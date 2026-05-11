@@ -189,3 +189,13 @@ IAID.md (the parent architecture) was written in 2024, before MCP existed. The c
 ## Contact
 
 gadanin.delamor — May 2026
+
+---
+
+## Note on G.I. Gurdjieff's Teachings
+
+The Teachings of G.I. Gurdjieff are not present in this work in any of their forms: not as a model, not as a claim, not as a conceptual relation, not as a sought or obtained result, not as declared or implicit intention — from any of the perspectives this work contains.
+
+The work arises from direct observation, empirical verification, and formal construction. Any convergence with materials from the Tradition is convergence — not derivation, not representation, not application.
+
+*gadanin.delamor — May 2026*

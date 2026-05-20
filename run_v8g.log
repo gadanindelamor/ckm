@@ -1,0 +1,76 @@
+# Log: run_v8g.log
+============================================================
+CKM Pipeline v8g - fourforums gun control
+============================================================
+
+[1] Parseando SQL...
+  parsing... 0 lines  parsing... 1,269 lines - done.              
+
+  Schema detectado:
+    author: 3453 rows | cols: ['author_id', 'username']
+    discussion: 4632 rows | cols: ['discussion_id', 'url', 'title', 'initiating_author_id']
+    discussion_topic: 2894 rows | cols: ['discussion_id', 'topic_id']
+    mturk_2010_dialogue_relation_question: 10 rows | cols: ['question_id', 'title', 'task_id', 'is_scalar', 'has_unsure', 'question', 'low_value_label', 'high_value_label']
+    mturk_author_stance: 5598 rows | cols: ['discussion_id', 'author_id', 'topic_id', 'topic_stance_id_1', 'topic_stance_votes_1', 'topic_stance_id_2', 'topic_stance_votes_2', 'topic_stance_votes_other']
+    quote: 539658 rows | cols: ['discussion_id', 'post_id', 'quote_index', 'parent_quote_index', 'text_offset', 'text_id', 'source_discussion_id', 'source_post_id']
+    topic: 31 rows | cols: ['topic_id', 'topic']
+    topic_stance: 109 rows | cols: ['topic_id', 'topic_stance_id', 'stance']
+
+[2] Filtrando gun control...
+  discussion_topic: 2894 rows
+  Sample: {'discussion_id': 4, 'topic_id': 3}
+  Discusiones gun (topic_id=9): 905
+  WARN: tabla post no encontrada
+
+[3] LDA N=8...
+  Topics: T0=pro_control, T1=anti_control (stance ground truth)
+  Posts disponibles para mapeo: 0
+
+[4] Construyendo W y Delta (streaming)...
+  mturk_author_stance: 5598 rows
+  Sample: {'discussion_id': 3, 'author_id': 2, 'topic_id': 5, 'topic_stance_id_1': 2, 'topic_stance_votes_1': 0}
+  Autores con stance: 304 (T0=96 T1=208)
+  stream_post: cols=['discussion_id', 'post_id', 'author_id', 'creation_date', 'parent_post_id', 'parent_missing'] | idx_pid=1 idx_aid=2
+  streaming post... 0 lines | mapeados=0  streaming post... done. posts=414,453              
+  Posts mapeados a topic: 32062
+  quote: 539658 rows (filtrando gun_disc_ids=905)
+  Interacciones totales: 42,395 | cross-topic: 26,346
+  W[0,1]=26346 W[1,0]=26346 | Delta[0,1]=0.602 Delta[1,0]=1.000
+
+[5] Elicitando pares C1-C5...
+  Pares: 1
+    FF_GC_01: T0↔T1 tensión=1.0 asim=0.0 C3=✗
+
+[6] C6c vs CreateDebate...
+  Matches: 0/1
+
+[7] P6 (neg_pairs=1)...
+  Colapso mixtos: 100.0 pp
+
+[7b] P1-P4 omitido (ckm_p1p4_module no disponible)
+
+[8] Stance cross-reference...
+  Stance table: mturk_author_stance (5598 rows)
+  Sample: {'discussion_id': 3, 'author_id': 2, 'topic_id': 5, 'topic_stance_id_1': 2, 'topic_stance_votes_1': 0}
+  965: None
+  555: None
+  150: not_found
+  751: None
+  1034: None
+  809: None
+  3452: not_found
+
+  REGs escritos en .
+    REG_c6c_comparison_guncontrol_v1.md
+    REG_p6_fourforums_guncontrol_v1.md
+    REG_pairs_fourforums_guncontrol_v1.md
+    REG_stance_fourforums_v1.md
+
+============================================================
+CKM Pipeline v8g - fourforums gun control
+Subir al proyecto:
+  REG_pairs_fourforums_guncontrol_v1.md
+  REG_c6c_comparison_guncontrol_v1.md
+  REG_p6_fourforums_guncontrol_v1.md
+  REG_stance_fourforums_v1.md
+============================================================

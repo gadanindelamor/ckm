@@ -1,0 +1,89 @@
+=== TODAS LAS TABLAS ===
+
+author <-- AUTHOR
+  cols: ['author_id', 'username']
+  sample: {'author_id': '1', 'username': "'So Heaven Dies?'"}
+
+dataset_metadata
+  cols: ['row_id', 'metadata_field', 'metadata_value']
+  sample: {'row_id': '1', 'metadata_field': "'title'", 'metadata_value': "'Internet Argument Co'"}
+
+discussion <-- AUTHOR
+  cols: ['discussion_id', 'url', 'title', 'initiating_author_id']
+  sample: {'discussion_id': '1', 'url': "'http://www.4forums.c'", 'title': "'Home Schooling'", 'initiating_author_id': '5'}
+
+discussion_topic
+  cols: ['discussion_id', 'topic_id']
+  sample: {'discussion_id': '4', 'topic_id': '3'}
+
+markup
+  cols: ['text_id', 'markup_id', 'markup_start', 'markup_end', 'type', 'attributes']
+  sample: {'text_id': '6', 'markup_id': '0', 'markup_start': '112', 'markup_end': '127', 'type': "'link'", 'attributes': '\'{"href": "http://www\''}
+
+mturk_2010_dialogue_relation_question
+  cols: ['question_id', 'title', 'task_id', 'is_scalar', 'has_unsure', 'question', 'low_value_label', 'high_value_label']
+  sample: {'question_id': '1', 'title': "'disagree_agree'", 'task_id': '1', 'is_scalar': '1', 'has_unsure': '1', 'question': "'Does the respondent '", 'low_value_label': "'disagree'", 'high_value_label': "'agree'"}
+
+mturk_2010_p123_average_response
+  cols: ['page_id', 'tab_number', 'num_annots', 'disagree_agree', 'disagree_agree_unsure', 'attacking_respectful', 'attacking_respectful_unsure', 'emotion_fact', 'emotion_fact_unsure', 'nasty_nice', 'nasty_nice_unsure', 'sarcasm_yes', 'sarcasm_no', 'sarcasm_unsure']
+  sample: {'page_id': '1', 'tab_number': '0', 'num_annots': '5', 'disagree_agree': '-0.4', 'disagree_agree_unsure': '0', 'attacking_respectful': '1.2', 'attacking_respectful_unsure': '0', 'emotion_fact': '2'}
+
+mturk_2010_p123_entry
+  cols: ['page_id', 'tab_number', 'p123_triple_id', 'context_triple_index', 'response_triple_index']
+  sample: {'page_id': '1', 'tab_number': '0', 'p123_triple_id': '5591', 'context_triple_index': '0', 'response_triple_index': '2'}
+
+mturk_2010_p123_post <-- POST
+  cols: ['p123_triple_id', 'triple_index', 'discussion_id', 'post_id', 'presented_text', 'presented_text_term_removed', 'term', 'topic']
+  sample: {'p123_triple_id': '2', 'triple_index': '0', 'discussion_id': '9987', 'post_id': '6', 'presented_text': "'Uh huh, which explai'", 'presented_text_term_removed': 'NULL', 'term': 'NULL', 'topic': "'gun control'"}
+
+mturk_2010_p123_worker_response
+  cols: ['page_id', 'tab_number', 'workerid', 'response_number', 'disagree_agree', 'disagree_agree_unsure', 'attacking_respectful', 'attacking_respectful_unsure', 'emotion_fact', 'emotion_fact_unsure', 'nasty_nice', 'nasty_nice_unsure', 'sarcasm']
+  sample: {'page_id': '1', 'tab_number': '0', 'workerid': "'7e3c333ab930f21f3ab9'", 'response_number': '0', 'disagree_agree': '0', 'disagree_agree_unsure': '0', 'attacking_respectful': '2', 'attacking_respectful_unsure': '0'}
+
+mturk_2010_qr_entry <-- POST
+  cols: ['page_id', 'tab_number', 'discussion_id', 'post_id', 'quote_index', 'response_text_end', 'presented_quote', 'presented_response', 'term', 'topic']
+  sample: {'page_id': '1', 'tab_number': '0', 'discussion_id': '3795', 'post_id': '28', 'quote_index': '3', 'response_text_end': '597', 'presented_quote': "'I got a good idea. h'", 'presented_response': "'By your own admissio'"}
+
+mturk_2010_qr_task1_average_response
+  cols: ['page_id', 'tab_number', 'num_annots', 'disagree_agree', 'disagree_agree_unsure', 'attacking_respectful', 'attacking_respectful_unsure', 'emotion_fact', 'emotion_fact_unsure', 'nasty_nice', 'nasty_nice_unsure', 'sarcasm_yes', 'sarcasm_no', 'sarcasm_unsure']
+  sample: {'page_id': '1', 'tab_number': '0', 'num_annots': '5', 'disagree_agree': '-2.2', 'disagree_agree_unsure': '0.4', 'attacking_respectful': '0', 'attacking_respectful_unsure': '0.2', 'emotion_fact': '-3.2'}
+
+mturk_2010_qr_task1_worker_response
+  cols: ['page_id', 'tab_number', 'workerid', 'response_number', 'disagree_agree', 'disagree_agree_unsure', 'attacking_respectful', 'attacking_respectful_unsure', 'emotion_fact', 'emotion_fact_unsure', 'nasty_nice', 'nasty_nice_unsure', 'sarcasm']
+  sample: {'page_id': '1', 'tab_number': '0', 'workerid': "'2a3fb4a9cd2aa0092a0e'", 'response_number': '0', 'disagree_agree': '-5', 'disagree_agree_unsure': '0', 'attacking_respectful': '-5', 'attacking_respectful_unsure': '0'}
+
+mturk_2010_qr_task2_average_response
+  cols: ['page_id', 'tab_number', 'num_disagree', 'num_annots', 'agree', 'defeater_undercutter', 'defeater_undercutter_unsure', 'negotiate_attack', 'negotiate_attack_unsure', 'personal_audience', 'personal_audience_unsure', 'questioning_asserting', 'questioning_asserting_unsure']
+  sample: {'page_id': '1', 'tab_number': '0', 'num_disagree': '4', 'num_annots': '5', 'agree': '0.2', 'defeater_undercutter': '0', 'defeater_undercutter_unsure': '0', 'negotiate_attack': '0'}
+
+mturk_2010_qr_task2_worker_response
+  cols: ['page_id', 'tab_number', 'workerid', 'response_number', 'agree', 'defeater_undercutter', 'defeater_undercutter_unsure', 'negotiate_attack', 'negotiate_attack_unsure', 'personal_audience', 'personal_audience_unsure', 'questioning_asserting', 'questioning_asserting_unsure']
+  sample: {'page_id': '1', 'tab_number': '0', 'workerid': "'13e28ccea945314dae49'", 'response_number': '0', 'agree': '0', 'defeater_undercutter': 'NULL', 'defeater_undercutter_unsure': 'NULL', 'negotiate_attack': 'NULL'}
+
+mturk_author_stance <-- AUTHOR
+  cols: ['discussion_id', 'author_id', 'topic_id', 'topic_stance_id_1', 'topic_stance_votes_1', 'topic_stance_id_2', 'topic_stance_votes_2', 'topic_stance_votes_other']
+  sample: {'discussion_id': '3', 'author_id': '2', 'topic_id': '5', 'topic_stance_id_1': '2', 'topic_stance_votes_1': '0', 'topic_stance_id_2': '3', 'topic_stance_votes_2': '1', 'topic_stance_votes_other': '1'}
+
+post <-- POST+AUTHOR
+  cols: ['discussion_id', 'post_id', 'author_id', 'creation_date', 'parent_post_id', 'parent_missing', 'text_id']
+  sample: {'discussion_id': '1', 'post_id': '1', 'author_id': '5', 'creation_date': "'2003-01-26 09:40:00'", 'parent_post_id': 'NULL', 'parent_missing': '0', 'text_id': '1'}
+
+quote <-- POST
+  cols: ['discussion_id', 'post_id', 'quote_index', 'parent_quote_index', 'text_offset', 'text_id', 'source_discussion_id', 'source_post_id', 'source_start', 'source_end', 'truncated', 'altered']
+  sample: {'discussion_id': '1', 'post_id': '36', 'quote_index': '0', 'parent_quote_index': 'NULL', 'text_offset': '113', 'text_id': '59', 'source_discussion_id': '1', 'source_post_id': '30'}
+
+text
+  cols: ['text_id', 'text']
+  sample: {'text_id': '1', 'text': "'home schooling is on'"}
+
+topic
+  cols: ['topic_id', 'topic']
+  sample: {'topic_id': '1', 'topic': "'unknown'"}
+
+topic_stance
+  cols: ['topic_id', 'topic_stance_id', 'stance']
+  sample: {'topic_id': '3', 'topic_stance_id': '1', 'stance': "'unknown'"}
+
+
+=== TABLAS CON POST_ID + AUTHOR_ID ===
+  post: ['discussion_id', 'post_id', 'author_id', 'creation_date', 'parent_post_id', 'parent_missing', 'text_id']

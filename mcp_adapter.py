@@ -66,6 +66,7 @@ class CKMAdapter:
         self.config = config or CKMConfig()
         self._task_mode = False
         self._baseline_sigma: Optional[np.ndarray] = None
+        self._saved_epsilon: Optional[float] = None  # guardado antes de task_mode_enter
 
         N = len(capabilities)
         nodes = [c.name for c in capabilities]
@@ -159,14 +160,16 @@ class CKMAdapter:
         """Suspend C2 during task execution (as per Scenario 13)."""
         self._task_mode = True
         self._baseline_sigma = self.graph.sigma.copy()
-        self.graph.config.epsilon = float("inf")  # C2 suspended
+        self._saved_epsilon = self.config.epsilon       # guardar ANTES de modificar
+        self.graph.config.epsilon = float("inf")        # C2 suspended
 
     def task_mode_exit(self) -> dict:
         """Re-evaluate C2 at task closure against baseline."""
         if not self._task_mode:
             return {"error": "Not in task mode"}
         self._task_mode = False
-        self.graph.config.epsilon = self.config.epsilon  # restore
+        self.graph.config.epsilon = self._saved_epsilon  # restaurar desde valor guardado
+        self._saved_epsilon = None
 
         if self._baseline_sigma is None:
             return {"error": "No baseline recorded"}

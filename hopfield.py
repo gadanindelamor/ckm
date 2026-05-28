@@ -11,6 +11,7 @@ from collections import Counter
 from typing import Optional
 
 import numpy as np
+from scipy import stats as sp_stats
 
 from .core import CKMGraph, CKMConfig
 
@@ -156,8 +157,6 @@ def hysteresis_loop(
     DOWN branch: remove nodes one by one → measure c(S).
     Returns trajectories and loop area.
     """
-    from scipy import stats as sp_stats
-
     np.random.seed(seed)
     N = graph.N
     rho_grid = np.linspace(1 / N, 1.0, N)

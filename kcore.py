@@ -133,12 +133,10 @@ def cascade_distribution(
     if len(core) < 3:
         return {"tau": None, "sizes": [], "confirmed": False, "core_size": len(core)}
 
+    core_list = list(core)  # calcular UNA vez fuera del loop
     sizes = []
     for _ in range(n_trials):
-        current_core, _ = kcore(adj, k, N)
-        if not current_core:
-            break
-        node = np.random.choice(list(current_core))
+        node = np.random.choice(core_list)
         s = cascade_after_removal(adj, k, node, N)
         if s > 0:
             sizes.append(s)

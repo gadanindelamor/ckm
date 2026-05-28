@@ -25,6 +25,10 @@ def copresence_matrix(
     """
     Pearson correlation of co-presence across unique attractors.
     Returns N×N correlation matrix.
+
+    Nodos con presencia constante (varianza=0, ej: traza_inferencia al 84%+)
+    producen NaN en corrcoef. Se reemplazan por 0.0: sin información de
+    co-presencia diferencial, no correlación artificial.
     """
     unique = list(attractors.keys())
     n_unique = len(unique)
@@ -36,6 +40,7 @@ def copresence_matrix(
                 attr_matrix[idx, i] = 1
 
     corr = np.corrcoef(attr_matrix.T)
+    np.nan_to_num(corr, nan=0.0, copy=False)  # NaN → 0 (nodo core-invariante)
     return corr
 
 

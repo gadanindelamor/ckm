@@ -2,42 +2,6 @@
 
 ---
 
-## v26 — May 2026
-
-**IAC external validation complete. P5, P6, P7 confirmed on two independent corpora.**
-
-### IAC external validation — fourforums gun control
-- Pipeline `fourforums_pipeline_v8g.py` functional on 570MB SQL dump (IAC v2, 1269-line batch INSERTs)
-- Critical bug resolved in v8g: `post_id` is local to each discussion in fourforums — fix (composite key `discussion_id + post_id`) raised gun control posts identified from 468 to 35,966
-- 905 gun control discussions, 304 authors with stance, 42,395 interactions, 26,346 cross-stance (62%)
-
-### P5, P6, P7 confirmed
-- P5: 8 attractors at ~50% N — polarized corpus collapses state diversity (fourforums gun control)
-- P6: Delta collapse of mixed states = **100 pp** in fourforums vs 54 pp in CreateDebate — scenario A+ (stronger than baseline). Directional structure (sos_dom / atk_dom) preserved across independent corpora
-- P7 (was hypothesis): confirmed in both corpora. Author 204 (fourforums, ratio=296×, out=0) is structural analog of Author 965 (CreateDebate, ratio=455×). ≥5 pure sustainer nodes in fourforums, from both stances. P7 status: **confirmed**
-
-### Structural findings
-- Directional role structure (sustainer/attacker) is a property of the gun control domain, not a corpus artifact
-- Sustainer nodes appear in both stances in fourforums — higher debate symmetry than CreateDebate
-- W asymmetry (C6c) not measurable in fourforums with current pipeline (quote table has no agree/disagree labels) — requires `mturk_2010_qr_task1_worker_response` for real labels
-
-### Open gaps updated
-- W asymmetric fourforums: pending — requires MTurk labels
-- Author 204 content verification: identified by ratio, content analysis pending
-- P7 falsification in other IAC domains (abortion, climate, evolution): open
-- COCO-thermostat: hypothesis only — no prototype
-
-### Topology module — first run + bug fix
-- `ckm_topology_module.py`: bug fixed in `check_orientability`. Original code used membership check for edge sign; fix uses boundary formula ∂(i,j,k) = +(j,k) − (i,k) + (i,j). K4 test confirmed: before=Möbius(6) false positive, after=cilindro correct.
-- First run on real CKM corpus (N=32): H0=1, H1=0, H2≈845, cilindro at all thresholds. Orientability result now trustworthy.
-- H2 remains approximate — 3,378 4-cliques in corpus, ∂₃ ≠ 0. Exact H2 open.
-
-### Infrastructure
-- CONVENTIONS.md updated: `--log` flag mandatory for all pipeline runs
-- Execution environment: GitHub Codespace (7.8GB RAM) — project integrity independent of environment
-
----
-
 ## v25 — May 2026
 
 **All four CKM v4 predictions confirmed. N=32 and N=64 experiments completed.**
@@ -142,7 +106,26 @@
 
 ---
 
-## v9 — April 2026
+## sesión 32 — Mayo 2026
+
+**Monitor services v2. W mixta operativa. Nomenclatura Δ consolidada.**
+
+- **Nomenclatura Δ consolidada:**
+  - `Δ_bias`: lo que un agente declara sobre sí antes de que el campo lo valide — prematuro, no falso; razón estructural del fallo A2A
+  - `Δ_r`: rechazos acumulados — emergente desde interacción real, anclado en W
+- **`corpus_service.py` v2:** W mixta con pesos negativos por marcadores de oposición (elicitación sin sesgo). W[i,j] ∈ [−1,+1]. Marcadores EN+ES cubriendo debate formal e informal.
+- **`monitor_service.py`:** renombrado `_Delta` → `_Delta_r` y `Delta_sum` → `Delta_r_sum` en toda la base.
+- **`node_extractor.py`:** fix texto vacío — `ValueError: empty vocabulary` al pasar texto sin contenido.
+- **`test_monitor_services.py`:** suite nueva, 7 grupos, 35/35. Cubre NodeExtractor, CorpusService (modo, pesos, persistencia), MonitorService (panel, Δ_r, ratio, stop_signal). Corpus pareados para tests comparativos.
+- **Experimento comparativo W_pos vs W_mixta:** fi ×2.25 y c_S ×2.7 para corpus gun control (7 textos, 3 marcadores).
+- **Estructura de repo:** nuevas carpetas `/services/` y `/experiments/figures/`.
+- **CONVENTIONS.md:** dos principios nuevos:
+  - *Ratio, no diferencia absoluta* — invariante a escala, preserva la tasa de divergencia
+  - *Invariante de código ≠ resultado experimental* — tests testean lo primero, REG registra lo segundo
+
+---
+
+## v25 — Mayo 2026
 
 **Hopfield over real corpus. 6 attractors mapped.**
 

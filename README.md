@@ -1,6 +1,6 @@
 # CKM — Cohesive Knowledge Model
 
-**Status:** Research · v26 · May 2026  
+**Status:** Research · v25 · May 2026  
 **Author:** gadanin.delamor  
 **License:** MIT
 
@@ -60,11 +60,11 @@ Six falsifiable predictions, confirmed experimentally on internal corpus (N=32, 
 | P3 | Temporal asymmetry: relaxation after removal > after addition | ✓ Confirmed | N=32 p<0.0001, N=64 p≈0 |
 | P4 | Interior optimal density Ω* in W_mixta | ~ Partial | Confirmed N=32. Ω* exists at N=64 (ρ*≈0.509) but W_mixta advantage diluted — 18 neg. pairs in 2016-pair graph. Open: negative pair density threshold. |
 | P5 | Polarized corpus: attractors ~50%N, polarization collapses state diversity | ✓ Confirmed | fourforums gun control. 8 attractors, 50%N. |
-| P6 | Delta (asymmetric initiation) acts as symmetry-breaking mechanism | ✓ Confirmed | CreateDebate: 54pp collapse of mixed states. fourforums: **100pp** collapse. Directional role structure preserved across independent corpora. |
+| P6 | Delta (asymmetric initiation) acts as symmetry-breaking mechanism | ✓ Confirmed | CreateDebate: 54pp collapse of mixed states. fourforums: 80pp collapse. |
 
 **P4 open question:** negative pair density sweep shows W_mixta advantage reappears between k=72 and k=108 at N=64. k* with real corpus W pending term_map reconstruction.
 
-**P7 (confirmed v26):** every system with genuine structural tension has at least one type-965 node — high in/out ratio, never initiates, high coercivity. Confirmed in both corpora: Author 965 (CreateDebate, ratio=455×) and Author 204 (fourforums, ratio=296×). Its absence indicates fabricated tension. Open: falsification in other IAC domains.
+**P7 (hypothesis, not confirmed):** every system with genuine structural tension has at least one type-965 node — high in/out ratio, frequent in frustrated triads, high coercivity. Its absence indicates fabricated tension. Falsifiable in any new domain.
 
 ---
 
@@ -77,11 +77,11 @@ Six falsifiable predictions, confirmed experimentally on internal corpus (N=32, 
 - Perfect structural oppositions: cohesion_fabricada↔M_M, atractor_espurio↔portero, sentido_comun↔inconmensurabilidad.
 - Attractor size is a property of W, not of initial state.
 
-**External validation — fourforums gun control (414K posts, v26):**
-- Pipeline `fourforums_pipeline_v8g.py` on 570MB SQL dump. Critical fix: `post_id` is local per discussion — composite key raised mapped posts from 468 to 35,966.
-- 905 gun control discussions, 304 authors with stance, 42,395 interactions, 26,346 cross-stance (62%).
-- Author 204: out=0, in=148, ratio=296×. Structural analog of Author 965. ≥5 pure sustainer nodes, both stances.
-- P6 collapse: **100pp** (vs 54pp CreateDebate). Directional role structure (sustainer/attacker) is a property of the gun control domain, not a corpus artifact.
+**External validation — fourforums gun control (414K posts):**
+- Author 965: out=1, in=455, ratio 455x. Never initiates. Present in C3 (frustrated triad) in 89% of pairs.
+- 32 tension axes converge on Author 965 (verified projective bundle).
+- Triads containing Author 965: coercivity = 0 at up to 50% noise. Triads without 965: coercivity = 0 at noise = 0 (already collapsed).
+- Holonomy confirmed: path A→B vs B→A produces same dominant attractor but different amplitude (+0.176 fraction active in 4/8 asymmetric pairs).
 
 ---
 
@@ -90,48 +90,82 @@ Six falsifiable predictions, confirmed experimentally on internal corpus (N=32, 
 ```
 ckm/
 ├── core.py                         # CKMGraph: W+Δ, c(S), Gatekeeper R15
-├── ckm_p1p4_module.py              # P1–P4 reusable module
-├── ckm_topology_module.py          # Topological invariants H0/H1/H2, orientability chains
-├── CLAUDE.md                       # Coding guidelines
+├── analytics.py                    # Graph analytics utilities
+├── hopfield.py                     # Hopfield dynamics
+├── kcore.py                        # k-core cascade functions
+├── mcp_adapter.py                  # MCP adapter layer
+├── pyproject.toml
+├── .gitignore
+├── CLAUDE.md                       # Coding guidelines (Karpathy-style)
 ├── THEORY.md                       # Formal rules R01–R17, knowledge orders
 ├── EXPERIMENTS.md                  # Full experimental methodology and results
-├── METHODOLOGY.md                  # Project methodology — inductive, documented
-├── CHANGELOG.md                    # Version history v1–v26
-├── CONVENTIONS.md                  # Naming and structural conventions
-├── ENTRY_POINT.md                  # Onboarding guide for new agents/readers
+├── METODOLOGY.MD                   # Project methodology — inductive, documented
+├── CHANGELOG.md                    # Version history
+├── CONVENTIONS.md                  # Naming conventions (ratio, invariante vs experimental)
 ├── API_SPEC.md                     # API specification for agent integration
+├── LETTER.md
+├── services/                       # Monitor architecture — three operational services
+│   ├── node_extractor.py           # NodeExtractorService: text → nodes + co-activations
+│   ├── corpus_service.py           # CorpusService v2: W mixta, negative weights via markers
+│   ├── monitor_service.py          # MonitorService: Delta_r, fabrication_index, stop_signal
+│   └── ckm_monitor.py              # Monitor entry point
 ├── experiments/
-│   ├── p4_neg_sweep.py             # P4 negative pair density sweep
-│   ├── fourforums_pipeline_v8g.py  # fourforums IAC 2010 pipeline (final)
-│   ├── fourforums_delta_v7.py      # Delta (asymmetry) computation
-│   ├── find_965_v3.py              # Type-965 node detection
-│   ├── explore_tables.py           # IAC SQL schema exploration
-│   ├── test_ckm_p1p4.py            # P1–P4 test suite
-│   └── c6c_fourforums_extraction.py
+│   ├── ckm_monitor.py
+│   ├── ckm_p1p4_module.py
+│   ├── ckm_topology_module.py
+│   ├── corpus_service.py
+│   ├── monitor_service.py
+│   ├── node_extractor.py
+│   ├── exp_monitor_trajectory.py
+│   ├── find_965_v3.py
+│   ├── fourforums_pipeline_v8g.py
+│   ├── test_ckm_p1p4.py
+│   ├── test_core.py
+│   ├── test_monitor_services.py    # Monitor services test suite — 35/35
+│   └── figures/
+│       ├── d_contextual_primer_mapa.png
+│       ├── exp_d_contextual_temporal.png
+│       ├── exp_n32_chispazos.png
+│       ├── exp_n32_copresencia.png
+│       ├── exp_n32_estructura.png
+│       ├── exp_n32_tamano.png
+│       ├── exp_ratio_calidad_epistemica.png
+│       ├── exp_stop_operator.png
+│       ├── exp_tension_sweep.png
+│       ├── p4_neg_density_sweep.png
+│       └── process_V8c.png
+├── process/                        # Pipeline development history
+│   ├── fourforums_pipeline_v8.py … v8g.py
+│   ├── explore_tables.py / .log
+│   ├── README_process.md
+│   └── topology_bug_trace.md
 ├── registers/
-│   ├── REG_pairs_createdbate_guncontrol_v1.md
-│   ├── REG_pairs_fourforums_guncontrol_v1.md
-│   ├── REG_c6c_comparison_guncontrol_v1.md
-│   ├── REG_p6_fourforums_guncontrol_v1.md
-│   ├── REG_stance_fourforums_v1.md
+│   ├── REG_monitor_service_arch_v1.md   # Monitor architecture — sesión 31+32
+│   ├── REG_monitor_ckm_v2.md
+│   ├── REG_hint_next_instance_v1.md
+│   ├── REG_d_contextual_temporal_v1.md
+│   ├── REG_hipotesis_distancia_contextual_v1.md
+│   ├── REG_hat_gpt53_ckm_v1.md
 │   ├── REG_holonomy_coercivity_fourforums_v1.md
 │   ├── REG_author_965_structure_v1.md
-│   └── REG_sesion_perspectivas_rp2_ff_v7.md
+│   ├── REG_sesion_perspectivas_rp2_ff_v7.md
+│   ├── REG_p6_fourforums_guncontrol_v1.md
+│   ├── REG_pairs_fourforums_guncontrol_v1.md
+│   ├── REG_c6c_comparison_guncontrol_v1.md
+│   ├── REG_stance_fourforums_v1.md
+│   ├── REG_termap_ckm_corpus_v1.md
+│   ├── REG_condiciones_meta_access_v1.md
+│   ├── REG_pendientes_ckm_v1.md
+│   └── REG_topology_ckm_corpus_v2_fixed.json
 ├── logs/
-│   ├── run_v8g.log                 # fourforums pipeline v8g run evidence
-│   └── find_965_v3.log
-└── docs/
-    └── CKM_Informe_Trabajo_v26.docx  # Full working report
+├── docs/
+│   └── CKM_Informe_Trabajo_v25.docx
+└── test_ckm_p1p4.py                # (also in experiments/)
 ```
 
-**Topology module — first results (v26):**
-- H0=1 at all thresholds: corpus is a single connected component.
-- H1=0 at all thresholds: no independent cycles — tree-like complex.
-- Cilindro (orientable) at all thresholds: no Möbius torsion. Structural tensions are resolvable divergences. R12 (incommensurability) not present in current corpus.
-- H2≈845 (approximate): large cavity count — candidate signature of missing intermediate knowledge.
-- Bug fixed in `check_orientability`: boundary formula sign correction. Verified on K4 and C5.
-
 ---
+
+## How to Run
 
 **Requirements:** Python 3.10+, numpy, scipy, matplotlib
 
@@ -179,16 +213,14 @@ These are documented as gaps, not concealed:
 | R15 gatekeeper: formal criteria for portero admission | Partially formalized (C1–C4); semantic criteria open |
 | Knowledge cohesive: representation model | Open — hysteresis is the only defined property |
 | P4 k* with real W_base | Pending after term_map reconstruction |
-| P7 falsification in other IAC domains | Confirmed gun control — open: abortion, climate, evolution |
-| W asymmetric fourforums | Pending — requires MTurk labels (mturk_2010_qr_task1_worker_response) |
-| Author 204 content verification | Identified by ratio; content analysis pending |
+| P7 falsification in new domain | Hypothesis only |
 | COCO implementation | Unimplemented central hypothesis |
 
 ---
 
 ## Methodology Note
 
-The CKM was developed through a process of **phenomenology as first step of engineering**: conceptual clarity precedes specification. The working reports (v2–v26) are not documentation of a separate process — they are the process. The conversation is the corpus.
+The CKM was developed through a process of **phenomenology as first step of engineering**: conceptual clarity precedes specification. The working reports (v2–v25) are not documentation of a separate process — they are the process. The conversation is the corpus.
 
 IAID.md (the parent architecture) was written in 2024, before MCP existed. The convergence with MCP, A2A, and related protocols was discovered in review, not designed. This is treated as validation by independence, not alignment.
 

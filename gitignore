@@ -1,0 +1,45 @@
+# CKM — .gitignore
+
+# Working reports (carta magna — not for public repo)
+CKM_Informe_Trabajo*.docx
+Metodologia.docx
+
+# Personal / internal
+Carta_Antropyc_delamor.pdf
+WHO_IS_965
+GOTAYTIZA.txt
+uk.txt
+cosmological_voids_and_the_Hubble_tension_
+Fragmentos_de_una_Enseñanza_Desconocida*.md
+
+# BE framework (separate project)
+BE/
+BEGAME_PEACE_PRAYER/
+README_BE.md
+REPORT_BE_SP.md
+
+# Internal tooling
+SKILL.md
+awareness_skill.jsx
+
+# Experimental development versions (superseded)
+fourforums_delta_v1.py
+fourforums_delta_v2.py
+fourforums_delta_v3.py
+fourforums_delta_v4.py
+fourforums_delta_v5.py
+
+# Class T — working/session files (regenerable)
+tmp_*.jsonl
+tmp_*.json
+tmp_*.py
+GPT53_REG_hat_feedbak.md
+
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db

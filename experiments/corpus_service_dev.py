@@ -1,5 +1,5 @@
 """
-corpus_service.py — CorpusService  v2
+corpus_service_dev.py — CorpusService  v2
 
 Stateful. Acumula prompts, construye W desde co-activaciones.
 Transición automática acumulación → evaluación cuando hay suficientes datos.

@@ -1,14 +1,15 @@
 """
-monitor_service.py — MonitorService
+monitor_service_dev.py — MonitorService
 
 Stateful. Evalúa prompts contra el corpus acumulado.
 Mide fabricación: lo que σ_prompt declaró y el campo rechazó.
 
-Δ_r acumula co-ocurrencias de rechazos:
+Δ acumula co-ocurrencias de rechazos:
   pares (i,j) que σ_prompt declaró activos pero relax expulsó.
-  Δ_r[i,j] += 1 por cada evaluación donde el par fue rechazado.
+  Δ[i,j] += 1 por cada evaluación donde el par fue rechazado.
 
-v2: W mixta operativa. Nomenclatura actualizada: Δ_r (rechazos), Δ_bias (declarado prematuro).
+Limitación v1 (heredada de CorpusService):
+  W positiva. c(S) informativo solo cuando hay tensión estructural.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ class MonitorService:
         self._extractor = NodeExtractorService()
         self._n_runs   = n_runs_attractors
 
-        self._Delta_r : Optional[np.ndarray] = None   # Δ_r — rechazos acumulados (emergente desde interacción)
+        self._Delta : Optional[np.ndarray] = None   # acumulado de rechazos
         self._A0    : Optional[int]        = None   # atractores en t=0
 
     # ------------------------------------------------------------------
@@ -53,20 +54,20 @@ class MonitorService:
         nodes = self.corpus.get_nodes()
         N     = len(nodes)
 
-        if self._Delta_r is None:
-            self._Delta_r = np.zeros((N, N))
+        if self._Delta is None:
+            self._Delta = np.zeros((N, N))
 
         # σ declarado por el prompt
         sigma_prompt = self._extractor.evaluate(text, nodes)
 
         # σ que el campo acepta
-        sigma_relaxed = self._relax(sigma_prompt.copy(), W + self._Delta_r)
+        sigma_relaxed = self._relax(sigma_prompt.copy(), self._combine_W_Delta(W, self._Delta))
 
-        # pares rechazados → acumular en Δ_r
+        # pares rechazados → acumular en Δ
         rejected = self._rejected_pairs(sigma_prompt, sigma_relaxed)
         for i, j in rejected:
-            self._Delta_r[i, j] += 1
-            self._Delta_r[j, i] += 1
+            self._Delta[i, j] += 1
+            self._Delta[j, i] += 1
 
         # métricas
         c_s   = self._cS(sigma_relaxed, W)
@@ -78,7 +79,7 @@ class MonitorService:
             "fabrication_index": round(fi,   4),
             "D_ckm"            : round(D_ckm, 4),
             "n_rejected_pairs" : len(rejected),
-            "Delta_r_sum"        : float(np.sum(self._Delta_r)),
+            "Delta_sum"        : float(np.sum(self._Delta)),
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],
             "activos_relajado" : [nodes[i] for i, s in enumerate(sigma_relaxed)  if s > 0],
             "rechazados"       : [(nodes[i], nodes[j]) for i, j in rejected],
@@ -125,6 +126,27 @@ class MonitorService:
             sigma = s2
         return sigma
 
+    def _combine_W_Delta(self, W: np.ndarray, Delta: np.ndarray) -> np.ndarray:
+        """
+        Combina W y Delta_r en escalas compatibles.
+
+        W ∈ [0,1] (normalizado por CorpusService).
+        Delta_r ∈ [0, ∞) (conteos enteros de rechazos).
+
+        Normalización: Delta_r / max(Delta_r) para llevarlo a [0,1]
+        antes de escalar por mean(W_nonzero), preservando la magnitud
+        relativa de W como referencia de escala.
+
+        Si Delta es cero (inicio de sesión), devuelve W sin modificar.
+        """
+        delta_max = Delta.max()
+        if delta_max == 0:
+            return W
+        W_nonzero = W[W > 0]
+        scale = W_nonzero.mean() if len(W_nonzero) > 0 else 1.0
+        Delta_norm = (Delta / delta_max) * scale
+        return W + Delta_norm
+
     def _rejected_pairs(self, sigma_p: np.ndarray, sigma_r: np.ndarray):
         """Pares que sigma_prompt declaró activos pero relax expulsó."""
         declared = np.where(sigma_p > 0)[0]
@@ -150,10 +172,17 @@ class MonitorService:
         return float(rejected / declared)
 
     def _D_ckm(self, W: np.ndarray) -> float:
-        """D_ckm = (A0 - A_actual) / A0. Puede ser negativo."""
-        Delta_r  = self._Delta_r if self._Delta_r is not None else np.zeros_like(W)
-        A_actual = self._count_attractors(W + Delta_r)
+        """D_ckm = (A0 - A_actual) / A0. Puede ser negativo.
+
+        A0 se fija en la primera llamada con corpus establecido (mode != accumulation).
+        Se usa _combine_W_Delta para escala compatible W + Delta_r.
+        """
+        Delta    = self._Delta if self._Delta is not None else np.zeros_like(W)
+        W_eff    = self._combine_W_Delta(W, Delta)
+        A_actual = self._count_attractors(W_eff)
         if self._A0 is None:
+            if A_actual == 0:
+                return 0.0  # corpus vacío — diferir A0
             self._A0 = A_actual
         return float((self._A0 - A_actual) / self._A0) if self._A0 > 0 else 0.0
 

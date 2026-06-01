@@ -71,49 +71,34 @@ No crear REG de reconstrucciones desde memoria — validez limitada.
 
 ---
 
-## Principio de reporte — ratio, no diferencia absoluta
+## Principio de nombres unicos — sin duplicados entre carpetas
 
-**El ratio es lo que importa. La diferencia absoluta opaca lo que se deriva de ella.**
+**Dos archivos de codigo del proyecto no deben llevar el mismo nombre.**
 
-La diferencia absoluta depende de la escala — cambia con la normalización.
-El ratio es invariante a la escala. Es lo que el campo hizo con lo que tenía.
+Un archivo con el mismo nombre en dos carpetas distintas es una fuente
+documentada de confusion: agentes, instancias de Claude y el propio autor
+pueden leer la version incorrecta sin saberlo. Verificado empiricamente
+en sesion Mayo 2026.
 
-Este principio no es preferencia de presentación. Es derivación directa de la divergencia como operador CKM:
-la divergencia mide tasa de separación, no distancia. El ratio preserva esa tasa.
-La diferencia absoluta la destruye.
+Convencion de sufijo para versiones de desarrollo:
 
-Regla operativa:
-- En comparaciones experimentales: reportar ratio primero, diferencia absoluta solo si aporta contexto adicional.
-- Nunca reportar diferencia absoluta como hallazgo principal en resultados CKM.
-- Ejemplos correctos: "fi ×2.25", "c_S ×2.7", "W_mixta produce c(S) 13× mayor que W_pos"
-- Ejemplos incorrectos: "fi subió 0.417", "c_S aumentó 0.129"
+| Carpeta | Sufijo | Ejemplo |
+|---------|--------|---------|
+| `services/` | sin sufijo — version estable | `fabrication_service.py` |
+| `experiments/` | `_dev` — version de trabajo | `fabrication_service_dev.py` |
 
-La diferencia absoluta opaca la divergencia. El ratio la expone.
+Renombramientos aplicados (1 jun. 2026):
 
----
+| Nombre anterior | Ubicacion | Nombre actual |
+|-----------------|-----------|---------------|
+| `ckm_monitor.py` | `services/` | `fabrication_service.py` |
+| `ckm_monitor.py` | `experiments/` | `fabrication_service_dev.py` |
+| `monitor_service.py` | `experiments/` | `monitor_service_dev.py` |
+| `corpus_service.py` | `experiments/` | `corpus_service_dev.py` |
+| `node_extractor.py` | `experiments/` | `node_extractor_dev.py` |
 
-## Principio de distinción — invariante de código vs resultado experimental
-
-**Los tests testean invariantes de código. Los REG registran resultados experimentales.**
-
-Un invariante de código es una propiedad que el sistema garantiza en cualquier corpus válido:
-- fi ∈ [0, 1]
-- Δ_r no decrece
-- W simétrica
-- W_mixta.neg_frac > W_pos.neg_frac cuando hay marcadores
-
-Un resultado experimental es una medición sobre un corpus específico:
-- fi(W_mixta) = 0.750 vs fi(W_pos) = 0.333 → ratio ×2.25 (sesión 32, gun control)
-- c_S(W_mixta) ×2.7 para prompt de tensión
-
-Codificar un resultado experimental como invariante de código produce tests frágiles
-que fallan cuando el corpus cambia — incluso si el sistema funciona correctamente.
-La fragilidad no indica bug: indica que se confundieron las dos categorías.
-
-Regla operativa:
-- Tests: propiedades que el código garantiza estructuralmente.
-- REG: ratios, magnitudes, comparaciones sobre corpus específicos.
-- Si un test falla porque el corpus cambió → mover la aserción al REG, no parchar el corpus.
+Regla: al crear un archivo nuevo en `experiments/` que tenga un
+homologo en `services/`, agregar sufijo `_dev` desde el inicio.
 
 ---
 

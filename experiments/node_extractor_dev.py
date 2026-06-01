@@ -1,5 +1,5 @@
 """
-node_extractor.py — NodeExtractorService
+node_extractor_dev.py — NodeExtractorService
 
 Dispositivo MIND, stateless.
 Transforma texto en co-activaciones para CorpusService / MonitorService.

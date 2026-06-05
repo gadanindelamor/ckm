@@ -11,7 +11,7 @@ por construcción del loop — reconstruido aquí explícitamente.
 
 import json, shutil
 import numpy as np
-from ckm_monitor import FabricationService
+from fabrication_service_dev import FabricationService
 
 # Parámetros                                          [SNIPPET]
 SEED = 42; T_STEPS = 80; N_RUNS = 100; ETA_FACTOR = 1.0; AMP = 15

@@ -16,6 +16,9 @@ from typing import Optional
 
 import numpy as np
 
+# NodeExtractorService imported lazily inside from_corpus to avoid
+# circular dependency risk and keep core independent.
+
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -97,27 +100,63 @@ class CKMGraph:
     def from_corpus(
         cls,
         paragraphs: list[str],
-        nodes: list[str],
-        term_map: dict[str, list[str]],
+        nodes: Optional[list[str]] = None,
+        term_map: Optional[dict[str, list[str]]] = None,
         negative_pairs: Optional[list[tuple[str, str]]] = None,
         config: Optional[CKMConfig] = None,
+        top_k: int = 20,
     ) -> "CKMGraph":
-        """Build CKMGraph from a text corpus via co-occurrence."""
-        cfg = config or CKMConfig()
-        N = len(nodes)
-        cooc = np.zeros((N, N))
+        """Build CKMGraph from a text corpus via co-occurrence.
 
-        for para in paragraphs:
-            para_l = para.lower()
-            present = [
-                i for i, node in enumerate(nodes)
-                if any(t.lower() in para_l for t in term_map.get(node, []))
-            ]
-            for a in range(len(present)):
-                for b in range(a + 1, len(present)):
-                    i, j = present[a], present[b]
-                    cooc[i, j] += 1
-                    cooc[j, i] += 1
+        Path A — term_map provided:
+            Nodes are detected per paragraph using the supplied term lists.
+            Classical behavior; requires manual curation of term_map.
+
+        Path B — term_map=None (default):
+            NodeExtractorService.accumulate() extracts nodes and co-occurrences
+            automatically via TF-IDF. No manual construction required.
+            `nodes` overrides the extracted node list if provided.
+            `top_k` controls how many terms the extractor retains.
+        """
+        cfg = config or CKMConfig()
+        cooc: np.ndarray
+
+        if term_map is not None:
+            # ── Path A: manual term_map ──────────────────────────────────────
+            if nodes is None:
+                raise ValueError("nodes must be provided when term_map is given")
+            N = len(nodes)
+            cooc = np.zeros((N, N))
+            for para in paragraphs:
+                para_l = para.lower()
+                present = [
+                    i for i, node in enumerate(nodes)
+                    if any(t.lower() in para_l for t in term_map.get(node, []))
+                ]
+                for a in range(len(present)):
+                    for b in range(a + 1, len(present)):
+                        i, j = present[a], present[b]
+                        cooc[i, j] += 1
+                        cooc[j, i] += 1
+        else:
+            # ── Path B: automatic extraction via NodeExtractorService ────────
+            from .node_extractor import NodeExtractorService
+            extractor = NodeExtractorService(top_k=top_k)
+            result = extractor.accumulate(paragraphs)
+
+            if nodes is None:
+                nodes = result["nodes"]
+
+            N = len(nodes)
+            node_set = set(nodes)
+            cooc = np.zeros((N, N))
+            node_idx = {n: i for i, n in enumerate(nodes)}
+
+            for (na, nb), count in result["pairs"].items():
+                if na in node_set and nb in node_set:
+                    i, j = node_idx[na], node_idx[nb]
+                    cooc[i, j] += count
+                    cooc[j, i] += count
 
         W = cooc / max(len(paragraphs), 1)
 

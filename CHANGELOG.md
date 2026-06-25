@@ -2,6 +2,124 @@
 
 ---
 
+## v28 — June 2026
+
+**IAP concept. COCOThermostat 43/43. Firma del Corpus. Octava observation.**
+
+### COCOThermostat — implementation complete
+- `beta_i(agent_id)` = `1/mean_fi` — estimated from real rejection history
+- `beta_collective()` = median of active beta_i — emerges from interaction, not declaration
+- `beta_c_corpus` derived analytically: `beta_c = 1/(rho* · N · mu_W)` → 13.83 (N=32, mu_W=0.004519)
+- `_alpha_for(D_ckm)`: independent method for dynamic alpha calibration (monotonically decreasing)
+- `temp_signal`: TOO_COLD / NOMINAL / TOO_HOT — three states
+- fi=0 → beta_i = None (undefined, not infinite)
+- 43/43 tests passing (original Δ/STOP behavior + TestBetaIndividual + TestBetaCollective)
+- delta_collective between monitor._Delta and thermostat._Delta: fertile divergence, intentionally left unsynchronized
+- mu_W global (not positive-only) chosen for conservatism — refinement to mu_W_positivo pending
+
+### IAP — Intel Access Point (concept emerged)
+- IAP provides CKM Chatrooms for multi-agent conversational interaction over MCP
+- A2A handles routing domain; IAP covers conversational interactions outside that scope
+- Chatrooms operate without arbiter or moderator
+- CKM services: interaction dynamics monitoring, SLA, Supervised Contract Protocols
+- Private Highway Network: STOP and TEMP_SIGNAL sent via separate high-priority channel — effectiveness depends on temporal windows of opportunity
+- Status: concept named. Implementation pending — requires COCOThermostat + versioned W
+
+### Firma del Corpus (concept emerged)
+- Certifies trace — not content of event
+- Fields: sha256(W_momento), D_ckm(t), temp_signal, n_agentes, timestamp, sha256(Delta_r_acumulado)
+- Distinction from CA: structural evidence, not delegated trust. Verification open against public corpus
+- MENTIRIIS.MORIERIS in IAP: agent declaring interaction with Firma_CKM X — if X does not exist in corpus registry — died. No punishment. Structural consequence
+- Dependencies: COCOThermostat, MonitorService, versioned W
+
+### Theoretical: sigma symmetry — P4 structural guarantee
+- Proven exactly: relax(-s) = -relax(s) for synchronous Hopfield dynamics
+- Verified empirically: 450/450 paired samples
+- Consequence: A(rho) interior peaks at rho*~0.5 are structurally guaranteed by sigma→-sigma symmetry
+- P4 confirmed as structurally necessary, not contingent on corpus
+
+### Observation: Law of Seven / Octava (speculative — not confirmed experiment)
+- D_CKM_THRESHOLD=0.40 → implicit interval [0.20, 0.80] = [cv/2, cv*2] (one octave around cv)
+- Structural derivation possible: cv is the critical note, octave contains it
+- P1 hysteresis loop as "almost a circle" — same structural property as octave projection
+- Status: structural observation on confirmed data. Requires experimental verification
+
+### A2A protocol analysis
+- Verified: A2A v1.0 uses JSON-RPC 2.0, contextId, parts array, role (ROLE_USER/ROLE_AGENT)
+- Gemini-generated samples are not A2A-compliant — custom JSON, no JSON-RPC envelope
+- contextId in A2A = natural anchor for CKM session (ckm_session_id already exists in protocol)
+- text content lives in parts[].text — NodeExtractor target field
+- MUTATION/OVERRIDE patterns are not A2A primitives — application-level content
+- Open structural question: minimum viable chatroom requires two agents with structurally opposed objectives in same contextId — analogue of Author 965 and counterpart
+
+---
+
+## v27 — May/June 2026
+
+**IAC external validation complete. HOLDINGs closed. STOP formalized.**
+
+### External validation — fourforums (complete)
+- P5 confirmed: ~50%N attractors in polarized corpus (8 attractors, fourforums gun control)
+- P6 confirmed: 100pp collapse (vs 54pp CreateDebate) — polo sos_dom dominant in both
+- P7 hypothesis: every system with genuine structural tension contains at least one 965-type node (high in/out ratio, C3 frequent, high coercivity). Absence indicates fabricated tension. Falsifiable in any new domain
+- Author 965 (CreateDebate): ratio 455x, C3 in 89% of pairs — confirmed structural instance
+- Author 204 (fourforums): ratio 296x — second confirmed instance
+- QR asymmetry fourforums: holonomy confirmed — path A→B vs B→A same dominant attractor, different amplitude (+0.176 fraction active in asymmetric pairs)
+
+### HOLDINGs H1/H2/H3 — closed analytically
+- H1: mu_AA requires internal nucleus structure analysis — separate future project, does not block COCOThermostat
+- H2: mu_BB analytically derivable as mean(fi·fj) for peripheral pairs — confirmed
+- H3: mu_AB requires A/B nucleus composition — same as H1
+- mu_W global (all pairs) sufficient and correct for beta_c_corpus
+
+### STOP formalized
+- STOP invariant confirmed: fraccion_rec ≥ 1.0 always — W is invariant ground, STOP clears Δ, ground re-emerges
+- Real destruction requires modifying W directly (Hebbian learning) — explicitly avoided
+- A(t) sharp transition: t=30→50 drops from 25→13 attractors; oscillates in degraded band afterward
+- Hypothesis revised: Efectividad_STOP = f(A_pre), not f(D_ckm)
+  - A_pre < A0 → STOP expands landscape (ratio > 1)
+  - A_pre = A0 → STOP neutral (ratio = 1)
+  - alpha* ≈ 0.4 robust in 5/9 cases
+- Sweep D_ckm(t_stop) × alpha: pending (design changed with revised hypothesis)
+
+### Architectural developments
+- delta_collective: MonitorService._Delta vs COCOThermostat._Delta — intentionally divergent
+- Trace goes to Δ, not to W. Hebb on W destroys tension; Hebb on Δ preserves W intact
+- REG_firma_corpus_v1.md created: structural trace certification analogous to notary, not CA
+- Nomenclature: Δ_bias (declared) vs Δ_r (real, from interaction)
+
+---
+
+## v26 — May 2026
+
+**fourforums IAC external validation. P5+P6 confirmed. Author 965 discovered.**
+
+### Pipeline — fourforums_pipeline_v8g
+- fourforums_no_parse_2016_05_18.sql (570MB, 1269 lines, batch INSERTs)
+- Critical bug resolved in v8g: post_id is not globally unique in fourforums — local to each discussion. Composite key (discussion_id, post_id) required
+- Stream processing: parse_sql loads small tables in RAM, streams post/text tables
+- 539K quote rows processed in RAM for W and Delta construction
+- Stance ground truth: topic_stance_votes_1 vs topic_stance_votes_2 from mturk_author_stance
+
+### P5 confirmed — fourforums gun control
+- 8 attractors at N=32 ≈ 50%N (P5: polarized corpus → attractors ~N/2)
+- Attractor diversity collapses with polarization — verified
+
+### P6 confirmed — fourforums gun control
+- Delta predicts directional attractor flow: 100pp collapse (vs 54pp CreateDebate)
+- Polo sos_dom dominant in both corpora independently
+
+### Author 965 structure (CreateDebate)
+- out=1, in=455, ratio 455x. Never initiates. Present in C3 in 89% of pairs
+- 32 tension axes converge on Author 965 (verified projective bundle)
+- Triads with 965: coercivity=0 at up to 50% noise
+- Triads without 965: coercivity=0 at noise=0 (already collapsed)
+
+### neg_pairs_config_fourforums_v8h.json
+- 60 negative + 7 positive T1-T1 pairs
+- W_mixta reconstructible without re-running pipeline from this file
+
+
 ## v25 — May 2026
 
 **All four CKM v4 predictions confirmed. N=32 and N=64 experiments completed.**
@@ -106,26 +224,7 @@
 
 ---
 
-## sesión 32 — Mayo 2026
-
-**Monitor services v2. W mixta operativa. Nomenclatura Δ consolidada.**
-
-- **Nomenclatura Δ consolidada:**
-  - `Δ_bias`: lo que un agente declara sobre sí antes de que el campo lo valide — prematuro, no falso; razón estructural del fallo A2A
-  - `Δ_r`: rechazos acumulados — emergente desde interacción real, anclado en W
-- **`corpus_service.py` v2:** W mixta con pesos negativos por marcadores de oposición (elicitación sin sesgo). W[i,j] ∈ [−1,+1]. Marcadores EN+ES cubriendo debate formal e informal.
-- **`monitor_service.py`:** renombrado `_Delta` → `_Delta_r` y `Delta_sum` → `Delta_r_sum` en toda la base.
-- **`node_extractor.py`:** fix texto vacío — `ValueError: empty vocabulary` al pasar texto sin contenido.
-- **`test_monitor_services.py`:** suite nueva, 7 grupos, 35/35. Cubre NodeExtractor, CorpusService (modo, pesos, persistencia), MonitorService (panel, Δ_r, ratio, stop_signal). Corpus pareados para tests comparativos.
-- **Experimento comparativo W_pos vs W_mixta:** fi ×2.25 y c_S ×2.7 para corpus gun control (7 textos, 3 marcadores).
-- **Estructura de repo:** nuevas carpetas `/services/` y `/experiments/figures/`.
-- **CONVENTIONS.md:** dos principios nuevos:
-  - *Ratio, no diferencia absoluta* — invariante a escala, preserva la tasa de divergencia
-  - *Invariante de código ≠ resultado experimental* — tests testean lo primero, REG registra lo segundo
-
----
-
-## v25 — Mayo 2026
+## v9 — April 2026
 
 **Hopfield over real corpus. 6 attractors mapped.**
 

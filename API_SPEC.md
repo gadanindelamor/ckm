@@ -28,6 +28,17 @@ Detects compatible-but-destructive patterns: patterns with high c(S) that destro
 
 *Note: C2 is suspended during task execution in agent domain. Verified at closure only.*
 
+**Transit protocol — C2 extended:** a node that temporarily reduces c(S) during admission may be a *transit node* rather than a destructive one. The verification network (red_verificacion) is the canonical example: its admission temporarily lowers c(S) but enables access to ATR_733 (score=0.734) which would otherwise be unreachable.
+
+Transit node criterion: c(S) recovers above current − ε within 2 relaxation steps after admission. If it does: admit and retain. If not: reject.
+
+```
+chain verified: red_verificacion → k_core → full_meaning (via Δ)
+Spurious #5 cannot reach the cohesive core without activating red_verif first.
+```
+
+The verification network does not correct toward A∪B — it leads where the system can go from where it is.
+
 ### C3 — Direction Score (M.M criterion)
 
 ```
@@ -97,17 +108,23 @@ Accuracy = 1.000 on N=16 real corpus. Margin = 0.029.
 ### Graph Construction
 
 ```python
-def build_W(corpus_paragraphs, nodes, term_map):
+def build_W(corpus_paragraphs, nodes=None, term_map=None, top_k=20):
     """
     Build co-occurrence weight matrix W from corpus.
     Returns W_base (symmetric, non-negative).
+
+    term_map=None (default): NodeExtractorService.accumulate() extracts
+        nodes and co-occurrences automatically via TF-IDF.
+    term_map provided: classical path — manual term lists per node.
+        nodes must be provided in this case.
+    top_k: number of terms retained by automatic extraction (Path B only).
     """
 
 def build_W_mixta(W_base, negative_pairs, w_neg=0.10):
     """
     Add structural tension: negative weights on opposed pairs.
     Returns W_mixta.
-    Negative pairs verified: see corpus/pairs_neg.json
+    Negative pairs persisted in neg_pairs_config_fourforums_v8h.json.
     """
 ```
 

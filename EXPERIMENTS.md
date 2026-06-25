@@ -6,11 +6,11 @@
 
 ## Corpus
 
-**Source:** CKM Working Reports v2–v26 (gadanin.delamor + Claude Sonnet 4.6, April–May 2026).
+**Source:** CKM Working Reports v2–v28 (gadanin.delamor + Claude Sonnet 4.6, April–June 2026).
 
 **Construction:** paragraph-level co-occurrence. A link W[i,j] exists if nodes i and j appear in the same paragraph. W normalized by total paragraph count.
 
-**W_mixta:** W_base + negative weights (-0.10) on structurally opposed pairs. See `corpus/pairs_neg.json`.
+**W_mixta:** W_base + negative weights (-0.10) on structurally opposed pairs. Negative pairs persisted in `neg_pairs_config_fourforums_v8h.json` (60 neg + 7 pos pairs).
 
 ---
 
@@ -182,7 +182,7 @@ tau_mle = 1 + n / sum(log(s_i / (s_min - 0.5)))
 | 64 | W_base | 1.0 | No | — |
 | 64 | W_mixta | 0.509 | **Yes** | **No** — W_base wins |
 
-**Interpretation:** Ω* interior exists at N=64 (ρ*≈0.509). But W_mixta does not outperform W_base in the zone because 18 negative pairs are diluted in a 2016-pair graph. P4 (structural Ω*) confirmed; P4 (tension advantage) does not scale at N=64 with current negative pair count.
+**Interpretation:** P4 confirmed on W_ckm_corpus_v2 (N=32): Ω* interior exists, W_mixta 13× over W_base. At N=64, Ω* interior exists (ρ*≈0.509) but W_mixta advantage is diluted — 18 negative pairs in a 2016-pair graph. This is a k-core density problem, not a scale problem: peripheral nodes dilute the negative pair signal. Open: extend to other domains (fourforums topics, A2A).
 
 ---
 
@@ -246,152 +246,6 @@ This is the mathematical structure underlying the "frequency of consciousness sp
 
 ---
 
-## Topology Module — H0/H1/H2 and Orientability
-
-**Module:** `ckm_topology_module.py`  
-**First run:** May 2026 on `W_ckm_corpus_v2.json` (N=32)
-
-### Algorithm
-
-Vietoris-Rips simplicial complex from W at threshold θ. Homology over GF(2) via Gaussian elimination on boundary matrices ∂₁, ∂₂. Orientability via BFS over dual triangle graph.
-
-### Bug found and fixed — `check_orientability`
-
-Original code used membership check for edge sign in triangle. Bug: formula ∂(i,j,k) = +(j,k) − (i,k) + (i,j) assigns −1 to edge (i,k), but membership check returned +1.
-
-Fix:
-```python
-if (a,b) == (i,j) or (a,b) == (j,k): return +1
-elif (a,b) == (i,k): return -1
-```
-
-**Verification:**
-
-| Graph | Expected | Before fix | After fix |
-|-------|----------|-----------|-----------|
-| K4 | H0=1 H1=0 H2=1 cilindro | Möbius(6) — false positive | ✓ correct |
-| C5 | H0=1 H1=1 H2=0 cilindro | ✓ correct | ✓ correct |
-
-### Results — CKM corpus (N=32)
-
-| θ | E | T | H0 | H1 | H2* | Orientability |
-|---|---|---|----|----|-----|---------------|
-| 0.0002 | 234 | 1048 | 1 | 0 | 845 | cilindro |
-| 0.0010 | 200 | 904 | 3 | 0 | 733 | cilindro |
-| 0.0050 | 112 | 435 | 12 | 0 | 343 | cilindro |
-| 0.0100 | 92 | 306 | 17 | 0 | 229 | cilindro |
-| 0.0200 | 34 | 38 | 20 | 0 | 16 | cilindro |
-
-*H2 approximate — corpus has 3,378 4-cliques, ∂₃ ≠ 0. True H2 ≤ values shown.
-
-**H0=1:** corpus is a single connected component at all thresholds.  
-**H1=0:** no independent cycles — tree-like complex, no closed self-sustaining loops.  
-**Cilindro:** no Möbius torsion. Structural tensions are resolvable divergences (R12 not triggered by full corpus).  
-**H2≈845:** large cavity count — candidate for missing intermediate knowledge. Exact value open.
-
-### Open
-
-- H2 exact: build ∂₃ from 3,378 4-cliques — feasible.
-- R12 with real VPs: compare clusters C1/C2/C3/C4 as VP subgraphs.
-- Möbius synthetic test: verify fixed algorithm detects torsion correctly.
-
-**Run evidence:** `REG_topology_ckm_corpus_v2_fixed.json`
-
----
-
-## P5: Polarized Corpus — Attractor Collapse
-
-**Corpus:** fourforums gun control. 905 discussions, 304 authors with ground-truth stance (T0=pro_control, T1=anti_control via MTurk votes).
-
-**Protocol:** build W from cross-stance quote interactions. Run Hopfield relaxation from random initial states. Count distinct attractors and measure mean active fraction.
-
-**Results:**
-
-| Metric | Value |
-|--------|-------|
-| Distinct attractors | 8 |
-| Mean active fraction | ~50% N |
-| Saturated attractor | absent |
-| State diversity | collapsed |
-
-**Interpretation:** polarized corpus produces exactly the predicted collapse — few attractors, all near N/2. The debate structure constrains the attractor landscape to two dominant basins. P5 confirmed.
-
----
-
-## P6: Delta Predicts Directional Attractor Flow
-
-**Protocol:** compute Delta[T0→T1] and Delta[T1→T0] from quote initiation asymmetry. Identify dominant stance (sos_dom = higher sustained tension, lower out-degree). Measure collapse of mixed attractor states under directional perturbation.
-
-**Results — fourforums gun control (v26):**
-
-| Metric | fourforums | CreateDebate | Note |
-|--------|-----------|--------------|------|
-| Delta[0,1] | 0.602 | — | T1 initiates toward T0 |
-| Delta[1,0] | 1.000 | — | T0 initiates toward T1 (normalized) |
-| sos_dom | T0 51.4% | sos_dom 55.8% | Pro-control sustains tension |
-| atk_dom | T1 47.8% | atk_dom 44.2% | Anti-control initiates |
-| Mixed state collapse | **100.0 pp** | 54.0 pp | Scenario A+ |
-
-**Key finding:** directional role structure (sustainer/attacker) is a property of the gun control domain, not of a specific corpus. Preserved across two independent datasets with different methodologies (CreateDebate: agree/disagree labels; fourforums: quote network). P6 confirmed — scenario A+.
-
----
-
-## P7: Type-965 Node as Condition for Genuine Structural Tension
-
-**Hypothesis (falsifiable):** every system with genuine structural tension has at least one node with extreme in/out asymmetry (high in-degree, near-zero out-degree, stance-defined). Its absence indicates fabricated tension.
-
-**Results — CreateDebate gun control:**
-
-| Author | in | out | ratio | Role |
-|--------|-----|-----|-------|------|
-| 965 | 455 | 1 | 455× | pure sustainer |
-
-**Results — fourforums gun control (v26):**
-
-| Author | Stance | in | out | ratio | Role |
-|--------|--------|----|-----|-------|------|
-| 204 | T0 (pro-control) | 148 | 0 | 296× | pure sustainer |
-| 435 | T0 | 66 | 0 | 132× | pure sustainer |
-| 2204 | T0 | 37 | 0 | 74× | pure sustainer |
-| 595 | T1 (anti-control) | 24 | 0 | 48× | pure sustainer |
-| 40 | T1 | 13 | 0 | 26× | pure sustainer |
-
-**Key finding:** P7 confirmed in both corpora. Notable difference: fourforums shows pure sustainers in *both* stances — higher symmetry than CreateDebate. The type-965 pattern is not stance-specific; it is a structural role in the tension architecture.
-
-**Open:** falsification in other IAC domains (abortion, climate, evolution).
-
----
-
-## IAC External Validation — fourforums Pipeline
-
-**Dataset:** IAC v2, fourforums, gun control (topic_id=9). 570MB SQL dump, 1269-line batch INSERTs.
-
-**Pipeline:** `experiments/fourforums_pipeline_v8g.py`
-
-**Schema used:**
-
-| Table | Rows | Purpose |
-|-------|------|---------|
-| author | 3,453 | Author reference |
-| discussion | 4,632 | 905 gun control discussions |
-| mturk_author_stance | 5,598 | Stance ground truth (MTurk votes) |
-| quote | 539,658 | W and Delta construction |
-| post | 414,453 | post→author mapping (streaming) |
-
-**Critical fix (v8g):** `post_id` is not globally unique in fourforums — it resets per discussion. Composite key `(discussion_id, post_id)` required for all lookups. Fix raised gun control posts mapped from 468 to 35,966.
-
-**Run evidence:** `logs/run_v8g.log`
-
-**Outputs:**
-- `registers/REG_pairs_fourforums_guncontrol_v1.md`
-- `registers/REG_p6_fourforums_guncontrol_v1.md`
-- `registers/REG_c6c_comparison_guncontrol_v1.md`
-- `registers/REG_stance_fourforums_v1.md`
-
-**Limitation:** W is symmetric in fourforums (quote table has no agree/disagree labels). C6c asymmetry metric = 0 — not a structural absence, but a measurement constraint. Real asymmetry is in Delta. Requires `mturk_2010_qr_task1_worker_response` for labeled W.
-
----
-
 ## Reproducibility
 
 All experiments reproducible with:
@@ -399,7 +253,6 @@ All experiments reproducible with:
 numpy.random.seed(42)
 ```
 
-Corpus file: `corpus/W_ckm_corpus_v2.json` (node list + weights).  
-Weight construction: `experiments/build_corpus_W.py`.  
-Full experiment scripts: `experiments/exp_p1_histeresis.py` through `exp_n64_main.py`.  
-IAC pipeline: `experiments/fourforums_pipeline_v8g.py`. Run log: `logs/run_v8g.log`.
+Corpus file: `W_ckm_corpus_v2.json` (N=32, 5145 paragraphs, sha256: d12b2b…).  
+Weight construction: `corpus_service.py` (CorpusService) or `CKMGraph.from_corpus()` (Path B: automatic via NodeExtractorService).  
+Full experiment scripts: `experiments/exp_p1_histeresis.py` through `exp_n64_main.py`.

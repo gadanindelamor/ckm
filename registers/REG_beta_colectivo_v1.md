@@ -54,4 +54,45 @@ Pendiente: mapear ρ* → β_c_corpus con función explícita.
 
 ---
 
+---
+
+## Traza de W — puntos de invalidación de β_c_corpus
+
+*Agregado Jun 30 2026*
+
+### Problema
+
+β_c_corpus es estimado, no derivable. Su cálculo requiere correr A(ρ) sobre un W específico e identificar ρ*. Si W cambia — por crecimiento del corpus, por adición de nodos, por recalibración de pesos en el proceso verificador continuo — el β_c_corpus calculado previamente queda stale sin que nada lo señale.
+
+El corpus es dinámico y compartido. W no es estático entre instancias del thermostat.
+
+### Decisión
+
+No se versiona W como objeto entero. Se registran **puntos en la traza de W** — marcas livianas que señalan cuándo W cambió lo suficiente como para invalidar β_c_corpus vigente.
+
+Cada punto de traza contiene mínimo:
+- Referencia al evento causal (REG o circunstancia que produjo el cambio)
+- `corpus_size` en ese momento
+- Estado de β_c_corpus: vigente → invalidado
+
+### Qué hace la marca
+
+No reconstruye β_c_corpus. No lo recalcula automáticamente.
+
+Señala: *el valor que tenés ya no corresponde al W actual.*
+
+El recálculo es un evento posterior, separado, ejecutado cuando alguien lo requiere. La marca solo declara la necesidad.
+
+### Por qué no es derivable
+
+Corpus dinámico + compartido → W cambia entre instancias → ρ* puede estar en otro lugar → no hay función que infiera el nuevo β_c_corpus desde el anterior más un delta. Requiere estimación completa cada vez.
+
+### Relación con STOP
+
+STOP opera sobre Δ. Las marcas en la traza de W operan sobre W. Son planos que no se cruzan. Un STOP no agrega ni elimina marcas en la traza de W. Un cambio real de W no dispara STOP.
+
+La distinción es operacional. W y Δ son ontológicamente la misma cosa.
+
+---
+
 *β_collective observable desde Jun 2026 — regulación térmica: próxima etapa*

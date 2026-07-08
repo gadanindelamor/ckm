@@ -312,7 +312,7 @@ if __name__ == "__main__":
     print(f"\nT4 OK — beta_status: {beta}")
 
     # T5 — _Delta diverge libremente sin STOP
-    d_monitor  = monitor2._Delta.sum()
+    d_monitor  = monitor2._Delta_r.sum()
     d_thermo   = th.delta_state().sum()
     print(f"\nT5 Delta — monitor={d_monitor:.4f}  thermostat={d_thermo:.4f}")
     print(f"   divergen={'SI' if abs(d_monitor - d_thermo) > 1e-6 else 'NO (ambos en 0)'}")

@@ -19,6 +19,7 @@ from typing import List, Optional
 
 import numpy as np
 from node_extractor import NodeExtractorService
+from w_version import WVersionManager
 
 
 # ---------------------------------------------------------------------------
@@ -56,9 +57,10 @@ class CorpusService:
         self._extractor   = NodeExtractorService(top_k=top_k, ngram_max=ngram_max)
 
         # estado
-        self._texts : List[str]          = []
-        self._nodes : List[str]          = []
-        self._W     : Optional[np.ndarray] = None
+        self._texts     : List[str]            = []
+        self._nodes     : List[str]            = []
+        self._W         : Optional[np.ndarray] = None
+        self._w_versions: WVersionManager      = WVersionManager()
 
         if self.storage_path.exists() and self.storage_path.stat().st_size > 0:
             self._load()
@@ -85,6 +87,14 @@ class CorpusService:
     def get_W(self) -> Optional[np.ndarray]:
         return self._W.copy() if self._W is not None else None
 
+    def w_sha(self) -> Optional[str]:
+        """sha256 de W en el momento actual. Para Firma_CKM."""
+        return self._w_versions.current_sha()
+
+    def w_changed_since(self, sha: str) -> bool:
+        """True si W cambió desde la versión sha. Señal de invalidación beta_c_corpus."""
+        return self._w_versions.changed_since(sha)
+
     def get_nodes(self) -> List[str]:
         return list(self._nodes)
 
@@ -103,7 +113,8 @@ class CorpusService:
             "min_texts"  : self.min_texts,
             "W_shape"    : list(W.shape) if W is not None else None,
             "W_sparsity" : self._sparsity() if W is not None else None,
-            "W_neg_frac" : neg_frac,   # fracción de pesos negativos en W
+            "W_neg_frac" : neg_frac,
+            "w_sha"      : self._w_versions.current_sha(),   # Firma_CKM
         }
 
     # ------------------------------------------------------------------
@@ -165,6 +176,7 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         self._nodes = nodes
         self._W     = W
+        self._w_versions.register(W, len(self._texts), causal_event="rebuild")
 
     def _sparsity(self) -> float:
         if self._W is None:
@@ -179,9 +191,10 @@ class CorpusService:
 
     def save(self) -> None:
         state = {
-            "texts" : self._texts,
-            "nodes" : self._nodes,
-            "W"     : self._W.tolist() if self._W is not None else None,
+            "texts"           : self._texts,
+            "nodes"           : self._nodes,
+            "W"               : self._W.tolist() if self._W is not None else None,
+            "w_version_history": self._w_versions.to_list(),
         }
         self.storage_path.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
@@ -191,6 +204,7 @@ class CorpusService:
         self._nodes = state.get("nodes", [])
         raw_W       = state.get("W")
         self._W     = np.array(raw_W) if raw_W is not None else None
+        self._w_versions.from_list(state.get("w_version_history", []))
 
 
 # ---------------------------------------------------------------------------

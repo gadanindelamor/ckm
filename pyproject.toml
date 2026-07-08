@@ -40,9 +40,9 @@ viz = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/gadanin/ckm"
-Repository = "https://github.com/gadanin/ckm"
-Documentation = "https://github.com/gadanin/ckm/blob/main/README.md"
+Homepage = "https://github.com/gadanindelamor"
+Repository = "https://github.com/gadanindelamor/ckm"
+Documentation = "https://github.com/gadanindelamor/ckm/blob/main/README.md"
 
 [tool.setuptools.packages.find]
 where = ["."]

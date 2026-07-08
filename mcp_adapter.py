@@ -44,12 +44,13 @@ class AdmissionResult:
 
 # ─── CKM Adapter ─────────────────────────────────────────────────────────────
 
-class CKMAdapter:
+class CKMAdapterMCPCapabilities:
     """
     CKM layer over an MCP agent graph.
+    Nodes = declared MCP capabilities, not concepts.
 
     Usage:
-        adapter = CKMAdapter(capabilities, config)
+        adapter = CKMAdapterMCPCapabilities(capabilities, config)
         result = adapter.evaluate("Gmail:search_threads", active_caps)
         if result:
             # capability admitted
@@ -235,3 +236,6 @@ class CKMAdapter:
             for cap in self.capabilities
             if cap.name not in active_capabilities
         }
+
+# Backward compatibility alias
+CKMAdapter = CKMAdapterMCPCapabilities

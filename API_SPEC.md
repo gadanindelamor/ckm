@@ -219,7 +219,7 @@ def critical_zone(W, k=2, thresholds=None):
 ## MCP Adapter
 
 ```python
-class CKMAdapter:
+class CKMAdapterMCPCapabilities:
     """
     CKM layer over MCP agent graph.
     Nodes = declared capabilities, not concepts.

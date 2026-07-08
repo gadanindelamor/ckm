@@ -1,6 +1,6 @@
 # CONVENTIONS.md — Gestion de Archivos CKM
 
-*Mayo 2026*
+*Mayo 2026 — actualizado Jul 2026*
 
 ---
 
@@ -58,47 +58,38 @@ No crear REG de reconstrucciones desde memoria — validez limitada.
 
 ---
 
+## Repo git — que va y que no va a HEAD
+
+### Va a HEAD (git add / commit / push)
+- services/        — codigo de servicios
+- experiments/     — scripts y resultados JSON
+- tests/           — suites de tests
+- registers/       — REG_*.md
+- docs/*.md        — informes en formato markdown (v29, v30, etc.)
+- process/         — datos de proceso
+
+### NO va a HEAD — excluido en .gitignore
+- docs/*.docx      — corpus de informes de trabajo (v1-v28)
+                     Razon: binarios grandes, regenerables desde fuente
+                     Viven en el filesystem local — Claude Code los lee ahi
+- logs/            — logs de ejecucion
+- *.log            — cualquier log
+
+Regla: si .gitignore lo rechaza, no usar -f para forzarlo.
+Los .docx son corpus, no codigo. No pertenecen al repo.
+
+---
+
 ## Inventario REG actual
 
 | Archivo | Contenido | Estado |
 |---------|-----------|--------|
 | IAC_extraccion_oposicion.md | Extraccion CreateDebate gun control | en proyecto |
 | REG_pairs_createdbate_guncontrol_v1.md | Pares C1-C5 CreateDebate gun control | en proyecto |
-| REG_pairs_fourforums_guncontrol_v1.md | Pares C1-C5 fourforums gun control | pendiente C6c |
-| REG_c6c_comparison_guncontrol_v1.md | Comparacion estructural C6c | pendiente C6c |
+| REG_pairs_fourforums_guncontrol_v1.md | Pares C1-C5 fourforums gun control | en proyecto |
+| REG_c6c_comparison_guncontrol_v1.md | Comparacion estructural C6c | en proyecto |
 | PROTOCOLO_ELICITACION_v2.md | Criterios C1-C6 | en proyecto |
 | CONVENTIONS.md | Este archivo | en proyecto |
-
----
-
-## Principio de nombres unicos — sin duplicados entre carpetas
-
-**Dos archivos de codigo del proyecto no deben llevar el mismo nombre.**
-
-Un archivo con el mismo nombre en dos carpetas distintas es una fuente
-documentada de confusion: agentes, instancias de Claude y el propio autor
-pueden leer la version incorrecta sin saberlo. Verificado empiricamente
-en sesion Mayo 2026.
-
-Convencion de sufijo para versiones de desarrollo:
-
-| Carpeta | Sufijo | Ejemplo |
-|---------|--------|---------|
-| `services/` | sin sufijo — version estable | `fabrication_service.py` |
-| `experiments/` | `_dev` — version de trabajo | `fabrication_service_dev.py` |
-
-Renombramientos aplicados (1 jun. 2026):
-
-| Nombre anterior | Ubicacion | Nombre actual |
-|-----------------|-----------|---------------|
-| `ckm_monitor.py` | `services/` | `fabrication_service.py` |
-| `ckm_monitor.py` | `experiments/` | `fabrication_service_dev.py` |
-| `monitor_service.py` | `experiments/` | `monitor_service_dev.py` |
-| `corpus_service.py` | `experiments/` | `corpus_service_dev.py` |
-| `node_extractor.py` | `experiments/` | `node_extractor_dev.py` |
-
-Regla: al crear un archivo nuevo en `experiments/` que tenga un
-homologo en `services/`, agregar sufijo `_dev` desde el inicio.
 
 ---
 

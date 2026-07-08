@@ -1,0 +1,710 @@
+{
+  "meta": {
+    "corpus": "fourforums",
+    "topic": "gun control",
+    "version": "v7",
+    "pipeline": "C1-C5 primario → C7+C8 secundario",
+    "C1_agree_threshold": 0.4,
+    "C7_agree_threshold": 0.35,
+    "C2_C8_min": 2,
+    "discussions_gun": 905,
+    "hilos_C1": 262,
+    "pares_C1_C2": 169,
+    "pares_C4_C5": 137,
+    "pares_C3": 137,
+    "pares_C7": 36,
+    "pares_C8_final": 36
+  },
+  "pares_finales": [
+    {
+      "a": "53",
+      "b": "682",
+      "a_cita_b": 664,
+      "b_cita_a": 441,
+      "total": 1105,
+      "asimetria": 0.202,
+      "c3_terceros": [
+        "132",
+        "965",
+        "1034"
+      ],
+      "in_degree": [
+        3357,
+        3450
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "150",
+      "b": "501",
+      "a_cita_b": 478,
+      "b_cita_a": 588,
+      "total": 1066,
+      "asimetria": -0.103,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        4895,
+        1748
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "751",
+      "b": "1034",
+      "a_cita_b": 521,
+      "b_cita_a": 314,
+      "total": 835,
+      "asimetria": 0.248,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        3249,
+        3321
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "555",
+      "b": "751",
+      "a_cita_b": 397,
+      "b_cita_a": 125,
+      "total": 522,
+      "asimetria": 0.521,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        2776,
+        3249
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "150",
+      "b": "1034",
+      "a_cita_b": 287,
+      "b_cita_a": 231,
+      "total": 518,
+      "asimetria": 0.108,
+      "c3_terceros": [
+        "965",
+        "3351",
+        "1443"
+      ],
+      "in_degree": [
+        4895,
+        3321
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "555",
+      "b": "1034",
+      "a_cita_b": 160,
+      "b_cita_a": 318,
+      "total": 478,
+      "asimetria": -0.331,
+      "c3_terceros": [
+        "965",
+        "150",
+        "3351"
+      ],
+      "in_degree": [
+        2776,
+        3321
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "150",
+      "b": "555",
+      "a_cita_b": 316,
+      "b_cita_a": 140,
+      "total": 456,
+      "asimetria": 0.386,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "3351"
+      ],
+      "in_degree": [
+        4895,
+        2776
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "150",
+      "b": "381",
+      "a_cita_b": 214,
+      "b_cita_a": 226,
+      "total": 440,
+      "asimetria": -0.027,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "3351"
+      ],
+      "in_degree": [
+        4895,
+        1656
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "751",
+      "b": "809",
+      "a_cita_b": 146,
+      "b_cita_a": 202,
+      "total": 348,
+      "asimetria": -0.161,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        3249,
+        1928
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "53",
+      "b": "501",
+      "a_cita_b": 148,
+      "b_cita_a": 183,
+      "total": 331,
+      "asimetria": -0.106,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        3357,
+        1748
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "381",
+      "b": "555",
+      "a_cita_b": 144,
+      "b_cita_a": 179,
+      "total": 323,
+      "asimetria": -0.108,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "150"
+      ],
+      "in_degree": [
+        1656,
+        2776
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "751",
+      "b": "3452",
+      "a_cita_b": 239,
+      "b_cita_a": 71,
+      "total": 310,
+      "asimetria": 0.542,
+      "c3_terceros": [
+        "965",
+        "680",
+        "809"
+      ],
+      "in_degree": [
+        3249,
+        1343
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "809",
+      "b": "3452",
+      "a_cita_b": 15,
+      "b_cita_a": 259,
+      "total": 274,
+      "asimetria": -0.891,
+      "c3_terceros": [
+        "965",
+        "680",
+        "682"
+      ],
+      "in_degree": [
+        1928,
+        1343
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "53",
+      "b": "679",
+      "a_cita_b": 137,
+      "b_cita_a": 132,
+      "total": 269,
+      "asimetria": 0.019,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "37"
+      ],
+      "in_degree": [
+        3357,
+        943
+      ],
+      "mturk_min_agree": 0.286
+    },
+    {
+      "a": "115",
+      "b": "150",
+      "a_cita_b": 112,
+      "b_cita_a": 131,
+      "total": 243,
+      "asimetria": -0.078,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "680"
+      ],
+      "in_degree": [
+        683,
+        4895
+      ],
+      "mturk_min_agree": 0.2
+    },
+    {
+      "a": "679",
+      "b": "682",
+      "a_cita_b": 124,
+      "b_cita_a": 107,
+      "total": 231,
+      "asimetria": 0.074,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "37"
+      ],
+      "in_degree": [
+        943,
+        3450
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "809",
+      "b": "1034",
+      "a_cita_b": 109,
+      "b_cita_a": 107,
+      "total": 216,
+      "asimetria": 0.009,
+      "c3_terceros": [
+        "965",
+        "150",
+        "3351"
+      ],
+      "in_degree": [
+        1928,
+        3321
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "150",
+      "b": "751",
+      "a_cita_b": 197,
+      "b_cita_a": 4,
+      "total": 201,
+      "asimetria": 0.96,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        4895,
+        3249
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "1034",
+      "b": "3452",
+      "a_cita_b": 144,
+      "b_cita_a": 48,
+      "total": 192,
+      "asimetria": 0.5,
+      "c3_terceros": [
+        "965",
+        "680",
+        "809"
+      ],
+      "in_degree": [
+        3321,
+        1343
+      ],
+      "mturk_min_agree": 0.167
+    },
+    {
+      "a": "381",
+      "b": "751",
+      "a_cita_b": 83,
+      "b_cita_a": 105,
+      "total": 188,
+      "asimetria": -0.117,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        1656,
+        3249
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "809",
+      "b": "965",
+      "a_cita_b": 154,
+      "b_cita_a": 1,
+      "total": 155,
+      "asimetria": 0.987,
+      "c3_terceros": [
+        "1034",
+        "150",
+        "3351"
+      ],
+      "in_degree": [
+        1928,
+        1316
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "555",
+      "b": "809",
+      "a_cita_b": 103,
+      "b_cita_a": 18,
+      "total": 121,
+      "asimetria": 0.702,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "150"
+      ],
+      "in_degree": [
+        2776,
+        1928
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "555",
+      "b": "680",
+      "a_cita_b": 66,
+      "b_cita_a": 51,
+      "total": 117,
+      "asimetria": 0.128,
+      "c3_terceros": [
+        "965",
+        "37",
+        "679"
+      ],
+      "in_degree": [
+        2776,
+        2068
+      ],
+      "mturk_min_agree": 0.167
+    },
+    {
+      "a": "965",
+      "b": "1034",
+      "a_cita_b": 0,
+      "b_cita_a": 111,
+      "total": 111,
+      "asimetria": -1.0,
+      "c3_terceros": [
+        "150",
+        "3351",
+        "1443"
+      ],
+      "in_degree": [
+        1316,
+        3321
+      ],
+      "mturk_min_agree": 0.143
+    },
+    {
+      "a": "965",
+      "b": "3452",
+      "a_cita_b": 0,
+      "b_cita_a": 103,
+      "total": 103,
+      "asimetria": -1.0,
+      "c3_terceros": [
+        "680",
+        "809",
+        "1034"
+      ],
+      "in_degree": [
+        1316,
+        1343
+      ],
+      "mturk_min_agree": 0.167
+    },
+    {
+      "a": "115",
+      "b": "1034",
+      "a_cita_b": 98,
+      "b_cita_a": 0,
+      "total": 98,
+      "asimetria": 1.0,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "680"
+      ],
+      "in_degree": [
+        683,
+        3321
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "555",
+      "b": "3452",
+      "a_cita_b": 89,
+      "b_cita_a": 7,
+      "total": 96,
+      "asimetria": 0.854,
+      "c3_terceros": [
+        "965",
+        "680",
+        "809"
+      ],
+      "in_degree": [
+        2776,
+        1343
+      ],
+      "mturk_min_agree": 0
+    },
+    {
+      "a": "751",
+      "b": "965",
+      "a_cita_b": 87,
+      "b_cita_a": 0,
+      "total": 87,
+      "asimetria": 1.0,
+      "c3_terceros": [
+        "1443",
+        "3367",
+        "680"
+      ],
+      "in_degree": [
+        3249,
+        1316
+      ],
+      "mturk_min_agree": 0.143
+    },
+    {
+      "a": "53",
+      "b": "381",
+      "a_cita_b": 57,
+      "b_cita_a": 27,
+      "total": 84,
+      "asimetria": 0.357,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "150"
+      ],
+      "in_degree": [
+        3357,
+        1656
+      ],
+      "mturk_min_agree": 0.2
+    },
+    {
+      "a": "381",
+      "b": "501",
+      "a_cita_b": 50,
+      "b_cita_a": 4,
+      "total": 54,
+      "asimetria": 0.852,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "3367"
+      ],
+      "in_degree": [
+        1656,
+        1748
+      ],
+      "mturk_min_agree": 0.2
+    },
+    {
+      "a": "37",
+      "b": "679",
+      "a_cita_b": 15,
+      "b_cita_a": 36,
+      "total": 51,
+      "asimetria": -0.412,
+      "c3_terceros": [
+        "965",
+        "680",
+        "809"
+      ],
+      "in_degree": [
+        224,
+        943
+      ],
+      "mturk_min_agree": 0.167
+    },
+    {
+      "a": "115",
+      "b": "555",
+      "a_cita_b": 40,
+      "b_cita_a": 0,
+      "total": 40,
+      "asimetria": 1.0,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "680"
+      ],
+      "in_degree": [
+        683,
+        2776
+      ],
+      "mturk_min_agree": 0.2
+    },
+    {
+      "a": "1034",
+      "b": "3351",
+      "a_cita_b": 26,
+      "b_cita_a": 12,
+      "total": 38,
+      "asimetria": 0.368,
+      "c3_terceros": [
+        "1443",
+        "965",
+        "679"
+      ],
+      "in_degree": [
+        3321,
+        355
+      ],
+      "mturk_min_agree": 0.143
+    },
+    {
+      "a": "53",
+      "b": "809",
+      "a_cita_b": 5,
+      "b_cita_a": 32,
+      "total": 37,
+      "asimetria": -0.73,
+      "c3_terceros": [
+        "965",
+        "1034",
+        "150"
+      ],
+      "in_degree": [
+        3357,
+        1928
+      ],
+      "mturk_min_agree": 0.2
+    },
+    {
+      "a": "53",
+      "b": "1443",
+      "a_cita_b": 8,
+      "b_cita_a": 5,
+      "total": 13,
+      "asimetria": 0.231,
+      "c3_terceros": [
+        "965",
+        "679",
+        "3367"
+      ],
+      "in_degree": [
+        3357,
+        264
+      ],
+      "mturk_min_agree": 0.167
+    },
+    {
+      "a": "381",
+      "b": "680",
+      "a_cita_b": 2,
+      "b_cita_a": 4,
+      "total": 6,
+      "asimetria": -0.333,
+      "c3_terceros": [
+        "37",
+        "965",
+        "679"
+      ],
+      "in_degree": [
+        1656,
+        2068
+      ],
+      "mturk_min_agree": 0
+    }
+  ],
+  "top_iniciadores": [
+    {
+      "author": "555",
+      "pares_como_iniciador": 5
+    },
+    {
+      "author": "53",
+      "pares_como_iniciador": 4
+    },
+    {
+      "author": "751",
+      "pares_como_iniciador": 4
+    },
+    {
+      "author": "809",
+      "pares_como_iniciador": 4
+    },
+    {
+      "author": "150",
+      "pares_como_iniciador": 4
+    },
+    {
+      "author": "1034",
+      "pares_como_iniciador": 4
+    },
+    {
+      "author": "115",
+      "pares_como_iniciador": 2
+    },
+    {
+      "author": "381",
+      "pares_como_iniciador": 2
+    },
+    {
+      "author": "3452",
+      "pares_como_iniciador": 2
+    },
+    {
+      "author": "679",
+      "pares_como_iniciador": 2
+    }
+  ]
+}

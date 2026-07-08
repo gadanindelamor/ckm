@@ -1,0 +1,22 @@
+{
+  "corpus": "CKM_v2-v25",
+  "N": 32,
+  "neg_pairs": 3,
+  "seed": 42,
+  "P1": {
+    "result": "CONFIRMADA",
+    "detail": "max_Δc(S)=0.000079 min_p=0.0459"
+  },
+  "P2": {
+    "result": "NO_CONFIRMADA",
+    "detail": "[(0.002, np.float64(5.416321156196489), np.False_), (0.005, np.float64(14.493824900858227), np.False_), (0.007, np.float64(12.49274996669899), np.False_), (0.01, np.float64(4.476059496782208), np.False_)]"
+  },
+  "P3": {
+    "result": "CONFIRMADA",
+    "detail": "rem=2.245 add=2.130 p=0.0016"
+  },
+  "P4": {
+    "result": "NO_CONFIRMADA",
+    "detail": "rho_base=1.00 rho_mixta=1.00 mixta_wins=False"
+  }
+}

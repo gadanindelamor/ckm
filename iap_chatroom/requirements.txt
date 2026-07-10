@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+gradio>=4.0
+websockets
+python-dotenv
+anthropic
+openai
+google-genai
+groq

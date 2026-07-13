@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+fastmcp>=2.0
 gradio>=4.0
 websockets
 python-dotenv

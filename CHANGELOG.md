@@ -2,6 +2,93 @@
 
 ---
 
+## v30 — July 2026
+
+**IAP MCP Server. Demo C. W versionado. Firma_CKM. A2A integration analysis.**
+
+### IAP Chatroom Demo C (iap_chatroom/)
+- FastAPI + Gradio, 3 devices (2 AI + 1 Human), no turn structure
+- CorpusService starts empty — W emerges from LNH interaction
+- CKMMonitor passive observer, accumulates on every message (alpha trigger)
+- First empirical CKM group field observation: D_ckm = −0.2222 (NOMINAL), n_nodes=32, n_agentes=3
+- Firma_CKM returning all 6 canonical fields operational
+- Bug fixed: uvicorn.run(app) not "server:app" string — prevented double callback registration
+
+### IAP MCP Server (iap_chatroom/mcp_server.py)
+- 6 MCP tools: join_channel, send_message, get_messages, get_monitor_state, get_firma, leave_channel
+- FastMCP mounted on existing FastAPI at /mcp — REST /api/* and Gradio /ui/ coexist without regression
+- Critical constraint: FastAPI must receive mcp_app.lifespan at construction — mount order is mandatory (violation produces RuntimeError: Task group is not initialized at runtime)
+- test_mcp_client.py: 6/6 OK against real server (port 7860, no mocks)
+- Known gap: mcp_server.py singletons are separate from server.py singletons — cross-layer state sharing pending iteration B
+
+### W Versionado (services/w_version.py)
+- WVersionManager + WTracePoint: lightweight version history, not W copies
+- API: corpus.w_sha(), corpus.w_changed_since(sha), corpus.status()["w_sha"]
+- Was the blocking dependency for Firma_CKM
+- 9/9 tests passing
+
+### Firma_CKM (services/firma_ckm.py)
+- FirmaService + Firma dataclass
+- 6 canonical fields: sha256(W_momento), D_ckm(t), temp_signal, n_agentes, timestamp, sha256(Delta_r_acumulado)
+- verificar() checks w_sha against WVersionManager history — structural evidence, not delegated trust
+- MENTIRIIS.MORIERIS: fabricated w_sha rejected as structural consequence
+- 10/10 tests passing
+
+### A2A protocol integration analysis
+- A2A v1.0 verified: JSON-RPC 2.0, contextId, parts[], role (ROLE_USER/ROLE_AGENT)
+- Gemini-generated samples non-compliant — discarded
+- MUTATION_DIRECTIVE, CONTEXT_OVERRIDE, MUTATION_DISPATCH: not in A2A v1.0 spec — discarded
+- Architecture clarified: A2A operates orchestrator→agent; MCP operates agent→IAP
+- IAP is transparent to A2A by design — no interception required
+- S3 corrected: STOP operates on Δ_r within CKM stack, not on A2A lifecycle
+- contextId → ckm_session_id: direct mapping, no invention required
+- Old interception model (mcp_adapter diagram) superseded — agents publish LNH via send_message deliberately
+
+### CorpusService — definitions closed
+- CorpusService operates exclusively on Human Natural Language Text (argumentative, conversational)
+- Condition of IAP participation: device must have "Conversational Interaction in Human Natural Language Text" skill
+- CKM operates over A2A/MCP — does not depend on either
+
+---
+
+## v29 — June 2026
+
+**term_map dissolved. Protocol Sonnet/Code formalized. P4 N=64 interpretation. C6c asymmetry.**
+
+### term_map — phantom dissolved
+- term_map never existed as a project process — no construction, no loss
+- References to "reconstruct term_map" were traces from prior instances operating on false assumption
+- NodeExtractorService.accumulate() via TF-IDF was already the solution
+- from_corpus() modified: term_map=None default
+  - Path A: explicit term_map (prior behavior intact)
+  - Path B: term_map=None → NodeExtractorService.accumulate() auto-extracts nodes and co-occurrences
+- Import of NodeExtractorService lazy inside method — no module-level dependency in core
+
+### Documentation corrected
+- README: P4 Confirmed (was Partial). Open Gaps corrected. from_corpus() Path A/B documented
+- API_SPEC: build_W signature updated — term_map=None default
+- EXPERIMENTS: P4 interpretation as k-core density, not scale. Corpus references corrected to W_ckm_corpus_v2.json
+
+### P4 N=64 — interpretation confirmed
+- Weakness at N=64 is dilution (k*=54, ratio=0.0268), not scaling failure
+- 60 real fourforums pairs (ratio=0.0298) fall above threshold
+- P4 confirmed as density phenomenon — dilution is structural, not architectural
+
+### Protocol Sonnet/Code — formalized
+- REG_protocolo_sonnet_code_v1.md: Sonnet prepares atomic tasks, Code executes, delamor mediates
+- Roles: Sonnet (context + design decisions), Code (execution on real repo), delamor (authority + channel)
+- Task format requirements: atomic, explicit success criterion, no assumed context
+
+### C6c asymmetry scalar — fourforums gun control
+- C6c = 0.4099 (W_asim_v8h.json)
+- T0 (pro-control) cites T1 (anti-control) at 2.18× frequency with comparable intensity
+- T1 is 3.05× more internally cohesive
+- Author 204 = SOSTENEDORpuro in raw citation network (ratio=296)
+- Author 148 = high-coercivity target in disagreement-weighted network
+- First valid directional asymmetry scalar for fourforums (replaces invalid N=7 result)
+
+---
+
 ## v28 — June 2026
 
 **IAP concept. COCOThermostat 43/43. Firma del Corpus. Octava observation.**

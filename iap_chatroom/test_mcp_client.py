@@ -35,7 +35,7 @@ async def test() -> None:
         assert any(m["device_id"] == "test_agent" for m in r3.data)
 
         r4 = await c.call_tool("get_monitor_state", {})
-        assert "D_ckm" in r4.data
+        assert "D_ckm" in r4.data and "corpus_status" in r4.data
 
         await c.call_tool("get_firma", {})
         # puede ser None si corpus < min_texts — ok igual

@@ -20,7 +20,7 @@ from iap_chatroom.device_manager import DeviceManager
 
 channel = ChatChannel()
 device_manager = DeviceManager()
-ckm_monitor = CKMMonitor()
+ckm_monitor = CKMMonitor()  # min_texts=3 (default actual del umbral rebuild(W))
 
 mcp = FastMCP("iap-chatroom")
 
@@ -79,7 +79,9 @@ async def get_messages(since: Optional[float] = None) -> list[dict]:
 
 @mcp.tool
 async def get_monitor_state() -> dict:
-    """Estado CKM: D_ckm, temp_signal, n_agentes, corpus_size, message_count, n_nodes."""
+    """Estado CKM: D_ckm, temp_signal, n_agentes, corpus_size, message_count,
+    n_nodes, corpus_status ("accumulating" si corpus_size < min_texts,
+    "operational" si W existe y D_ckm es calculable)."""
     return ckm_monitor.get_state()
 
 

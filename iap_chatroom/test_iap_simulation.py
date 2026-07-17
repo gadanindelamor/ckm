@@ -10,29 +10,22 @@ ejercita el flujo completo de 3 devices (2 AI + 1 HUMAN) sobre las
 6 tools MCP reales, siguiendo un caso de soporte al cliente de
 SmartWidget Co. (producto no enciende, dentro de ventana de 30 dias).
 
+2 modelos Anthropic — evaluamos campo CKM, no providers. Agent A y
+Agent B usan el mismo provider (AnthropicProvider) con modelos
+distintos (haiku / sonnet); lo que se observa es la trayectoria D_ckm
+del corpus compartido, no una comparacion entre providers.
+
 Uso:
     python iap_chatroom/test_iap_simulation.py
-
-Nota — providers sin API key real:
-    iap_chatroom/.env trae valores placeholder (ANTHROPIC_API_KEY,
-    GROQ_API_KEY sin completar). AnthropicProvider / GroqProvider real
-    fallan con 401 en ese caso. _make_provider() detecta el placeholder
-    y sustituye por FakeProvider(canned), que devuelve una lista fija de
-    respuestas predefinidas (AGENT_A_CANNED / AGENT_B_CANNED) en orden,
-    una por llamada — p.ej. GroqProvider no disponible: Agent B usa
-    respuestas predefinidas. Reemplazar con el provider real en cuanto
-    la key correspondiente este configurada en .env; no requiere tocar
-    el resto del script.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastmcp import Client
@@ -45,66 +38,9 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from iap_chatroom.providers.anthropic_provider import AnthropicProvider  # noqa: E402
-from iap_chatroom.providers.base import ChatMessage, Provider  # noqa: E402
-from iap_chatroom.providers.groq_provider import GroqProvider  # noqa: E402
+from iap_chatroom.providers.base import ChatMessage  # noqa: E402
 
 MCP_URL = "http://localhost:7860/mcp"
-
-
-class FakeProvider(Provider):
-    """Stub deterministico: usado cuando la API key real no esta configurada
-    (.env con placeholder). Devuelve respuestas enlatadas en orden fijo, una
-    por cada llamada — mantiene el test reproducible sin requerir credenciales
-    reales."""
-
-    name = "fake"
-
-    def __init__(self, canned: List[str]):
-        super().__init__()
-        self._canned = list(canned)
-        self._idx = 0
-
-    async def complete(self, messages: List[ChatMessage]) -> str:
-        text = self._canned[self._idx % len(self._canned)]
-        self._idx += 1
-        return text
-
-
-AGENT_A_CANNED = [
-    "Hi Agent B, I have a case for you: customer purchased a SmartWidget "
-    "6 days ago, within our 30-day window. The product will not turn on "
-    "at all. Customer is requesting a refund or replacement. I don't "
-    "have authority to approve either — can you advise?",
-    "Confirmed: purchase was 6 days ago, well within the 30-day policy "
-    "window. The unit is completely dead — no lights, no response to "
-    "charging, no troubleshooting has resolved it.",
-    "Good news — your SmartWidget replacement has been approved. A new "
-    "unit will be shipped out, and you'll get tracking details by email "
-    "once it's on its way. Thanks for your patience!",
-]
-
-AGENT_B_CANNED = [
-    "Understood. Since the purchase is within 30 days, this qualifies "
-    "for a refund or replacement per policy. Before I decide, I need to "
-    "know: has the customer stated a preference between the two?",
-    "Thanks for confirming the timeline and symptoms. I need the "
-    "customer to confirm their preference directly — Agent A, please "
-    "get that from them.",
-    "Decision: approved — replacement. The customer requested a "
-    "replacement and the purchase is within our 30-day policy window, "
-    "so we will ship a new SmartWidget at no charge.",
-]
-
-
-def _make_provider(env_var: str, real_cls, canned: List[str]) -> Provider:
-    key = os.getenv(env_var, "")
-    if not key or "..." in key:
-        print(
-            f"[warn] {env_var} no configurada (placeholder detectado) — "
-            f"usando FakeProvider determinista en su lugar."
-        )
-        return FakeProvider(canned)
-    return real_cls()
 
 
 AGENT_A_SYSTEM = """You are Groovie, a customer support AI for SmartWidget Co.
@@ -186,12 +122,8 @@ async def _log_ckm(client: Client, device_id: str) -> None:
 
 
 async def run_simulation() -> None:
-    DEVICES[AGENT_A]["provider"] = _make_provider(
-        "ANTHROPIC_API_KEY", AnthropicProvider, AGENT_A_CANNED
-    )
-    DEVICES[AGENT_B]["provider"] = _make_provider(
-        "GROQ_API_KEY", GroqProvider, AGENT_B_CANNED
-    )
+    DEVICES[AGENT_A]["provider"] = AnthropicProvider(model="claude-haiku-4-5-20251001")
+    DEVICES[AGENT_B]["provider"] = AnthropicProvider(model="claude-sonnet-5")
 
     joined: set[str] = set()
     full_history: list[dict] = []

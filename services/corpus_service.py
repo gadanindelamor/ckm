@@ -48,7 +48,7 @@ class CorpusService:
     def __init__(
         self,
         storage_path : str  = "corpus_state.json",
-        min_texts    : int  = 10,   # umbral para pasar a modo evaluación
+        min_texts    : int  = 3,    # umbral para pasar a modo evaluación
         top_k        : int  = 20,
         ngram_max    : int  = 2,
     ):

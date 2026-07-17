@@ -41,7 +41,7 @@ class CKMMonitor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self) -> None:
+    def __init__(self, min_texts: int = 3) -> None:
         if self._initialized:
             return
         self._initialized = True
@@ -49,7 +49,7 @@ class CKMMonitor:
         self._extractor = NodeExtractorService(top_k=32)
         self._corpus = CorpusService(
             storage_path=str(_STATE_DIR / "corpus_state.json"),
-            min_texts=3,  # minimo para pasar a modo evaluacion
+            min_texts=min_texts,  # default=3; configurable por el caller
             top_k=32,
         )
         self._monitor = MonitorService(
@@ -68,7 +68,7 @@ class CKMMonitor:
         self._message_count += 1
         self._devices_seen.add(message.device_id)
 
-        if self._message_count >= 3:
+        if self._message_count >= self._corpus.min_texts:
             self._last_panel = self._monitor.evaluate(message.text, agent_id=message.device_id)
 
     def get_state(self) -> dict:
@@ -81,6 +81,8 @@ class CKMMonitor:
             thermostat = self._last_panel.get("thermostat")
             temp_signal = thermostat["temp_signal"] if thermostat else "NOMINAL"
 
+        corpus_status = "operational" if status["mode"] == "evaluation" else "accumulating"
+
         return {
             "corpus_size": status["n_texts"],
             "n_nodes": status["n_nodes"],
@@ -88,6 +90,7 @@ class CKMMonitor:
             "D_ckm": d_ckm,
             "temp_signal": temp_signal,
             "n_agentes": len(self._devices_seen),
+            "corpus_status": corpus_status,
         }
 
     def get_firma(self) -> dict | None:

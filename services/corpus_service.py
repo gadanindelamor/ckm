@@ -15,7 +15,7 @@ v2: W mixta — pesos negativos por marcadores de oposición (elicitación sin s
 from __future__ import annotations
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 from node_extractor import NodeExtractorService
@@ -127,6 +127,21 @@ class CorpusService:
         t = text.lower()
         return any(m in t for m in _OPPOSITION_MARKERS)
 
+    def _accumulate_safe(self, texts: List[str]) -> Dict:
+        """
+        Wrapper de self._extractor.accumulate() que absorbe el ValueError de
+        TfidfVectorizer cuando un texto (o el batch) no aporta vocabulario
+        tras stopwords + token_pattern — p.ej. mensajes muy cortos como
+        "ok", "[quiet]" o textos de una sola stopword. Sin este guard, un
+        solo mensaje degenerado tumba _rebuild() y deja self._texts
+        envenenado (el texto ya fue extend()-ido antes de rebuild), lo que
+        rompe todo ingest() futuro hasta reiniciar el proceso.
+        """
+        try:
+            return self._extractor.accumulate(texts)
+        except ValueError:
+            return {"nodes": [], "pairs": {}, "node_freq": {}}
+
     def _rebuild(self) -> None:
         """
         Reconstruye nodos y W desde todos los textos acumulados.
@@ -137,7 +152,7 @@ class CorpusService:
         W[i,j] = (pos[i,j] - neg[i,j]) / max(|pos - neg|)
         Rango resultante: [−1, +1].
         """
-        result = self._extractor.accumulate(self._texts)
+        result = self._accumulate_safe(self._texts)
         nodes  = result["nodes"]
 
         if not nodes:
@@ -151,7 +166,7 @@ class CorpusService:
 
         # reconstruir pares por texto individual (granularidad texto)
         for text in self._texts:
-            text_result = self._extractor.accumulate([text])
+            text_result = self._accumulate_safe([text])
             t_pairs     = text_result.get("pairs", {})
             is_opp      = self._has_opposition(text)
 

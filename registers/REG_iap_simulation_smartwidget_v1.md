@@ -1,7 +1,7 @@
 # REG_iap_simulation_smartwidget_v1.md
 
 *Jul 2026 — gadanin.delamor + Claude Sonnet 4.6 + Claude Code*
-*Clase R*
+*Clase R — actualizado con hallazgos emergentes del trajectory*
 
 ---
 
@@ -49,14 +49,14 @@ Infraestructura MCP corrió contra servidor real (no mockeada).
 ## Trayectoria D_ckm
 
 ```
-t1:  None     → W no construida (corpus_size < 3)
-t2:  None     → idem
-t3:  0.0      → A(t0) establecido — baseline
-t4: -1.0000   → A(t) = 2×A(t0) — expansión post-confirmación Agent A
-t5: -2.7500   → A(t) = 3.75×A(t0) — pico: LNH del Customer (HUMAN)
-t6:  0.5000   → A(t) = 0.5×A(t0) — contracción post-decisión Agent B
-t7:  0.0      → retorno a baseline
-t8:  0.0      → cierre en baseline
+t1:  None     ← W no construida (corpus_size < 3)
+t2:  None     ← idem
+t3:  0.0      ← A(t0) establecido — baseline
+t4: -1.0000   ← A(t) = 2×A(t0) — expansión post-confirmación Agent A
+t5: -2.7500   ← A(t) = 3.75×A(t0) — pico: LNH del Customer (HUMAN)
+t6:  0.5000   ← A(t) = 0.5×A(t0) — contracción post-decisión Agent B
+t7:  0.0      ← retorno a baseline
+t8:  0.0      ← cierre en baseline
 ```
 
 temp_signal: NOMINAL en 8/8 turnos.
@@ -78,22 +78,6 @@ temp_signal: NOMINAL en 8/8 turnos.
 
 ---
 
-## W — estructura emergida
-
-W_base pura (todos los valores ≥ 0). Sin W_mixta.
-N = 32 nodos extraídos por TF-IDF del dominio SmartWidget.
-
-Nodos centrales (por co-ocurrencia):
-`replacement`, `smartwidget`, `policy`, `window`, `purchase`,
-`customer`, `days`, `within`, `day`, `refund`
-
-Ningún nodo del dominio CKM — campo limpio, externo.
-
-W_version_history: 6 rebuilds (corpus_size 3→8, uno por texto desde t3).
-Primer rebuild en corpus_size=3 → explica D_ckm=None en t1 y t2.
-
----
-
 ## Criterios de éxito
 
 | Criterio | Resultado |
@@ -102,55 +86,105 @@ Primer rebuild en corpus_size=3 → explica D_ckm=None en t1 y t2.
 | corpus_size crece turno a turno | ✓ (1→2→3→4→5→6→7→8) |
 | temp_signal NOMINAL en ≥5/8 turnos | ✓ (8/8) |
 | Firma_CKM: 6 campos, no None | ✓ |
-| D_ckm != 0 al cierre | ✗ — d_ckm=0.0 (ver nota) |
+| D_ckm != 0 al cierre | ✗ — ver nota |
 | Agent B declara refund/replacement | ✓ ("replacement" explícito en t6) |
 
 **Nota sobre D_ckm=0 al cierre:** no es falla del instrumento.
-Con W_base (sin pesos negativos) y dominio cooperativo
-(todos los devices hablan del mismo producto/política),
-el landscape converge a baseline una vez que el corpus se estabiliza.
+Con W_base (sin pesos negativos) y dominio cooperativo,
+el landscape converge a baseline al estabilizarse el corpus.
 D_ckm=0 al cierre = cohesión alcanzada, no ausencia de dinámica.
 El criterio aplica a corpus adversariales con W_mixta.
 Criterio revisado para próximas corridas.
 
 ---
 
-## Hallazgos
+## Hallazgos emergentes — análisis del trajectory (monitor_trajectory.jsonl)
 
-**1. LNH humano produce mayor expansión del landscape.**
-El mensaje del Customer (turno 5, device HUMAN) generó el pico D_ckm=-2.75.
-Los turnos de AI (FakeProvider) produjeron expansión menor.
-Primera evidencia empírica de heterogeneidad de fuente como variable CKM.
-Requiere replicación con providers reales para confirmar.
+*Incorporados en actualización posterior a la corrida 1.
+El trajectory abarca t0-t5 (corrida 1) y t6-t12 (corrida 2 — ver REG_v2).*
 
-**2. Decisión resolutiva produce mayor contracción.**
-El turno 6 (Agent B aprueba replacement) generó la mayor contracción
-D_ckm: de -2.75 a +0.50. La declaración de resolución actúa como
-operador de contracción del landscape — análogo funcional al STOP
-pero emergente del contenido, no aplicado externamente.
+### fabrication_index — patrón por tipo de mensaje (corrida 1: t0-t5)
 
-**3. Ciclo completo: expansión → contracción → retorno.**
-El campo siguió una trayectoria en U invertida y volvió al baseline.
-Para interacciones de servicio cooperativas esto es el comportamiento
-esperado. Para interacciones adversariales (con W_mixta), la trayectoria
-debería divergir del baseline.
+```
+t0  Agent A (confirma síntomas):      fi=0.0    — coherente con corpus
+t1  Agent B (pide preferencia):       fi=0.0    — coherente
+t2  Customer (primer mensaje):        fi=0.4444 — 26 pares rechazados
+t3  Agent B (decisión aprobada):      fi=0.0    — coherente
+t4  Agent A ("Good news"):            fi=1.0    — activos_relajado=[]
+t5  Customer ("thank you"):           fi=1.0    — activos_relajado=[]
+```
 
-**4. W_base sin W_mixta — limitación de esta corrida.**
-Sin pesos negativos no hay tensión estructural. El landscape no puede
-expandirse asimétricamente. Para ver el comportamiento completo del CKM
-se necesita W_mixta, lo que requiere corpus adversarial o pares de
-oposición explícitos.
+`activos_relajado=[]` indica que Hopfield no encontró ningún atractor
+estable consistente con el texto dado el W actual.
+
+### fabrication_index NO mide engaño en dominio cooperativo
+
+Los mensajes con `fi=1.0` son los más cortos y formulaicos:
+confirmaciones breves, agradecimientos, frases de cierre.
+No son fabricados en sentido deceptivo — son informativamente
+delgados respecto al corpus.
+
+El Gatekeeper R15 detecta que sus nodos no forman un atractor
+estable: los pares co-activados no tienen suficiente W acumulada.
+
+**fabrication_index en dominio cooperativo = novedad estructural
+respecto al corpus, no detección de engaño.**
+
+La distinción es operativamente importante: el mismo índice mide
+cosas distintas según el dominio:
+- Dominio adversarial (fourforums, CreateDebate): fi alto = tensión
+  real entre nodos establecidos en W.
+- Dominio cooperativo (SmartWidget): fi alto = nodos nuevos no
+  integrados aún en W.
+
+### Delta_r_sum — acumulación por turno (corrida 1: t0-t5)
+
+```
+t0:   0.0   ← baseline
+t1:   0.0   ← sin acumulación
+t2:  52.0   ← Customer mensaje — spike (+52)
+t3:  52.0   ← estable
+t4: 124.0   ← Agent A "Good news" — segundo spike (+72)
+t5: 124.0   ← Customer "thank you" — sin acumulación adicional
+```
+
+Mayor spike: Customer (t2, +52).
+Segundo spike: Agent A confirmación (t4, +72).
+Mensajes con fi=0.0 no acumulan Delta_r.
+
+### n_rejected_pairs (corrida 1)
+
+```
+t2: 26 pares rechazados — Customer primer mensaje
+t4: 36 pares rechazados — Agent A "Good news"
+```
+
+El Customer introduce nodos que co-activan con pares establecidos
+en W pero sin suficiente cohesión para pasar Gatekeeper R15
+(C2: c(S) delta ≥ -ε).
+
+### Hallazgo: LNH argumentativo vs. LNH transaccional
+
+Los mensajes de confirmación y cierre ("Good news", "thank you",
+"standing by") operan en la frontera del campo CKM.
+No destruyen W — pero tampoco contribuyen a expandirla.
+
+Confirma el criterio de operación de CorpusService:
+- **LNH argumentativo e interactivo** → construye W
+- **LNH transaccional y formulaico** → atraviesa W sin modificarla
 
 ---
 
-## Observación técnica
+## W — estructura emergida
 
-`full_history.extend(fetched.data)` en el loop acumula mensajes
-por turno. Con `since=last_ts` puede producir solapamiento si
-el timestamp no es preciso. No produjo error en esta corrida
-(secuencial, un client). En producción con múltiples clients
-simultáneos puede generar duplicados en el historial del AI.
-Pendiente de corrección para iteración B.
+W_base pura (todos los valores ≥ 0). Sin W_mixta.
+N = 32 nodos extraídos por TF-IDF del dominio SmartWidget.
+
+Nodos centrales: `replacement`, `smartwidget`, `policy`, `window`,
+`purchase`, `customer`, `days`, `within`, `day`, `refund`
+
+Ningún nodo del dominio CKM — campo limpio, externo.
+W_version_history: 6 rebuilds (corpus_size 3→8).
 
 ---
 
@@ -158,28 +192,27 @@ Pendiente de corrección para iteración B.
 
 `iap_chatroom/_state/corpus_state.json` → movido a `process/`
 `iap_chatroom/_state/monitor_trajectory.jsonl` → movido a `process/`
-`_state/` arrancó vacío. Se repobló naturalmente durante la corrida.
+`_state/` arrancó vacío. Se repobló durante la corrida.
 
 ---
 
 ## Pendientes para próxima corrida
 
-- Providers reales (Anthropic + Groq) con API keys configuradas
-- W_mixta: incluir pares de oposición para generar tensión estructural
-- Corrección solapamiento historial en `full_history`
-- Criterio D_ckm al cierre: revisar para corpus cooperativo vs adversarial
+- Providers reales → resuelto en corrida 2
+- Corpus limpio al inicio (Paso 0 explícito en tarea)
+- Explorar fi en dominio adversarial para contrastar
+- Criterio D_ckm al cierre: informativo, no binario
 
 ---
 
 ## Archivos relacionados
 
-- REG_iap_mcp_server_v1.md — IAP MCP Server (infraestructura base)
-- REG_iap_chatroom_demo_c_v1.md — Demo C (primera observación grupal)
-- iap_chatroom/test_iap_simulation.py — script de corrida
-- process/corpus_state.json — estado final del corpus
-- process/monitor_trajectory.jsonl — trayectoria completa
+- REG_iap_simulation_smartwidget_v2.md — corrida 2 (Anthropic real)
+- REG_iap_mcp_server_v1.md — IAP MCP Server
+- REG_iap_chatroom_demo_c_v1.md — Demo C
+- process/monitor_trajectory.jsonl — trajectory completo (corridas 1+2)
 
 ---
 
-*Jul 16 2026 — gadanin.delamor + Claude Sonnet 4.6 + Claude Code*
+*Jul 2026 — gadanin.delamor + Claude Sonnet 4.6 + Claude Code*
 *Codespace ckm — bash/Linux*

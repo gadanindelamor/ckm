@@ -140,7 +140,7 @@ class MonitorService:
                 "temp_signal" : self._thermostat.temp_signal(),
             }
 
-        self._persist(text, panel)
+        self._persist(text, panel, agent_id)
         return panel
 
     def trajectory(self) -> list:
@@ -250,10 +250,13 @@ class MonitorService:
             attractors.add(tuple(self._relax(s0, W).tolist()))
         return len(attractors)
 
-    def _persist(self, text: str, panel: dict) -> None:
+    def _persist(self, text: str, panel: dict, agent_id: Optional[str] = None) -> None:
         t = len(self.trajectory())
         with open(self._storage, "a") as f:
-            f.write(json.dumps({"t": t, "text": text[:80], "panel": panel}) + "\n")
+            f.write(
+                json.dumps({"t": t, "agent_id": agent_id, "text": text[:80], "panel": panel})
+                + "\n"
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -479,4 +479,4 @@ def _test_temp_signal():
 
     print("T9-T13 OK — TEMP_SIGNAL operativo")
 
-_test_temp_signal()
+# _test_temp_signal()

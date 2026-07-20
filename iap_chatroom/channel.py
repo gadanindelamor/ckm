@@ -19,7 +19,7 @@ from fastapi import WebSocket
 @dataclass
 class Message:
     device_id: str
-    device_type: Literal["AI", "HUMAN"]
+    device_type: Literal["AI", "HUMAN", "SYSTEM"]
     text: str
     timestamp: str  # ISO8601
 
@@ -67,6 +67,10 @@ class ChatChannel:
             callback(message)
 
         return message
+
+    async def publish_system_event(self, text: str) -> Message:
+        """Emite un mensaje operacional (device_type=SYSTEM), p.ej. join events."""
+        return await self.publish(device_id="system", device_type="SYSTEM", text=text)
 
     def subscribe(self, ws: WebSocket) -> None:
         self._subscribers.append(ws)

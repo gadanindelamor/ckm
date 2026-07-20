@@ -84,5 +84,6 @@ def build_gradio_app() -> gr.Blocks:
 
         timer = gr.Timer(value=3)
         timer.tick(_refresh_state, outputs=state_json)
+        timer.tick(_history_as_messages, outputs=chatbot)
 
     return demo

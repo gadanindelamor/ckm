@@ -37,8 +37,12 @@ def _message_dict(index: int, message) -> dict:
 
 @mcp.tool
 async def join_channel(device_id: str, device_type: str) -> dict:
-    """Registra un device en la chatroom via DeviceManager."""
+    """Registra un device en la chatroom via DeviceManager. Emite un
+    mensaje SYSTEM operacional en el canal ("{device_id} joined the
+    channel") — visible en get_messages() y disponible como trigger
+    del ciclo ODA."""
     device = device_manager.register(device_id=device_id, device_type=device_type)
+    await channel.publish_system_event(f"{device_id} joined the channel")
     return {
         "ok": True,
         "device_id": device.device_id,

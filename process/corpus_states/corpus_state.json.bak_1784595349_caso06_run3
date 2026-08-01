@@ -1,0 +1,97 @@
+{
+  "texts": [
+    "ClaudeSonnet_5_2 joined the channel",
+    "ClaudeSonnet_5_4 joined the channel",
+    "ClaudeHaiku_4-5-20251001_3 joined the channel",
+    "ClaudeHaiku_4-5-20251001_1 joined the channel",
+    "."
+  ],
+  "nodes": [
+    "joined channel",
+    "joined",
+    "channel",
+    "claudesonnet_ joined",
+    "claudesonnet_",
+    "claudehaiku_ joined",
+    "claudehaiku_"
+  ],
+  "W": [
+    [
+      0.0,
+      1.0,
+      1.0,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      1.0,
+      0.0,
+      1.0,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      1.0,
+      1.0,
+      0.0,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.0,
+      0.5,
+      0.0,
+      0.0
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.0,
+      0.0,
+      0.0,
+      0.5
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.0,
+      0.0,
+      0.5,
+      0.0
+    ]
+  ],
+  "w_version_history": [
+    {
+      "timestamp": 1784595239.3969705,
+      "sha256": "ac99a93bc4f363a66c8e61dc94188f88f218457aa1ec54fa6deb33eb0ba10d2f",
+      "corpus_size": 3,
+      "causal_event": "rebuild"
+    },
+    {
+      "timestamp": 1784595239.4382117,
+      "sha256": "ad808273899367c932fe2ab9a0479363cb5db20b47025db70a56a33365f9a3f8",
+      "corpus_size": 4,
+      "causal_event": "rebuild"
+    }
+  ]
+}

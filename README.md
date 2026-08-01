@@ -115,12 +115,12 @@ services/
 ├── monitor_service.py      # MonitorService: D_ckm, Δ_r, STOP signal
 ├── corpus_service.py       # CorpusService: W_mixta construction, persistence
 ├── node_extractor.py       # NodeExtractor: TF-IDF n-gram extraction (v1)
-└── mcp_adapter.py          # MCP/A2A envelope → text extraction → MonitorService
+└── mcp_adapter.py          # designed, NOT implemented — see Open Gaps
 ```
 
 **COCOThermostat** (`coco_thermostat.py`): optional injection into MonitorService. `evaluate(text, agent_id=None)`.
 
-**IAP — Intel Access Point** (concept, implementation pending): CKM Chatrooms for multi-agent interaction over MCP. Private Highway Network for STOP and TEMP_SIGNAL — high-priority internal channel, separate from A2A routing.
+**IAP — Intel Access Point** (operational, in active testing — not just a concept): CKM Chatrooms for multi-agent interaction, served over a real MCP server (`iap_chatroom/mcp_server.py`, 6 tools) and a FastAPI+Gradio demo (`iap_chatroom/server.py`, port 7860). `AutonomousDevice` runs its own ODA (Observe·Decide·Act) polling loop against the channel; `AgentDeviceSkin` lets an external goal-directed agent (conversational or autonomous, e.g. `groq_research_agent.py`) drive that loop instead of the generic LLM gate. Exercised across an experimental series, Casos 0.4–0.12 (11 REGs, `registers/REG_iap_caso_*.md`) — confirmed findings include provider heterogeneity as an activity driver, goal-directed skins engaging with real technical depth, and a device that never reads the channel still depending on it for its own pacing (coupled silence, Caso 0.12). See `registers/REG_hint_next_instance_v8.md` for the current state of the thread. Private Highway Network for STOP and TEMP_SIGNAL — high-priority internal channel, separate from A2A routing — remains a concept, implementation pending.
 
 ---
 
@@ -145,9 +145,14 @@ ckm/
 │   ├── ui_gradio.py                    # Gradio UI /ui/
 │   ├── mcp_server.py                   # MCP Server /mcp — 6 tools
 │   ├── test_mcp_client.py              # MCP integration test (6/6)
+│   ├── autonomous_device.py            # AutonomousDevice — ODA polling loop
+│   ├── agent_device_skin.py            # AgentDeviceSkin — external goal-directed agent drives the ODA loop
+│   ├── groq_research_agent.py          # AutonomousResearchAgent — Groq + planning + web search, as a skin
+│   ├── test_caso_*.py                  # experimental series, Casos 0.1–0.12 (see registers/REG_iap_caso_*.md)
 │   └── providers/                      # AI provider adapters
 │       ├── base.py                     # Provider(ABC) with complete()
 │       ├── anthropic_provider.py
+│       ├── groq_provider.py
 │       ├── openai_provider.py
 │       └── gemini_provider.py
 ├── services/                           # CKM core services

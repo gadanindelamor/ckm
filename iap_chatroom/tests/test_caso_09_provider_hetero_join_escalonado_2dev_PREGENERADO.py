@@ -1,0 +1,244 @@
+"""
+test_caso_09_provider_hetero_join_escalonado_2dev.py — Caso 0.9.
+
+Heterogeneidad de PROVIDER, no solo de modelo. Toda la serie 0.5-0.8
+varió modelo dentro de un mismo provider (Anthropic: Haiku vs Sonnet).
+Caso 0.9 aísla una variable nueva: dos providers distintos — Anthropic
+(Sonnet) y Groq (Llama) — con el mismo diseño de Caso 0.8 (2 devices,
+join escalonado, DELTA_T=5s, roles invertidos entre runs).
+
+------------------------------------------------------------------
+VARIABLES DE SESIÓN — cuáles varían acá, cuáles quedan fijas
+------------------------------------------------------------------
+Ejes explorados en la serie 0.4→0.9 (ver registers/REG_iap_caso_*.md):
+
+  seed                : SYSTEM-event ("X joined the channel")   [FIJO desde 0.5]
+  WELCOME_MSG          : SYSTEM_PROMPT_04A (sin explicación CKM) [FIJO desde 0.4a]
+  lectura de canal      : tool get_messages (no resource)         [FIJO — 0.7 exploró resource, acá no aplica]
+  tamaño de grupo       : 2 devices                               [FIJO — igual que 0.5/0.7/0.8, no 0.6 (4 dev.)]
+  timing de join         : escalonado, DELTA_T=5s                 [FIJO — igual que 0.6/0.8, no 0.5/0.7 (simultáneo)]
+  heterogeneidad modelo : N/A — no aplica, ver heterogeneidad provider abajo
+  heterogeneidad provider: Anthropic (Sonnet) vs Groq (Llama)     [VARIABLE NUEVA — nunca probada antes de Caso 0.9]
+
+Precedente directo — Caso 0.8 (2 dev., hetero-modelo intra-Anthropic,
+join escalonado): silencio 2/2. Caso 0.6 Run 1 (4 dev., misma
+combinación de ejes salvo tamaño de grupo): actividad en el intento
+original, pero la réplica limpia (post-fix de monitor_service.py) dio
+silencio — reclasificado como varianza de muestreo, no celda
+confirmada. Caso 0.9 prueba si cambiar el eje modelo→provider (mismo
+timing, mismo tamaño de grupo que 0.8) altera el resultado.
+
+------------------------------------------------------------------
+DEVICES Y RUNS
+------------------------------------------------------------------
+2 devices:
+  ClaudeSonnet_5_1     → AnthropicProvider, claude-sonnet-5
+  GroqLlama_3-3-70b_2  → GroqProvider, llama-3.3-70b-versatile
+
+2 runs, roles invertidos (igual diseño que Caso 0.8):
+  Run 1: early=ClaudeSonnet_5_1,    late=GroqLlama_3-3-70b_2
+  Run 2: early=GroqLlama_3-3-70b_2, late=ClaudeSonnet_5_1
+
+Ambos devices leen vía tool get_messages — AutonomousDevice base, sin
+resource, sin subclase. SYSTEM_PROMPT_04A (sin explicación CKM), sin
+seed_human — mismo mecanismo de seed SYSTEM-event de 0.5/0.6/0.7/0.8.
+
+Uso (con el servidor levantado y estado limpio, python iap_chatroom/server.py):
+    python iap_chatroom/test_caso_09_provider_hetero_join_escalonado_2dev.py --run {1,2} [--reset]
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import shutil
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+from dotenv import load_dotenv
+from fastmcp import Client
+
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(_ENV_PATH)
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from iap_chatroom.autonomous_device import AutonomousDevice  # noqa: E402
+from iap_chatroom.providers.anthropic_provider import AnthropicProvider  # noqa: E402
+from iap_chatroom.providers.groq_provider import GroqProvider  # noqa: E402
+
+MCP_URL = "http://localhost:7860/mcp"
+_STATE_DIR = Path(__file__).resolve().parent / "_state"
+_TRAJECTORY_PATH = _STATE_DIR / "monitor_trajectory.jsonl"
+
+# Idéntico a SYSTEM_PROMPT_04A de 0.4a/0.5/0.6/0.7/0.8 — sin bloque CKM.
+SYSTEM_PROMPT_04A = """You are {device_id}.
+
+You are in an IAP chatroom — a shared space with no turn structure.
+Other devices (AI and Human) may be present.
+
+What you can do:
+- Read the full chat history, including your own prior messages
+- Publish a message — to anyone, about anything, at any time
+- Do nothing — operational silence (OP_SILENCE) means not publishing. No announcement needed."""
+
+SONNET_MODEL = "claude-sonnet-5"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
+DEVICE_SONNET = "ClaudeSonnet_5_1"
+DEVICE_GROQ = "GroqLlama_3-3-70b_2"
+
+# device_id -> (Provider class, model string)
+PROVIDER_BY_DEVICE_ID = {
+    DEVICE_SONNET: (AnthropicProvider, SONNET_MODEL),
+    DEVICE_GROQ: (GroqProvider, GROQ_MODEL),
+}
+
+# early/late por run — mismos 2 device_id en ambos, roles invertidos.
+RUN_ROLES: dict[int, dict[str, str]] = {
+    1: {"early": DEVICE_SONNET, "late": DEVICE_GROQ},
+    2: {"early": DEVICE_GROQ, "late": DEVICE_SONNET},
+}
+
+DURATION = 90.0
+POLL_INTERVAL = 2.0
+DELTA_T = 5.0
+
+
+def prepare_state(state_dir: Path, label: str) -> None:
+    """
+    Preserva corpus_state.json y monitor_trajectory.jsonl en process/
+    (repo root) antes de correr — no borra, mueve con sufijo
+    .bak_<epoch>_<label>. Mismo mecanismo canónico que
+    test_caso_04*.py/test_caso_05.py/test_caso_06.py/test_caso_07*.py/test_caso_08.py.
+    """
+    process_dir = _REPO_ROOT / "process"
+    process_dir.mkdir(exist_ok=True)
+    for f in ["corpus_state.json", "monitor_trajectory.jsonl"]:
+        src = state_dir / f
+        if src.exists():
+            dst = process_dir / f"{f}.bak_{int(time.time())}_{label}"
+            shutil.move(str(src), str(dst))
+            print(f"[prepare_state] {f} preservado en {dst}")
+
+
+def _make_device(device_id: str) -> AutonomousDevice:
+    provider_cls, model = PROVIDER_BY_DEVICE_ID[device_id]
+    return AutonomousDevice(
+        device_id=device_id,
+        provider=provider_cls(model=model),
+        system_prompt=SYSTEM_PROMPT_04A.format(device_id=device_id),
+        mcp_url=MCP_URL,
+        poll_interval=POLL_INTERVAL,
+    )
+
+
+async def _run_late(device: AutonomousDevice) -> None:
+    await asyncio.sleep(DELTA_T)
+    await device.run(duration=DURATION - DELTA_T)
+
+
+async def run_caso_09(run_number: int) -> None:
+    roles = RUN_ROLES[run_number]
+    early_id = roles["early"]
+    late_id = roles["late"]
+
+    print(f"=== Caso 0.9 — Run {run_number} ===")
+    print(f"early (t=0): {early_id} ({PROVIDER_BY_DEVICE_ID[early_id][0].name}, {PROVIDER_BY_DEVICE_ID[early_id][1]})")
+    print(f"late (t={DELTA_T}s): {late_id} ({PROVIDER_BY_DEVICE_ID[late_id][0].name}, {PROVIDER_BY_DEVICE_ID[late_id][1]})")
+
+    early_device = _make_device(early_id)
+    late_device = _make_device(late_id)
+
+    await asyncio.gather(
+        early_device.run(duration=DURATION),
+        _run_late(late_device),
+    )
+
+    async with Client(MCP_URL) as client:
+        firma_result = await client.call_tool("get_firma", {})
+        firma: Optional[dict] = firma_result.data
+
+        # since=0.0 — get_messages(since=None) trunca a los ultimos 20
+        history_result = await client.call_tool("get_messages", {"since": 0.0})
+        history: list[dict] = history_result.data
+
+    print("\n=== Firma_CKM (cierre) ===")
+    if firma is None:
+        print("Firma_CKM: None (corpus aun en acumulacion)")
+    else:
+        for field in ("w_sha", "d_ckm", "temp_signal", "n_agentes", "timestamp", "delta_sha"):
+            print(f"{field}: {firma.get(field)}")
+
+    n_textos = {early_id: 0, late_id: 0}
+    for m in history:
+        if m["device_id"] in n_textos:
+            n_textos[m["device_id"]] += 1
+
+    print("\n=== Textos publicados por device ===")
+    for did, n in n_textos.items():
+        print(f"{did}: {n}")
+
+    max_n_rejected = 0
+    delta_r_close: Optional[float] = None
+    if _TRAJECTORY_PATH.exists():
+        with open(_TRAJECTORY_PATH) as f:
+            for line in f:
+                panel = json.loads(line)["panel"]
+                max_n_rejected = max(max_n_rejected, panel["n_rejected_pairs"])
+                delta_r_close = panel["Delta_r_sum"]
+
+    print("\n=== Trayectoria (resumen) ===")
+    print(f"n_rejected_pairs (max): {max_n_rejected}")
+    print(f"Delta_r_sum (cierre): {delta_r_close}")
+
+    print("\n=== Historial completo del canal ===")
+    for m in history:
+        print(f"[{m['device_id']}] ({m['device_type']}) {m['text']}")
+
+    n_ai_texts = sum(n_textos.values())
+
+    print("\n=== Comparación explícita con la serie previa (0.5-0.8) ===")
+    print("0.5              (mono-modelo, Anthropic,  simultáneo):  actividad (2/2, mecanismo distinto cada vez)")
+    print("0.6 R2,R3        (mono-modelo, Anthropic,  escalonado): silencio (2/2)")
+    print("0.7              (hetero-modelo, Anthropic, simultáneo): silencio (3/3)")
+    print("0.6 R1 (orig+réplica, hetero-modelo, Anthropic, escalonado, 4 dev.): actividad 1/2, réplica limpia dio silencio — reclasificado como ruido")
+    print("0.8              (hetero-modelo, Anthropic, escalonado, 2 dev.): silencio (2/2)")
+    if n_ai_texts > 0:
+        print(
+            f"Caso 0.9 Run {run_number} (hetero-PROVIDER: Anthropic+Groq, escalonado, 2 dev.): "
+            f"actividad ({n_ai_texts} textos) — sería la PRIMERA celda hetero+escalonado con "
+            "actividad confirmada en una corrida limpia (no crasheada). La heterogeneidad de "
+            "provider podría producir una dinámica distinta a la heterogeneidad de modelo "
+            "intra-Anthropic."
+        )
+    else:
+        print(
+            f"Caso 0.9 Run {run_number} (hetero-PROVIDER: Anthropic+Groq, escalonado, 2 dev.): "
+            "silencio total — CONSISTENTE con el patrón dominante de la serie (silencio en 9/11 "
+            "corridas previas). La heterogeneidad de provider tampoco alcanza para romper el "
+            "silencio del join escalonado con 2 devices."
+        )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--run", type=int, required=True, choices=(1, 2),
+        help="Qué device es early/late (ver RUN_ROLES)",
+    )
+    parser.add_argument(
+        "--reset", action="store_true",
+        help="Preserva (mueve a process/ con timestamp, label caso09_run<N>) corpus_state.json y monitor_trajectory.jsonl antes de correr",
+    )
+    args = parser.parse_args()
+
+    if args.reset:
+        prepare_state(_STATE_DIR, label=f"caso09_run{args.run}")
+    else:
+        asyncio.run(run_caso_09(args.run))

@@ -56,6 +56,12 @@ from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
 from coco_thermostat import COCOThermostat, ThermostatState
 
+try:
+    from behavior_graph import BehaviorGraph as _BehaviorGraph
+    _HAS_G = True
+except ImportError:
+    _HAS_G = False
+
 
 class MonitorService:
 
@@ -65,12 +71,14 @@ class MonitorService:
         storage_path    : str = "monitor_trajectory.jsonl",
         n_runs_attractors: int = 50,
         thermostat      : Optional[COCOThermostat] = None,
+        behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
     ):
         self.corpus    = corpus
         self._storage  = Path(storage_path)
         self._extractor = NodeExtractorService()
         self._n_runs   = n_runs_attractors
         self._thermostat = thermostat
+        self._g         = behavior_graph
 
         self._Delta_r : Optional[np.ndarray] = None
         self._A0    : Optional[int]        = None
@@ -90,7 +98,7 @@ class MonitorService:
         nodes = self.corpus.get_nodes()
         N     = len(nodes)
 
-        if self._Delta_r is None:
+        if self._Delta_r is None or self._Delta_r.shape != (N, N):
             self._Delta_r = np.zeros((N, N))
 
         # σ declarado por el prompt
@@ -110,6 +118,13 @@ class MonitorService:
         fi    = self._fabrication_index(sigma_prompt, sigma_relaxed)
         D_ckm = self._D_ckm(W)
 
+        # G_state — paralelo a {W, Δ_W}, no retroactivo
+        g_state_panel = None
+        if self._g is not None:
+            self._g.ingest([text])
+            g_state_panel = self._g.g_state()
+            g_state_panel["active_behavior"] = self._g.active_nodes(text)
+
         panel = {
             "c_S"              : round(c_s,  6),
             "fabrication_index": round(fi,   4),
@@ -120,6 +135,7 @@ class MonitorService:
             "activos_relajado" : [nodes[i] for i, s in enumerate(sigma_relaxed)  if s > 0],
             "rechazados"       : [(nodes[i], nodes[j]) for i, j in rejected],
             "thermostat"       : None,
+            "G_state"          : g_state_panel,
         }
 
         # thermostat observa el Delta acumulado real

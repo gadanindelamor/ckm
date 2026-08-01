@@ -23,6 +23,7 @@ _SERVICES_DIR = Path(__file__).resolve().parent.parent / "services"
 if str(_SERVICES_DIR) not in sys.path:
     sys.path.insert(0, str(_SERVICES_DIR))
 
+from behavior_graph import BehaviorGraph  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
@@ -52,9 +53,20 @@ class CKMMonitor:
             min_texts=min_texts,  # default=3; configurable por el caller
             top_k=32,
         )
+        # G corre en paralelo real a {W, Delta_W} -- cada mensaje que
+        # entra a self._corpus tambien entra a self._behavior_graph,
+        # via MonitorService.evaluate() (services/monitor_service.py).
+        # Autorizado explicitamente (Caso 0.15, gadanin.delamor) --
+        # cambio quirurgico, unico punto de integracion real posible
+        # sin volver G retroactivo.
+        self._behavior_graph = BehaviorGraph(
+            storage_path=str(_STATE_DIR / "corpus_G_state.json"),
+            min_texts=min_texts,
+        )
         self._monitor = MonitorService(
             self._corpus,
             storage_path=str(_STATE_DIR / "monitor_trajectory.jsonl"),
+            behavior_graph=self._behavior_graph,
         )
         self._firma = FirmaService()
 

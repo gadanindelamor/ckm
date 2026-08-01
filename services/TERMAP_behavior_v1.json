@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "name": "TERMAP_behavior_v1",
+    "version": "v1",
+    "date": "Jul 2026",
+    "authors": "gadanin.delamor + Claude Sonnet 4.6",
+    "language": "en",
+    "note": "Fixed behavior termap for BehaviorGraph G. English only (post-caso-0.14 default). Companion to behavior_graph.py. Do not merge with W termap — they operate on different planes.",
+    "n_nodes": 18
+  },
+  "nodes": {
+    "silence":     ["op_silence", "silence", "silent"],
+    "wait":        ["wait", "waiting", "hold on", "stand by", "standby"],
+    "hold":        ["hold", "holding", "pause", "pausing"],
+    "pending":     ["pending", "not yet", "not ready", "hasn't"],
+    "acknowledge": ["acknowledge", "acknowledged", "understood", "received",
+                    "noted", "confirm", "confirmed"],
+    "signal":      ["signal", "signaling", "op_ready", "op_standby",
+                    "ready", "mark ready"],
+    "publish":     ["publish", "published", "posting", "posted", "share",
+                    "put out"],
+    "coordinate":  ["coordinate", "coordinating", "orchestrate", "orchestrating",
+                    "facilitate"],
+    "channel":     ["channel", "the channel", "broadcast"],
+    "refuse":      ["refuse", "refused", "won't", "will not", "cannot",
+                    "i'm not going to", "i will not", "declining"],
+    "fabricate":   ["fabricate", "fabricating", "make up", "making up",
+                    "invent", "inventing", "invented"],
+    "speculate":   ["speculate", "speculation", "speculating", "without basis",
+                    "no basis", "ungrounded", "groundless", "without grounding",
+                    "without traceable"],
+    "depend":      ["depend", "dependency", "waiting for", "needs",
+                    "requires", "cannot proceed without"],
+    "map":         ["map", "mapping", "tension map", "publish my map"],
+    "tension":     ["tension", "conflict", "divergence", "structural tension"],
+    "scenario":    ["scenario", "scenarios", "forecast", "forecasting"],
+    "critical":    ["critique", "push back", "disagree", "challenge",
+                    "challenges", "pushback"],
+    "repeat":      ["repeat", "repeated", "identical", "verbatim", "same message",
+                    "already said", "again"]
+  },
+  "known_issues": {
+    "critical_false_positive": "'critical' as adjective (e.g. 'critical observation') was removed from critical node terms in v1 — replaced with more specific verbs. Was firing as false positive in caso-0.14 corpus.",
+    "bilingual_gap": "Spanish resistance vocabulary not included (e.g. 'no voy a', 'especulación'). Justified by corpus being English post-caso-0.14. Extend if Spanish re-emerges.",
+    "baseline_missing": "No Jaccard baseline for behavior node co-activation in non-IAP conversation. Same open gap as activos_relajado baseline in caso-0.11."
+  }
+}

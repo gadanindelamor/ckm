@@ -16,8 +16,17 @@ class GroqProvider(Provider):
         self._client = AsyncGroq(api_key=self.api_key)
 
     async def complete(self, messages: List[ChatMessage]) -> str:
+        max_tokens = 4096
         response = await self._client.chat.completions.create(
             model=self.model,
             messages=messages,
+            max_tokens=max_tokens,
         )
-        return response.choices[0].message.content or ""
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            print(
+                f"[GroqProvider WARNING] response truncated at "
+                f"max_tokens={max_tokens} (model={self.model}) — "
+                f"raise max_tokens if this recurs"
+            )
+        return choice.message.content or ""

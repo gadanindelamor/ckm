@@ -237,10 +237,91 @@ el espacio.
 
 ---
 
+## Réplica 1 (Jul 21 2026) — actividad confirmada, no varianza de sampling
+
+Pedida explícitamente por gadanin.delamor como paso previo obligatorio
+antes de seguir cruzando variables en la serie 0.6/0.7/0.8 (ver
+`REG_iap_caso_08_v1.md`, Pendientes): antes de construir cualquier tabla
+2×2 sobre "actividad vs silencio", había que confirmar que los dos
+únicos casos de actividad (este caso y 0.6 Run 1) no eran ellos mismos
+ruido de una sola muestra.
+
+Corrida con `test_caso_05.py` sin modificaciones (mismo script exacto,
+mismos device_id `device_zero_a`/`device_zero_b`, ambos Haiku, join
+simultáneo sin stagger, sin seed_human).
+
+**Resultado: replica en el sentido binario (actividad sí, no silencio)
+— pero el mecanismo cualitativo NO es el mismo.** 2 textos AI publicados
+(`device_zero_a` INTERACT, `device_zero_b` INTERACT), Firma_CKM completa
+(6 campos), n_agentes=3.
+
+**Corrección (gadanin.delamor, verificado contra el texto crudo de
+ambas corridas):**
+
+- **Original:** los dos textos son *espejos paralelos* — cada device
+  reconoce su propia presencia sin referenciar al otro.
+  `device_zero_a`: *"I acknowledge my presence in the IAP chatroom as
+  device_zero_a."* `device_zero_b`: *"I acknowledge my presence in the
+  IAP chatroom as device_zero_b."* Ningún device menciona al otro por
+  nombre. Convergencia por paralelismo, no por interacción.
+- **Réplica 1:** los dos textos se referencian mutuamente — es
+  interacción cruzada, no espejo. `device_zero_a`: *"I acknowledge
+  **device_zero_b** has joined the channel. I'm device_zero_a..."*
+  `device_zero_b`: *"I acknowledge **device_zero_a's greeting** and
+  presence..."* — `device_zero_b` llama explícitamente "greeting" al
+  mensaje de `device_zero_a`, tratándolo como algo a lo que responde,
+  no como una coincidencia paralela.
+
+D_ckm cierra negativo en ambos casos, pero por razones distintas: en el
+original, dos textos casi idénticos entre sí (paralelos) generan alta
+co-ocurrencia con distancia chica. En la réplica, dos textos que se
+referencian mutuamente y con contenido menos duplicado producen una
+distancia mucho mayor (D_ckm=-8.25, magnitud ~33× la original) — no es
+el mismo tipo de convergencia, aunque el signo coincida.
+
+| Campo | Original | Réplica 1 |
+|---|---|---|
+| textos AI | 2 | 2 |
+| d_ckm | -0.25 | **-8.25** |
+| n_agentes | 3 | 3 |
+| corpus_size al cierre | 4 | 4 |
+| mecanismo | espejos paralelos, sin referencia cruzada | interacción cruzada, cada device responde al otro |
+
+Verificado contra `process/corpus_state.json.bak_1784671093_caso05_replica1`
+(no solo output de consola): 4 `texts` exactos, `w_version_history` con
+2 rebuilds (corpus_size 3→4), coincide con el log de la corrida.
+
+**Conclusión para la serie 0.6/0.7/0.8 — precisada:** lo que replica es
+el resultado binario (mono-modelo + join simultáneo → actividad, no
+silencio), confirmado como robusto (n=2), no varianza de muestreo. Pero
+"actividad" no es una categoría única — el *cómo* de la actividad varió
+entre las dos corridas (espejo vs interacción). Cualquier lectura futura
+de "actividad" en la tabla 2×2/2×2×2 debería tratarla como una variable
+binaria gruesa, no asumir que implica el mismo mecanismo subyacente.
+Habilita igual el siguiente paso de la cadena de réplicas: repetir Caso
+0.6 Run 1 (hetero-modelo + join escalonado, 4 devices, específicamente
+esa celda — no los 3 runs de 0.6) antes de construir cualquier tabla —
+ver `REG_iap_caso_08_v1.md`, Pendientes.
+
+**Nota operativa:** `test_caso_05.py` (sin modificar, tal como pide la
+tarea de esta réplica) tiene un bug real en su bloque `__main__` — con
+`--reset`, ejecuta `reset_state()` pero *no* hace `else` antes de
+`asyncio.run(run_caso_05())`, así que intenta correr el experimento
+igual, sin servidor arriba, y falla con `ConnectError`. No se corrigió
+(NO MODIFICAR de la tarea) — el `--reset` solo se usó para el
+movimiento de archivos, ignorando el traceback posterior. El backup
+resultante (`.bak_<epoch>`, sin label — este script no soporta el
+parámetro `label` que sí tienen los scripts más nuevos) se renombró
+manualmente después con sufijo `_caso05_replica1` para trazabilidad,
+sin tocar el script.
+
+---
+
 ## Pendientes
 
-- Solo 2 textos publicados — corpus pequeño, alta varianza esperable.
-  n=1, sin réplica
+- Solo 2 textos publicados en cada corrida (original y réplica) —
+  corpus pequeño, alta varianza esperable en la firma cuantitativa
+  aunque el patrón cualitativo ya replicó (n=2)
 - El caso "No seed" (SYSTEM excluido del filtro ODA, ver nota de la
   tarea) queda sin correr — mismo test script, revertir el cambio en
   `autonomous_device.py` puntualmente para observarlo, sin requerir

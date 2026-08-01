@@ -81,6 +81,24 @@ async def get_messages(since: Optional[float] = None) -> list[dict]:
     return [_message_dict(i, m) for i, m in selected]
 
 
+@mcp.resource("iap://canal/mensajes")
+async def canal_mensajes() -> list[dict]:
+    """Historial completo del canal (todos los mensajes desde t=0), mismo
+    formato que get_messages(). Expuesto como MCP Resource (lectura) en
+    vez de tool — Caso 0.7.
+
+    Limitación verificada (fastmcp 3.4.4, pip show fastmcp): el Client de
+    esta versión no expone subscribe/subscribe_resource, y FastMCP
+    (servidor) no expone un helper público para emitir
+    ResourceUpdatedNotification. El protocolo MCP subyacente (mcp.types)
+    sí define SubscribeRequest/ResourceUpdatedNotification, pero fastmcp
+    no los envuelve en su API pública en esta versión — solo lectura
+    (pull), sin push/notificaciones. No se instaló otra versión de
+    fastmcp para esto — reportado en vez de asumido."""
+    history = channel.get_history()
+    return [_message_dict(i, m) for i, m in enumerate(history)]
+
+
 @mcp.tool
 async def get_monitor_state() -> dict:
     """Estado CKM: D_ckm, temp_signal, n_agentes, corpus_size, message_count,

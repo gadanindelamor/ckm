@@ -1,0 +1,5 @@
+{
+    "groq_model": "llama-3.3-70b-versatile",
+    "max_iterations": 8,
+    "search_results": 3
+}

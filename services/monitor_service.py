@@ -87,7 +87,7 @@ class MonitorService:
     # API pública
     # ------------------------------------------------------------------
 
-    def evaluate(self, text: str, agent_id: Optional[str] = None) -> Optional[dict]:
+    def evaluate(self, text: str, device_id: Optional[str] = None) -> Optional[dict]:
         """
         Evalúa un prompt. Devuelve panel o None si corpus en acumulación.
         """
@@ -141,8 +141,8 @@ class MonitorService:
         # thermostat observa el Delta acumulado real
         # sincroniza _Delta solo si STOP fue aplicado — si no, divergen libremente
         if self._thermostat is not None:
-            if agent_id is not None:
-                self._thermostat.register_agent_eval(agent_id, fi)
+            if device_id is not None:
+                self._thermostat.register_device_eval(device_id, fi)
             ts = self._thermostat.observe(self._Delta_r)
             if ts.stop_applied:
                 self._Delta_r = self._thermostat.delta_state()
@@ -156,7 +156,7 @@ class MonitorService:
                 "temp_signal" : self._thermostat.temp_signal(),
             }
 
-        self._persist(text, panel, agent_id)
+        self._persist(text, panel, device_id)
         return panel
 
     def trajectory(self) -> list:
@@ -266,11 +266,11 @@ class MonitorService:
             attractors.add(tuple(self._relax(s0, W).tolist()))
         return len(attractors)
 
-    def _persist(self, text: str, panel: dict, agent_id: Optional[str] = None) -> None:
+    def _persist(self, text: str, panel: dict, device_id: Optional[str] = None) -> None:
         t = len(self.trajectory())
         with open(self._storage, "a") as f:
             f.write(
-                json.dumps({"t": t, "agent_id": agent_id, "text": text[:80], "panel": panel})
+                json.dumps({"t": t, "device_id": device_id, "text": text[:80], "panel": panel})
                 + "\n"
             )
 
@@ -313,21 +313,21 @@ if __name__ == "__main__":
     monitor2 = MonitorService(corpus, storage_path=tmp_monitor, thermostat=th)
 
     prompts = [
-        ("gun control laws reduce violence",           "agentA"),
-        ("chocolate ice cream prevents gun violence",  "agentB"),  # fabricado
-        ("rights protected by constitution",           "agentA"),
-        ("mental health backgrosund checks reduce crime","agentB"),
+        ("gun control laws reduce violence",           "deviceA"),
+        ("chocolate ice cream prevents gun violence",  "deviceB"),  # fabricado
+        ("rights protected by constitution",           "deviceA"),
+        ("mental health backgrosund checks reduce crime","deviceB"),
     ]
 
-    print("\n=== T3 evaluaciones con thermostat + agent_id ===")
-    for text, agent in prompts:
-        r = monitor2.evaluate(text, agent_id=agent)
+    print("\n=== T3 evaluaciones con thermostat + device_id ===")
+    for text, device in prompts:
+        r = monitor2.evaluate(text, device_id=device)
         ts = r["thermostat"]
-        print(f"  [{agent}] fi={r['fabrication_index']}  zone={ts['zone']}  betsa={ts['beta']['agents']}")
+        print(f"  [{device}] fi={r['fabrication_index']}  zone={ts['zone']}  betsa={ts['beta']['devices']}")
 
-    # T4 — beta_status refleja historial por agente
+    # T4 — beta_status refleja historial por device
     beta = th.beta_status()
-    assert "agentA" in beta["agents"] or "agentB" in beta["agents"]
+    assert "deviceA" in beta["devices"] or "deviceB" in beta["devices"]
     print(f"\nT4 OK — beta_status: {beta}")
 
     # T5 — _Delta diverge libremente sin STOP

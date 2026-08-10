@@ -8,7 +8,7 @@ precarga. No participa en el chat — solo observa.
 Nota de integración con services/:
   - CorpusService.ingest(texts) es el método real de acumulación (no
     "accumulate" como se llama en NodeExtractorService).
-  - MonitorService.evaluate(text, agent_id=None) requiere el texto de
+  - MonitorService.evaluate(text, device_id=None) requiere el texto de
     cada evaluación — no es un evaluate() sin argumentos.
   - FirmaService.firmar(corpus, monitor, n_agentes) es stateless; no
     guarda referencia a corpus/monitor por sí sola.
@@ -81,7 +81,7 @@ class CKMMonitor:
         self._devices_seen.add(message.device_id)
 
         if self._message_count >= self._corpus.min_texts:
-            self._last_panel = self._monitor.evaluate(message.text, agent_id=message.device_id)
+            self._last_panel = self._monitor.evaluate(message.text, device_id=message.device_id)
 
     def get_state(self) -> dict:
         status = self._corpus.status()

@@ -9,11 +9,11 @@ Aplica STOP (Delta → alpha * Delta) sobre el CorpusService compartido.
 β_collective es la mediana de los β_i individuales — se calcula, 
 se reporta en el panel. Pero no regula nada. Es observación, no termostat.
 Para que sea colectivo en la práctica necesita un efecto sobre el campo 
-que ningún agente individual produce solo.
+que ningún device individual produce solo.
 
 En el modelo ferromagnético: β_c es el punto donde el sistema es
-máximamente receptivo. Un agente con β >> β_c es rígido — rechaza todo.
-Un agente con β << β_c es transparente — acepta todo sin discriminar.
+máximamente receptivo. Un device con β >> β_c es rígido — rechaza todo.
+Un device con β << β_c es transparente — acepta todo sin discriminar.
 
 La regulación térmica real sería: cuando β_collective se aleja de β_c 
 — en cualquier dirección — el thermostat emite una señal. No STOP.
@@ -95,7 +95,7 @@ class COCO:
     de interacciones A2A reales. Evalúa estado del campo en cada ciclo
     y emite señal STOP cuando D_ckm cruza umbral.
 
-    No sabe quién es cada agente. No usa AgentCards.
+    No sabe quién es cada device. No usa AgentCards.
     Trabaja con lo que el campo rechazó — Δ_r.
     """
 
@@ -141,7 +141,7 @@ class COCO:
         self._Delta          : np.ndarray           = np.zeros((self.N, self.N))
         self._history        : list[ThermostatState] = []
         self._t              : int                  = 0
-        self._rejections_per_agent: dict             = {}
+        self._rejections_per_device: dict            = {}
 
     # ── API pública ──────────────────────────────────────────────────────────
 
@@ -186,16 +186,16 @@ class COCO:
         self._history.append(state)
         return state
 
-    def register_agent_eval(self, agent_id: str, fi: float) -> None:
-        """Registra fabrication_index de una evaluación de un agente."""
-        if agent_id not in self._rejections_per_agent:
-            self._rejections_per_agent[agent_id] = []
-        self._rejections_per_agent[agent_id].append(fi)
+    def register_device_eval(self, device_id: str, fi: float) -> None:
+        """Registra fabrication_index de una evaluación de un device."""
+        if device_id not in self._rejections_per_device:
+            self._rejections_per_device[device_id] = []
+        self._rejections_per_device[device_id].append(fi)
 
-    def beta_i(self, agent_id: str, epsilon: float = 1e-6) -> Optional[float]:
-        """β estimado para un agente: alto rechazo → β alto (rígido).
+    def beta_i(self, device_id: str, epsilon: float = 1e-6) -> Optional[float]:
+        """β estimado para un device: alto rechazo → β alto (rígido).
         fi=0.0 → None (el campo no rechazó nada — β indefinido, no infinito)."""
-        vals = self._rejections_per_agent.get(agent_id)
+        vals = self._rejections_per_device.get(device_id)
         if not vals:
             return None
         mean_fi = float(np.mean(vals))
@@ -205,24 +205,24 @@ class COCO:
 
     def beta_collective(self) -> Optional[float]:
         """β_c estimado: mediana de todos los β_i activos."""
-        betas = [self.beta_i(aid) for aid in self._rejections_per_agent]
+        betas = [self.beta_i(did) for did in self._rejections_per_device]
         betas = [b for b in betas if b is not None]
         if not betas:
             return None
         return float(np.median(betas))
 
     def beta_status(self) -> dict:
-        """Estado β de todos los agentes activos."""
-        agents = {
-            aid: round(self.beta_i(aid), 4)
-            for aid in self._rejections_per_agent
-            if self.beta_i(aid) is not None
+        """Estado β de todos los devices activos."""
+        devices = {
+            did: round(self.beta_i(did), 4)
+            for did in self._rejections_per_device
+            if self.beta_i(did) is not None
         }
         bc = self.beta_collective()
         return {
             "beta_collective": round(bc, 4) if bc is not None else None,
-            "agents"         : agents,
-            "n_agents"       : len(agents),
+            "devices"        : devices,
+            "n_devices"      : len(devices),
         }
 
     def beta_c_corpus(self) -> float:
@@ -253,7 +253,7 @@ class COCO:
           ratio ≈ 1  → NOMINAL   — zona Ω*, portero discrimina bien
 
         Umbrales provisionales: una octava arriba/abajo de β_c.
-        Sin agentes activos → UNKNOWN (β_collective no estimable).
+        Sin devices activos → UNKNOWN (β_collective no estimable).
         """
         bc = self.beta_collective()
         beta_c = self.beta_c_corpus()
@@ -264,7 +264,7 @@ class COCO:
                 "beta_collective" : None,
                 "beta_c_corpus"   : round(beta_c, 4),
                 "ratio"           : None,
-                "note"            : "sin agentes con fi estimable — β_collective indefinido",
+                "note"            : "sin devices con fi estimable — β_collective indefinido",
             }
 
         ratio = bc / beta_c
@@ -383,18 +383,18 @@ if __name__ == "__main__":
     assert alphas[0] > alphas[1] > alphas[2] > alphas[3], "FAIL T2"
     print(f"T2 OK — alpha_for: {[round(a,3) for a in alphas]}")
 
-    # T3 — beta sin agentes → None
+    # T3 — beta sin devices → None
     assert th.beta_collective() is None
-    print("T3 OK — beta_collective None sin agentes")
+    print("T3 OK — beta_collective None sin devices")
 
     # T4 — beta_i: fi=0 → None, mayor rechazo → beta menor
-    th.register_agent_eval("agentA", 0.8)
-    th.register_agent_eval("agentA", 0.6)
-    th.register_agent_eval("agentB", 0.0)
-    th.register_agent_eval("agentC", 0.4)
-    assert th.beta_i("agentB") is None, "FAIL T4 — fi=0 debe ser None"
-    assert th.beta_i("agentA") < th.beta_i("agentC"), "FAIL T4 — orden beta"
-    print(f"T4 OK — beta_A={th.beta_i('agentA'):.3f}  beta_B={th.beta_i('agentB')}  beta_C={th.beta_i('agentC'):.3f}")
+    th.register_device_eval("deviceA", 0.8)
+    th.register_device_eval("deviceA", 0.6)
+    th.register_device_eval("deviceB", 0.0)
+    th.register_device_eval("deviceC", 0.4)
+    assert th.beta_i("deviceB") is None, "FAIL T4 — fi=0 debe ser None"
+    assert th.beta_i("deviceA") < th.beta_i("deviceC"), "FAIL T4 — orden beta"
+    print(f"T4 OK — beta_A={th.beta_i('deviceA'):.3f}  beta_B={th.beta_i('deviceB')}  beta_C={th.beta_i('deviceC'):.3f}")
 
     # T5 — beta_collective mediana sobre activos (excluye None)
     bc = th.beta_collective()
@@ -447,22 +447,22 @@ def _test_temp_signal():
     assert abs(bc - 13.83) < 0.1, f"FAIL T9: {bc}"
     print(f"T9 OK — beta_c_corpus={bc:.4f}")
 
-    # T10 — sin agentes → UNKNOWN
+    # T10 — sin devices → UNKNOWN
     ts = th.temp_signal()
     assert ts["signal"] == "UNKNOWN"
-    print(f"T10 OK — UNKNOWN sin agentes")
+    print(f"T10 OK — UNKNOWN sin devices")
 
     # T11 — TOO_COLD: fi bajo → β alto → paranoia/inanición
-    th.register_agent_eval("agentA", 0.001)
-    th.register_agent_eval("agentB", 0.001)
+    th.register_device_eval("deviceA", 0.001)
+    th.register_device_eval("deviceB", 0.001)
     ts = th.temp_signal()
     assert ts["signal"] == "TOO_COLD", f"FAIL T11: {ts}"
     print(f"T11 OK — TOO_COLD ratio={ts['ratio']}")
 
     # T12 — TOO_HOT: fi alto → β bajo → intoxicación
     th2 = COCO(W=W_real, n_runs=40, seed=42)
-    th2.register_agent_eval("agentA", 0.99)
-    th2.register_agent_eval("agentB", 0.95)
+    th2.register_device_eval("deviceA", 0.99)
+    th2.register_device_eval("deviceB", 0.95)
     ts2 = th2.temp_signal()
     assert ts2["signal"] == "TOO_HOT", f"FAIL T12: {ts2}"
     print(f"T12 OK — TOO_HOT ratio={ts2['ratio']}")
@@ -470,9 +470,9 @@ def _test_temp_signal():
     # T13 — NOMINAL: fi ≈ 1/β_c
     th3 = COCO(W=W_real, n_runs=40, seed=42)
     fi_nom = 1.0 / bc
-    th3.register_agent_eval("agentA", fi_nom)
-    th3.register_agent_eval("agentB", fi_nom * 1.2)
-    th3.register_agent_eval("agentC", fi_nom * 0.8)
+    th3.register_device_eval("deviceA", fi_nom)
+    th3.register_device_eval("deviceB", fi_nom * 1.2)
+    th3.register_device_eval("deviceC", fi_nom * 0.8)
     ts3 = th3.temp_signal()
     assert ts3["signal"] == "NOMINAL", f"FAIL T13: {ts3}"
     print(f"T13 OK — NOMINAL ratio={ts3['ratio']}")

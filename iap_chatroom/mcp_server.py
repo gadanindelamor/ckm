@@ -1,7 +1,7 @@
 """
 mcp_server.py — capa MCP sobre la infraestructura existente de IAP Chatroom.
 
-IAP se expone como MCP Server: agentes externos usan estas tools como
+IAP se expone como MCP Server: devices externos usan estas tools como
 clientes MCP para participar en el canal de chat. Reutiliza los mismos
 singletons (ChatChannel, DeviceManager, CKMMonitor) que ya usa
 api_routes.py — no se instancia estado nuevo.

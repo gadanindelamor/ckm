@@ -1,14 +1,14 @@
 """
-test_coco_thermostat.py
-CKM — Tests suite: COCOThermostat
+test_coco.py
+CKM — Tests suite: COCO
 
 Ancla de simulación: exp_coco_thermostat_v1.png
   W_mixta AMP=40 · 3 pares · N=32 · seed=0 · n_runs=80 → A0=20
   (reproducido en esta sesión con calibrate_W_mixta.py + W_ckm_corpus_v2.json)
 
 Ejecutar:
-    pytest test_coco_thermostat.py -v
-    python test_coco_thermostat.py   # modo standalone
+    pytest test_coco.py -v
+    python test_coco.py   # modo standalone
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent))
-from coco_thermostat import (
-    COCOThermostat, ThermostatState,
+sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
+from coco import (
+    COCO, ThermostatState,
     D_CKM_THRESHOLD, ALPHA_STAR, FRAC_REC_MIN, ALPHA_MIN, ALPHA_MAX,
 )
 
@@ -50,6 +50,7 @@ def make_W_mixta_amp40():
     """
     candidates = [
         Path(__file__).parent / "W_ckm_corpus_v2.json",
+        Path(__file__).parent.parent / "services" / "W_ckm_corpus_v2.json",
         Path("W_ckm_corpus_v2.json"),
     ]
     for p in candidates:
@@ -73,7 +74,7 @@ class TestAPI:
     def setup_method(self):
         self.W  = make_W_small()
         self.N  = self.W.shape[0]
-        self.th = COCOThermostat(W=self.W, n_runs=20, seed=0)
+        self.th = COCO(W=self.W, n_runs=20, seed=0)
 
     def test_observe_returns_thermostat_state(self):
         state = self.th.observe(np.zeros((self.N, self.N)))
@@ -97,7 +98,7 @@ class TestAPI:
             assert key in s, f"Clave faltante en status(): {key}"
 
     def test_history_empty_before_observe(self):
-        th = COCOThermostat(W=self.W, n_runs=20, seed=0)
+        th = COCO(W=self.W, n_runs=20, seed=0)
         assert th.history() == []
 
     def test_delta_state_returns_array(self):
@@ -124,7 +125,7 @@ class TestZoneClassification:
 
     def setup_method(self):
         W  = make_W_small()
-        self.th = COCOThermostat(W=W, n_runs=5, seed=0)
+        self.th = COCO(W=W, n_runs=5, seed=0)
 
     def test_negative_D_ckm_is_stable(self):
         z = self.th._classify_zone(-0.1, 0.9)
@@ -159,8 +160,8 @@ class TestAlphaFor:
 
     def setup_method(self):
         W = make_W_small()
-        self.th_dyn   = COCOThermostat(W=W, dynamic_alpha=True,  n_runs=5)
-        self.th_fixed = COCOThermostat(W=W, dynamic_alpha=False, n_runs=5)
+        self.th_dyn   = COCO(W=W, dynamic_alpha=True,  n_runs=5)
+        self.th_fixed = COCO(W=W, dynamic_alpha=False, n_runs=5)
 
     def test_alpha_at_threshold_equals_alpha_max(self):
         a = self.th_dyn._alpha_for(D_CKM_THRESHOLD)
@@ -202,11 +203,11 @@ class TestSTOP:
     def _thermostat_with_forced_zone(self, zone):
         """Crea thermostat con umbral ajustado para forzar zona."""
         if zone == "stable":
-            return COCOThermostat(
+            return COCO(
                 W=self.W, d_ckm_threshold=0.99, n_runs=20, seed=0
             )
         elif zone == "degrading":
-            return COCOThermostat(
+            return COCO(
                 W=self.W, d_ckm_threshold=0.0, frac_rec_min=0.0, n_runs=20, seed=0
             )
 
@@ -225,7 +226,7 @@ class TestSTOP:
         (una para A_current, otra para A0 si es None). Para controlar el
         resultado se fija _A0 directamente y se parchea solo A_current.
         """
-        th = COCOThermostat(W=self.W, n_runs=5, seed=0)
+        th = COCO(W=self.W, n_runs=5, seed=0)
         N  = self.N
         # A0=10 fijo; _count_attractors devuelve 5 → D_ckm=0.5 → degrading
         th._A0 = 10
@@ -242,7 +243,7 @@ class TestSTOP:
 
     def test_stop_scales_delta(self):
         """Después de STOP, delta_state() contiene Delta escalado."""
-        th = COCOThermostat(W=self.W, n_runs=5, seed=0)
+        th = COCO(W=self.W, n_runs=5, seed=0)
         N  = self.N
         # A0=10, A_current=2 → D_ckm=0.8 → deep
         th._A0 = 10
@@ -273,7 +274,7 @@ class TestWImmutable:
         W  = make_W_small()
         W0 = W.copy()
         # threshold=0 → siempre STOP
-        th    = COCOThermostat(W=W, d_ckm_threshold=0.0,
+        th    = COCO(W=W, d_ckm_threshold=0.0,
                                frac_rec_min=0.0, n_runs=20, seed=0)
         Delta = np.ones_like(W) * 2.0
         np.fill_diagonal(Delta, 0)
@@ -286,7 +287,7 @@ class TestWImmutable:
     def test_W_not_modified_by_multiple_observes(self):
         W  = make_W_small()
         W0 = W.copy()
-        th = COCOThermostat(W=W, d_ckm_threshold=0.0,
+        th = COCO(W=W, d_ckm_threshold=0.0,
                             frac_rec_min=0.0, n_runs=20, seed=0)
         for _ in range(5):
             Delta = np.abs(np.random.default_rng(0).normal(0, 1, W.shape))
@@ -314,7 +315,7 @@ class TestSimulationAnchor:
             print("  [SKIP] W_ckm_corpus_v2.json no disponible")
             return
         N  = self.W.shape[0]
-        th = COCOThermostat(W=self.W, n_runs=80, seed=0)
+        th = COCO(W=self.W, n_runs=80, seed=0)
         state = th.observe(np.zeros((N, N)))
         assert state.A0 == 20, f"Esperado A0=20, obtenido {state.A0}"
 
@@ -323,7 +324,7 @@ class TestSimulationAnchor:
         if self.W is None:
             return
         N  = self.W.shape[0]
-        th = COCOThermostat(W=self.W, n_runs=80, seed=0)
+        th = COCO(W=self.W, n_runs=80, seed=0)
         state = th.observe(np.zeros((N, N)))
         assert state.D_ckm == 0.0
         assert state.frac_rec == 1.0
@@ -335,7 +336,7 @@ class TestSimulationAnchor:
         if self.W is None:
             return
         N  = self.W.shape[0]
-        th = COCOThermostat(W=self.W, n_runs=80, seed=0)
+        th = COCO(W=self.W, n_runs=80, seed=0)
         # fijar A0 primero
         th.observe(np.zeros((N, N)))
         # construir Delta que lleva D_ckm=0.40 (igual que simulación)

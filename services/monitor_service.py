@@ -32,7 +32,7 @@ Inicializacion:
         corpus          : CorpusService,
         storage_path    : str = "monitor_trajectory.jsonl",
         n_runs_attractors: int = 50,
-        thermostat      : Optional[COCOThermostat] = None,
+        thermostat      : Optional[COCO] = None,
     ):
         self.corpus    = corpus
         self._storage  = Path(storage_path)
@@ -54,7 +54,7 @@ import numpy as np
 
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
-from coco_thermostat import COCOThermostat, ThermostatState
+from coco import COCO, ThermostatState
 
 try:
     from behavior_graph import BehaviorGraph as _BehaviorGraph
@@ -70,7 +70,7 @@ class MonitorService:
         corpus          : CorpusService,
         storage_path    : str = "monitor_trajectory.jsonl",
         n_runs_attractors: int = 50,
-        thermostat      : Optional[COCOThermostat] = None,
+        thermostat      : Optional[COCO] = None,
         behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
     ):
         self.corpus    = corpus
@@ -280,7 +280,7 @@ class MonitorService:
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import tempfile, os
-    from coco_thermostat import COCOThermostat
+    from coco import COCO
 
     tmp_corpus  = tempfile.mktemp(suffix=".json")
     tmp_monitor = tempfile.mktemp(suffix=".jsonl")
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     tmp_monitor = tempfile.mktemp(suffix=".jsonl")
 
     # T3 — con thermostat: panel incluye zone y beta
-    th = COCOThermostat(W=corpus.get_W(), n_runs=30, seed=0)
+    th = COCO(W=corpus.get_W(), n_runs=30, seed=0)
     monitor2 = MonitorService(corpus, storage_path=tmp_monitor, thermostat=th)
 
     prompts = [

@@ -40,8 +40,8 @@ def make_corpus_monitor(texts=None, with_thermostat=False):
 
     thermostat = None
     if with_thermostat:
-        from coco_thermostat import COCOThermostat
-        thermostat = COCOThermostat(W=corpus.get_W(), n_runs=20, seed=0)
+        from coco import COCO
+        thermostat = COCO(W=corpus.get_W(), n_runs=20, seed=0)
 
     tmp_m = tempfile.mktemp(suffix=".jsonl")
     monitor = MonitorService(corpus, storage_path=tmp_m, n_runs_attractors=20,

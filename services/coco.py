@@ -1,5 +1,5 @@
 """
-coco_thermostat.py — Collective COCO-thermostat (prototipo mínimo)
+coco.py — Collective COCO-thermostat (prototipo mínimo)
 
 No almacena capacidades declaradas (eso es COCO-registry, se vuelve stale).
 Observa D_ckm(t) del corpus colectivo emergido de interacción real A2A.
@@ -37,10 +37,10 @@ Precondición: W debe ser el suelo del corpus en modo evaluación.
 W es inmutable para el thermostat — es el campo original al que
 el sistema puede regresar. COCO-thermostat actúa solo sobre Δ.
 Si W cambia (corpus crece, nuevos nodos), instanciar un nuevo
-COCOThermostat con la W actualizada.
+COCO con la W actualizada.
 Uso correcto con CorpusService:
     assert corpus.mode == "evaluation", "corpus insuficiente"
-    thermostat = COCOThermostat(W=corpus.get_W())
+    thermostat = COCO(W=corpus.get_W())
 W=None (corpus en acumulación) lanza ValueError.
 
 
@@ -87,7 +87,7 @@ class ThermostatState:
     zone         : str   = "stable"   # stable | degrading | deep
 
 
-class COCOThermostat:
+class COCO:
     """
     Termostato colectivo de campo CKM.
 
@@ -115,18 +115,18 @@ class COCOThermostat:
         W es inmutable para el thermostat — es el campo original al que
         el sistema puede regresar. COCO-thermostat actúa solo sobre Δ.
         Si W cambia (corpus crece, nuevos nodos), instanciar un nuevo
-        COCOThermostat con la W actualizada.
+        COCO con la W actualizada.
 
         Uso correcto con CorpusService:
             assert corpus.mode == "evaluation", "corpus insuficiente"
-            thermostat = COCOThermostat(W=corpus.get_W())
+            thermostat = COCO(W=corpus.get_W())
 
         W=None (corpus en acumulación) lanza ValueError.
         """
         if W is None:
             raise ValueError(
                 "W no puede ser None. "
-                "Esperar corpus.mode == 'evaluation' antes de instanciar COCOThermostat."
+                "Esperar corpus.mode == 'evaluation' antes de instanciar COCO."
             )
         self.W               = W
         self.N               = W.shape[0]
@@ -370,13 +370,13 @@ if __name__ == "__main__":
 
     # T1 — precondición W=None
     try:
-        COCOThermostat(W=None)
+        COCO(W=None)
         print("FAIL T1")
         sys.exit(1)
     except ValueError:
         print("T1 OK — ValueError en W=None")
 
-    th = COCOThermostat(W=W, n_runs=40, seed=42)
+    th = COCO(W=W, n_runs=40, seed=42)
 
     # T2 — _alpha_for monotona decreciente
     alphas = [th._alpha_for(d) for d in [0.40, 0.60, 0.80, 1.0]]
@@ -415,7 +415,7 @@ if __name__ == "__main__":
     print(f"T7 OK — zone={state2.zone}, alpha={state2.alpha_used:.4f}, stop=True")
 
     # T8 — dynamic_alpha=False usa alpha_star fijo
-    th2 = COCOThermostat(W=W, dynamic_alpha=False, n_runs=40, seed=42)
+    th2 = COCO(W=W, dynamic_alpha=False, n_runs=40, seed=42)
     th2.observe(Delta_heavy)
     state3 = th2.observe(Delta_heavy)
     if state3.stop_applied:
@@ -440,7 +440,7 @@ def _test_temp_signal():
     with open(w_path) as f:
         W_real = np.array(json.load(f)["W"])
 
-    th = COCOThermostat(W=W_real, n_runs=40, seed=42)
+    th = COCO(W=W_real, n_runs=40, seed=42)
 
     # T9 — beta_c_corpus verificado
     bc = th.beta_c_corpus()
@@ -460,7 +460,7 @@ def _test_temp_signal():
     print(f"T11 OK — TOO_COLD ratio={ts['ratio']}")
 
     # T12 — TOO_HOT: fi alto → β bajo → intoxicación
-    th2 = COCOThermostat(W=W_real, n_runs=40, seed=42)
+    th2 = COCO(W=W_real, n_runs=40, seed=42)
     th2.register_agent_eval("agentA", 0.99)
     th2.register_agent_eval("agentB", 0.95)
     ts2 = th2.temp_signal()
@@ -468,7 +468,7 @@ def _test_temp_signal():
     print(f"T12 OK — TOO_HOT ratio={ts2['ratio']}")
 
     # T13 — NOMINAL: fi ≈ 1/β_c
-    th3 = COCOThermostat(W=W_real, n_runs=40, seed=42)
+    th3 = COCO(W=W_real, n_runs=40, seed=42)
     fi_nom = 1.0 / bc
     th3.register_agent_eval("agentA", fi_nom)
     th3.register_agent_eval("agentB", fi_nom * 1.2)

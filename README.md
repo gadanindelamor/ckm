@@ -1,6 +1,6 @@
 # CKM — Cohesive Knowledge Model
 
-**Status:** Research · v30 · Jul 2026  
+**Status:** Research · v31 · Aug 2026  
 **Author:** gadanin.delamor  
 **License:** MIT
 
@@ -12,252 +12,302 @@ CKM is a formal model for knowledge graph dynamics in multi-agent systems. Its c
 
 The model uses a Hopfield attractor architecture over a weighted knowledge graph, with a cohesion measure derived from ferromagnetic physics. It distinguishes three layers:
 
-- **W** — symmetric co-occurrence weight matrix (N×N). Structural memory. Invariant ground.
-- **Δ** — asymmetric directional dependency matrix (N×N). Inference orientation. Trace goes to Δ, not to W.
-- **c(S)** — cohesion measure = mean(W_ij · σ_i · σ_j) over all pairs i<j. Negative normalized Hopfield energy.
+- **W** — symmetric co-occurrence weight matrix (N×N). Structural memory.
+- **Δ** — asymmetric directional dependency matrix (N×N). Inference orientation.  
+  Built from corpus (citation network, quote directionality). Static once built.  
+  Not the same as Δ_r (MonitorService rejection accumulator — see Architecture).
+- **c(S)** — cohesion measure = mean(W_ij · σ_i · σ_j) over all pairs i<j. Negative normalized Hopfield energy. Measures W/state alignment.
 
-**W and Δ are kept strictly separate.** Hebbian learning on W destroys the structural tension that produces attractor diversity (verified: recovery drops from 0.78 to 0.02). Hebbian learning on Δ preserves W intact.
+**W and Δ are kept strictly separate.** Mixing them destroys attractor recovery capacity (verified: recovery drops from 0.78 to 0.02).
 
-Designed to operate as a layer over existing protocols (MCP, A2A).
+| Matrix  | Source         | Role                                | Mutable |
+|---------|----------------|-------------------------------------|---------|
+| W_base  | corpus         | symmetric co-occurrence             | no      |
+| W_mixta | W_base + config| W_base + structural negative pairs  | no      |
+| Δ       | corpus         | asymmetric directional dependency   | no      |
+| Δ_r     | MonitorService | rejection accumulator               | yes     |
+
+**W — static vs. dynamic:** In validation experiments (P1–P7), W is a static snapshot built from a complete corpus dump. In live IAP operation, CorpusService reconstructs W continuously as new texts arrive; WVersionManager traces each reconstruction; Firma_CKM certifies each state. When W changes, a new COCO instance must be created — COCO's β_c is derived from the W it was initialized with. The snapshot is a frame in a streaming field, static by experimental design, not by architectural constraint.
 
 ---
 
 ## Architecture
 
 ```
- IAP Chatroom Service      ←  multiple device chatrooms (NLH)
+Agent produces knowledge node
         ↓
-  CKM Monitor              ←  observes devices interactions
-        ↓
-  Shared Corpus Service    ←  ingests devices interactions
-        ↓                      W_mixta construction, persistence
-        ↓
-  Node Extractor Service   ←  interactions produce knowledge nodes
-        ↓                      TF-IDF n-gram extraction (v1)
-        ↓
-  Gatekeeper (R15)         ←  O(N) per node, binary, bounded time
+  Gatekeeper (R15)        ← O(N) per node, binary, bounded time
   C1: minimum connection weight
   C2: c(S) delta ≥ -ε
   C3: direction score > 0  (M.M criterion)
   C4: capacity < α_c · N
         ↓
-  Knowledge graph (W + Δ)
+  Knowledge graph (W_mixta)              ← W_base + structural negative pairs
         ↓
-  Hopfield relaxation      ←  async update, finds stable attractor
+  Hopfield relaxation                    ← operates on W_mixta + Δ_r
+                                            Δ_r: rejection accumulator, starts at zero,
+                                            grows with each MonitorService.evaluate() call.
+                                            Not the same as Δ (corpus-derived, static).
         ↓
-  Monitor Service          ←  D_ckm, Δ_r accumulation, STOP signal
-        ↓
-  COCOThermostat           ←  beta_collective, temp_signal
-                               (TOO_COLD / NOMINAL / TOO_HOT)
+  Continuous verification  ← recalibrates weights, chain propagation
 ```
-*Devices are Agents, Humans, Tools, Data Access, Skills, Artifacts*
-
-**Cohesion function:**
-```python
-def cS(sigma, W):
-    pairs = [(i,j) for i in range(N) for j in range(i+1, N)]
-    return np.mean([W[i,j] * sigma[i] * sigma[j] for i,j in pairs])
-```
-
-**W_mixta:** W_base + structural negative weights on opposed pairs. Required at N≥32 — W≥0 produces spurious saturation.
-
----
-
-## Verified Predictions
-
-Seven predictions, six confirmed experimentally on internal corpus (N=32, N=64) and two independent external domains (CreateDebate gun control, fourforums gun control, IAC v2).
-
-| # | Prediction | Status | Notes |
-|---|-----------|--------|-------|
-| P1 | Hysteresis loop in c(S): incorporating ≠ removing at identical density | ✓ Confirmed | N=32 area=0.000862 p≈0. N=64. External domains. |
-| P2 | Cascade distribution P(s) ∝ s^−τ, τ∈[1.5,2] | ✓ Confirmed | N=32 extended zone. N=64 τ=1.775. |
-| P3 | Temporal asymmetry: relaxation after removal > after addition | ✓ Confirmed | N=32 p<0.0001. N=64 p≈0. |
-| P4 | Interior optimal density Ω* in W_mixta | ✓ Confirmed | W_mixta produces c(S) 13x greater than W_pos. Ω* at ρ*=0.5–0.8. N=32 full, N=64 dilution (k*=54, ratio=0.0268) — density phenomenon, not scale failure. |
-| P5 | Polarized corpus: attractors ~50%N, polarization collapses state diversity | ✓ Confirmed | fourforums gun control. 8 attractors ≈ 50%N. |
-| P6 | Delta (asymmetric initiation) acts as symmetry-breaking mechanism | ✓ Confirmed | CreateDebate: 54pp collapse. fourforums: 100pp collapse. Polo sos_dom dominant in both. |
-| P7 | Every system with genuine structural tension has at least one 965-type node | Hypothesis | Author 965 (CreateDebate, ratio 455×) and Author 204 (fourforums, ratio 296×) as confirmed instances. Absence indicates fabricated tension. Falsifiable in any new domain. |
-
-**P4 open question (N=64):** negative pair density threshold k* between k=72–108 (ratio 0.036–0.054). Real W_base_n64.npy requires term_map reconstruction session.
-
----
-
-## Key Experimental Findings
-
-**N=32 internal corpus (W_ckm_corpus_v2.json, N=32, corpus_size=5145):**
-- 88 distinct attractors. Saturated attractor disappears completely.
-- `traza_inferencia` is the only core-invariant node (84% of attractors).
-- 4 co-presence clusters: contact · tension · motor · ground.
-- Perfect structural oppositions: cohesion_fabricada↔M_M, atractor_espurio↔portero, sentido_comun↔inconmensurabilidad.
-- Attractor size is a property of W, not of initial state.
-
-**External validation — fourforums gun control (414K posts, IAC v2):**
-- Author 965 (CreateDebate): out=1, in=455, ratio 455×. Present in C3 (frustrated triad) in 89% of pairs.
-- 32 tension axes converge on Author 965 (verified projective bundle).
-- Triads containing Author 965: coercivity = 0 at up to 50% noise. Triads without 965: coercivity = 0 at noise = 0.
-- Holonomy confirmed: path A→B vs B→A produces same dominant attractor, different amplitude (+0.176 fraction active).
-
-**STOP operator:**
-- STOP invariant: fraccion_rec ≥ 1.0 always. W is invariant ground — STOP clears Δ, ground re-emerges.
-- Effectiveness = f(A_pre): when A_pre < A0 → STOP expands landscape (ratio > 1). alpha*≈0.4 robust.
-- Does not interrupt A2A task execution. Operates on Δ accumulation within CKM stack.
-
-**COCOThermostat (43/43 tests):**
-- beta_collective = median beta_i of active agents, inferred from rejection history — not declared.
-- beta_c_corpus = 1/(ρ* · N · μ_W) = 13.83 (N=32, μ_W=0.004519).
-- temp_signal: TOO_COLD (paranoia/starvation) / NOMINAL (Ω* zone) / TOO_HOT (intoxication).
-
----
-
-## Services Architecture
-
-```
-services/
-├── monitor_service.py      # MonitorService: D_ckm, Δ_r, STOP signal
-├── corpus_service.py       # CorpusService: W_mixta construction, persistence
-├── node_extractor.py       # NodeExtractor: TF-IDF n-gram extraction (v1)
-└── mcp_adapter.py          # designed, NOT implemented — see Open Gaps
-```
-
-**COCOThermostat** (`coco_thermostat.py`): optional injection into MonitorService. `evaluate(text, agent_id=None)`.
-
-**IAP — Intel Access Point** (operational, in active testing — not just a concept): CKM Chatrooms for multi-agent interaction, served over a real MCP server (`iap_chatroom/mcp_server.py`, 6 tools) and a FastAPI+Gradio demo (`iap_chatroom/server.py`, port 7860). `AutonomousDevice` runs its own ODA (Observe·Decide·Act) polling loop against the channel; `AgentDeviceSkin` lets an external goal-directed agent (conversational or autonomous, e.g. `groq_research_agent.py`) drive that loop instead of the generic LLM gate. Exercised across an experimental series, Casos 0.4–0.12 (11 REGs, `registers/REG_iap_caso_*.md`) — confirmed findings include provider heterogeneity as an activity driver, goal-directed skins engaging with real technical depth, and a device that never reads the channel still depending on it for its own pacing (coupled silence, Caso 0.12). See `registers/REG_hint_next_instance_v8.md` for the current state of the thread. Private Highway Network for STOP and TEMP_SIGNAL — high-priority internal channel, separate from A2A routing — remains a concept, implementation pending.
 
 ---
 
 ## Repository Structure
 
 ```
-ckm/
-├── core.py                              # CKMGraph: W+Δ, c(S), Gatekeeper R15
-├── CLAUDE.md                            # Coding guidelines for Claude Code
-├── THEORY.md                            # Formal rules R01–R17, knowledge orders
-├── EXPERIMENTS.md                       # Experimental methodology and results
-├── METHODOLOGY.md                       # Project methodology
-├── CHANGELOG.md                         # Version history v1–v30
-├── CONVENTIONS.md                       # Naming and structural conventions
-├── API_SPEC.md                          # API specification
-├── iap_chatroom/                        # IAP Chatroom service (Demo C + MCP)
-│   ├── server.py                        # FastAPI entry point (port 7860)
-│   ├── channel.py                       # ChatChannel — message broadcast
-│   ├── device_manager.py               # Device registration
-│   ├── ckm_monitor.py                  # CKMMonitor — passive observer
-│   ├── api_routes.py                   # REST endpoints /api/*
-│   ├── ui_gradio.py                    # Gradio UI /ui/
-│   ├── mcp_server.py                   # MCP Server /mcp — 6 tools
-│   ├── test_mcp_client.py              # MCP integration test (6/6)
-│   ├── autonomous_device.py            # AutonomousDevice — ODA polling loop
-│   ├── agent_device_skin.py            # AgentDeviceSkin — external goal-directed agent drives the ODA loop
-│   ├── groq_research_agent.py          # AutonomousResearchAgent — Groq + planning + web search, as a skin
-│   ├── test_caso_*.py                  # experimental series, Casos 0.1–0.12 (see registers/REG_iap_caso_*.md)
-│   └── providers/                      # AI provider adapters
-│       ├── base.py                     # Provider(ABC) with complete()
-│       ├── anthropic_provider.py
-│       ├── groq_provider.py
-│       ├── openai_provider.py
-│       └── gemini_provider.py
-├── services/                           # CKM core services
-│   ├── corpus_service.py              # CorpusService — W construction
-│   ├── node_extractor.py              # NodeExtractorService — TF-IDF
-│   ├── monitor_service.py             # MonitorService — D_ckm, Δ_r
-│   ├── coco_thermostat.py            # COCOThermostat — beta_collective
-│   ├── w_version.py                  # WVersionManager — W trace history
-│   └── firma_ckm.py                  # FirmaService — Firma_CKM 6 fields
-├── experiments/
-│   ├── fourforums_pipeline_v8g.py    # fourforums IAC pipeline (P5/P6)
-│   ├── fourforums_pipeline_v8h.py    # with W_asim (C6c asymmetry)
-│   ├── p4_neg_sweep.py               # P4 negative pair density sweep
-│   └── build_W_base_N64.py           # N=64 W construction
-├── registers/                         # REG_*.md — experimental traces
-└── docs/                              # .docx reports (gitignored, local only)
-    └── CKM_Informe_Trabajo_v30.md    # Full working report
+ckm/                                 # Repo root
+├── core.py                          # CKMGraph, CKMConfig, GatekeeperResult
+├── analytics.py                     # copresence_matrix, cluster_nodes, P4 optimal_density
+├── hopfield.py                      # relax, find_attractors, hysteresis_loop (P1)
+├── kcore.py                         # kcore, cascade_distribution (P2), temporal_asymmetry (P3)
+├── mcp_adapter.py                   # CKMAdapterMCPCapabilities — MCP capabilities layer
+│
+├── services/                        # Servicios CKM operativos (IAP runtime)
+│   ├── corpus_service.py
+│   ├── monitor_service.py
+│   ├── coco.py                      # (renombrado de coco_thermostat.py)
+│   ├── fabrication_service.py
+│   ├── firma_ckm.py
+│   ├── w_version.py
+│   ├── node_extractor.py
+│   ├── behavior_graph.py
+│   ├── TERMAP_behavior_v1.json
+│   └── W_ckm_corpus_v2.json
+│
+├── tests/                           # Tests de servicios
+│   ├── test_coco.py                 # (renombrado de test_coco_thermostat.py)
+│   ├── test_firma_ckm.py
+│   ├── test_monitor_services.py
+│   └── test_w_version.py
+│
+├── iap_chatroom/                    # Aplicación IAP Chatroom
+│   ├── server.py
+│   ├── api_routes.py
+│   ├── mcp_server.py
+│   ├── channel.py
+│   ├── device_manager.py
+│   ├── ckm_monitor.py               # Integra W + G
+│   ├── autonomous_device.py
+│   ├── agent_device_skin.py
+│   ├── groq_research_agent.py
+│   ├── ui_gradio.py
+│   ├── groq_agent_config.json
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── providers/                   # AnthropicProvider, GroqProvider, OpenAIProvider, GeminiProvider
+│   ├── tests/                       # Casos 0.0–0.15 + TASKs
+│   └── _state/                      # Runtime state (gitignored)
+│
+├── experiments/                     # Pipelines de validación externa
+│   ├── fourforums_pipeline_v8g.py
+│   ├── fourforums_pipeline_v8h.py
+│   ├── build_W_base_N64.py
+│   ├── calibrate_W_mixta.py
+│   ├── neg_pairs_config_fourforums_v8h.json
+│   └── figures/
+│
+├── process/                         # Estado experimental — backups por caso
+│   ├── corpus_states/               # corpus_state.json.bak_* (Casos 0.4–0.14)
+│   ├── monitor_trajectories/        # monitor_trajectory.jsonl.bak_*
+│   └── experiments/                 # W_ckm_corpus_v2.json, REG JSON outputs
+│
+├── registers/                       # REGs — Clase R, no modificar
+│   └── REG_*.md  (+ MAPA_REG_corpus_v*.md)
+│
+├── docs/                            # Informes de trabajo y figuras
+│   ├── CKM_Informe_Trabajo_v30.md
+│   ├── Informe_Sciamarella_CKM.md
+│   └── figures/
+│
+├── readme/                          # Documentación operativa
+│   ├── API_SPEC.md
+│   ├── CONVENTIONS.md
+│   ├── THEORY.md
+│   ├── METODOLOGY.MD
+│   ├── LETTER.md
+│   └── EXPERIMENTS.md
+│
+├── logs/
+├── pyproject.toml                   # numpy>=1.24, scipy>=1.11
+├── CHANGELOG.md
+├── LICENSE
+├── .gitignore
+└── README.md
 ```
 
----
 
 ## How to Run
 
-**Requirements:** Python 3.10+, numpy, scipy, matplotlib, scikit-learn
+### Prerequisites
 
 ```bash
-pip install numpy scipy matplotlib scikit-learn
+pip install fastapi uvicorn gradio anthropic groq spacy
+# Network access required for Groq and Anthropic API calls
 ```
 
-**MonitorService:**
-```python
-from services.monitor_service import MonitorService
-from services.coco_thermostat import COCOThermostat
+### IAP Chatroom
 
-thermostat = COCOThermostat(W)
-monitor = MonitorService(W, thermostat=thermostat)
-
-result = monitor.evaluate("texto del agente", agent_id="agent_001")
-print(result)  # MonitorResult(admitted=True, D_ckm=..., temp_signal=...)
-```
-
-**COCOThermostat:**
-```python
-from services.coco_thermostat import COCOThermostat
-
-thermostat = COCOThermostat(W)
-print(thermostat.beta_c_corpus())   # 13.83
-print(thermostat.temp_signal())     # NOMINAL / TOO_COLD / TOO_HOT
-print(thermostat.beta_collective()) # median beta_i of active agents
-```
-
-**P4 density sweep:**
 ```bash
-python experiments/p4_neg_sweep.py
-# Output: p4_neg_density_sweep.png + .csv
+cd iap_chatroom/
+python server.py
+# FastAPI at :7860/api/*
+# Gradio UI at :7860/ui/
+# MCP server at :7860/mcp
 ```
 
-**W_mixta calibration:**
+### MCP tools (6 available)
+
+```
+join_channel · send_message · get_messages
+get_monitor_state · get_firma · leave_channel
+```
+
+Test: `python test_mcp_client.py` — expects 6/6 OK against live server.
+
+### Corpus experiments (fourforums)
+
 ```bash
-python experiments/calibrate_W_mixta.py
-# Sharp phase transition at AMP=40→45 (A0: 25→79)
+# Requires: fourforums_no_parse_2016_05_18.sql (570MB) in /data/
+cd experiments/
+python fourforums_pipeline_v8h.py --log
 ```
 
----
+### Unit tests
 
-## Open Gaps
-
-| Gap | Status |
-|-----|--------|
-| W_base N=64 real corpus | Pending — pipeline exists (v8g), term_map auto-extraction via NodeExtractor |
-| P4 k* at N=64 | Depends on W_base N=64 |
-| Tests de completitud N=64 — decisión sobre N=128 | Pending |
-| α_c calibration per N_operativo | Pending |
-| NodeExtractor v2 (spaCy) | Pending — network constraints in Codespace |
-| P7 falsification in new domain | Hypothesis only |
-| IAP cross-layer state sharing (REST + MCP same singletons) | Iteration B |
-| IAP chatroom: multiple rooms (group + private) | Iteration B |
-| CorpusService persistence between sessions | Iteration B |
-| Firma_CKM triggers at lifecycle boundaries | Iteration B |
+```bash
+python services/test_coco.py          # 43/43
+python services/test_firma_ckm.py     # 10/10
+python services/test_w_version.py     # 9/9
+```
 
 ---
 
 ## Methodology Note
 
-CKM was developed through **phenomenology as first step of engineering**: conceptual clarity precedes specification. The working reports (v2–v28) are not documentation of a separate process — they are the process. The conversation is the corpus.
+The methodology was not declared before it was used — it emerged inductively from what happened. That is itself a methodological characteristic, not an accident.
 
-IAID.md (the parent architecture) was written in 2024, before MCP existed. The convergence with MCP, A2A, and related protocols was discovered in review, not designed. This is treated as validation by independence, not alignment.
+**Phenomenology as first step of engineering.** Conceptual clarity precedes formalization throughout. The Hopfield architecture and Ising-model thermodynamics were imported after identifying structural analogies — not as decorative references but because the physical models predict behaviors the conceptual domain actually exhibits.
 
-**"La interacción es el protocolo, no su precursor."**
+**Conversation as laboratory.** The working reports (v2–v31) are not documentation of the process — they are the process. The term-map, co-occurrence matrices, and W construction are derived directly from the text of the conversation. The conversation is the corpus.
+
+**Incompleteness preserved as information.** Gaps in the formal model (representation of cohesive knowledge, META KNOWLEDGE, COCO implementation) are named as gaps, not filled speculatively.
+
+**Retroactive convergence, not aligned design.** IAID.md was written in 2024, before MCP existed. The convergence with MCP, A2A, and JSON-RPC was discovered in review, not designed to coincide.
+
+**Two paths to design:**
+```
+phenomenological field → observation → comprehension/conceptual clarity → design
+experimental field     → observation → comprehension/rigorous analogy   → design
+```
+Neither path reaches design without passing through comprehension.
+
+---
+
+## Falsifiable Predictions
+
+| Prediction | Status | N verified |
+|---|---|---|
+| P1 — c(S) hysteresis: incorporating ≠ removing | ✓ Confirmed | 16, 32, 64 |
+| P2 — cascade distribution P(s) ∝ s^-τ, τ∈[1.5,2] | ✓ Confirmed | 32, 64 |
+| P3 — temporal asymmetry: removal relaxes slower than incorporation | ✓ Confirmed | 32, 64 |
+| P4 — interior optimal density Ω* in W_mixta | ✓ Confirmed (N=32) / Reframed (N=64: W_mixta 13× W_pos) | 32, 64 |
+| P5 — polarized corpus collapses attractor diversity | ✓ Confirmed | 32 |
+| P6 — Δ primary function: symmetry-breaking for ambiguous states | ✓ Confirmed (T0 cites T1 at 2.18×, T1 internal cohesion 3.05×) | fourforums 100pp |
+| P7 — type-965 node in every system with genuine structural tension | ~ Confirmed in two corpora, open in new domains | CreateDebate + fourforums |
+| H_STOP monotonicity in D_ckm | ✗ Falsified — reformulated as f(A_pre) | — |
+| HOLDINGs H1/H2/H3 (bimodal μ_W structure A/B) | ✓ Closed analytically | — |
+
+---
+
+## Key Experimental Findings
+
+**P6 (fourforums gun control):** Δ's primary function is symmetry-breaking for ambiguous states. T0 (pro-control) cites T1 (anti-control) at 2.18× frequency; T1 maintains 3.05× stronger internal cohesion. The structural asymmetry is preserved across two independent corpora with distinct methodologies.
+
+**P7 (type-965 node):** Every system with genuine structural tension contains at least one node with extreme in/out asymmetry (ratio > 100×, out-degree ≈ 0, defined stance). Author 965 (CreateDebate, ratio 455×) and Author 204 (fourforums, ratio 296×) are structurally equivalent. Hypothesis: absence of such nodes indicates fabricated tension.
+
+**OPERADOR_STOP_COCO never produces loss:** Pérdida_STOP_COCO ≤ 0 in all cases, Fracción_rec ≥ 1.0. COCO's compression of Δ_r (α ∈ [0.05, 0.30]) produces restoration or expansion, not loss. STOP as a standalone operator does not exist — COCO executes the compression.
+
+**W_mixta with negative opposition pairs:** maintains more accessible attractors than W_base under equal accumulation. Structural tension resists contextual collapse.
+
+**Holonomy:** the path (who initiates A→B vs B→A) does not change which attractor dominates but shifts the fraction of active nodes by +0.176.
+
+**Coupled silence (IAP series):** a device that does not read the channel still depends on it for execution rhythm — triggers come from new messages. Silence and inactivity are not equivalent.
+
+**traza_inferencia:** the sole core-invariant node at N=32, living in the tension cluster. Orients from/toward simultaneously.
+
+---
+
+## Operational Services
+
+| Service | Status | Tests |
+|---|---|---|
+| NodeExtractor | ✓ TF-IDF, stateless, no LLM, from_corpus() Path B | — |
+| MonitorService | ✓ Accumulates Δ_r, trace_ip identified | — |
+| COCO | ✓ β inferred from fi, not declared. Executes OPERADOR_STOP_COCO: compresses Δ_r by α ∈ [0.05, 0.30] when D_ckm crosses threshold. MonitorService adopts the compressed Δ_r. | 43/43 |
+| FabricationService | ✓ Detects fabrication of content and control signals | — |
+| Firma_CKM | ✓ 6 canonical fields: sha256(W), D_ckm, temp_signal, n_agents, timestamp, sha256(Δ_r) | — |
+| WVersionManager | ✓ Lightweight trace — when W changed, not copies | — |
+| IAP Chatroom | ✓ FastAPI + Gradio, 3 devices, no turn structure | — |
+| MCP Server | ✓ 6 tools: join/send/get_messages/monitor/firma/leave | 6/6 OK |
+| BehaviorGraph G | ✓ Proof of concept — TERMAP_behavior_v1.json | — |
+
+## Calibrated Parameters
+
+| Parameter | Value | Source |
+|---|---|---|
+| μ_W | 0.004519 | W_ckm_corpus_v2.json empirical |
+| β_c | 13.83 | analytic: 1/(ρ* · N · μ_W), N=32 |
+| ρ* | ≈ 0.5 | fixed algebraically by σ→−σ symmetry |
+| α* | ≈ 0.4 | robust in 5/9 sweep cases |
+| α_c Hopfield capacity | ≈ 0.138·N | verified empirically N=16 |
+| N operational | 32 | below Hopfield minimum ~128 for meaningful observations |
+
+---
+
+## Design Gaps
+
+**Not technical debt. Remain open by design.**
+
+| GAP | Status | Reason |
+|---|---|---|
+| Representation of cohesive knowledge | No model | Main gap — hysteresis is the only fully defined property. Incompleteness preserved as information. |
+| META KNOWLEDGE | Held deliberately | Conditions not given. Cannot be summoned. |
+| COCO as collective consciousness | Conceptual gap | COCO (thermal regulation service) is implemented — 43/43. The gap is whether the field can know itself: not a thermostatic function but the residue of real contact between agents. Not implementable by declaration. |
+| BehaviorGraph G — full operationalization | Proof of concept | behavior_graph.py + TERMAP_behavior_v1.json operational. D_G measurement on real IAP corpus: pending. Full integration with channel workflow: pending. Termap English-only — Spanish behavior vocabulary is conditional extension, not baseline. |
+| R15 gatekeeper — semantic criteria | Partially formalized | The gatekeeper/elicitation distinction is architecturally critical. R15 remains open. |
+| trace_ip verifiability | Concept confirmed | The action at t_i is observable; whether a device recognized and acted from that recognition is not verifiable by the instrument. |
+
+---
+
+## Out of Scope
+
+Validated. Not to be reopened.
+
+1. A2A latent communication (non-human NL text corpus)
+2. TEMPLEX — orientation chain topology
+3. Real Hebbian causality (firing in sequence ≠ firing together)
+4. Common Sense Attractor
+5. Wisdom Model — Potential Inference Rule Generation
+6. Firma*CKM — presence revelation (deferred, post-deadline)
+7. Git workflow for agents
+8. Experiments in other debate domains (explorable continuation)
 
 ---
 
 ## Related Work
 
 - Hopfield (1982): associative memory via energy minimization
+- Thirumalaiswamy et al. (PNAS 2025): Fractal Landscape Dynamics in foams
 - Sciamarella & Mindlin (2001): topological analysis of dynamics (BraMAH)
-- IAC Internet Argument Corpus (Abbott et al., 2016): fourforums, CreateDebate datasets
+- IAC Internet Argument Corpus (Abbott et al., 2016): fourforums dataset
 - Dung (1995): abstract argumentation frameworks
 - MCP (Anthropic, Nov 2024): Model Context Protocol
-- A2A Protocol v1.0 (Linux Foundation, 2026): Agent-to-Agent communication standard
-- de Salzmann, M. (2014): La otra atención
 - Ouspensky, P.D. (1949): In Search of the Miraculous
 
 ---
 
 ## Contact
 
-gadanin.delamor — Jul 2026
+gadanin.delamor — Aug 2026

@@ -142,6 +142,7 @@ class COCO:
         self._history        : list[ThermostatState] = []
         self._t              : int                  = 0
         self._rejections_per_device: dict            = {}
+        self._alpha_trajectory: list[dict]           = []
 
     # ── API pública ──────────────────────────────────────────────────────────
 
@@ -172,6 +173,17 @@ class COCO:
             alpha_used   = self._alpha_for(D_ckm)
             self._Delta  = alpha_used * self._Delta
             stop_applied = True
+
+            # Extensión 3 (TASK_coco_landscape_observation_v1) — log liviano,
+            # un registro por STOP aplicado, no por observe(). delta_A queda
+            # en None hasta que Extensión 2 (track_landscape) exista — no se
+            # inventa un valor sin esa pieza.
+            self._alpha_trajectory.append({
+                "t"      : len(self._alpha_trajectory),
+                "alpha"  : alpha_used,
+                "D_ckm"  : round(D_ckm, 4),
+                "delta_A": None,
+            })
 
         state = ThermostatState(
             t            = self._t,
@@ -292,6 +304,12 @@ class COCO:
 
     def history(self) -> list[ThermostatState]:
         return list(self._history)
+
+    def alpha_trajectory(self) -> list:
+        """Returns list of {t, alpha, D_ckm, delta_A} dicts — un registro
+        por STOP aplicado. delta_A es None hasta que track_landscape
+        (Extensión 2, TASK_coco_landscape_observation_v1) esté implementado."""
+        return list(self._alpha_trajectory)
 
     def status(self) -> dict:
         if not self._history:

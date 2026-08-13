@@ -69,12 +69,14 @@ class CorpusService:
     # API pública
     # ------------------------------------------------------------------
 
-    def ingest(self, texts: List[str]) -> dict:
+    def ingest(self, texts: List[str], landscape_signal: Optional[list] = None) -> dict:
         """
         Agrega textos al corpus. Reconstruye W si hay suficientes datos.
         Devuelve estado actual.
         """
         self._texts.extend(texts)
+        if landscape_signal is not None:
+            self._last_landscape_signal = landscape_signal
         if len(self._texts) >= self.min_texts:
             self._rebuild()
         self.save()
@@ -86,6 +88,11 @@ class CorpusService:
 
     def get_W(self) -> Optional[np.ndarray]:
         return self._W.copy() if self._W is not None else None
+
+    @property
+    def coco(self):
+        """Active COCO instance. None if corpus in accumulation mode."""
+        return getattr(self, '_coco', None)
 
     def w_sha(self) -> Optional[str]:
         """sha256 de W en el momento actual. Para Firma_CKM."""
@@ -192,6 +199,9 @@ class CorpusService:
         self._nodes = nodes
         self._W     = W
         self._w_versions.register(W, len(self._texts), causal_event="rebuild")
+
+        from coco import COCO
+        self._coco = COCO(W=self._W, track_landscape=True)
 
     def _sparsity(self) -> float:
         if self._W is None:

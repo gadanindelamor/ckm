@@ -76,7 +76,8 @@ class CKMMonitor:
 
     def on_message(self, message) -> None:
         """Callback registrado en ChatChannel.add_callback."""
-        self._corpus.ingest([message.text])
+        signal = self._corpus.coco.landscape_history() if self._corpus.coco is not None else None
+        self._corpus.ingest([message.text], landscape_signal=signal)
         self._message_count += 1
         self._devices_seen.add(message.device_id)
 

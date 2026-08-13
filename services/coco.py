@@ -151,6 +151,7 @@ class COCO:
         self._alpha_trajectory: list[dict]           = []
         self._track_landscape : bool                 = track_landscape
         self._last_landscape_delta: Optional[dict]    = None
+        self._landscape_history: list[dict]           = []
 
     # ── API pública ──────────────────────────────────────────────────────────
 
@@ -208,6 +209,7 @@ class COCO:
                     "alpha_used"   : alpha_used,
                     "D_ckm_at_stop": round(D_ckm, 4),
                 }
+                self._landscape_history.append(self._last_landscape_delta.copy())
             else:
                 self._last_landscape_delta = None
 
@@ -346,6 +348,10 @@ class COCO:
         por STOP aplicado. delta_A es None hasta que track_landscape
         (Extensión 2, TASK_coco_landscape_observation_v1) esté implementado."""
         return list(self._alpha_trajectory)
+
+    def landscape_history(self) -> list:
+        """Full history of landscape_delta dicts from all STOP events."""
+        return list(self._landscape_history)
 
     def status(self) -> dict:
         if not self._history:

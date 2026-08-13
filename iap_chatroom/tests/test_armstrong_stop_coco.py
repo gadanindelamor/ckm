@@ -111,7 +111,7 @@ def main():
     print(f"W shape: {W.shape}, mean: {W.mean():.6f}")
 
     # 2. Instanciar COCO con W establecida
-    th = COCO(W=W, n_runs=50, seed=42)
+    th = COCO(W=W, n_runs=50, seed=42, track_landscape=True)
     print(f"β_c_corpus: {th.beta_c_corpus():.4f}")
 
     # 3. Instanciar MonitorService CON thermostat inyectado

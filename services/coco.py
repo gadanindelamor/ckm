@@ -108,6 +108,7 @@ class COCO:
         dynamic_alpha  : bool  = True,
         n_runs         : int   = 80,
         seed           : int   = 0,
+        track_landscape: bool  = False,
     ):
         """
         Precondición: W debe ser el suelo del corpus en modo evaluación.
@@ -122,6 +123,11 @@ class COCO:
             thermostat = COCO(W=corpus.get_W())
 
         W=None (corpus en acumulación) lanza ValueError.
+
+        track_landscape: si True, cada STOP mide A/c(S) del paisaje
+        antes y después de la compresión (self._last_landscape_delta,
+        Extensión 2 de TASK_coco_landscape_observation_v1). Cuesta ~3x
+        el trabajo de relajación normal por STOP — False por defecto.
         """
         if W is None:
             raise ValueError(
@@ -143,6 +149,8 @@ class COCO:
         self._t              : int                  = 0
         self._rejections_per_device: dict            = {}
         self._alpha_trajectory: list[dict]           = []
+        self._track_landscape : bool                 = track_landscape
+        self._last_landscape_delta: Optional[dict]    = None
 
     # ── API pública ──────────────────────────────────────────────────────────
 
@@ -171,18 +179,46 @@ class COCO:
 
         if zone in ("degrading", "deep"):
             alpha_used   = self._alpha_for(D_ckm)
+
+            # Extensión 2 (TASK_coco_landscape_observation_v1) — paisaje
+            # ANTES de comprimir. Reusa A_current/W_eff ya calculados
+            # arriba — self._Delta todavía no cambió en este punto.
+            delta_A = None
+            if self._track_landscape:
+                A_antes  = A_current
+                cS_antes = self._mean_cS(W_eff)
+
             self._Delta  = alpha_used * self._Delta
             stop_applied = True
 
-            # Extensión 3 (TASK_coco_landscape_observation_v1) — log liviano,
-            # un registro por STOP aplicado, no por observe(). delta_A queda
-            # en None hasta que Extensión 2 (track_landscape) exista — no se
-            # inventa un valor sin esa pieza.
+            # Paisaje DESPUÉS de comprimir — solo si track_landscape=True
+            # (cuesta ~2 relajaciones extra de n_runs muestras cada una).
+            if self._track_landscape:
+                W_eff_despues = self.W + self._Delta
+                A_despues     = self._count_attractors(W_eff_despues)
+                cS_despues    = self._mean_cS(W_eff_despues)
+                delta_A       = A_despues - A_antes
+                self._last_landscape_delta = {
+                    "A_antes"      : A_antes,
+                    "A_despues"    : A_despues,
+                    "delta_A"      : delta_A,
+                    "cS_antes"     : cS_antes,
+                    "cS_despues"   : cS_despues,
+                    "delta_cS"     : cS_despues - cS_antes,
+                    "alpha_used"   : alpha_used,
+                    "D_ckm_at_stop": round(D_ckm, 4),
+                }
+            else:
+                self._last_landscape_delta = None
+
+            # Extensión 3 — log liviano, un registro por STOP aplicado,
+            # no por observe(). delta_A es real si track_landscape=True,
+            # None si no — no se inventa un valor sin esa pieza.
             self._alpha_trajectory.append({
                 "t"      : len(self._alpha_trajectory),
                 "alpha"  : alpha_used,
                 "D_ckm"  : round(D_ckm, 4),
-                "delta_A": None,
+                "delta_A": delta_A,
             })
 
         state = ThermostatState(
@@ -374,6 +410,32 @@ class COCO:
             s0[rng.choice(self.N, n_act, replace=False)] = 1.
             attractors.add(tuple(self._relax(s0, W_eff).tolist()))
         return len(attractors)
+
+    def _mean_cS(self, W_eff: np.ndarray) -> float:
+        """
+        Media de c(S) sobre las mismas muestras que _count_attractors():
+        mismo self._seed, mismo self._n_runs, misma secuencia de sigma_0
+        — el rng con semilla fija reproduce exactamente la misma
+        secuencia de estados iniciales, independiente de la llamada.
+
+        c(S) = mean(W_eff_ij · sigma_i · sigma_j) sobre pares i<j, mismo
+        formato que MonitorService._cS(). Se computa sobre W_eff (=W+Δ),
+        no sobre self.W solo — coherente con lo que _count_attractors ya
+        hace: COCO opera sobre el paisaje efectivo, no sobre W puro. Esto
+        no es la misma regla que R18 (W/Δ_W separadas en el corpus) —
+        self.W nunca se muta acá, W_eff es una combinación efímera local
+        a esta observación, igual que en A_current.
+        """
+        rng = np.random.default_rng(self._seed)
+        ii, jj = np.triu_indices(self.N, k=1)
+        cs_values = []
+        for _ in range(self._n_runs):
+            n_act = max(1, int(round(rng.uniform(0.3, 0.7) * self.N)))
+            s0    = np.full(self.N, -1.)
+            s0[rng.choice(self.N, n_act, replace=False)] = 1.
+            sigma = self._relax(s0, W_eff)
+            cs_values.append(float(np.mean(W_eff[ii, jj] * sigma[ii] * sigma[jj])))
+        return float(np.mean(cs_values))
 
 
 # ---------------------------------------------------------------------------

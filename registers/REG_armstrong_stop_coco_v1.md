@@ -247,14 +247,55 @@ TEMP_SIGNAL bajo carga real).
 
 ---
 
+## Addendum — `landscape_delta` (TASK_coco_landscape_observation_v1, Extensiones 2 y 3)
+
+Re-corrida idéntica del Intento 2 (mismo corpus, mismos textos, mismos
+seeds — `Δ_r`/`D_ckm` reproducen exacto los valores ya reportados
+arriba, confirmando determinismo) con `COCO(..., track_landscape=True)`
+recién implementado. Mide `A`/`c(S)` del paisaje antes y después de
+cada compresión — no solo la magnitud de `Δ_r`.
+
+| t | A_antes | A_después | Δ_A | c(S)_antes | c(S)_después | Δ_c(S) | D_ckm_at_stop |
+|---|---|---|---|---|---|---|---|
+| 0 | 27 | 42 | **+15** | 0.1039 | 0.0662 | −0.0376 | 0.449 |
+| 1 | 10 | 15 | **+5**  | 0.3037 | 0.0919 | −0.2118 | 0.7959 |
+| 2 | 15 | 28 | **+13** | 0.0919 | 0.0622 | −0.0296 | 0.6939 |
+
+**Δ_A positivo en los tres primeros triggers — atractores ganados, no
+perdidos, verificado ahora a nivel de paisaje, no solo inferido de que
+`Δ_r` decrece en magnitud.** Confirma cuantitativamente, con un
+instrumento nuevo, lo mismo que `REG_destruccion_recuperacion_v1.md`
+encontró por otro camino: OPERADOR_STOP_COCO restaura/expande, no
+destruye. `D_ckm_at_stop` coincide exacto con los valores de COCO ya
+reportados en este REG (0.449, 0.7959, 0.6939) — mismo cálculo, ahora
+también expuesto junto al paisaje que lo produjo.
+
+`c(S)` acá se computa sobre `W_eff` (`W+Δ`), no sobre `W` solo — mismo
+plano que ya usa `_count_attractors()` internamente en `COCO`, distinto
+del `c(S)` de `MonitorService` (que sí es W-exclusivo, R18). No es una
+violación de R18: `self.W` nunca se muta, `W_eff` es una combinación
+efímera local a la observación, igual que `A_current`.
+
+Implementación: `services/coco.py` (`_mean_cS()`, `track_landscape` flag,
+`_last_landscape_delta`, `alpha_trajectory()` con `delta_A` real) y
+`services/monitor_service.py` (`panel["thermostat"]["landscape_delta"]`).
+Extensión 1 del mismo task no se implementó — `panel["thermostat"]["D_ckm"]`
+ya era el D_ckm de COCO (ver arriba), un campo `d_ckm_coco` nuevo habría
+sido redundante.
+
+---
+
 ## Archivos relacionados
 
 - `iap_chatroom/tests/TASK_armstrong_stop_coco_v1.md` — especificación
+- `iap_chatroom/tests/TASK_coco_landscape_observation_v1.md` — especificación del addendum (Ext. 2/3)
 - `iap_chatroom/tests/test_armstrong_stop_coco.py` — script (TEXTS
-  rediseñados respecto al original del task, ver Intento 1/2 arriba)
-- `process/experiments/armstrong_stop_coco_v1.jsonl` — trayectoria completa (intento 2)
-- `process/experiments/armstrong_delta_r_history.json` — historial Δ_r (intento 2)
+  rediseñados respecto al original del task, ver Intento 1/2 arriba;
+  `track_landscape=True` desde el addendum)
+- `process/experiments/armstrong_stop_coco_v1.jsonl` — trayectoria completa, incluye `landscape_delta`
+- `process/experiments/armstrong_delta_r_history.json` — historial Δ_r
 - `process/experiments/armstrong_*.bak_*_null_result_v1` — intento 1 preservado, no descartado
+- `process/experiments/armstrong_*.bak_*_pre_ext2` — estado previo al addendum, preservado
 - `registers/REG_monitor_ckm_v2.md` — origen del "problema del chocolate"
 - `registers/REG_sesion_coco_endogeno_v2.md` — ponderación endógena de α, origen de esta tarea
 - `registers/REG_destruccion_recuperacion_v1.md` — definición real de Fracción_rec

@@ -154,6 +154,7 @@ class MonitorService:
                 "alpha_used"  : ts.alpha_used,
                 "beta"        : self._thermostat.beta_status(),
                 "temp_signal" : self._thermostat.temp_signal(),
+                "landscape_delta": getattr(self._thermostat, "_last_landscape_delta", None),
             }
 
         self._persist(text, panel, device_id)

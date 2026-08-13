@@ -285,6 +285,67 @@ sido redundante.
 
 ---
 
+## Réplica — seed=123, única variable cambiada
+
+Pedida explícitamente por gadanin.delamor tras la Extensión 2, antes de
+dar el "20/20" del Intento 2 por robusto. El pipeline completo (corpus,
+`WARMUP_TEXTS`, `TEXTS`, `n_runs=50`, `track_landscape=True`) es
+determinístico dado un seed — no hay forma de "correr de nuevo" y
+obtener variación real sin cambiar algo. Única variable cambiada:
+`seed` de `COCO` (42 → 123). Todo lo demás, idéntico al Intento 2.
+Script: `armstrong_replica_seed123.py` (scratchpad), output:
+`process/experiments/armstrong_replica_seed123*`.
+
+### Resultado: 3/20 STOPs, no 20/20
+
+| t | D_ckm (COCO) | zone | stop | alpha_used |
+|---|---|---|---|---|
+| 0 | 0.4898 | deep | True | 0.2626 |
+| 1 | 0.8163 | deep | True | 0.1265 |
+| 2 | 0.6735 | deep | True | 0.1861 |
+| 3–19 | 0.3673 (fijo) | stable | False | — |
+
+Comparación directa con el Intento 2 (`seed=42`):
+
+| | seed=42 (Intento 2) | seed=123 (réplica) |
+|---|---|---|
+| STOPs | 20/20 | **3/20** |
+| D_ckm de convergencia (t≥3) | 0.4286 (**arriba** de 0.40) | 0.3673 (**abajo** de 0.40) |
+| alpha_used, t=0–2 | 0.2796, 0.1350, 0.1776 | 0.2626, 0.1265, 0.1861 — mismo rango |
+| Δ_A, t=0–2 | +15, +5, +13 | +18, +7, +15 — mismo signo |
+
+### Lectura — qué replica, qué no, y por qué cada uno es el resultado correcto
+
+**Replica (mecanismo robusto):** en las tres primeras evaluaciones de
+ambas semillas, `alpha_used` cae dentro de `[0.05, 0.30]` y `Δ_A` es
+positivo — STOP, cuando dispara, comprime dentro del rango declarado y
+gana atractores, no los pierde. Esto no depende del seed. Es el
+hallazgo central de la Extensión 2, confirmado independientemente.
+
+**No replica (y no debería):** el conteo "20/20" del Intento 2 no es
+una propiedad robusta del mecanismo — es dónde cayó, para ese seed
+específico, el `D_ckm` de convergencia respecto al umbral fijo 0.40.
+`D_ckm` es una **estimación** sobre `n_runs=50` muestras estocásticas
+de `_count_attractors()`, no un valor analítico exacto. Con `seed=42`
+esa estimación convergió a 0.4286 (arriba del umbral → sigue
+disparando indefinidamente). Con `seed=123` convergió a 0.3673 (abajo
+→ se estabiliza y para en t=3). Ambos valores están a menos de 0.033
+del umbral — el sistema converge cerca del borde en las dos semillas,
+y el ruido de muestreo decide de qué lado cae.
+
+**Por qué esto es información estructural, no un defecto:** un umbral
+fijo (0.40) comparado contra una estimación ruidosa produce
+exactamente este comportamiento — sensibilidad binaria (sigue/para)
+ante una cantidad continua con varianza. El 20/20 original no estaba
+mal — era el resultado correcto para `seed=42`. El 3/20 tampoco está
+mal — es el resultado correcto para `seed=123`. Lo que no se sostiene
+es la generalización "COCO regula indefinidamente sobre este corpus" —
+eso era artefacto de una semilla particular, no propiedad del
+mecanismo. `n_runs=50` puede ser insuficiente para una estimación
+estable cerca del umbral — línea abierta, no resuelta acá.
+
+---
+
 ## Archivos relacionados
 
 - `iap_chatroom/tests/TASK_armstrong_stop_coco_v1.md` — especificación
@@ -292,10 +353,12 @@ sido redundante.
 - `iap_chatroom/tests/test_armstrong_stop_coco.py` — script (TEXTS
   rediseñados respecto al original del task, ver Intento 1/2 arriba;
   `track_landscape=True` desde el addendum)
-- `process/experiments/armstrong_stop_coco_v1.jsonl` — trayectoria completa, incluye `landscape_delta`
-- `process/experiments/armstrong_delta_r_history.json` — historial Δ_r
+- `process/experiments/armstrong_stop_coco_v1.jsonl` — trayectoria completa, incluye `landscape_delta` (seed=42)
+- `process/experiments/armstrong_replica_seed123.jsonl` — trayectoria completa de la réplica (seed=123)
+- `process/experiments/armstrong_replica_seed123_summary.json` — resumen de los 3 STOPs de la réplica
+- `process/experiments/armstrong_delta_r_history.json` — historial Δ_r (seed=42)
 - `process/experiments/armstrong_*.bak_*_null_result_v1` — intento 1 preservado, no descartado
-- `process/experiments/armstrong_*.bak_*_pre_ext2` — estado previo al addendum, preservado
+- `process/experiments/armstrong_*.bak_*_pre_ext2` — estado previo al addendum de Ext. 2, preservado
 - `registers/REG_monitor_ckm_v2.md` — origen del "problema del chocolate"
 - `registers/REG_sesion_coco_endogeno_v2.md` — ponderación endógena de α, origen de esta tarea
 - `registers/REG_destruccion_recuperacion_v1.md` — definición real de Fracción_rec

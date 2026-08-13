@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
 from firma_ckm import FirmaService, Firma, _sha256
 
 

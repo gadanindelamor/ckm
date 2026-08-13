@@ -23,7 +23,7 @@ try:
 except ImportError:
     pytest = None
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
 from monitor_service import MonitorService

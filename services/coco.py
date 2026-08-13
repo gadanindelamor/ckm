@@ -109,6 +109,7 @@ class COCO:
         n_runs         : int   = 80,
         seed           : int   = 0,
         track_landscape: bool  = False,
+        landscape_history: Optional[list] = None,
     ):
         """
         Precondición: W debe ser el suelo del corpus en modo evaluación.
@@ -128,6 +129,10 @@ class COCO:
         antes y después de la compresión (self._last_landscape_delta,
         Extensión 2 de TASK_coco_landscape_observation_v1). Cuesta ~3x
         el trabajo de relajación normal por STOP — False por defecto.
+
+        landscape_history: historia previa a precargar (TASK_coco_load_
+        landscape_history_v1) — COCO muere con W, pero su traza sobrevive
+        en el JSONL de MonitorService; al renacer puede recargarla acá.
         """
         if W is None:
             raise ValueError(
@@ -151,7 +156,7 @@ class COCO:
         self._alpha_trajectory: list[dict]           = []
         self._track_landscape : bool                 = track_landscape
         self._last_landscape_delta: Optional[dict]    = None
-        self._landscape_history: list[dict]           = []
+        self._landscape_history: list[dict]           = list(landscape_history) if landscape_history else []
 
     # ── API pública ──────────────────────────────────────────────────────────
 

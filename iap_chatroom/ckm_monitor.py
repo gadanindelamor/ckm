@@ -36,7 +36,7 @@ _STATE_DIR.mkdir(exist_ok=True)
 class CKMMonitor:
     _instance: "CKMMonitor | None" = None
 
-    def __new__(cls) -> "CKMMonitor":
+    def __new__(cls, *args, **kwargs) -> "CKMMonitor":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
@@ -47,11 +47,14 @@ class CKMMonitor:
             return
         self._initialized = True
 
+        _monitor_jsonl_path = str(_STATE_DIR / "monitor_trajectory.jsonl")
+
         self._extractor = NodeExtractorService(top_k=32)
         self._corpus = CorpusService(
             storage_path=str(_STATE_DIR / "corpus_state.json"),
             min_texts=min_texts,  # default=3; configurable por el caller
             top_k=32,
+            monitor_jsonl_path=_monitor_jsonl_path,
         )
         # G corre en paralelo real a {W, Delta_W} -- cada mensaje que
         # entra a self._corpus tambien entra a self._behavior_graph,
@@ -65,7 +68,7 @@ class CKMMonitor:
         )
         self._monitor = MonitorService(
             self._corpus,
-            storage_path=str(_STATE_DIR / "monitor_trajectory.jsonl"),
+            storage_path=_monitor_jsonl_path,
             behavior_graph=self._behavior_graph,
         )
         self._firma = FirmaService()

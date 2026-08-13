@@ -51,10 +51,12 @@ class CorpusService:
         min_texts    : int  = 3,    # umbral para pasar a modo evaluación
         top_k        : int  = 20,
         ngram_max    : int  = 2,
+        monitor_jsonl_path: Optional[str] = None,
     ):
         self.storage_path = Path(storage_path)
         self.min_texts    = min_texts
         self._extractor   = NodeExtractorService(top_k=top_k, ngram_max=ngram_max)
+        self._monitor_jsonl_path = monitor_jsonl_path
 
         # estado
         self._texts     : List[str]            = []
@@ -127,6 +129,29 @@ class CorpusService:
     # ------------------------------------------------------------------
     # Construcción de W  (v2 — mixta)
     # ------------------------------------------------------------------
+
+    def _load_landscape_history(self, jsonl_path: Optional[str]) -> list:
+        """
+        Lee el JSONL de MonitorService y extrae los landscape_delta
+        de todas las evaluaciones donde stop_applied=True.
+        Devuelve lista vacía si el archivo no existe o no hay STOPs.
+        """
+        if not jsonl_path or not Path(jsonl_path).exists():
+            return []
+        history = []
+        with open(jsonl_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    ld = record.get("panel", {}).get("thermostat", {}).get("landscape_delta")
+                    if ld is not None:
+                        history.append(ld)
+                except (json.JSONDecodeError, AttributeError):
+                    continue
+        return history
 
     @staticmethod
     def _has_opposition(text: str) -> bool:
@@ -201,7 +226,8 @@ class CorpusService:
         self._w_versions.register(W, len(self._texts), causal_event="rebuild")
 
         from coco import COCO
-        self._coco = COCO(W=self._W, track_landscape=True)
+        history = self._load_landscape_history(self._monitor_jsonl_path)
+        self._coco = COCO(W=self._W, track_landscape=True, landscape_history=history)
 
     def _sparsity(self) -> float:
         if self._W is None:

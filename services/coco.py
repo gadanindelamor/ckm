@@ -77,6 +77,8 @@ BETA_TOO_HOT     = 0.5    # β_collective / β_c < 0.5 → intoxicación / permi
 
 @dataclass
 class ThermostatState:
+    """Snapshot devuelto por observe() — un campo por cantidad evaluada
+    ese ciclo. Ver observe() para el significado de cada uno."""
     t            : int   = 0
     D_ckm        : float = 0.0
     A_current    : int   = 0
@@ -89,14 +91,15 @@ class ThermostatState:
 
 class COCO:
     """
-    Termostato colectivo de campo CKM.
+    Regulador de campo CKM compartido por múltiples devices.
 
-    Recibe el corpus compartido (CorpusService) y el Delta acumulado
-    de interacciones A2A reales. Evalúa estado del campo en cada ciclo
-    y emite señal STOP cuando D_ckm cruza umbral.
+    Mide diversidad de atractores (D_ckm) sobre W + Δ_r y comprime Δ_r
+    (STOP) cuando cae por debajo de umbral. Reporta también una señal
+    térmica (TOO_COLD/NOMINAL/TOO_HOT) comparando β_collective con el
+    β_c del corpus.
 
-    No sabe quién es cada device. No usa AgentCards.
-    Trabaja con lo que el campo rechazó — Δ_r.
+    Trackea devices solo por device_id (string opaco, vía
+    register_device_eval) — no identidad rica, no AgentCards.
     """
 
     def __init__(
@@ -113,31 +116,29 @@ class COCO:
         gamma          : float = 0.01,
     ):
         """
-        Precondición: W debe ser el suelo del corpus en modo evaluación.
+        W debe ser el campo del corpus en modo evaluación — inmutable
+        para esta instancia. Si W cambia (corpus creció), instanciar un
+        COCO nuevo, no reasignar W. Uso típico:
+            assert corpus.mode == "evaluation"
+            coco = COCO(W=corpus.get_W())
 
-        W es inmutable para el thermostat — es el campo original al que
-        el sistema puede regresar. COCO-thermostat actúa solo sobre Δ.
-        Si W cambia (corpus crece, nuevos nodos), instanciar un nuevo
-        COCO con la W actualizada.
-
-        Uso correcto con CorpusService:
-            assert corpus.mode == "evaluation", "corpus insuficiente"
-            thermostat = COCO(W=corpus.get_W())
-
-        W=None (corpus en acumulación) lanza ValueError.
-
-        track_landscape: si True, cada STOP mide A/c(S) del paisaje
-        antes y después de la compresión (self._last_landscape_delta,
-        Extensión 2 de TASK_coco_landscape_observation_v1). Cuesta ~3x
-        el trabajo de relajación normal por STOP — False por defecto.
-
-        landscape_history: historia previa a precargar (TASK_coco_load_
-        landscape_history_v1) — COCO muere con W, pero su traza sobrevive
-        en el JSONL de MonitorService; al renacer puede recargarla acá.
-
-        gamma: sensibilidad del componente histórico en alpha compuesto
-        (TASK_coco_alpha_compuesto_v3, _landscape_component()). Conservador
-        por defecto — variable de instancia, no constante de módulo.
+        Args:
+            W: matriz de co-ocurrencia. W=None lanza ValueError.
+            d_ckm_threshold: D_ckm por encima del cual STOP puede disparar.
+            alpha_star: alpha fijo usado si dynamic_alpha=False.
+            frac_rec_min: A_current/A0 por debajo de esto → zona "deep".
+            dynamic_alpha: si True, alpha varía con D_ckm (_alpha_for);
+                si False, siempre alpha_star.
+            n_runs: reinicios aleatorios para contar atractores. Sesgado
+                hacia arriba con n_runs (ver _count_attractors) — no
+                cambiar sin revisar el hallazgo del sweep n_runs 60→70.
+            seed: semilla del RNG de conteo de atractores.
+            track_landscape: si True, cada STOP mide A/c(S) antes y
+                después de comprimir (más caro, ~3x relajaciones).
+            landscape_history: historial previo a precargar (p. ej. desde
+                el JSONL de MonitorService al renacer COCO con W nueva).
+            gamma: sensibilidad del componente histórico en alpha
+                compuesto (_landscape_component). Conservador por default.
         """
         if W is None:
             raise ValueError(
@@ -169,9 +170,22 @@ class COCO:
 
     def observe(self, Delta_new: np.ndarray) -> ThermostatState:
         """
-        Recibe el Delta acumulado actual del corpus colectivo.
-        Evalúa estado del campo. Aplica STOP si corresponde.
-        Devuelve ThermostatState con diagnóstico.
+        Evalúa el campo con el Δ_r actual y aplica STOP si corresponde.
+
+        Args:
+            Delta_new: Δ_r acumulado por MonitorService (NxN).
+
+        Returns:
+            ThermostatState: t, D_ckm (negativo = campo expandido, no es
+            error), A_current, A0, frac_rec, zone ("stable"|"degrading"|
+            "deep"), stop_applied, alpha_used.
+
+        Side effects (solo si stop_applied):
+            - Δ interno se reemplaza por alpha_used * Δ_new — recuperar
+              con delta_state().
+            - alpha_trajectory() gana una entrada.
+            - si track_landscape=True, landscape_history() gana una
+              entrada y self._last_landscape_component se actualiza.
         """
         self._Delta = Delta_new.copy()
         self._t    += 1
@@ -331,6 +345,10 @@ class COCO:
 
         Umbrales provisionales: una octava arriba/abajo de β_c.
         Sin devices activos → UNKNOWN (β_collective no estimable).
+
+        Returns dict con: signal, beta_collective, beta_c_corpus, ratio,
+        note (explicación en texto de la señal). Sin devices activos →
+        signal="UNKNOWN", beta_collective y ratio en None.
         """
         bc = self.beta_collective()
         beta_c = self.beta_c_corpus()
@@ -364,20 +382,42 @@ class COCO:
         }
 
     def delta_state(self) -> np.ndarray:
-        """Delta actual después de posibles STOPs aplicados."""
+        """
+        Δ actual, después de cualquier compresión por STOP.
+
+        Llamar después de observe() cuando stop_applied=True, para
+        reasignarlo a MonitorService._Delta_r.
+        """
         return self._Delta.copy()
 
     def history(self) -> list[ThermostatState]:
+        """Un ThermostatState por cada llamada a observe(), no solo los
+        STOPs (para eso ver alpha_trajectory()/landscape_history())."""
         return list(self._history)
 
     def alpha_trajectory(self) -> list:
-        """Returns list of {t, alpha, D_ckm, delta_A} dicts — un registro
-        por STOP aplicado. delta_A es None hasta que track_landscape
-        (Extensión 2, TASK_coco_landscape_observation_v1) esté implementado."""
+        """
+        Un registro por cada STOP aplicado: {t, alpha, D_ckm, delta_A}.
+
+        t acá es la posición dentro de esta lista, no el t de
+        ThermostatState (ese cuenta todas las llamadas a observe(),
+        no solo los STOPs). delta_A es None si track_landscape=False.
+        """
         return list(self._alpha_trajectory)
 
     def landscape_history(self) -> list:
-        """Full history of landscape_delta dicts from all STOP events."""
+        """
+        Historial completo de paisaje antes/después de cada STOP.
+
+        Vacía si track_landscape=False o si nunca disparó STOP. Cada
+        entry es un dict:
+            A_antes, A_despues    (int)   — atractores antes/después de comprimir
+            delta_A               (int)   — A_despues - A_antes
+            cS_antes, cS_despues  (float) — c(S) medio antes/después
+            delta_cS              (float) — cS_despues - cS_antes
+            alpha_used            (float) — factor de compresión aplicado
+            D_ckm_at_stop          (float) — D_ckm que disparó el STOP
+        """
         return list(self._landscape_history)
 
     def _landscape_component(self) -> float:
@@ -402,6 +442,12 @@ class COCO:
         return -float(np.mean(efficiencies)) * self._gamma  # negativo: más eficiencia → α más bajo
 
     def status(self) -> dict:
+        """
+        Resumen del último ThermostatState (t, A0, A_current, D_ckm,
+        frac_rec, zone, stop_applied, alpha_used).
+
+        {"t": 0, "zone": "uninitialized"} si observe() nunca se llamó.
+        """
         if not self._history:
             return {"t": 0, "zone": "uninitialized"}
         s = self._history[-1]
@@ -436,6 +482,8 @@ class COCO:
     # ── Clasificación de zona ─────────────────────────────────────────────────
 
     def _classify_zone(self, D_ckm: float, frac_rec: float) -> str:
+        """D_ckm negativo o por debajo de threshold → "stable". Si no,
+        frac_rec por debajo de frac_rec_min → "deep", si no → "degrading"."""
         if D_ckm < 0:
             return "stable"          # campo expandido — acumulación suma atractores
         if D_ckm < self.threshold:
@@ -447,6 +495,8 @@ class COCO:
     # ── Hopfield ─────────────────────────────────────────────────────────────
 
     def _relax(self, sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> np.ndarray:
+        """Paso de relajación de Hopfield: actualiza sigma hasta punto
+        fijo (o max_iter) bajo la matriz W dada."""
         for _ in range(max_iter):
             h  = W @ sigma
             s2 = np.where(h > 0, 1., np.where(h < 0, -1., sigma))
@@ -456,6 +506,14 @@ class COCO:
         return sigma
 
     def _count_attractors(self, W_eff: np.ndarray) -> int:
+        """
+        Cuenta atractores distintos alcanzados en n_runs reinicios
+        aleatorios de Hopfield sobre W_eff.
+
+        No satura: el conteo crece ~linealmente con n_runs en corpus
+        chicos (verificado hasta n_runs=200, sweep Ago 2026) — es una
+        cota inferior sesgada por n_runs, no un valor convergente.
+        """
         rng = np.random.default_rng(self._seed)
         attractors = set()
         for _ in range(self._n_runs):

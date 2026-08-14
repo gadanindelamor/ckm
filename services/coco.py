@@ -110,6 +110,7 @@ class COCO:
         seed           : int   = 0,
         track_landscape: bool  = False,
         landscape_history: Optional[list] = None,
+        gamma          : float = 0.01,
     ):
         """
         Precondición: W debe ser el suelo del corpus en modo evaluación.
@@ -133,6 +134,10 @@ class COCO:
         landscape_history: historia previa a precargar (TASK_coco_load_
         landscape_history_v1) — COCO muere con W, pero su traza sobrevive
         en el JSONL de MonitorService; al renacer puede recargarla acá.
+
+        gamma: sensibilidad del componente histórico en alpha compuesto
+        (TASK_coco_alpha_compuesto_v3, _landscape_component()). Conservador
+        por defecto — variable de instancia, no constante de módulo.
         """
         if W is None:
             raise ValueError(
@@ -157,6 +162,8 @@ class COCO:
         self._track_landscape : bool                 = track_landscape
         self._last_landscape_delta: Optional[dict]    = None
         self._landscape_history: list[dict]           = list(landscape_history) if landscape_history else []
+        self._gamma           : float                 = gamma
+        self._last_landscape_component: float          = 0.0
 
     # ── API pública ──────────────────────────────────────────────────────────
 
@@ -185,6 +192,21 @@ class COCO:
 
         if zone in ("degrading", "deep"):
             alpha_used   = self._alpha_for(D_ckm)
+
+            # Extensión 1 (TASK_coco_alpha_compuesto_v3) — alpha compuesto.
+            # Componente histórico de eficiencia solo si hay historia
+            # suficiente; si no, comportamiento idéntico al actual (sin
+            # regresión, como pide la task). No es un epsilon agregado —
+            # reconoce el ruido estocástico que ya existe en
+            # _count_attractors (n_runs finito, ver sweep n_runs 60→70).
+            landscape_component = 0.0
+            if self._track_landscape and len(self._landscape_history) >= 2:
+                landscape_component = self._landscape_component()
+                alpha_used = float(np.clip(
+                    alpha_used + landscape_component,
+                    ALPHA_MIN, ALPHA_MAX,
+                ))
+            self._last_landscape_component = landscape_component
 
             # Extensión 2 (TASK_coco_landscape_observation_v1) — paisaje
             # ANTES de comprimir. Reusa A_current/W_eff ya calculados
@@ -357,6 +379,27 @@ class COCO:
     def landscape_history(self) -> list:
         """Full history of landscape_delta dicts from all STOP events."""
         return list(self._landscape_history)
+
+    def _landscape_component(self) -> float:
+        """
+        Gradiente de eficiencia histórica de STOP.
+        Positivo → STOPs anteriores fueron eficientes con α bajo → reducir α.
+        Negativo → STOPs ineficientes → aumentar α.
+        Retorna 0.0 si no hay historia suficiente (< 2 entradas).
+        """
+        h = self.landscape_history()
+        if len(h) < 2:
+            return 0.0
+        # Eficiencia = delta_A / alpha_used (delta_A por unidad de compresión)
+        efficiencies = [
+            e["delta_A"] / e["alpha_used"]
+            for e in h[-5:]   # ventana últimas 5 entradas
+            if e.get("alpha_used") and e["alpha_used"] > 0
+            and e.get("delta_A") is not None
+        ]
+        if not efficiencies:
+            return 0.0
+        return -float(np.mean(efficiencies)) * self._gamma  # negativo: más eficiencia → α más bajo
 
     def status(self) -> dict:
         if not self._history:

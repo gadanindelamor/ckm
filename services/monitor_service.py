@@ -155,6 +155,13 @@ class MonitorService:
                 "beta"        : self._thermostat.beta_status(),
                 "temp_signal" : self._thermostat.temp_signal(),
                 "landscape_delta": getattr(self._thermostat, "_last_landscape_delta", None),
+                "landscape_component": (
+                    self._thermostat._last_landscape_component
+                    if getattr(self._thermostat, "_track_landscape", False)
+                    else None
+                ),
+                "gamma"  : getattr(self._thermostat, "_gamma", None),
+                "n_runs" : getattr(self._thermostat, "_n_runs", None),
             }
 
         self._persist(text, panel, device_id)

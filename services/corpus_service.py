@@ -107,6 +107,17 @@ class CorpusService:
     def get_nodes(self) -> List[str]:
         return list(self._nodes)
 
+    def should_rebuild(self, d_ckm_history: List[float], n: int = 3) -> bool:
+        """
+        Retorna True si el gradiente de D_ckm es positivo sostenido por n pasos.
+        Señal estructural de rebuild — complementa el criterio de volumen.
+        """
+        if len(d_ckm_history) < n + 1:
+            return False
+        recent = d_ckm_history[-(n + 1):]
+        gradients = [recent[i + 1] - recent[i] for i in range(n)]
+        return all(g > 0 for g in gradients)
+
     def status(self) -> dict:
         W = self._W
         neg_frac = None

@@ -32,6 +32,11 @@ from node_extractor import NodeExtractorService  # noqa: E402
 _STATE_DIR = Path(__file__).resolve().parent / "_state"
 _STATE_DIR.mkdir(exist_ok=True)
 
+# Jerarquía de señales de rebuild (TASK_coco_alpha_compuesto_v3, Extensión 2):
+# estructural (gradiente D_ckm) > volumen > tiempo. MAX_CICLOS provisional —
+# no especificado por la task, ajustable sin cambiar la jerarquía.
+MAX_CICLOS = 10
+
 
 class CKMMonitor:
     _instance: "CKMMonitor | None" = None
@@ -76,16 +81,41 @@ class CKMMonitor:
         self._message_count = 0
         self._devices_seen: set[str] = set()
         self._last_panel: dict | None = None
+        self._d_ckm_history: list[float] = []
+        self._ciclos_sin_rebuild = 0
+        self._last_rebuild_signal = False
 
     def on_message(self, message) -> None:
         """Callback registrado en ChatChannel.add_callback."""
         signal = self._corpus.coco.landscape_history() if self._corpus.coco is not None else None
+        sha_before = self._corpus.w_sha()
         self._corpus.ingest([message.text], landscape_signal=signal)
+        sha_after = self._corpus.w_sha()
+
         self._message_count += 1
         self._devices_seen.add(message.device_id)
 
+        # rebuild real (_rebuild() corrió y cambió W) detectado por sha,
+        # no un flag que ingest() no expone — reset del contador de ciclos.
+        if sha_after != sha_before:
+            self._ciclos_sin_rebuild = 0
+        else:
+            self._ciclos_sin_rebuild += 1
+
         if self._message_count >= self._corpus.min_texts:
             self._last_panel = self._monitor.evaluate(message.text, device_id=message.device_id)
+            d_ckm = self._last_panel.get("D_ckm") if self._last_panel else None
+            if d_ckm is not None:
+                self._d_ckm_history.append(d_ckm)
+
+        # Jerarquía: estructural (gradiente D_ckm) > volumen > tiempo.
+        # Señal observable — no fuerza el rebuild todavía (eso sigue
+        # gobernado por el chequeo de volumen interno de ingest()).
+        self._last_rebuild_signal = (
+            self._corpus.should_rebuild(self._d_ckm_history, n=3)
+            or len(self._corpus._texts) >= self._corpus.min_texts * 2
+            or self._ciclos_sin_rebuild >= MAX_CICLOS
+        )
 
     def get_state(self) -> dict:
         status = self._corpus.status()

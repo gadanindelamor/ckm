@@ -38,6 +38,9 @@ GPT53_REG_hat_feedbak.md
 # IAP Chatroom — corpus/monitor state generado en runtime (regenerable)
 iap_chatroom/_state/
 
+# stochastic_attractor_eval.py — locks de coordinación efímera, no evidencia
+process/experiments/stochastic_eval/*.lock
+
 __pycache__/
 *.pyc
 *.pyo

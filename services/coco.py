@@ -114,6 +114,8 @@ class COCO:
         track_landscape: bool  = False,
         landscape_history: Optional[list] = None,
         gamma          : float = 0.01,
+        sampling_mode  : str   = "uniform",
+        n_warmup       : Optional[int] = None,
     ):
         """
         W debe ser el campo del corpus en modo evaluación — inmutable
@@ -139,6 +141,16 @@ class COCO:
                 el JSONL de MonitorService al renacer COCO con W nueva).
             gamma: sensibilidad del componente histórico en alpha
                 compuesto (_landscape_component). Conservador por default.
+            sampling_mode: cómo observe() muestrea sigma_0 al contar
+                atractores — "uniform" (default, comportamiento
+                histórico), "weighted" o "boltzmann". Queda expuesto en
+                el panel de MonitorService como sampling_mode: qué modo
+                estaba activo en cada decisión de STOP. Cambiarlo cambia
+                D_ckm — ver REG_stochastic_eval_v2: a n_runs fijo, el
+                mismo Δ_r puede quedar de un lado o del otro de
+                D_CKM_THRESHOLD según el modo.
+            n_warmup: actualizaciones del calentamiento Boltzmann.
+                None → N. Sólo se usa con sampling_mode="boltzmann".
         """
         if W is None:
             raise ValueError(
@@ -153,6 +165,13 @@ class COCO:
         self.dynamic_alpha   = dynamic_alpha
         self._n_runs         = n_runs
         self._seed           = seed
+        if sampling_mode not in ("uniform", "weighted", "boltzmann"):
+            raise ValueError(
+                f"sampling_mode inválido: {sampling_mode!r} — "
+                "esperado 'uniform', 'weighted' o 'boltzmann'."
+            )
+        self._sampling_mode  = sampling_mode
+        self._n_warmup       = n_warmup if n_warmup is not None else self.N
 
         self._A0             : Optional[int]        = None
         self._Delta          : np.ndarray           = np.zeros((self.N, self.N))
@@ -191,10 +210,13 @@ class COCO:
         self._t    += 1
 
         W_eff    = self.W + self._Delta
-        A_current = self._count_attractors(W_eff)
+        # kwargs del modo de muestreo activo — con sampling_mode="uniform"
+        # (default) quedan los dos en False y esto es la llamada histórica.
+        smp      = self._sampling_kwargs()
+        A_current = self._count_attractors(W_eff, **smp)
 
         if self._A0 is None:
-            self._A0 = self._count_attractors(self.W)  # baseline sin Delta
+            self._A0 = self._count_attractors(self.W, **smp)  # baseline sin Delta
 
         D_ckm    = (self._A0 - A_current) / self._A0 if self._A0 > 0 else 0.0
         frac_rec = A_current / self._A0 if self._A0 > 0 else 1.0
@@ -228,7 +250,7 @@ class COCO:
             delta_A = None
             if self._track_landscape:
                 A_antes  = A_current
-                cS_antes = self._mean_cS(W_eff)
+                cS_antes = self._mean_cS(W_eff, **smp)
 
             self._Delta  = alpha_used * self._Delta
             stop_applied = True
@@ -237,8 +259,8 @@ class COCO:
             # (cuesta ~2 relajaciones extra de n_runs muestras cada una).
             if self._track_landscape:
                 W_eff_despues = self.W + self._Delta
-                A_despues     = self._count_attractors(W_eff_despues)
-                cS_despues    = self._mean_cS(W_eff_despues)
+                A_despues     = self._count_attractors(W_eff_despues, **smp)
+                cS_despues    = self._mean_cS(W_eff_despues, **smp)
                 delta_A       = A_despues - A_antes
                 self._last_landscape_delta = {
                     "A_antes"      : A_antes,
@@ -276,6 +298,25 @@ class COCO:
         )
         self._history.append(state)
         return state
+
+    def sampling_mode(self) -> str:
+        """
+        Modo de muestreo de sigma_0 activo en esta instancia —
+        "uniform" | "weighted" | "boltzmann".
+
+        Es el modo con el que observe() cuenta atractores, y por lo tanto
+        el que produjo el D_ckm de cada decisión de STOP. MonitorService
+        lo expone en el panel para trazabilidad.
+        """
+        return self._sampling_mode
+
+    def _sampling_kwargs(self) -> dict:
+        """kwargs de _count_attractors/_mean_cS para el modo activo."""
+        if self._sampling_mode == "boltzmann":
+            return {"boltzmann": True, "n_warmup": self._n_warmup}
+        if self._sampling_mode == "weighted":
+            return {"weighted": True}
+        return {}
 
     def register_device_eval(self, device_id: str, fi: float) -> None:
         """Registra fabrication_index de una evaluación de un device."""
@@ -505,7 +546,128 @@ class COCO:
             sigma = s2
         return sigma
 
-    def _count_attractors(self, W_eff: np.ndarray) -> int:
+    def _node_probs(self, W_eff: np.ndarray, weighted: bool) -> Optional[np.ndarray]:
+        """
+        Distribución sobre nodos para el muestreo de sigma_0.
+
+        weighted=False → None (uniforme, comportamiento histórico).
+        weighted=True  → fi / fi.sum(), con fi = |W_eff|.sum(axis=1):
+        actividad marginal de cada nodo en el paisaje que se evalúa.
+        Nodos con mayor acoplamiento en W_eff tienen mayor probabilidad
+        de caer en la cuenca de un atractor real. No requiere β_c.
+
+        Fallback a uniforme (None) en dos casos, sin error:
+          - fi.sum() == 0 (W_eff completamente cero);
+          - menos nodos con probabilidad > 0 que el n_act máximo posible
+            (0.7·N): rng.choice(replace=False, p=...) no puede muestrear
+            sin reposición más nodos que los de peso no nulo.
+        """
+        if not weighted:
+            return None
+        fi = np.abs(W_eff).sum(axis=1)
+        fi_sum = fi.sum()
+        if fi_sum <= 0:
+            return None
+        n_act_max = max(1, int(round(0.7 * self.N)))
+        if int(np.count_nonzero(fi)) < n_act_max:
+            return None
+        return fi / fi_sum
+
+    def _beta_c_landscape(self, W_eff: np.ndarray) -> Optional[float]:
+        """
+        β_c del paisaje que se está evaluando, para el calentamiento
+        Boltzmann:
+
+            β_c = 1 / (ρ* · N · μ_W)     con μ_W = mean(W_eff[W_eff > 0])
+
+        ρ* = BETA_RHO_STAR = 0.5 — identidad algebraica relax(-σ) = -relax(σ).
+        Se computa una vez por llamada a _count_attractors(), no por run.
+
+        NO es el mismo número que beta_c_corpus(). Ese usa μ_W sobre el
+        triángulo superior *incluyendo ceros* ("conservador, menos
+        sensible", ver su docstring) y sobre self.W; éste usa la media
+        sobre pesos no-nulos y sobre W_eff. Medido en
+        W_ckm_corpus_v2.json (N=32, densidad 0.73): beta_c_corpus()=13.83,
+        este=10.46 — razón 0.756. Son dos temperaturas distintas y no
+        deben confundirse: beta_c_corpus() sigue siendo la referencia de
+        TEMP_SIGNAL; ésta es sólo la temperatura de muestreo.
+        Especificado así en TASK_boltzmann_sampling_count_attractors_v3_1.
+
+        Devuelve None si W_eff no tiene pesos positivos — sin error; el
+        llamador cae a muestreo uniforme.
+        """
+        pos = W_eff[W_eff > 0]
+        if pos.size == 0:
+            return None
+        mu_W = float(np.mean(pos))
+        if mu_W <= 0:
+            return None
+        return 1.0 / (BETA_RHO_STAR * self.N * mu_W)
+
+    def _boltzmann_warmup(
+        self,
+        rng      : np.random.Generator,
+        sigma    : np.ndarray,
+        W_eff    : np.ndarray,
+        beta     : float,
+        n_warmup : int,
+    ) -> np.ndarray:
+        """
+        Calentamiento estocástico asíncrono a temperatura 1/beta.
+
+        n_warmup actualizaciones de un nodo por vez:
+
+            p(σ_i = +1) = 1 / (1 + exp(-2·β·h_i))    con h_i = Σ_j W_ij σ_j
+
+        Misma regla que la rama estocástica de relax() en hopfield.py
+        (raíz del repo, línea 51). Reimplementada acá y no importada:
+        hopfield.py hace `from .core import ...` — import relativo sin
+        __init__.py en la raíz, no es importable desde services/ — y usa
+        np.random.seed()/np.random.rand() (estado GLOBAL de numpy), que
+        rompería el aislamiento de semilla del que dependen
+        experiments/stochastic_attractor_eval.py y REG_stochastic_eval_v1/v2.
+        La duplicación es deliberada y está declarada; si hopfield.py:51
+        cambia, esto hay que revisarlo a mano.
+        Ver docs/VERIF_repo_boltzmann_paso0_v1.md.
+
+        n_warmup se cuenta en actualizaciones de UN nodo (no en barridos):
+        n_warmup = N equivale a un barrido en promedio, no a un barrido
+        completo — la selección es con reposición, algunos nodos se
+        actualizan más de una vez y otros ninguna. No hay garantía de
+        mezcla: n_warmup óptimo es pregunta abierta (TASK v3_1).
+        """
+        sigma = sigma.copy()
+        for _ in range(n_warmup):
+            i = int(rng.integers(self.N))
+            h = float(W_eff[i] @ sigma)
+            p = 1.0 / (1.0 + np.exp(-2.0 * beta * h))
+            sigma[i] = 1.0 if rng.random() < p else -1.0
+        return sigma
+
+    def _sample_s0(
+        self,
+        rng  : np.random.Generator,
+        probs: Optional[np.ndarray],
+    ) -> np.ndarray:
+        """
+        Un estado inicial sigma_0 ∈ {+1,-1}^N con 30–70% de nodos activos.
+
+        Compartido por _count_attractors() y _mean_cS() para que ambos
+        consuman el RNG en la misma secuencia con la misma semilla.
+        probs=None → uniforme sobre nodos.
+        """
+        n_act = max(1, int(round(rng.uniform(0.3, 0.7) * self.N)))
+        s0    = np.full(self.N, -1.)
+        s0[rng.choice(self.N, n_act, replace=False, p=probs)] = 1.
+        return s0
+
+    def _count_attractors(
+        self,
+        W_eff    : np.ndarray,
+        weighted : bool = False,
+        boltzmann: bool = False,
+        n_warmup : Optional[int] = None,
+    ) -> int:
         """
         Cuenta atractores distintos alcanzados en n_runs reinicios
         aleatorios de Hopfield sobre W_eff.
@@ -513,22 +675,71 @@ class COCO:
         No satura: el conteo crece ~linealmente con n_runs en corpus
         chicos (verificado hasta n_runs=200, sweep Ago 2026) — es una
         cota inferior sesgada por n_runs, no un valor convergente.
+
+        Sesgo estructural: rng.choice(self.N, ...) asigna probabilidad
+        uniforme a cada nodo como candidato al estado inicial. Con W
+        sparse o anisotrópica (p.ej. presencia de nodo tipo-965), esto
+        sobremuestra zonas de acoplamiento bajo. El método cuenta una
+        cota inferior más conservadora que la diversidad real del
+        paisaje. Para muestreo informado por W_eff, usar weighted=True
+        (ver parámetro).
+
+        Los dos sesgos — n_runs y uniformidad sobre nodos — son
+        independientes: ni weighted=True ni boltzmann=True corrigen el
+        primero.
+
+        Tres modos de muestreo de sigma_0, mutuamente excluyentes:
+          - uniforme  (default) — P(nodo) = 1/N.
+          - ponderado (weighted=True) — P(nodo) ∝ |W_eff|.sum(axis=1).
+          - Boltzmann (boltzmann=True) — sigma_0 uniforme + calentamiento
+            estocástico a β_c del paisaje (ver _boltzmann_warmup). A
+            diferencia de los otros dos, que son estáticos, éste usa el
+            campo local: es muestreo por importancia respecto de la
+            geometría real de W_eff.
+
+        boltzmann=True tiene precedencia sobre weighted.
+
+        Args:
+            W_eff: paisaje efectivo sobre el que relajar.
+            weighted: muestreo ponderado por actividad marginal en W_eff
+                (ver _node_probs). Ignorado si boltzmann=True.
+            boltzmann: calentamiento estocástico a β_c antes del relax
+                determinístico. Si W_eff no tiene pesos positivos, β_c no
+                es calculable y cae a uniforme sin error.
+            n_warmup: actualizaciones de un nodo en el calentamiento.
+                None → self._n_warmup (default N). Sólo aplica con
+                boltzmann=True.
         """
-        rng = np.random.default_rng(self._seed)
+        rng   = np.random.default_rng(self._seed)
+        beta  = self._beta_c_landscape(W_eff) if boltzmann else None
+        probs = None if boltzmann else self._node_probs(W_eff, weighted)
+        n_w   = (n_warmup if n_warmup is not None else self._n_warmup)
         attractors = set()
         for _ in range(self._n_runs):
-            n_act = max(1, int(round(rng.uniform(0.3, 0.7) * self.N)))
-            s0    = np.full(self.N, -1.)
-            s0[rng.choice(self.N, n_act, replace=False)] = 1.
+            s0 = self._sample_s0(rng, probs)
+            if beta is not None:
+                s0 = self._boltzmann_warmup(rng, s0, W_eff, beta, n_w)
             attractors.add(tuple(self._relax(s0, W_eff).tolist()))
         return len(attractors)
 
-    def _mean_cS(self, W_eff: np.ndarray) -> float:
+    def _mean_cS(
+        self,
+        W_eff    : np.ndarray,
+        weighted : bool = False,
+        boltzmann: bool = False,
+        n_warmup : Optional[int] = None,
+    ) -> float:
         """
         Media de c(S) sobre las mismas muestras que _count_attractors():
         mismo self._seed, mismo self._n_runs, misma secuencia de sigma_0
         — el rng con semilla fija reproduce exactamente la misma
         secuencia de estados iniciales, independiente de la llamada.
+        El muestreo es literalmente el mismo código (_sample_s0 y, con
+        boltzmann=True, _boltzmann_warmup), por lo que `weighted`,
+        `boltzmann` y `n_warmup` tienen acá el mismo significado y los
+        mismos sesgos documentados en _count_attractors: para que ambas
+        cantidades sigan describiendo las mismas muestras, hay que pasar
+        los mismos valores a las dos.
 
         c(S) = mean(W_eff_ij · sigma_i · sigma_j) sobre pares i<j, mismo
         formato que MonitorService._cS(). Se computa sobre W_eff (=W+Δ),
@@ -538,13 +749,16 @@ class COCO:
         self.W nunca se muta acá, W_eff es una combinación efímera local
         a esta observación, igual que en A_current.
         """
-        rng = np.random.default_rng(self._seed)
+        rng    = np.random.default_rng(self._seed)
+        beta   = self._beta_c_landscape(W_eff) if boltzmann else None
+        probs  = None if boltzmann else self._node_probs(W_eff, weighted)
+        n_w    = (n_warmup if n_warmup is not None else self._n_warmup)
         ii, jj = np.triu_indices(self.N, k=1)
         cs_values = []
         for _ in range(self._n_runs):
-            n_act = max(1, int(round(rng.uniform(0.3, 0.7) * self.N)))
-            s0    = np.full(self.N, -1.)
-            s0[rng.choice(self.N, n_act, replace=False)] = 1.
+            s0    = self._sample_s0(rng, probs)
+            if beta is not None:
+                s0 = self._boltzmann_warmup(rng, s0, W_eff, beta, n_w)
             sigma = self._relax(s0, W_eff)
             cs_values.append(float(np.mean(W_eff[ii, jj] * sigma[ii] * sigma[jj])))
         return float(np.mean(cs_values))
@@ -616,7 +830,7 @@ if __name__ == "__main__":
     else:
         print("T8 SKIP — no STOP en esta corrida")
 
-    print("\nTodos los tests OK")
+    print("\nT1-T8 OK")
 
 # ---------------------------------------------------------------------------
 # Tests TEMP_SIGNAL — requiere W real (W_ckm_corpus_v2.json)
@@ -671,4 +885,11 @@ def _test_temp_signal():
 
     print("T9-T13 OK — TEMP_SIGNAL operativo")
 
-# _test_temp_signal()
+
+# La llamada va guardada por __name__: _test_temp_signal() a nivel de módulo
+# correría T9-T13 en CADA import de coco.py — y lo importan monitor_service,
+# iap_chatroom y los módulos de experiments/. Acá corre sólo con
+# `python services/coco.py`, junto a T1-T8.
+if __name__ == "__main__":
+    _test_temp_signal()
+    print("\nTodos los tests OK — T1-T13")

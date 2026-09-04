@@ -162,6 +162,16 @@ class MonitorService:
                 ),
                 "gamma"  : getattr(self._thermostat, "_gamma", None),
                 "n_runs" : getattr(self._thermostat, "_n_runs", None),
+                # modo de muestreo de sigma_0 que produjo este D_ckm —
+                # uniform | weighted | boltzmann. Trazabilidad: el mismo
+                # Δ_r puede caer de un lado u otro de D_CKM_THRESHOLD
+                # según el modo (REG_stochastic_eval_v2).
+                "sampling_mode": getattr(self._thermostat, "_sampling_mode", None),
+                "n_warmup": (
+                    getattr(self._thermostat, "_n_warmup", None)
+                    if getattr(self._thermostat, "_sampling_mode", None) == "boltzmann"
+                    else None
+                ),
             }
 
         self._persist(text, panel, device_id)

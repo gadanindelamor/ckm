@@ -52,11 +52,24 @@ class CorpusService:
         top_k        : int  = 20,
         ngram_max    : int  = 2,
         monitor_jsonl_path: Optional[str] = None,
+        force_w_pos  : bool = False,
     ):
         self.storage_path = Path(storage_path)
         self.min_texts    = min_texts
         self._extractor   = NodeExtractorService(top_k=top_k, ngram_max=ngram_max)
         self._monitor_jsonl_path = monitor_jsonl_path
+        # FLAG DE DESARROLLO — no usar en operacion normal.
+        # force_w_pos=True saltea el ruteo por marcadores de oposicion en
+        # _rebuild(): todos los pares van a pos_counts, con lo cual
+        # W = (pos + neg)/max en vez de (pos - neg)/max. Es el contrafactico
+        # exacto "mismo corpus, sin codificar su tension": el corpus conserva
+        # los marcadores, el servicio no los traduce a pesos negativos.
+        # No es un estado alcanzable por el ciclo natural de servicios — solo
+        # sirve para verificar comportamiento del instrumento.
+        # La W resultante queda MARCADA en la traza (causal_event y
+        # forced_w_pos en el estado persistido) para que no sea
+        # indistinguible de una W natural.
+        self._force_w_pos = force_w_pos
 
         # estado
         self._texts     : List[str]            = []
@@ -211,7 +224,7 @@ class CorpusService:
         for text in self._texts:
             text_result = self._accumulate_safe([text])
             t_pairs     = text_result.get("pairs", {})
-            is_opp      = self._has_opposition(text)
+            is_opp      = False if self._force_w_pos else self._has_opposition(text)
 
             for (ni, nj), count in t_pairs.items():
                 if ni in node_idx and nj in node_idx:
@@ -234,7 +247,10 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         self._nodes = nodes
         self._W     = W
-        self._w_versions.register(W, len(self._texts), causal_event="rebuild")
+        self._w_versions.register(
+            W, len(self._texts),
+            causal_event="rebuild_debug_force_w_pos" if self._force_w_pos else "rebuild",
+        )
 
         from coco import COCO
         history = self._load_landscape_history(self._monitor_jsonl_path)
@@ -257,6 +273,7 @@ class CorpusService:
             "nodes"           : self._nodes,
             "W"               : self._W.tolist() if self._W is not None else None,
             "w_version_history": self._w_versions.to_list(),
+            "forced_w_pos"    : self._force_w_pos,
         }
         self.storage_path.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 

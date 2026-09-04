@@ -1,0 +1,2027 @@
+{
+  "611590909b41bf3bf883283332bb129e15df8005fc960726c70098e07ce1a9d4": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083402"
+  },
+  "3474373271892de1907abba6a73ff0952e7bbf4ad9b1175b62cc6a0e61ece9d2": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083403"
+  },
+  "1e24271be25bc5b81a7b5dd06f45f94a9ec891d39f7c8e0d464f1c6b178720b2": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083403"
+  },
+  "a0c769414ee77266adc7fe0aebe5f21908f3314afbaed5435382650ba00b640e": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083404"
+  },
+  "c8d660a215cb5009a9088af87a05873c39b0a00301a48bd62b58c866a8cb5fd3": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083404"
+  },
+  "f76663968f827f3cc30d4c900827401137321aab41d5a58d7223c67ac4b54588": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083405"
+  },
+  "2c0fb3f2a7e34062759b1c9a93cddc5f06cfb3c875ebdf3bc2f2916a27990bae": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083405"
+  },
+  "c3e7febcbd5f984dfee5e18e1ad0d05004285b2d8e743e94a504932d1e8e475f": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083406"
+  },
+  "318826716278516020b5244ffbd71e092a31b989136a3718f6b33f057519cae3": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083406"
+  },
+  "463e4bda4e4b554f2c9fae7c61c083ca376a622bd72a591f8a97c6ae970590c0": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083407"
+  },
+  "3fd94a609aeaeab2b4c0f2dbc2bd2d2aef2f3537ee948e0e42645e9fd2627dc3": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083407"
+  },
+  "cb1dace688e8b459fe5998c543e8048b1bbfaba342666e5a8f8818ff255ffddf": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083408"
+  },
+  "0132a13d178877ad46b8c52fdcde797b1ad1b87bddfb76450c8f25a0781eba3c": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083408"
+  },
+  "ccb9f24b6e45ceb89514080ab53068a68683d8180dc05b74fb70e1d2a3918cdb": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083409"
+  },
+  "da20e1e14fb8de3eeb002c95add27880a5a3dc838b55b6493195e0e18ce8c398": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083409"
+  },
+  "8984bf0ed1d3757b4234e99f0abcc7bd2bcb0438f4b41feceb411e39919435c6": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083409"
+  },
+  "33315e868761d0ea717408346cfaba9112910271ed3863928739033272eb3cd0": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083410"
+  },
+  "180d5e20dcd5c2f23d2e0f294acd9dcbbdc351afda61815bd165c0ba2a08d9d6": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083410"
+  },
+  "21ece59b45e4014f77a2838302926eea4b3453422615e41e0ee55d041a6936aa": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083410"
+  },
+  "6474c00270b7b7c5a8baee6059051839ead01bbe5a2545d89bd2d15d7dfd2e95": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "e4f34df7acc67fa0922318ce5b197845c16302d42faed958255446a5dbf269d4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083411"
+  },
+  "3453d485d3121439f82653c8c5641a5a61ba5bd70f5d361c15ceca6799ed5c59": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083412"
+  },
+  "3003ed1e598c35776f1dfc3aec5b177f4837e95b2b33d5b79647543d5cde810a": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083413"
+  },
+  "fa7214ea90f8f211ea1f889ebead6282b4a68a2d179caaebb12ab5679d5a8d47": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083413"
+  },
+  "e5e3b95383a4df308f52d2c4b02782c5530536bafc326c55199d60d538928479": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083414"
+  },
+  "499f39413972a724d5c0868be00ffdc4cdae49cf61c26b3edb2209160d5e2be6": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083414"
+  },
+  "494b33e482aaade455a3f2559083b02f2966183792f2c9cad599bb2781c60626": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083414"
+  },
+  "9090d6dbbf44b404f79fdb6a5fa5e992654bef535f83fb35684a50ad54bd7f7b": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083415"
+  },
+  "69e4553660faace2f7a0ec856f767686400c88a0e57fcf1f27c7085842428244": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083415"
+  },
+  "eda01255d8515ae2e3b1e3112cb9305e940eec0e211ac95f89b44a53c6775173": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083415"
+  },
+  "91657528df9555e27a6f186e9fbc1c67b19d35f06a0809d4c0ae4e46d841caf8": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083416"
+  },
+  "35804443be1fcc8320afbd27869052f52713a2279b6c88f617bb96eec74a91a7": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083416"
+  },
+  "67aeeb4ed1268dffc65e86c4b3602b55aa67eac8bf8e7b6e17c1a3ec37f08e0a": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083416"
+  },
+  "f3ab23697397cb89d4bb1e20e23d21b229df73fd82edcda66a05f85e0cf8fb31": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083416"
+  },
+  "a4465c88710e77529d8e9a840e307bd19058c8d96eaaf5104a99b52947e9bbfd": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083417"
+  },
+  "2091b18cce804f286d63b1b4d2e3b1832a5cd4f055e6336996ca9229e41238e4": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083417"
+  },
+  "d50be2bff3950e694be7d85e3faf75b929098e06d5ec79a8e7b827d1fdb3c97f": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083418"
+  },
+  "bcedbe4a35ea1dceb523658153fd4c2c668e5bc5af054d54660052820bf76ec8": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083418"
+  },
+  "532555850a1788b053b75e4ee597f8252a0fa694b6d9f1ed4608e1c4178cfbdb": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083419"
+  },
+  "77ddb52904cf8b2bc9174a2e235fbb7340d65277906f56381d674b7c5f1d2f1e": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083419"
+  },
+  "7aef374ab71df48c87dfd73f5bf5b49c81567654290abf7343cc2a21fcbcc9d2": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "b9cb4b8536fb1c015712dce275eeac9b430556e29922c6d1073c1842784ea684",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083419"
+  },
+  "c4bb6724a4ad74dc07e344ae8c6edee4f5ad13f6ddc07a02dd7dab4779b44827": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083422"
+  },
+  "01978d9e0bdbf17552a4ff5e2b7f227b24a98584d3a1dcaf4a2740213c87f4fc": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083423"
+  },
+  "52aad617cb3dea56596b640036408a776db83f06145b7301925eee6db6ba8fc0": {
+    "seed": 0,
+    "n_runs": 100,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083425"
+  },
+  "b20d1fa284227c9d87038ec565bff32540192921d4a9f24bca62b6b67900c1e6": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083425"
+  },
+  "cd34a544f4363c4f2260955020f442b98a695e0db1f2b10598f2ed630af5c9fa": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083426"
+  },
+  "afb42e7cf41cca81666142c176c28e8352bb5fe874f44b3981eb1f8432bd6ce6": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083426"
+  },
+  "39e977fb3a031c761b96e029968236ef4e1b27e2279bc678aa3056ecd9fa29c7": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083426"
+  },
+  "d9240f2c4157f49ac4efb6d4ce0dcc0cadd5514c697ae496d17f341e33e2294f": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083426"
+  },
+  "a1ce2e2a4dc071c8468dc985eb604e458a3bfe69d81631533a323d428a15ef81": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "5528cd01cdd0074b3f34482317797b4841fb0918dbe2c5ef2177036f79627fe0": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "2cdb1777a88858e9b1876428e9f8bd54f9e2f6dd652c7ef04e9a7a2f5d15f944": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "440b315af91074d27133d05397c36da73da9d9a6ffa1b880d663804bd417edae": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "abba272bb2db0544a339c168b587ab30e90798bb473e1e593139758e8224f261": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "d2a1aacee29d50722fa6ca259c798277f8b1a2e51ade3c64d22d89cd24923cd2": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083427"
+  },
+  "e042f7f0fff5a98d9200d2fdc6fb4cdec323d094d3ceda9d44b041c44a2a7ed0": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "b64135658f89bde7e234a3b294556d72736766337d9e33e19a01e66982119708": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "0dcbf310267989c29fda7ee30e10fe84162d2749c33db664b5238cf0c80ae6dd": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "3593649101b305a42ffd0e45b89d8df83a9547789a24982ed8a4519087e16a02": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "b6a1e8d1518eee4ad34d149caf1b745c69a8ba30181269b04e9e91180c0b6218": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "58103257c9af463081661d934cca7ee5c9ed09592d618dd3925c6a617db7b55b": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083428"
+  },
+  "c2454b4bec8aff94d28edb93b523917e4caec8ee1afe5c4338f026fafb637700": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "af1f8a049bda6f9edee6cf298cb7bcfce123980391340aed2b828fbacf6932fd",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "8f1b8c3e410279c5890a9b02769822016fef8b677d436988cf7c72b7aece4fb6": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "b22c1dfcd85bd4cede5934acd58a00128d546d04f63f667f06f4f2360e46fcb0": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "e5166f33e9b5b840237c3975aa56352099d84a275a5462c678323ca45280b63d": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "38c55f30ada1aabe173705fcc567c9fdd32a794515b80211422fae9e2f3140b5": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "48fc81ae087c3a52ab6fbe171510e36977d8118999dea65974d77bdbcf5f2e16": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "155259059d13c422993d6077648da53a439c23e4a1a6f37ebf99ced1f589916f": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "3643de693a9dd12c4334d08e15ffe8e192569d840dd329877954f4ef88f4d3d0": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "7f973f08c5f4747e55f278c36eadaf533c7f19469b454c478c6ae7603e732287": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "1fc2fef6b704b55fb1a002416c0898e1c4bb2ec023ecc43266536d66213f2646": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "1f1189d68b53b44d37d9a9db6443c00df433ee4c05fb36bfb265c18047d42146": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "b79951594f127076f127e4f8d84d488c4f83741f17ee8d89019ac859e0fe714a": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "d026f28884c1b120a88b02ad03627ec14c75097a5afb6dbd221474e9af7dfad3": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "763d98b11ca8ddb9f1a989a0323a5ac19a7dfc543b6e0e813ee113e21c41697e": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "6bd4f807e7d6a61c45b1aef1dac2a37dc300b6f8807282af670b053c86ca5db9": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "16ab603d76561034de64198d049e27c7e6a8cfcc97c5b4a11b06a19de425d66c": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "b074d5a81e0e42205efe24871a003221d695d53eece56dac1248278f1d8e7058": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "9e3fb3647700cb66efd01b376fcd2ae0361f81dd2dca915e5af2cb8c768ead97": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "c8a3d73e5d1616b3b7a1efb64ff6005c6b3199109f2eba1adeb781c408efcd9a": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "25146a4a48e5c570a8fc5f59c5fa0cd8d399425a5246519c754e10758c6c1959": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "b91e0cbbd61379e164b39d48757cd45491532a38d76be760ebf2bdf8c8cc6406": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "8428a9d3d36e3414aa342a1871790edeebc9d4e068e775c972d602e87572a31e",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083429"
+  },
+  "e2f8320be28b2f9bd88a18130b5eb209eb5e7d8c14eb411894172abaf92bb796": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083430"
+  },
+  "1c8251a5beb1ce5e4f892df6888ca5d55d7ac114852fcefa4be858e84db7137f": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083430"
+  },
+  "f0ea9e8b7834f637409123945a214f76801e33684a2f6d4244a99b8db3476e7b": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083430"
+  },
+  "2836a0f4378b730132588f3270b4374bbcbf460621b75e79268a22946b1aec8a": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083430"
+  },
+  "47e1f68a19552f364a2a97bb6ae29e9f924b008802517bfe85f2647113ed5f61": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083430"
+  },
+  "b7b476c8e4dbbe40ac9fe2caf15d52a5ee07d5003d20e4ee4a52afe5b6819c30": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083431"
+  },
+  "b5d8afd75a811f2958ac11061314fc3464d69c9d1002454b4281f5c5ef44b961": {
+    "seed": 2,
+    "n_runs": 100,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083431"
+  },
+  "953619d5fc0fa8656b177b31267b8eeb598fd5ceb5fcb2ff1eb8dbcef112f3e5": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083431"
+  },
+  "12c6d6c65021c6d107b9c6eb3d2f5f50d44b59b3f5ed9cbb0f272b027dd37036": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083431"
+  },
+  "952ba7deffe2d5bfb5b0a3271d5267a64a7183b973650e12e0268a260ff15b18": {
+    "seed": 3,
+    "n_runs": 100,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "13e421685ddf219c10555cb9666e7a9622269e9ac77cb70bd469d1cbae68db8a": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "8cadca5d2985cb6c71f768fa5fe371c2cf5f0f2c9e2ad4ece92daea931e3ab22": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "983bf43a8e2fbc244b0c1ff168243abb667762fbb0cf947cf67629fa9c5760c9": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "973c18e64c65bfd6b5eac1d3cd2e21187f500d6eed3c4f86385574724bc02798": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "79b9fb66f9a94a5aab0937d2374dd4aaf37b147f1d70e86a9f513a480245eeea": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "cb31083aa593549fd2082d439137676d5e1966b254213de22b1c369b1d3ac60b": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "81d4bd501b6e0028562c8ba00eb915df03f04e8c789df727143334693a14464f": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "9574d86d0f686b8b73bc13ab4b19c296928633392d14c8b025e025ca54bbc099": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083432"
+  },
+  "c62065a303c9bbe1207e6c33200819f1cd8ffe66f89dd0586dd236e461119046": {
+    "seed": 7,
+    "n_runs": 100,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "0a5710b578fa6882b997585ef404e8df1ebcb29e2e8ee4926464a9e9cc5f8d3b": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "454190877ed0a9a48fcd6703bf254d3573e7cfd04bf439d5f06c3c88f32efc0a": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "ded460f4bace445ac20d772d15c1b9aec05907324c8d7f75516688b7fcd9a7bb": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "c1f843d934f006309c7b2b60613d1bf96bccb2f71d82f270a1a33548bf1e8103": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "07d112b4e980481fdff6f333fd0b73b1566fc2325cc2b1986f3f8c14b74390c6",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "0fff3f7133ee0d46ed4c2075a9db6541e53c207b6d763477dea53ef7d29f90c1": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "733ab9981394d6a53ab74933296c6dd4d2204585801f0e786be94957ddc8ef61": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "6edefd34617d4e83e9fb77ba47922c73bf8fa03a125eb7fac6eb02097d9092a8": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "c8bd5f84e472f6c54f8c1b96d10fe1ed6fd802b43fb3a267489cecffaf432c9f": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "0e01673ee50055dc9547914f736e8ec25b1cfb563ef87989c149ae29c26f775a": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "a436782e81411ef1302f15c3923e73863d18d77181bc9bb6b41843e3f07ee3f5": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "feb6bdb4533f81c72a4ebf335a4ddbc18a68b4cebd25f4f47094aa7ad452f309": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "c2c51d63a808e774385efff5e0de5494bc740a06554add34efda1074aeb5f60a": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "f99b60c5fea6e1cd5260cb484df6a943bdb2ad6eb694f9431a86240f892a2328": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "d00b10c9e758feab4e0c8b7b9011dbaf7b7ebd93b9b97f1c24f822f878840289": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "121f26e45e8308b93e19e646b5b5b5cae33b2209397543d777b81124d0b8dda2": {
+    "seed": 4,
+    "n_runs": 100,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "77293b4a033ab47f9168bb0945db9a1c6af3e3c92d70343bc75db3e66d6c0c99": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "351708ccbfbc115ec84812e4a7b8bbebd8200504b47d1f40966efd0c6b71aa82": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "f7e19057497f4dc01383671d0e5de2ca4776d81712e3f884f3329528ed8dd41a": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "cf711511113a42d90202b45d6990f6305deb964cdddc28f3cfb592a30757262c": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "9579cc558ea980e5e38f0365e7ecb8e53ad56b130575d5bf3a838da4bb991856": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "ab811e1a861400888923cc2aa4a7b2b72fd10d54da4dbab6c1559a468b1b7eb7": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "f35d72f93db7af11ad9a2191910afad8b36a5c864ae30d14a3d323ecf91efdee": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "434dfc2f82dd5c979c7f59347c8a69ea3ea1e974bd44633d6b40e8bf2c709a53": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "dee5bf8850bc51d3d8115eca6d313e77e542dc3ca193cd89ad532ff2a626f151": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "c90113413ee8df8beff420889be8635359eb533ec36aa65993c4f6e30fde08a0": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "1e00ad8a379334ed764dac55374835955b0a8ddd0cbaff9426d62e32e5d27d0d": {
+    "seed": 9,
+    "n_runs": 100,
+    "W_sha": "9a0ad9c8ac1a1c7a43facd3ffe24d9b91547624562a91efc3ca1704d0e4d2961",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083433"
+  },
+  "3784332148356ffea53997d59f3c092067ffa7dc4807dd0aba101ade4d7d925b": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083435"
+  },
+  "2895a1c526d4864ce9ab9aaa6c20bee4d0ce6d785728fdb1759694601d2b57f1": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083435"
+  },
+  "fc91f8f16b7b1ed734e865c0cd4f41b8a4eaa1c3c626754f9fa58f3d20eeefb5": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083435"
+  },
+  "94e4058abc17e4cecb5f789f13d78beddb2a9a647c0d31bb57c70316de5a78cc": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083436"
+  },
+  "823871d47946367c8e7f840f6d8a0a1937af2d0db2a3669d7bcde91a6f857ceb": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083436"
+  },
+  "54342c7d4ac9dd44abc0643e6a13ea467048127b85528a837bf6367afc5e8ab1": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083436"
+  },
+  "9069f01ad6b3b4b15dd13982d179567a56bd214afc1f124ae1bf668456e7312d": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083436"
+  },
+  "ec99ea85ec95126b9fe4a09aca6342fa2d02983dbcaacefc3d14832a6a82d475": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083437"
+  },
+  "93c37f946a6bec18984d3bdf051433755ebd1a2b0e22afb97c4d7f54552f881f": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083437"
+  },
+  "6ec0d68bc79d4e4de6011817cefd78a4fbf71e53bf5ff09851144e5d1776922b": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083437"
+  },
+  "78db8c2b34141ee43400c968b288de82616d3350de42cdb42189f99b33f09856": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083437"
+  },
+  "ee060a0802c2d1dba7d90ba4d4383d9883c2504c1455086a6f5f19645ad36dba": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083438"
+  },
+  "e680776254571e54ec44e93a5c3cdb244e40272ed04ec34b9994392ec346c7c2": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083438"
+  },
+  "5c23d961cae8712a0bbc81949ceac2ca4caec374db1c7edd67825d0eb0d6ed50": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083439"
+  },
+  "ec49085f47d5692fee6aeb938cafef79cd6d8f7882d12466eec26ba46c15b723": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083439"
+  },
+  "1be48f82df333e72eaab4ce359f3f262ffba4e2024b583c7e096675cd57aaea2": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083440"
+  },
+  "daed6f056c043a8941394832fcbdce5745ab8955e4ed86d2cbb6d683af20ee4a": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083440"
+  },
+  "0f892d9e304896abdc47636f1a4390f37c1a61bf7ced425e6763ed10c2310e84": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083441"
+  },
+  "41a9920876a4c010d5c12fff02a851b7f5eede05499ec290c8edfebb19eb2e32": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083441"
+  },
+  "26c05f514477b65c7a8f61dc90c040dc91b3cca2e4a4f1d8283f39d5f18c9345": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "695de6cb5b36af8933cd9dfb56e9ee97fb8135b83ae655cecbb8bbf702992ef4",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083441"
+  },
+  "4de680edfe4631e6c3aed924122fa146c7a022512a1b5c7a0893cfc14fc89e5c": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083443"
+  },
+  "4ee0e9e692037a56f833c447733209914af353f66a67c8052ccebe1ff975dad2": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083444"
+  },
+  "6439c39c0c9f1f37962bfd8679921977cc43c442a4a16efdaa5cfe29b3a84429": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083444"
+  },
+  "42144bea5904090c8708bc096339435e377b6ecb6c003d861711d892e7775a96": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083444"
+  },
+  "a5f08510506b86536231fca03897b072d617bd946d8e50723beaa33ab0ea3734": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083445"
+  },
+  "5983c59dcb5d8e6cfe831c3e9387c4f8ac52ece7923f270c90a4b0acd176f1e0": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083445"
+  },
+  "4ed65c54cf99c757077c7a8399c89d24bba0f1ef9135ba0a69be52c8d58bafed": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083445"
+  },
+  "40768d96924b31baff590883a6fed6d8ba35cc25cba56502e9d2dd0e26f7c138": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083445"
+  },
+  "a1f2c9dc824210bd16894948b501fc710a625532bfd3990486ee48da2380af8f": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083446"
+  },
+  "c87b29e42be93b54e22a64ee6b6102b4d9c61c7e40d6e4431dbf334c3a98fd83": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083446"
+  },
+  "91036833152a3ed99a488411f656e1e6de9539fff297e3f24c594a403ddece0e": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083446"
+  },
+  "7f9bb718bb73d673f64f7467c92de0ee776be16b78c7aa854c7d6675718c6b6b": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083446"
+  },
+  "6ff29d0f24e7689256eabc11b4914723c66d4af11b281a5b49b2c314848da23f": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083447"
+  },
+  "74c7c7b8fd2685f51ac47461d74ef923cf25ac54d5ef6ace9ef25099d409ead4": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083447"
+  },
+  "64fde78daf908ec59de65ebaa721c6f6e8a7a28c4f91b6f59989364a29c52d9b": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083447"
+  },
+  "cc009fc307678fbe152db5a6824427887af80c4ad793d16a057c98310291a452": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083447"
+  },
+  "1fc30daefdb4a65dbe3e2059fff7edde373bbae879d93aff1da57ab43a014395": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083448"
+  },
+  "f5ec1648a0b6a98bf94b7fa07804cb14dfaec6aa3311f8ee249ea8c43ba00f0c": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083448"
+  },
+  "d9db4ae199b2713ea115eda518338bbf7c9014f1e6052e47c0e2beea1add7687": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083448"
+  },
+  "cb457fcd345f453f53b503f3848932b0e536614e4edbacaff0435eda5d2c26e3": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "ae5de5c6cb3230f4d715528ec164ec46fdb708328eb45788338dcc0ff913f46c",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083449"
+  },
+  "76e811ea8332ba873148b5a5559f1e8f10947b92f311d27935b19d8602d99ab2": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083452"
+  },
+  "7c2b7ccc5f5e49ee0426b8caf06f01c8774756bacdf093c3efc91478f851b473": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083452"
+  },
+  "8e71bc2229ca170e82b683c0becbe2c7ac4379d8af71d014f53ee8d9fb3a1c60": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "383e637184abc6e8f13c34baafb963969caf1d8ce8dc462b78b34f54427f91fa": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "b2c5b6ac78fd2f9e9820cc23b2e3130714c52fbe1d4fd69bea2f0a8174055886": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "d4dc496ec874710bee460e5671763637e78281711580f124e5e76082f2550e42": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "2ea822d0501f37bece54abbcd1daec1df9e1fd9bf38bd02d63898af993c4cdba": {
+    "seed": 2,
+    "n_runs": 100,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "5d088c406206773c2138447d373dee89a4f0e0d2564dc73e5122dd5b12f6852a": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083453"
+  },
+  "b4813863281efb06c02a04a5900cd8658d596a6003d4c7772d41305726df0991": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083454"
+  },
+  "db52ba89657a62b8fbb50f39499a83b28393a8cf56e9d1fda71fa75569cac338": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083454"
+  },
+  "44890c038207802c924426a3998096dd997d88b0fe564b22922187574bece61e": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083454"
+  },
+  "d04424645d7654732ef74198e270a9f3b70f081429931dc2e51c52144ee6187c": {
+    "seed": 4,
+    "n_runs": 100,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083454"
+  },
+  "a715bb2a29eb025eec62e7493fc86d84679cde2bde7a805fb2f40ceeb156f7db": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "6c3d7cd070d3805561b8e15676ad510f9b84f6dd0276fd6e6b287383af4eb144": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "5389b93b95fec54a3550c4dcd645c7925eb6cf89a7adb28dc55698ebbfd19e37": {
+    "seed": 5,
+    "n_runs": 100,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "adb75f1e85c7458bae982200ef61422d46865daf299e852b11907d33f8da5a22": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "fb4e51a91882c0abb755fc25218007312d9abcc4c269fab8b97b911e5b5a20fe": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "addd4ea71230fab9a846484b6c6c6cb43ecfbeda6bd8eb72f363157e788420d8": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083455"
+  },
+  "da4c9e4ed2e88e89f8e81c18084f8b74c5200c83273265f03da7de98f83bb426": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083456"
+  },
+  "dc9a794eb87587a86c4bc3e852d5744be1930e38b33a771144c54c98736003fd": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083456"
+  },
+  "db9b2f813edeb2892ff9633bc76d011cb7accfd904c2c8ff603177e550f5b4ea": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083456"
+  },
+  "74480a21db29db8afddfb831b39e146d3efa52cabbb417830519cd7df837e800": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083456"
+  },
+  "3f00f69af3d26c5cf39ff4754cf9ca162cb1a0899138f5285064a874c26b692a": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "3fa8080802e82fa43b697d1d817b2e139c6690bcc3b553092aea3916ff0ceb21",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083456"
+  },
+  "267807e910e47a9ac122f5a3aadc14b26c5694c2ab8ab63fb41be0367de4e4c2": {
+    "seed": 0,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083457"
+  },
+  "a3346f8ff692130dd08f7f0dab6a4087187aa57f6c5e7ab3de5bc8e1690d0d3e": {
+    "seed": 0,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083458"
+  },
+  "d84426a3471dba50b2d1c0b57d72442ca99583a7a08085cfb58fa96a2cc149a3": {
+    "seed": 0,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083459"
+  },
+  "7f7aa955811ccb866ee092abbf0154bff6c34414fe1971b76f453c19d28b7ca6": {
+    "seed": 0,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083503"
+  },
+  "ed8b316f1a1f5b10e3c971211c6e3efeb6c3fdcb6b008260aaa2bf4ea932a2cb": {
+    "seed": 1,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083503"
+  },
+  "79347245c7a40c597f9b538fd378db1afcf871a484d63ab33e435a0124ac2724": {
+    "seed": 1,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083503"
+  },
+  "82575f9fc60b5cb789b66cdac415e598846938af61614cf3c088dd1d80ef8c6f": {
+    "seed": 1,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083505"
+  },
+  "5e99c461d93d7cf6e9637c20ef5977a2cd6441d02aaad6fd22601e5be4ee4ee2": {
+    "seed": 1,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083508"
+  },
+  "6dfddedb377a97f306a63c9eaedf5aa64d0cf17b01302efa37554e1d0cb37d8e": {
+    "seed": 2,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083509"
+  },
+  "a3da37820b1c90f69652984fc88e0b9081978444506a53d4df6edccf4bfa28fd": {
+    "seed": 2,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083509"
+  },
+  "aaf81baa46bd434cf3143a04f71031c2ef08290a43a496fa853e181230c845e1": {
+    "seed": 2,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083510"
+  },
+  "99a0f6134f97d25d0f6b141976f05d44d390133a50ba552ff62243b58433ba45": {
+    "seed": 3,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083510"
+  },
+  "96375eef3f9c676bfd36cdf85f0fe149a6a488c7adb9de571eadbe88c6cab951": {
+    "seed": 3,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083511"
+  },
+  "1c5a726cffa20df293e28a769b914e17a13b37bff0ba8c896da2d6932fae6a8b": {
+    "seed": 3,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083512"
+  },
+  "1f9fe231c5d566350e716fdcabaf48e73447182f007fb896cb954fec531f42e0": {
+    "seed": 3,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083516"
+  },
+  "87cb9e543ad2a717e2faf90e7f26c1525cdd8324a13696d3716fa84ca25d69d0": {
+    "seed": 4,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083516"
+  },
+  "d24c193e454f4a55066504822c250cfb3bc67fc3e94d64ea0b5f0cd1f31c9ba7": {
+    "seed": 4,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083516"
+  },
+  "7fef10be9606d563de4c1f03a0da5e7610169e95304ca96885cc84dc53566e22": {
+    "seed": 4,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083517"
+  },
+  "896512852d2b818ff8f6c2f53e3b2153f2b7fd2f480f82dc266ff99599b45a57": {
+    "seed": 4,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083522"
+  },
+  "40f30e92bbd9af5393c31f5ff2c27dfd41a67eeec8303b40b29504a8fec97651": {
+    "seed": 5,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083522"
+  },
+  "2e974b8116b1717005b7807623a33dd9cd5ceb6fc8a7b0f41674e088c447c2e6": {
+    "seed": 5,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083522"
+  },
+  "78068f0bf4ac5f9c0ec6d104e0ed19b1bf795ffb38c9d1bd1d97fa05333c850a": {
+    "seed": 5,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083523"
+  },
+  "b65354ac9706dd99b01e9da7ae1ac1882f7d058b3f048f2a6e340d6893ee5356": {
+    "seed": 6,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083524"
+  },
+  "8ccfa11ef43d00e34ea9bfc58c3c9c0497e2b779916a74234f4f294d0b6e4176": {
+    "seed": 6,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083524"
+  },
+  "56723e4e53e1df7ecb863ea033e122da6b41eac520765e3ecc08a076919a2d09": {
+    "seed": 6,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083525"
+  },
+  "02ca77bc15c73092c92245249de4e06a15ca4793822319e7cfa521d45339e53e": {
+    "seed": 6,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083529"
+  },
+  "98fbd7e6918c454aa47cca1d93337446a51947c04560618f8b457c65dd05fc9a": {
+    "seed": 7,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083529"
+  },
+  "93e4588b9f302fe06bff046e51ae047bd4c591c46dde4e67e763cd6c0ee7f98e": {
+    "seed": 7,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083529"
+  },
+  "37efacf50bf5e06c939aa90bd21d2bfedb9961fe69ab37c41d17162a745bd251": {
+    "seed": 7,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083531"
+  },
+  "0a2b492f41c67c458cd30b8b0c8df1165660a9d27a6568268ffe22a59939a5c2": {
+    "seed": 7,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083535"
+  },
+  "d719e824b37d4701534bfb7824036bcf00c363404fe7a07c69aacf447ab8734b": {
+    "seed": 8,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083535"
+  },
+  "f0f5c2ecbdd65f509085b2827f8b2109a6582b41d888204fe5af8ce0a5e0084e": {
+    "seed": 8,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083535"
+  },
+  "f22970e49d2bf4f32fc155d744ad35b75e92d3f878f87f91acad13c8a6e08082": {
+    "seed": 8,
+    "n_runs": 100,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083536"
+  },
+  "fb5cde7487abd416431d6719c6f5a1ae6d6d420d443b72cf40714371c66b4683": {
+    "seed": 8,
+    "n_runs": 300,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083540"
+  },
+  "96e4fd68664e3594b7913d72186f62e416e560b289bfce51405a9f54284a6b5a": {
+    "seed": 9,
+    "n_runs": 10,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083540"
+  },
+  "079ff522b802112674b4efc0eb814f05bf06e8dd6f2d7f6082a041f264ee5e0d": {
+    "seed": 9,
+    "n_runs": 30,
+    "W_sha": "79d9a84a0956c3fe5eabab8a392c94840426edfa5e259de92b3c758efa63b405",
+    "weighted": true,
+    "status": "completed",
+    "jsonl_path": "/workspaces/ckm/process/experiments/stochastic_eval/h2_runs_run2w_20260821T083359.jsonl",
+    "timestamp": "20260821T083541"
+  }
+}

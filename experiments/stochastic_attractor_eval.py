@@ -12,6 +12,11 @@ comporta como estimador tipo coupon-collector (ver REG_n_runs_sweep_armstrong_v1
 n_runs 10->200 sin saturar D_ckm_tail). Este módulo produce distribuciones
 raw de A_observed por (seed, n_runs), sin interpretación.
 
+v6 (Ago 2026): _count_attractors llamado con weighted=True.
+Distribución de nodos: ponderada por fi = |W_eff|.sum(axis=1).
+n_act por reinicio: uniform(0.3, 0.7) * N — no distribución normal.
+n_runs_range: checkpoints fijos — no sampleados desde ninguna distribución.
+
 Uso:
     from stochastic_attractor_eval import run_sweep
     run_sweep(W, seeds=[0,1,2], n_runs_range=[10,50], out_dir="...", max_workers=2)
@@ -40,21 +45,32 @@ from coco import COCO  # noqa: E402
 from firma_ckm import _sha256  # noqa: E402
 
 
-def run_one(W: np.ndarray, seed: int, n_runs: int) -> dict:
+def run_one(W: np.ndarray, seed: int, n_runs: int, weighted: bool = True) -> dict:
     """
     Unidad de trabajo atómica. Sin I/O.
 
     Instancia un COCO nuevo (seed y n_runs solo son configurables al
     construir la instancia, _count_attractors() no los recibe como
     parámetros), corre _count_attractors(W), reporta raw.
+
+    weighted: default True desde v6 — el valor usado en la corrida
+    registrada en REG_stochastic_eval_v2.md. Es parámetro y no literal
+    (v7) para que la llamada, el `run_hash` y el campo `weighted` del
+    registro salgan de la misma fuente; poner weighted=False reproduce
+    la corrida uniforme de REG_stochastic_eval_v1.md con hashes propios.
     """
     coco = COCO(W=W, seed=seed, n_runs=n_runs)
     t0 = time.perf_counter()
-    a_observed = coco._count_attractors(W)
+    a_observed = coco._count_attractors(W, weighted=weighted)
     execution_time = time.perf_counter() - t0
 
     w_sha = _sha256(W)
-    run_hash_input = f"{seed}:{n_runs}:{w_sha}:{a_observed}"
+    # `weighted` entra en el hash (v7): dos corridas con los mismos
+    # (seed, n_runs, W) pero distinta distribución de muestreo son
+    # observaciones distintas, no la misma repetida. Sin esto, las
+    # coincidencias de A_observed entre modos colapsan en el índice
+    # (ver REG_stochastic_eval_v2.md §Ejecución, 193 entradas).
+    run_hash_input = f"{seed}:{n_runs}:{w_sha}:{a_observed}:weighted={weighted}"
     run_hash = _sha256(np.frombuffer(run_hash_input.encode(), dtype=np.uint8))
 
     return {
@@ -67,6 +83,7 @@ def run_one(W: np.ndarray, seed: int, n_runs: int) -> dict:
         "process_id": os.getpid(),
         "run_hash": run_hash,
         "W_sha": w_sha,
+        "weighted": weighted,
     }
 
 
@@ -94,6 +111,7 @@ def _write_result(record: dict, jsonl_path: Path, index_path: Path) -> None:
                 "seed": record["seed"],
                 "n_runs": record["n_runs"],
                 "W_sha": record["W_sha"],
+                "weighted": record.get("weighted"),
                 "status": "completed",
                 "jsonl_path": str(jsonl_path),
                 "timestamp": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S"),
@@ -173,21 +191,33 @@ RIESGO_CONFOUND_RATIO = 0.95
 COLAPSO_DIFF_REL = 0.02
 
 
-def run_pair(W: np.ndarray, Delta_r: np.ndarray, seed: int, n_runs: int) -> dict:
+def run_pair(
+    W       : np.ndarray,
+    Delta_r : np.ndarray,
+    seed    : int,
+    n_runs  : int,
+    weighted: bool = True,
+) -> dict:
     """
     Compara A0 (sobre W sola) vs A_actual (sobre W+Delta_r), mismo seed
     y n_runs para ambos — comparación pareada, no dos muestras
     independientes. Sin I/O.
+
+    weighted aplica a las DOS mediciones del par, nunca a una sola: la
+    comparación es pareada y mezclar modos la rompería. Ver nota en
+    run_one sobre por qué es parámetro y no literal.
     """
     coco = COCO(W=W, seed=seed, n_runs=n_runs)
-    a0 = coco._count_attractors(W)
-    a_actual = coco._count_attractors(W + Delta_r)
+    a0 = coco._count_attractors(W,                weighted=weighted)
+    a_actual = coco._count_attractors(W + Delta_r, weighted=weighted)
     delta = a_actual - a0
     d_ckm_instante = (a0 - a_actual) / a0 if a0 > 0 else 0.0
 
     w_sha = _sha256(W)
     delta_r_sha = _sha256(Delta_r)
-    run_hash_input = f"{seed}:{n_runs}:{w_sha}:{delta_r_sha}:{a0}:{a_actual}"
+    run_hash_input = (
+        f"{seed}:{n_runs}:{w_sha}:{delta_r_sha}:{a0}:{a_actual}:weighted={weighted}"
+    )
     run_hash = _sha256(np.frombuffer(run_hash_input.encode(), dtype=np.uint8))
 
     return {
@@ -200,6 +230,7 @@ def run_pair(W: np.ndarray, Delta_r: np.ndarray, seed: int, n_runs: int) -> dict
         "W_sha": w_sha,
         "Delta_r_sha": delta_r_sha,
         "run_hash": run_hash,
+        "weighted": weighted,
     }
 
 
@@ -263,6 +294,7 @@ def run_h2_case(
     checkpoints: list[int],
     jsonl_path: Path,
     index_path: Path,
+    weighted  : bool = True,
 ) -> None:
     """
     Un caso real (W, Delta_r ya construidos) x varios count_seeds x
@@ -277,7 +309,7 @@ def run_h2_case(
         confound_fired: set[str] = set()
         colapso_fired = False
         for n_runs in checkpoints:
-            record = run_pair(W, Delta_r, count_seed, n_runs)
+            record = run_pair(W, Delta_r, count_seed, n_runs, weighted=weighted)
             record["case_id"] = case_id
             record["fi_prediction"] = fi_pred
 

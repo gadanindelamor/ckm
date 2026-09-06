@@ -54,7 +54,7 @@ import numpy as np
 
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
-from coco import COCO, ThermostatState
+from coco import COCO, ThermostatState, BETA_RHO_STAR
 
 try:
     from behavior_graph import BehaviorGraph as _BehaviorGraph
@@ -72,13 +72,33 @@ class MonitorService:
         n_runs_attractors: int = 50,
         thermostat      : Optional[COCO] = None,
         behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
+        count_seed      : int = 0,
+        sampling_mode   : str = "uniform",
+        n_warmup        : Optional[int] = None,
     ):
+        """
+        count_seed / sampling_mode / n_warmup gobiernan el muestreo de
+        sigma_0 en _count_attractors(). Sus defaults —seed=0, uniform—
+        son los valores que este servicio usaba hardcodeados, de modo que
+        el comportamiento numerico no cambia. Ver TASK_monitor_service_
+        unificar_rutinas_v1.md: la equivalencia con COCO(seed=0) fue
+        verificada exacta antes de unificar.
+        """
         self.corpus    = corpus
         self._storage  = Path(storage_path)
         self._extractor = NodeExtractorService()
         self._n_runs   = n_runs_attractors
         self._thermostat = thermostat
         self._g         = behavior_graph
+
+        if sampling_mode not in ("uniform", "weighted", "boltzmann"):
+            raise ValueError(
+                f"sampling_mode invalido: {sampling_mode!r} — "
+                "esperado 'uniform', 'weighted' o 'boltzmann'."
+            )
+        self._count_seed    = count_seed
+        self._sampling_mode = sampling_mode
+        self._n_warmup      = n_warmup
 
         self._Delta_r : Optional[np.ndarray] = None
         self._A0    : Optional[int]        = None
@@ -134,6 +154,10 @@ class MonitorService:
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],
             "activos_relajado" : [nodes[i] for i, s in enumerate(sigma_relaxed)  if s > 0],
             "rechazados"       : [(nodes[i], nodes[j]) for i, j in rejected],
+            # modo con el que ESTE servicio conto atractores para D_ckm.
+            # Distinto del de panel["thermostat"]["sampling_mode"], que es
+            # el de COCO: son dos contadores independientes.
+            "sampling_mode"    : self._sampling_mode,
             "thermostat"       : None,
             "G_state"          : g_state_panel,
         }
@@ -206,7 +230,13 @@ class MonitorService:
     # Operaciones internas
     # ------------------------------------------------------------------
 
-    def _relax(self, sigma: np.ndarray, W: np.ndarray, max_iter: int = 100) -> np.ndarray:
+    def _relax(self, sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> np.ndarray:
+        """Relajacion de Hopfield sincrona hasta punto fijo (o max_iter).
+
+        max_iter=200 unificado con COCO._relax (antes 100 aca). Verificado:
+        0 de 200 estados finales distintos entre 100 y 200 sobre el corpus
+        caso09_run2 — la relajacion converge muy por debajo de 100.
+        """
         for _ in range(max_iter):
             h  = W @ sigma
             s2 = np.where(h > 0, 1., np.where(h < 0, -1., sigma))
@@ -273,14 +303,102 @@ class MonitorService:
             self._A0 = A_actual
         return float((self._A0 - A_actual) / self._A0) if self._A0 > 0 else 0.0
 
-    def _count_attractors(self, W: np.ndarray) -> int:
-        N   = W.shape[0]
-        rng = np.random.default_rng(0)
+    # ── Muestreo de sigma_0 — rutinas unificadas con COCO ────────────────
+    # Copiadas de services/coco.py (TASK_monitor_service_unificar_rutinas_v1)
+    # con una unica adaptacion: alli N es fijo al construir (self.N), aca W
+    # se reconstruye con el corpus, asi que N sale de W.shape[0] en cada
+    # llamada. Los defaults de este servicio (seed=0, uniform) preservan el
+    # comportamiento previo: la equivalencia con COCO(seed=0) fue verificada
+    # exacta sobre W sola, _combine_W_Delta(W,D) y W+D crudo.
+
+    def _node_probs(self, W_eff: np.ndarray, weighted: bool) -> Optional[np.ndarray]:
+        """Distribucion sobre nodos para sigma_0. weighted=False -> None
+        (uniforme). weighted=True -> fi/fi.sum() con fi=|W_eff|.sum(axis=1).
+        Fallback a uniforme si W_eff es nula o si hay menos nodos con peso
+        no nulo que el n_act maximo posible (0.7*N)."""
+        if not weighted:
+            return None
+        N  = W_eff.shape[0]
+        fi = np.abs(W_eff).sum(axis=1)
+        fi_sum = fi.sum()
+        if fi_sum <= 0:
+            return None
+        n_act_max = max(1, int(round(0.7 * N)))
+        if int(np.count_nonzero(fi)) < n_act_max:
+            return None
+        return fi / fi_sum
+
+    def _beta_c_landscape(self, W_eff: np.ndarray) -> Optional[float]:
+        """beta_c = 1/(rho*.N.mu_W) con mu_W sobre pesos no nulos de W_eff.
+        Se computa una vez por llamada. None si no hay pesos positivos."""
+        pos = W_eff[W_eff > 0]
+        if pos.size == 0:
+            return None
+        mu_W = float(np.mean(pos))
+        if mu_W <= 0:
+            return None
+        return 1.0 / (BETA_RHO_STAR * W_eff.shape[0] * mu_W)
+
+    def _sample_s0(self, rng, N: int, probs: Optional[np.ndarray]) -> np.ndarray:
+        """sigma_0 con 30-70% de nodos activos. probs=None -> uniforme."""
+        n_act = max(1, int(round(rng.uniform(0.3, 0.7) * N)))
+        s0    = np.full(N, -1.)
+        s0[rng.choice(N, n_act, replace=False, p=probs)] = 1.
+        return s0
+
+    def _boltzmann_warmup(self, rng, sigma: np.ndarray, W_eff: np.ndarray,
+                          beta: float, n_warmup: int) -> np.ndarray:
+        """Calentamiento estocastico asincrono a temperatura 1/beta:
+        p(sigma_i=+1) = 1/(1+exp(-2.beta.h_i)). n_warmup actualizaciones de
+        UN nodo, con reposicion. Misma regla que hopfield.py:51 y que
+        COCO._boltzmann_warmup."""
+        N = W_eff.shape[0]
+        sigma = sigma.copy()
+        for _ in range(n_warmup):
+            i = int(rng.integers(N))
+            h = float(W_eff[i] @ sigma)
+            p = 1.0 / (1.0 + np.exp(-2.0 * beta * h))
+            sigma[i] = 1.0 if rng.random() < p else -1.0
+        return sigma
+
+    def _count_attractors(
+        self,
+        W        : np.ndarray,
+        weighted : Optional[bool] = None,
+        boltzmann: Optional[bool] = None,
+        n_warmup : Optional[int]  = None,
+    ) -> int:
+        """
+        Atractores distintos en n_runs reinicios sobre W.
+
+        Sesgos heredados, ambos documentados e independientes: el conteo
+        crece con n_runs sin saturar, y la distribucion de sigma_0 no
+        representa la topologia de W. Ver REG_stochastic_eval_v1/v2 y
+        REG_count_attractors_bias_v1.
+
+        weighted/boltzmann en None toman self._sampling_mode. Pasarlos
+        explicitos permite un conteo puntual en otro modo sin cambiar la
+        configuracion del servicio.
+        """
+        if weighted is None and boltzmann is None:
+            weighted  = self._sampling_mode == "weighted"
+            boltzmann = self._sampling_mode == "boltzmann"
+        else:
+            weighted  = bool(weighted)
+            boltzmann = bool(boltzmann)
+
+        N     = W.shape[0]
+        rng   = np.random.default_rng(self._count_seed)
+        beta  = self._beta_c_landscape(W) if boltzmann else None
+        probs = None if boltzmann else self._node_probs(W, weighted)
+        n_w   = n_warmup if n_warmup is not None else (
+            self._n_warmup if self._n_warmup is not None else N)
+
         attractors = set()
         for _ in range(self._n_runs):
-            n_act = max(1, int(round(rng.uniform(0.3, 0.7) * N)))
-            s0    = np.full(N, -1.)
-            s0[rng.choice(N, n_act, replace=False)] = 1.
+            s0 = self._sample_s0(rng, N, probs)
+            if beta is not None:
+                s0 = self._boltzmann_warmup(rng, s0, W, beta, n_w)
             attractors.add(tuple(self._relax(s0, W).tolist()))
         return len(attractors)
 

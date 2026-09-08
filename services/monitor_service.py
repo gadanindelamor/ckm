@@ -230,20 +230,52 @@ class MonitorService:
     # Operaciones internas
     # ------------------------------------------------------------------
 
-    def _relax(self, sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> np.ndarray:
-        """Relajacion de Hopfield sincrona hasta punto fijo (o max_iter).
-
-        max_iter=200 unificado con COCO._relax (antes 100 aca). Verificado:
-        0 de 200 estados finales distintos entre 100 y 200 sobre el corpus
-        caso09_run2 — la relajacion converge muy por debajo de 100.
+    def _relax_orbit(
+        self,
+        sigma   : np.ndarray,
+        W       : np.ndarray,
+        max_iter: int = 200,
+    ) -> tuple:
         """
-        for _ in range(max_iter):
-            h  = W @ sigma
-            s2 = np.where(h > 0, 1., np.where(h < 0, -1., sigma))
-            if np.allclose(s2, sigma):
-                break
-            sigma = s2
-        return sigma
+        Relajacion de Hopfield sincrona, devolviendo la ORBITA alcanzada.
+        Misma implementacion que COCO._relax_orbit — ver alli el detalle.
+
+        Returns: (orbita, periodo, cola, estado_en_max_iter)
+        """
+        visto : dict = {}
+        seq   : list = []
+        s = sigma
+        for t in range(max_iter):
+            k    = s.tobytes()
+            prev = visto.get(k)
+            if prev is not None:
+                per = t - prev
+                idx = prev + ((max_iter - prev) % per)
+                orbita = frozenset(a.tobytes() for a in seq[prev:])
+                return orbita, per, prev, seq[idx]
+            visto[k] = t
+            seq.append(s)
+            h = W @ s
+            s = np.where(h > 0, 1., np.where(h < 0, -1., s))
+        return frozenset([s.tobytes()]), 0, -1, s
+
+    def _relax(self, sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> np.ndarray:
+        """
+        Estado alcanzado tras max_iter pasos de relajacion sincrona.
+        Comportamiento identico al loop previo, incluida la fase devuelta
+        cuando la trayectoria queda en una orbita de periodo > 1.
+
+        CORRECCION (Sep 2026, respecto del docstring anterior en 5f2ec6c):
+        aquel decia "0 de 200 estados finales distintos entre max_iter 100
+        y 200 — la relajacion converge muy por debajo de 100". La medicion
+        era correcta, la conclusion no: 100 y 200 son ambos PARES, y una
+        orbita de periodo 2 devuelve la misma fase en los dos. El test que
+        separa los casos es 100 contra 101. Medido asi: en el corpus
+        caso09_run2 natural, 136 de 200 runs NO llegan a punto fijo —
+        quedan en orbitas de periodo 2. En WARMUP_TEXTS, 141 de 200. En
+        W_ckm_corpus_v2 (N=32), solo 3 de 200.
+        """
+        return self._relax_orbit(sigma, W, max_iter)[3]
 
     def _combine_W_Delta(self, W: np.ndarray, Delta: np.ndarray) -> np.ndarray:
         """

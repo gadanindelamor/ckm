@@ -20,6 +20,7 @@ Secciones:
     C  W normalizada vs W cruda: orbitas, conjuntos, calibracion
     D  enumeracion exhaustiva 2^N — verdad de terreno (solo N<=22)
     E  muestreo contra verdad: A, top-k, N_eff
+    F  cantidades de W sola: frustracion, peso negativo, espectro
 
 Salida: process/experiments/orbitas/<seccion>_<timestamp>.json
 No pisa corridas anteriores.
@@ -390,13 +391,87 @@ def seccion_E(C, verdad: dict) -> dict:
     return out
 
 
+def seccion_F(C) -> dict:
+    """Cantidades que son funcion de W SOLA — sin sigma_0, sin n_runs, sin
+    modo de muestreo. Son del instrumento, no de la sonda: los barridos son
+    un mecanismo que imponemos para probar, no lo que el instrumento hace.
+
+    Separa dos ejes que las mediciones por muestreo mezclan:
+      topologico — indice de frustracion, depende solo del patron de SIGNOS
+      metrico    — peso negativo relativo, espectro; dependen de magnitudes
+    """
+    import itertools
+
+    def frustracion(W):
+        """Fraccion de triangulos frustrados: producto de los 3 signos < 0.
+        Un grafo con signos es balanceado sii el indice es 0 (Harary)."""
+        N = W.shape[0]
+        S = np.sign(W)
+        tot = fr = 0
+        for i, j, k in itertools.combinations(range(N), 3):
+            a, b, c = S[i, j], S[j, k], S[i, k]
+            if a == 0 or b == 0 or c == 0:
+                continue
+            tot += 1
+            if a * b * c < 0:
+                fr += 1
+        return fr, tot, (fr / tot if tot else 0.0)
+
+    def peso_negativo(W):
+        ii, jj = np.triu_indices(W.shape[0], k=1)
+        v = W[ii, jj]
+        t = np.abs(v).sum()
+        return float(np.abs(v[v < 0]).sum() / t) if t else 0.0
+
+    print("\n═══ F — cantidades de W sola ═══")
+    print("Sin sigma_0, sin n_runs, sin modo. Del instrumento, no de la sonda.\n")
+    print(f"{'corpus':<22} {'W<0':>5} {'triang':>7} {'frustr':>7} {'indice':>8} "
+          f"{'peso neg':>9} {'lambda_min':>11} {'CV(fi)':>7}")
+    out = {}
+    for nom, d in C.items():
+        W = d["W"]
+        fr, tot, idx = frustracion(W)
+        ev = np.linalg.eigvalsh(W)
+        fi = np.abs(W).sum(axis=1)
+        cv = float(fi.std() / fi.mean()) if fi.mean() > 0 else 0.0
+        r = dict(W_neg=int((W < 0).sum()), triangulos=tot, frustrados=fr,
+                 indice_frustracion=idx, peso_negativo=peso_negativo(W),
+                 lambda_min=float(ev[0]), lambda_max=float(ev[-1]), cv_fi=cv)
+        out[nom] = r
+        print(f"{nom:<22} {r['W_neg']:>5} {tot:>7} {fr:>7} {idx:>8.4f} "
+              f"{r['peso_negativo']:>9.4f} {r['lambda_min']:>11.4f} {cv:>7.3f}")
+
+    # barrido AMP: el indice topologico no se mueve, el metrico si
+    W2 = C["W_ckm_corpus_v2"]["W"]
+    NEG = [(13, 22), (15, 16), (18, 20)]        # calibrate_W_mixta.py
+    print("\nBarrido AMP sobre W_ckm_corpus_v2 — misma convencion que")
+    print("calibrate_W_mixta.build_W_mixta (amp=0 deja W_base intacta):")
+    print(f"{'AMP':>5} {'indice frustr':>14} {'peso neg':>9} {'lambda_min':>11}")
+    amp_out = {}
+    for amp in (0, 5, 15, 40, 80):
+        W = W2.copy()
+        if amp > 0:
+            for i, j in NEG:
+                W[i, j] = W[j, i] = -W2[i, j] * amp
+        _, _, idx = frustracion(W)
+        ev = np.linalg.eigvalsh(W)
+        amp_out[amp] = dict(indice=idx, peso_negativo=peso_negativo(W),
+                            lambda_min=float(ev[0]))
+        print(f"{amp:>5} {idx:>14.4f} {peso_negativo(W):>9.4f} {ev[0]:>11.4f}")
+    print("\n  El indice es INVARIANTE a AMP: la frustracion es de signos,")
+    print("  AMP solo escala magnitudes. El barrido AMP mueve lo metrico")
+    print("  dejando lo topologico fijo.")
+    out["_barrido_amp"] = amp_out
+    return out
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--seccion", default="ABCDE",
-                    help="letras de las secciones a correr (default: ABCDE)")
+    ap.add_argument("--seccion", default="ABCDEF",
+                    help="letras de las secciones a correr (default: ABCDEF)")
     args = ap.parse_args()
     sel = args.seccion.upper()
 
@@ -410,6 +485,7 @@ def main() -> None:
     if "C" in sel: res["C"] = seccion_C(C)
     verdad = res["D"] = seccion_D(C) if "D" in sel else {}
     if "E" in sel and verdad: res["E"] = seccion_E(C, verdad)
+    if "F" in sel: res["F"] = seccion_F(C)
 
     out = OUT_DIR / f"orbit_analytics_{ts}.json"
     out.write_text(json.dumps(res, indent=2, default=float))

@@ -1,0 +1,33 @@
+{
+  "timestamp": "20260908T170939",
+  "secciones": "C",
+  "C": {
+    "caso09 natural": {
+      "enteros": true,
+      "orb_norm": 206,
+      "orb_cruda": 206,
+      "identicas": true,
+      "solo_norm": 0,
+      "solo_cruda": 0,
+      "comunes": 206,
+      "mu_norm": 0.010526315789473684,
+      "mu_cruda": 0.021052631578947368,
+      "beta_c_norm": 9.5,
+      "beta_c_cruda": 4.75
+    },
+    "caso09 forzado": {
+      "enteros": true,
+      "orb_norm": 33,
+      "orb_cruda": 33,
+      "identicas": false,
+      "solo_norm": 18,
+      "solo_cruda": 18,
+      "comunes": 15,
+      "mu_norm": 0.1649122807017544,
+      "mu_cruda": 0.49473684210526314,
+      "beta_c_norm": 0.6063829787234042,
+      "beta_c_cruda": 0.20212765957446807
+    }
+  },
+  "D": {}
+}

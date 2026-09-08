@@ -1,0 +1,93 @@
+{
+  "timestamp": "20260908T170850",
+  "secciones": "ABC",
+  "A": {
+    "WARMUP": {
+      "N": 20,
+      "valores": 2,
+      "diadico": true,
+      "densidad": 0.12631578947368421,
+      "h_cero": 0.3291
+    },
+    "caso09 natural": {
+      "N": 20,
+      "valores": 4,
+      "diadico": true,
+      "densidad": 0.32105263157894737,
+      "h_cero": 0.1596
+    },
+    "caso09 forzado": {
+      "N": 20,
+      "valores": 3,
+      "diadico": false,
+      "densidad": 0.3684210526315789,
+      "h_cero": 0.0767
+    },
+    "W_ckm_corpus_v2": {
+      "N": 32,
+      "valores": 95,
+      "diadico": false,
+      "densidad": 0.7560483870967742,
+      "h_cero": 0.016875
+    }
+  },
+  "B": {
+    "WARMUP": {
+      "diadico": true,
+      "pasos_distintos": 0,
+      "n": 2000
+    },
+    "caso09 natural": {
+      "diadico": true,
+      "pasos_distintos": 0,
+      "n": 2000
+    },
+    "caso09 forzado": {
+      "diadico": false,
+      "pasos_distintos": 921,
+      "n": 2000
+    },
+    "W_ckm_corpus_v2": {
+      "diadico": false,
+      "pasos_distintos": 100,
+      "n": 2000
+    },
+    "_asincrono": {
+      "corpus": "caso09 forzado",
+      "n": 300,
+      "difs": {
+        "BLAS": 13,
+        "numpy": 16
+      }
+    }
+  },
+  "C": {
+    "caso09 natural": {
+      "enteros": true,
+      "orb_norm": 206,
+      "orb_cruda": 33,
+      "identicas": false,
+      "solo_norm": 206,
+      "solo_cruda": 33,
+      "comunes": 0,
+      "mu_norm": 0.010526315789473684,
+      "mu_cruda": 0.49473684210526314,
+      "beta_c_norm": 9.5,
+      "beta_c_cruda": 0.20212765957446807
+    },
+    "caso09 forzado": {
+      "enteros": true,
+      "orb_norm": 33,
+      "orb_cruda": 33,
+      "identicas": false,
+      "solo_norm": 18,
+      "solo_cruda": 18,
+      "comunes": 15,
+      "mu_norm": 0.1649122807017544,
+      "mu_cruda": 0.49473684210526314,
+      "beta_c_norm": 0.6063829787234042,
+      "beta_c_cruda": 0.20212765957446807
+    }
+  },
+  "D": {}
+}

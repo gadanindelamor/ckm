@@ -177,10 +177,20 @@ python fourforums_pipeline_v8h.py --log
 ### Unit tests
 
 ```bash
-python services/test_coco.py          # 43/43
-python services/test_firma_ckm.py     # 10/10
-python services/test_w_version.py     # 9/9
+python tests/test_coco.py             # 28/28
+python tests/test_monitor_services.py # 35/35
+python tests/test_firma_ckm.py        # 10/10
+python tests/test_w_version.py        # 9/9
+
+python services/coco.py               # T1-T13, suite propia del modulo
+python services/monitor_service.py    # T1-T6
+python services/corpus_service.py
 ```
+
+COCO cuenta 41: 28 en `tests/test_coco.py` mas 13 (T1-T13) en el `__main__`
+de `services/coco.py`. Se citan separados a proposito — son dos runners
+distintos, y un escalar unico se congela sin decir cual de los dos se movio.
+Verificado Sep 2026.
 
 ---
 
@@ -245,7 +255,7 @@ Neither path reaches design without passing through comprehension.
 |---|---|---|
 | NodeExtractor | ✓ TF-IDF, stateless, no LLM, from_corpus() Path B | — |
 | MonitorService | ✓ Accumulates Δ_r, trace_ip identified | — |
-| COCO | ✓ β inferred from fi, not declared. Executes OPERADOR_STOP_COCO: compresses Δ_r by α ∈ [0.05, 0.30] when D_ckm crosses threshold. MonitorService adopts the compressed Δ_r. | 43/43 |
+| COCO | ✓ β inferred from fi, not declared. Executes OPERADOR_STOP_COCO: compresses Δ_r by α ∈ [0.05, 0.30] when D_ckm crosses threshold. MonitorService adopts the compressed Δ_r. | 28 + 13 |
 | FabricationService | ✓ Detects fabrication of content and control signals | — |
 | Firma_CKM | ✓ 6 canonical fields: sha256(W), D_ckm, temp_signal, n_agents, timestamp, sha256(Δ_r) | — |
 | WVersionManager | ✓ Lightweight trace — when W changed, not copies | — |
@@ -274,7 +284,7 @@ Neither path reaches design without passing through comprehension.
 |---|---|---|
 | Representation of cohesive knowledge | No model | Main gap — hysteresis is the only fully defined property. Incompleteness preserved as information. |
 | META KNOWLEDGE | Held deliberately | Conditions not given. Cannot be summoned. |
-| COCO as collective consciousness | Conceptual gap | COCO (thermal regulation service) is implemented — 43/43. The gap is whether the field can know itself: not a thermostatic function but the residue of real contact between agents. Not implementable by declaration. |
+| COCO as collective consciousness | Conceptual gap | COCO (thermal regulation service) is implemented — 28 + 13. The gap is whether the field can know itself: not a thermostatic function but the residue of real contact between agents. Not implementable by declaration. |
 | BehaviorGraph G — full operationalization | Proof of concept | behavior_graph.py + TERMAP_behavior_v1.json operational. D_G measurement on real IAP corpus: pending. Full integration with channel workflow: pending. Termap English-only — Spanish behavior vocabulary is conditional extension, not baseline. |
 | R15 gatekeeper — semantic criteria | Partially formalized | The gatekeeper/elicitation distinction is architecturally critical. R15 remains open. |
 | trace_ip verifiability | Concept confirmed | The action at t_i is observable; whether a device recognized and acted from that recognition is not verifiable by the instrument. |

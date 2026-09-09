@@ -55,3 +55,6 @@ Thumbs.db
 
 # logs
 *.log
+
+# pid files de tooling operativo
+*.pid

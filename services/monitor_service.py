@@ -3,47 +3,27 @@ monitor_service.py — Collective MonitorService
 
 Stateful. Evalúa prompts contra el corpus acumulado.
 Mide fabricación: lo que σ_prompt declaró y el campo rechazó.
-        # σ declarado por el prompt
-        sigma_prompt = self._extractor.evaluate(text, nodes)
 
-        # σ que el campo acepta
-        sigma_relaxed = self._relax(sigma_prompt.copy(), self._combine_W_Delta(W, self._Delta_r))
-
-Combina W y Delta_r en escalas compatibles.
-    W ∈ [0,1] (normalizado por CorpusService).
-    Delta_r ∈ [0, ∞) (conteos enteros de rechazos).
-
-    Normalización: Delta_r / max(Delta_r) → [0,1],
-    luego escala por mean(W_nonzero) para preservar magnitud relativa de W.
-    Si Delta es cero (inicio de sesión), devuelve W sin modificar.
-
-Δ acumula co-ocurrencias de rechazos:
+Δ_r acumula co-ocurrencias de rechazos:
   pares (i,j) que σ_prompt declaró activos pero relax expulsó.
-  Δ[i,j] += 1 por cada evaluación donde el par fue rechazado.
+  Δ_r[i,j] += 1 por cada evaluación donde el par fue rechazado.
 
-Integrado a COCO thermostat (Inyectado)
+Rango de W (heredado de CorpusService): W ∈ [−1, +1]. `_rebuild()` calcula
+(pos_counts − neg_counts) / max|·|, y rutea a neg_counts los textos con
+marcador de oposición. c(S) es informativo cuando hay tensión estructural,
+que es justamente lo que codifican los pesos negativos.
 
-  Limitación v1 (heredada de CorpusService):
-  W positiva. c(S) informativo solo cuando hay tensión estructural.
+COCO (thermostat) es opcional — `thermostat=None` por defecto. Sin él no
+hay compresión de Δ_r, ni β, ni temp_signal, y `panel["thermostat"]` es
+None; el resto del panel se emite igual. Con él, Δ_r del monitor y Δ de
+COCO se sincronizan SOLO cuando se aplica STOP: entre STOPs divergen
+libremente, por diseño (ver evaluate()).
 
-Inicializacion:
-    def __init__(
-        self,
-        corpus          : CorpusService,
-        storage_path    : str = "monitor_trajectory.jsonl",
-        n_runs_attractors: int = 50,
-        thermostat      : Optional[COCO] = None,
-    ):
-        self.corpus    = corpus
-        self._storage  = Path(storage_path)
-        self._extractor = NodeExtractorService()
-        self._n_runs   = n_runs_attractors
-        self._thermostat = thermostat
-
-        self._Delta_r : Optional[np.ndarray] = None
-        self._A0    : Optional[int]        = None
-
-  """
+Este docstring describe lo que el código no dice de sí mismo. La firma del
+constructor, el cuerpo de evaluate() y la escala de _combine_W_Delta viven
+en el código, y ahí se leen — copiarlos acá crea una rama que se congela
+sin señal de estar desactualizada.
+"""
 
 from __future__ import annotations
 import json
@@ -281,12 +261,18 @@ class MonitorService:
         """
         Combina W y Delta_r en escalas compatibles.
 
-        W ∈ [0,1] (normalizado por CorpusService).
+        W ∈ [−1, +1] (normalizado por CorpusService: (pos − neg)/max|·|).
         Delta_r ∈ [0, ∞) (conteos enteros de rechazos).
 
         Normalización: Delta_r / max(Delta_r) → [0,1],
-        luego escala por mean(W_nonzero) para preservar magnitud relativa de W.
-        Si Delta es cero (inicio de sesión), devuelve W sin modificar.
+        luego escala por la media de los pesos POSITIVOS de W para
+        preservar magnitud relativa. Si Delta es cero (inicio de sesión),
+        devuelve W sin modificar.
+
+        La escala usa solo W>0 — no |W| ni todos los no-cero. Data de
+        cuando W era positiva y `W_nonzero` y `W>0` eran el mismo conjunto.
+        Se mantiene el comportamiento; queda dicho que es una elección,
+        no una consecuencia del rango de W.
         """
         delta_max = Delta.max()
         if delta_max == 0:

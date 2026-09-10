@@ -1,0 +1,205 @@
+{
+  "corpus": "corpus_state.json.bak_1784685610_caso09_run2",
+  "N_de_COCO": 19,
+  "N_actual_estable_en": [
+    20
+  ],
+  "N_de_COCO_coincide_con_el_actual": false,
+  "shapes_siempre_calzaron": false,
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "f74745412e"
+    },
+    {
+      "n_textos": 5,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "b14573170d"
+    },
+    {
+      "n_textos": 6,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "837ac6a9fc"
+    },
+    {
+      "n_textos": 7,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "e44eea6893"
+    },
+    {
+      "n_textos": 8,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "c1dc0ad9dd"
+    },
+    {
+      "n_textos": 9,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "e616765e7a"
+    },
+    {
+      "n_textos": 10,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "55e0922a79"
+    },
+    {
+      "n_textos": 11,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "b68e2cc34f"
+    },
+    {
+      "n_textos": 12,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "4c3ad62ce7"
+    },
+    {
+      "n_textos": 13,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "064c2b4ab0"
+    },
+    {
+      "n_textos": 14,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "9ff63a605a"
+    },
+    {
+      "n_textos": 15,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "bae103d286"
+    },
+    {
+      "n_textos": 16,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "26e4e9d8d9"
+    },
+    {
+      "n_textos": 17,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "a1e087a534"
+    },
+    {
+      "n_textos": 18,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "3171c7c313"
+    },
+    {
+      "n_textos": 19,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "3870e42a65"
+    },
+    {
+      "n_textos": 20,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "6ccdff436b"
+    },
+    {
+      "n_textos": 21,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "8df8099ed7"
+    },
+    {
+      "n_textos": 22,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "5f14249deb"
+    },
+    {
+      "n_textos": 23,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "e06cc0cd13"
+    },
+    {
+      "n_textos": 24,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "misma_forma": false,
+      "max_abs_dif": null,
+      "dif_relativa": null,
+      "sha_W_actual": "3fa8080802"
+    }
+  ],
+  "mu_W_de_COCO": 0.28654971,
+  "mu_W_actual": 0.01052632,
+  "beta_c_de_COCO": 0.367347,
+  "beta_c_si_fuese_actual": 9.5,
+  "nota": "si N crece despues de construir COCO, self.W + self._Delta rompe con ValueError. Si N ya saturo en top_k, los shapes calzan y la divergencia es silenciosa. Los dos desenlaces dependen del corpus, no del codigo."
+}

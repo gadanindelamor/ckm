@@ -1,0 +1,73 @@
+{
+  "corpus": "sinteticos (forzado)",
+  "id_inicial": 126147677345344,
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "id_corpus_coco": 126147678136912,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 5,
+      "id_corpus_coco": 126147671523152,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 6,
+      "id_corpus_coco": 126147670152624,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 7,
+      "id_corpus_coco": 126147670159488,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 8,
+      "id_corpus_coco": 126147678129616,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 9,
+      "id_corpus_coco": 126147671963312,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 10,
+      "id_corpus_coco": 126147685742064,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 11,
+      "id_corpus_coco": 126147670161984,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 12,
+      "id_corpus_coco": 126147705737856,
+      "id_monitor_thermostat": 126147677345344,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    }
+  ],
+  "corpus_coco_cambio_de_objeto": 9,
+  "monitor_thermostat_cambio_de_objeto": 1,
+  "veces_que_coincidieron": 0,
+  "total_ingestas": 9
+}

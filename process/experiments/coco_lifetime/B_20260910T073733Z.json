@@ -1,0 +1,97 @@
+{
+  "corpus": "sinteticos (forzado)",
+  "N_de_COCO": 20,
+  "N_actual_estable_en": [
+    20
+  ],
+  "N_de_COCO_coincide_con_el_actual": true,
+  "shapes_siempre_calzaron": true,
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 1.0,
+      "dif_relativa": 1.0,
+      "sha_W_actual": "516732d97a"
+    },
+    {
+      "n_textos": 5,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 1.0,
+      "dif_relativa": 1.0,
+      "sha_W_actual": "516732d97a"
+    },
+    {
+      "n_textos": 6,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 1.0,
+      "dif_relativa": 1.0,
+      "sha_W_actual": "af90c85f5b"
+    },
+    {
+      "n_textos": 7,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "7f96b57678"
+    },
+    {
+      "n_textos": 8,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "4007fbd671"
+    },
+    {
+      "n_textos": 9,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "73c8d96af7"
+    },
+    {
+      "n_textos": 10,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "ced6f47d1e"
+    },
+    {
+      "n_textos": 11,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "9673d56ffd"
+    },
+    {
+      "n_textos": 12,
+      "N_actual": 20,
+      "N_de_COCO": 20,
+      "misma_forma": true,
+      "max_abs_dif": 2.0,
+      "dif_relativa": 2.0,
+      "sha_W_actual": "5663d1bd2d"
+    }
+  ],
+  "mu_W_de_COCO": 0.32105263,
+  "mu_W_actual": 0.14210526,
+  "beta_c_de_COCO": 0.311475,
+  "beta_c_si_fuese_actual": 0.703704,
+  "nota": "si N crece despues de construir COCO, self.W + self._Delta rompe con ValueError. Si N ya saturo en top_k, los shapes calzan y la divergencia es silenciosa. Los dos desenlaces dependen del corpus, no del codigo."
+}

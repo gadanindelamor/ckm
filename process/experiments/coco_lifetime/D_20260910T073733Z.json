@@ -1,0 +1,74 @@
+{
+  "corpus": "sinteticos (forzado)",
+  "corte_por_excepcion": null,
+  "evaluaciones": [
+    {
+      "n_textos": 4,
+      "D_ckm_monitor": 0.0,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 0.0
+    },
+    {
+      "n_textos": 5,
+      "D_ckm_monitor": 0.0,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 0.0
+    },
+    {
+      "n_textos": 6,
+      "D_ckm_monitor": -4.0,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 0.0
+    },
+    {
+      "n_textos": 7,
+      "D_ckm_monitor": -1.0,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 2.0
+    },
+    {
+      "n_textos": 8,
+      "D_ckm_monitor": -3.25,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 2.0
+    },
+    {
+      "n_textos": 9,
+      "D_ckm_monitor": -6.0,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 4.0
+    },
+    {
+      "n_textos": 10,
+      "D_ckm_monitor": -6.5,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 4.0
+    },
+    {
+      "n_textos": 11,
+      "D_ckm_monitor": -6.25,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 4.0
+    },
+    {
+      "n_textos": 12,
+      "D_ckm_monitor": -6.5,
+      "D_ckm_coco": 0.0,
+      "stop_applied": false,
+      "Delta_r_sum": 4.0
+    }
+  ],
+  "D_ckm_monitor_valores_distintos": 7,
+  "D_ckm_coco_valores_distintos": 1,
+  "coinciden_alguna_vez": 2,
+  "n_stops": 0,
+  "nota": "D_ckm_monitor sale de _combine_W_Delta sobre la W ACTUAL; D_ckm_coco sale de self.W + Delta sobre la W de construccion (DEFS §10 documenta que el primero es ciego a STOP)"
+}

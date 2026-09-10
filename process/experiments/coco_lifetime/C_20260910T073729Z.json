@@ -1,0 +1,20 @@
+{
+  "corte_por_excepcion": {
+    "n_textos": 4,
+    "N_actual": 20,
+    "N_de_COCO": 19,
+    "excepcion": "ValueError: operands could not be broadcast together with shapes (19,19) (20,20) "
+  },
+  "corpus": "corpus_state.json.bak_1784685610_caso09_run2",
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "N_actual": 20,
+      "N_de_COCO": 19,
+      "excepcion": "ValueError: operands could not be broadcast together with shapes (19,19) (20,20) "
+    }
+  ],
+  "hallazgo": "Con N saturado: el que regula ACUMULA beta porque es el objeto viejo; corpus.coco, que tiene la W actual, nunca observa y su historia es 0 en todas las ingestas. Adoptar el fresco daria W actual y beta reiniciado. Con N creciendo: no llega a acumular nada, revienta en la primera evaluacion.",
+  "evals_acumuladas_regulador": null,
+  "evals_acumuladas_corpus_coco": null
+}

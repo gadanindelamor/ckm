@@ -1,0 +1,15 @@
+{
+  "corpus": "corpus_state.json.bak_1784685610_caso09_run2",
+  "corte_por_excepcion": {
+    "n_textos": 4,
+    "N_actual": 20,
+    "N_de_COCO": 19,
+    "excepcion": "ValueError: operands could not be broadcast together with shapes (19,19) (20,20) "
+  },
+  "evaluaciones": [],
+  "D_ckm_monitor_valores_distintos": 0,
+  "D_ckm_coco_valores_distintos": 0,
+  "coinciden_alguna_vez": 0,
+  "n_stops": 0,
+  "nota": "D_ckm_monitor sale de _combine_W_Delta sobre la W ACTUAL; D_ckm_coco sale de self.W + Delta sobre la W de construccion (DEFS §10 documenta que el primero es ciego a STOP)"
+}

@@ -1,0 +1,72 @@
+{
+  "corte_por_excepcion": null,
+  "corpus": "sinteticos (forzado)",
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "evals_en_el_regulador": 1,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.0,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 5,
+      "evals_en_el_regulador": 2,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 2.0,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 6,
+      "evals_en_el_regulador": 3,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.5,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 7,
+      "evals_en_el_regulador": 4,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.3333333333333333,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 8,
+      "evals_en_el_regulador": 5,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.25,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 9,
+      "evals_en_el_regulador": 6,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.3333333333333333,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 10,
+      "evals_en_el_regulador": 7,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.5555555555555554,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 11,
+      "evals_en_el_regulador": 8,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 1.7777777777777777,
+      "beta_corpus_coco": null
+    },
+    {
+      "n_textos": 12,
+      "evals_en_el_regulador": 9,
+      "evals_en_corpus_coco": 0,
+      "beta_regulador": 2.0,
+      "beta_corpus_coco": null
+    }
+  ],
+  "hallazgo": "Con N saturado: el que regula ACUMULA beta porque es el objeto viejo; corpus.coco, que tiene la W actual, nunca observa y su historia es 0 en todas las ingestas. Adoptar el fresco daria W actual y beta reiniciado. Con N creciendo: no llega a acumular nada, revienta en la primera evaluacion.",
+  "evals_acumuladas_regulador": 9,
+  "evals_acumuladas_corpus_coco": 0
+}

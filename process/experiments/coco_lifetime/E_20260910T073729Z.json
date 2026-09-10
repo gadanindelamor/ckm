@@ -1,0 +1,144 @@
+{
+  "_relax": {
+    "variantes": 3,
+    "archivos": 7,
+    "grupos": {
+      "4dec133f": [
+        {
+          "archivo": "process/experiments/coco_thermostat.py",
+          "lineas": 8
+        },
+        {
+          "archivo": "experiments/monitor_service_dev.py",
+          "lineas": 8
+        },
+        {
+          "archivo": "experiments/monitor_service.py",
+          "lineas": 8
+        }
+      ],
+      "e1340407": [
+        {
+          "archivo": "services/coco.py",
+          "lineas": 9
+        },
+        {
+          "archivo": "services/monitor_service.py",
+          "lineas": 17
+        }
+      ],
+      "af5985ba": [
+        {
+          "archivo": "services/fabrication_service.py",
+          "lineas": 10
+        },
+        {
+          "archivo": "experiments/fabrication_service_dev.py",
+          "lineas": 10
+        }
+      ]
+    }
+  },
+  "_relax_orbit": {
+    "variantes": 1,
+    "archivos": 2,
+    "grupos": {
+      "0efe7c59": [
+        {
+          "archivo": "services/coco.py",
+          "lineas": 53
+        },
+        {
+          "archivo": "services/monitor_service.py",
+          "lineas": 28
+        }
+      ]
+    }
+  },
+  "relax_orbit": {
+    "variantes": 1,
+    "archivos": 1,
+    "grupos": {
+      "4c2d441c": [
+        {
+          "archivo": "experiments/orbit_analytics.py",
+          "lineas": 18
+        }
+      ]
+    }
+  },
+  "_count_attractors": {
+    "variantes": 5,
+    "archivos": 7,
+    "grupos": {
+      "8ed82f54": [
+        {
+          "archivo": "process/experiments/coco_thermostat.py",
+          "lineas": 9
+        }
+      ],
+      "8cf90542": [
+        {
+          "archivo": "services/coco.py",
+          "lineas": 60
+        }
+      ],
+      "d443d479": [
+        {
+          "archivo": "services/fabrication_service.py",
+          "lineas": 10
+        },
+        {
+          "archivo": "experiments/fabrication_service_dev.py",
+          "lineas": 10
+        }
+      ],
+      "7b2dd80a": [
+        {
+          "archivo": "services/monitor_service.py",
+          "lineas": 40
+        }
+      ],
+      "07ad88b6": [
+        {
+          "archivo": "experiments/monitor_service_dev.py",
+          "lineas": 10
+        },
+        {
+          "archivo": "experiments/monitor_service.py",
+          "lineas": 10
+        }
+      ]
+    }
+  },
+  "_cS": {
+    "variantes": 2,
+    "archivos": 5,
+    "grupos": {
+      "3cd029b2": [
+        {
+          "archivo": "services/fabrication_service.py",
+          "lineas": 5
+        },
+        {
+          "archivo": "experiments/fabrication_service_dev.py",
+          "lineas": 5
+        }
+      ],
+      "4caec889": [
+        {
+          "archivo": "services/monitor_service.py",
+          "lineas": 3
+        },
+        {
+          "archivo": "experiments/monitor_service_dev.py",
+          "lineas": 3
+        },
+        {
+          "archivo": "experiments/monitor_service.py",
+          "lineas": 3
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "construcciones": [
+    {
+      "archivo": "experiments/coco_lifetime_analytics.py",
+      "linea": 107,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "experiments/monitor_service.py",
+      "linea": 219,
+      "en_main_del_modulo": true,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path"
+      ]
+    },
+    {
+      "archivo": "experiments/monitor_service_dev.py",
+      "linea": 229,
+      "en_main_del_modulo": true,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path"
+      ]
+    },
+    {
+      "archivo": "experiments/stochastic_attractor_eval.py",
+      "linea": 366,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/ckm_monitor.py",
+      "linea": 74,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path",
+        "behavior_graph"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_boltzmann_comparison.py",
+      "linea": 86,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_n_runs_sweep.py",
+      "linea": 69,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_replica_seed123.py",
+      "linea": 38,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_stop_coco.py",
+      "linea": 118,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_via_corpus_v3.py",
+      "linea": 44,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_armstrong_wmixta_forced_wpos.py",
+      "linea": 66,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_wmixta_forzado_paso3.py",
+      "linea": 101,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "iap_chatroom/tests/test_wmixta_natural_paso2.py",
+      "linea": 102,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "services/monitor_service.py",
+      "linea": 457,
+      "en_main_del_modulo": true,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path"
+      ]
+    },
+    {
+      "archivo": "services/monitor_service.py",
+      "linea": 467,
+      "en_main_del_modulo": true,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "tests/test_firma_ckm.py",
+      "linea": 47,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": true,
+      "keywords": [
+        "storage_path",
+        "n_runs_attractors",
+        "thermostat"
+      ]
+    },
+    {
+      "archivo": "tests/test_firma_ckm.py",
+      "linea": 74,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path"
+      ]
+    },
+    {
+      "archivo": "tests/test_monitor_services.py",
+      "linea": 88,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": []
+    },
+    {
+      "archivo": "tests/test_monitor_services.py",
+      "linea": 294,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": []
+    }
+  ],
+  "total": 19,
+  "con_thermostat": 11,
+  "en_produccion": [
+    {
+      "archivo": "iap_chatroom/ckm_monitor.py",
+      "linea": 74,
+      "en_main_del_modulo": false,
+      "pasa_thermostat": false,
+      "keywords": [
+        "storage_path",
+        "behavior_graph"
+      ]
+    }
+  ],
+  "produccion_con_thermostat": 0,
+  "hallazgo": "la unica construccion de produccion es iap_chatroom/ckm_monitor.py y NO pasa thermostat: en el canal vivo COCO nunca regula, panel['thermostat'] es None siempre. El defecto de W congelada es alcanzable solo desde tests y drivers."
+}

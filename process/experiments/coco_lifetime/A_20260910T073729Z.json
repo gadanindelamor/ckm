@@ -1,0 +1,157 @@
+{
+  "corpus": "corpus_state.json.bak_1784685610_caso09_run2",
+  "id_inicial": 134439272392768,
+  "ingestas": [
+    {
+      "n_textos": 4,
+      "id_corpus_coco": 134439243908400,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 5,
+      "id_corpus_coco": 134439236375312,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 6,
+      "id_corpus_coco": 134439236380784,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 7,
+      "id_corpus_coco": 134439272521200,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 8,
+      "id_corpus_coco": 134439236385728,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 9,
+      "id_corpus_coco": 134439236456464,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 10,
+      "id_corpus_coco": 134439236533472,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 11,
+      "id_corpus_coco": 134439236523728,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 12,
+      "id_corpus_coco": 134439236519984,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 13,
+      "id_corpus_coco": 134439243908400,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 14,
+      "id_corpus_coco": 134439236464192,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 15,
+      "id_corpus_coco": 134439236707840,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 16,
+      "id_corpus_coco": 134439236527856,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 17,
+      "id_corpus_coco": 134439238532416,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 18,
+      "id_corpus_coco": 134439236590272,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 19,
+      "id_corpus_coco": 134439235174224,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 20,
+      "id_corpus_coco": 134439235276240,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 21,
+      "id_corpus_coco": 134439235212144,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 22,
+      "id_corpus_coco": 134439237079104,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 23,
+      "id_corpus_coco": 134439247176064,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    },
+    {
+      "n_textos": 24,
+      "id_corpus_coco": 134439236800912,
+      "id_monitor_thermostat": 134439272392768,
+      "son_el_mismo_objeto": false,
+      "monitor_sigue_con_el_inicial": true
+    }
+  ],
+  "corpus_coco_cambio_de_objeto": 20,
+  "monitor_thermostat_cambio_de_objeto": 1,
+  "veces_que_coincidieron": 0,
+  "total_ingestas": 21
+}

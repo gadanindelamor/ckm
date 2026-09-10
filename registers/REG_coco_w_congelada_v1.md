@@ -284,3 +284,90 @@ instancia nueva, R02, R09), REG_monitor_service_unificar_rutinas_v1,
 REG_armstrong_boltzmann_comparison_v1.
 
 *Sep 2026 · Codespace ckm*
+
+---
+---
+
+# ADDENDUM 1 — el gap fue visto, nombrado y declarado cerrado
+
+*Sep 2026 — agregado el mismo dia, sin tocar el cuerpo. Corrige una
+afirmacion del cuerpo.*
+
+## Qué corrige
+
+El cuerpo de este REG dice **"se pasó sin revisar"**. Es falso.
+
+`TASK_landscape_delta_corpus_feedback_v2.md` (Ago 2026), en su seccion
+*"Contexto — hallazgos de lectura previa (Code)"*:
+
+> - `CKMMonitor` no instancia COCO — `MonitorService` se crea sin
+>   `thermostat=`. **COCO solo vive en test scripts. Esta task cierra ese
+>   gap.**
+
+Fue encontrado, nombrado con precision, y declarado como lo que la task
+iba a cerrar. Un mes antes de este REG.
+
+## Qué implementó la task, punto por punto
+
+```
+1. COCO.landscape_history()
+2. CorpusService — COCO nace en _rebuild() + property coco
+3. ingest() acepta landscape_signal
+4. CKMMonitor — leer corpus.coco, pasar senal
+   «CKMMonitor no gestiona el ciclo de vida de COCO — solo lo lee»
+```
+
+**Ninguno de los cuatro conecta COCO a MonitorService.** El criterio de
+exito verifica `corpus.coco is not None`, que sea instancia de `COCO`, y
+que tenga `landscape_history`. No verifica que alguien lo observe.
+
+Implementado en `b0311a8` (2026-08-13), cuyo mensaje declara el principio:
+
+> *corpus_service.py: COCO se instancia dentro de `_rebuild()` con la W
+> recien construida (**principio: COCO nace y muere con W**).*
+
+## Por qué se leyó como cerrado
+
+Antes de la task, `corpus.coco` no existia. Despues, existe y nace con la W
+correcta. La frase *"COCO solo vive en test scripts"* paso a ser falsa en un
+sentido —ahora vive en `CorpusService`— y siguio siendo cierta en el que
+importaba: sigue sin regular en ningun lado fuera de test scripts.
+
+La task hizo que COCO **exista** en la capa de servicios. No que **actue**.
+Son dos cosas y la frase del gap no las distinguia.
+
+## Lo que esto reclasifica
+
+**El principio no es deriva.** *"COCO nace y muere con W"* esta declarado
+como **decision de gadanin.delamor** en la task, en disco, con su razon:
+*"CorpusService es quien sabe cuando W cambia — es su evento interno."*
+Cumple el criterio completo de divergencia deliberada.
+
+**Que CKMMonitor no gestione el ciclo de vida tampoco es deriva.** Esta
+escrito en el punto 4 de la task y repetido en el mensaje del commit.
+
+**Lo que no tiene razon escrita en ningun lado** es qué otra cosa deberia
+gestionarlo. La task saca a CKMMonitor del rol y no designa reemplazo.
+
+Y `MonitorService._thermostat` asignado una sola vez es anterior a todo
+esto — viene de `28ec9de` (jun 2026), sin razon escrita. Esa parte del
+cuerpo se sostiene.
+
+## La forma
+
+El defecto no esta entre el codigo y nadie. Esta entre **lo que la task
+declaro cerrar** y **lo que sus puntos cubrian**. Nadie mintio y nadie se
+distrajo: el gap estaba enunciado en una frase —"COCO solo vive en test
+scripts"— que admite dos lecturas, y la implementacion satisfizo una.
+
+Los criterios de exito heredaron la misma ambiguedad, asi que pasaron.
+
+## Verificado hoy
+
+```
+drivers de caso IAP que mencionan COCO o thermostat : 0 de 21
+commits donde ckm_monitor.py paso thermostat=       : 0
+paneles archivados con thermostat                   : 0 de 253
+```
+
+*Addendum 1 · Sep 2026*

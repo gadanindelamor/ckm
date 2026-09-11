@@ -47,6 +47,22 @@ from corpus_service import CorpusService          # noqa: E402
 from monitor_service import MonitorService        # noqa: E402
 from coco import COCO                             # noqa: E402
 
+# Este archivo vive en experiments/, y experiments/ tiene copias homonimas
+# de los servicios (monitor_service.py, corpus_service_dev.py, ...) del
+# linaje previo a la unificacion de TASK_monitor_service_unificar_rutinas_v1.
+# El interprete pone el directorio del script en sys.path[0]; el insert de
+# arriba lo desplaza. Si esa linea se mueve o se saca, los imports resuelven
+# a las copias viejas y este driver mide otra cosa SIN error: los shapes
+# calzan y solo cambian los valores. La verificacion vuelve ruidoso lo que
+# de otro modo seria silencioso.
+import corpus_service as _cs, monitor_service as _ms, coco as _co  # noqa: E402
+for _mod in (_cs, _ms, _co):
+    if Path(_mod.__file__).resolve().parent != (RAIZ / "services").resolve():
+        raise ImportError(
+            f"{_mod.__name__} resolvio a {_mod.__file__}, no a services/. "
+            "Revisar el sys.path.insert de arriba antes de creerle a este driver."
+        )
+
 SALIDA = RAIZ / "process" / "experiments" / "coco_lifetime"
 
 

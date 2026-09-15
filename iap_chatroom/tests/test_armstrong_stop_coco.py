@@ -3,7 +3,7 @@ test_armstrong_stop_coco.py
 Primera observación in-vivo de OPERADOR_STOP_COCO en pipeline real
 MonitorService -> COCO -> compresión Delta_r -> MonitorService adopta.
 
-Especificación: iap_chatroom/tests/TASK_armstrong_stop_coco_v1.md
+Especificación: docs/tasks/TASK_armstrong_stop_coco_v1.md
 No toca IAP/MCP — instancia CorpusService/MonitorService/COCO
 directamente, sobre el corpus real (W_ckm_corpus_v2.json vía precarga).
 

@@ -72,3 +72,17 @@ def test_con_config_cada_linea_recarga_igual(corpus, tmp_path):
     assert len(lineas) == len(PROMPTS)
     for r in lineas:
         assert CKMlandscapeConfig.from_dict(r["panel"]["landscape_config"]) == cfg
+
+
+def test_gatekeeper_c1_presente_y_none(corpus, tmp_path):
+    """D4 — traza de admisión: nadie evalúa C1 todavía."""
+    cfg = CKMlandscapeConfig.from_W(
+        corpus.get_W(), theta_W=0.01, sampling_mode="uniform", scale="log",
+    )
+    for config in (None, cfg):
+        jsonl = tmp_path / f"m_{config is None}.jsonl"
+        m = MonitorService(corpus, storage_path=str(jsonl), n_runs_attractors=10,
+                           landscape_config=config)
+        panel = m.evaluate(PROMPTS[0])
+        assert "gatekeeper_c1" in panel and panel["gatekeeper_c1"] is None
+        assert all(r["panel"]["gatekeeper_c1"] is None for r in _lineas(jsonl))

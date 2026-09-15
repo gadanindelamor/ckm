@@ -98,6 +98,9 @@ class MonitorService:
 
         self._Delta_r : Optional[np.ndarray] = None
         self._A0    : Optional[int]        = None
+        # versión de W bajo la que se acumuló Δ_r — ver _invalidar_si_W_cambio
+        self._w_sha   : Optional[str]       = None
+        self._w_nodes : Optional[list]      = None
 
     # ------------------------------------------------------------------
     # API pública
@@ -113,6 +116,8 @@ class MonitorService:
         W     = self.corpus.get_W()
         nodes = self.corpus.get_nodes()
         N     = len(nodes)
+
+        reset_cause = self._invalidar_si_W_cambio(nodes)
 
         if self._Delta_r is None or self._Delta_r.shape != (N, N):
             self._Delta_r = np.zeros((N, N))
@@ -156,6 +161,9 @@ class MonitorService:
             "sampling_mode"    : self._sampling_mode,
             "thermostat"       : None,
             "G_state"          : g_state_panel,
+            # None si Δ_r siguió acumulando; "N" | "nodos" | "pesos" si esta
+            # evaluación empezó con Δ_r y A0 en cero por reconstrucción de W.
+            "Delta_r_reset"    : reset_cause,
             "landscape_config" : (
                 self._landscape_config.to_dict()
                 if self._landscape_config is not None else None
@@ -200,6 +208,37 @@ class MonitorService:
 
         self._persist(text, panel, device_id)
         return panel
+
+    def _invalidar_si_W_cambio(self, nodes: list) -> Optional[str]:
+        """
+        Δ_r y A0 se descartan en cualquier reconstrucción de W (D2).
+
+        Aunque los índices sean los mismos, los pesos que produjeron esa Δ_r
+        ya no son los vigentes; y A0 sería el baseline de otro campo. La
+        señal es w_version_id. Devuelve la causa —"N" | "nodos" | "pesos"—
+        o None si W no cambió. COCO queda fuera de alcance: sigue operando
+        con la W de su construcción.
+        Ver docs/tasks/TASK_invalidacion_delta_r_v1.md.
+        """
+        sha_actual = self.corpus.w_sha()
+        if self._w_sha is None:                       # primera evaluación
+            self._w_sha, self._w_nodes = sha_actual, list(nodes)
+            return None
+        if sha_actual == self._w_sha:
+            return None
+
+        cambio = self.corpus.w_change_since(self._w_sha, self._w_nodes)
+        if cambio["N_old"] != cambio["N_new"]:
+            causa = "N"
+        elif cambio["nodes_changed"]:
+            causa = "nodos"
+        else:
+            causa = "pesos"
+
+        self._Delta_r = np.zeros((len(nodes), len(nodes)))
+        self._A0      = None
+        self._w_sha, self._w_nodes = sha_actual, list(nodes)
+        return causa
 
     def trajectory(self) -> list:
         if not self._storage.exists():

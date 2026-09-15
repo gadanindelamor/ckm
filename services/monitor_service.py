@@ -35,6 +35,7 @@ import numpy as np
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
 from coco import COCO, ThermostatState, BETA_RHO_STAR
+from ckm_landscape_config import CKMlandscapeConfig
 
 try:
     from behavior_graph import BehaviorGraph as _BehaviorGraph
@@ -55,6 +56,7 @@ class MonitorService:
         count_seed      : int = 0,
         sampling_mode   : str = "uniform",
         n_warmup        : Optional[int] = None,
+        landscape_config: Optional[CKMlandscapeConfig] = None,
     ):
         """
         count_seed / sampling_mode / n_warmup gobiernan el muestreo de
@@ -63,6 +65,13 @@ class MonitorService:
         el comportamiento numerico no cambia. Ver TASK_monitor_service_
         unificar_rutinas_v1.md: la equivalencia con COCO(seed=0) fue
         verificada exacta antes de unificar.
+
+        landscape_config: config que produjo este run, ya construida por
+        quien arma el run — Monitor no decide calibración. Viaja serializada
+        en cada panel como "landscape_config" (None si no se pasa). Es la
+        config del contador de Monitor, no la de COCO. Se fija una vez por
+        run: tras un rebuild su w_version_id puede no coincidir con la W
+        vigente (D7). Ver docs/tasks/TASK_landscape_config_en_runs_v1.md.
         """
         self.corpus    = corpus
         self._storage  = Path(storage_path)
@@ -79,6 +88,13 @@ class MonitorService:
         self._count_seed    = count_seed
         self._sampling_mode = sampling_mode
         self._n_warmup      = n_warmup
+        if landscape_config is not None and landscape_config.sampling_mode != sampling_mode:
+            raise ValueError(
+                f"landscape_config.sampling_mode={landscape_config.sampling_mode!r} "
+                f"no coincide con sampling_mode={sampling_mode!r} de este Monitor — "
+                "el panel llevaría una config que no describe cómo contó."
+            )
+        self._landscape_config = landscape_config
 
         self._Delta_r : Optional[np.ndarray] = None
         self._A0    : Optional[int]        = None
@@ -140,6 +156,10 @@ class MonitorService:
             "sampling_mode"    : self._sampling_mode,
             "thermostat"       : None,
             "G_state"          : g_state_panel,
+            "landscape_config" : (
+                self._landscape_config.to_dict()
+                if self._landscape_config is not None else None
+            ),
         }
 
         # thermostat observa el Delta acumulado real

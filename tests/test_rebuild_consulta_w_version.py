@@ -1,0 +1,75 @@
+"""
+test_rebuild_consulta_w_version.py — verificación de TASK_rebuild_consulta_w_version_v1 (D7)
+
+Ejecutar:
+    pytest tests/test_rebuild_consulta_w_version.py -v
+"""
+
+from __future__ import annotations
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
+from corpus_service import CorpusService
+from ckm_landscape_config import CKMlandscapeConfig
+
+TEXTS = [
+    "gun control reduces violence and saves lives",
+    "the second amendment protects the right to bear arms",
+    "background checks prevent criminals from buying weapons",
+    "assault weapons bans reduce mass shootings",
+    "gun rights are constitutional rights not subject to restriction",
+    "mental health is the real cause of gun violence",
+    "armed citizens deter crime and protect communities",
+]
+
+
+@pytest.fixture
+def corpus(tmp_path):
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c.ingest(TEXTS)
+    assert c.mode == "evaluation"
+    return c
+
+
+def _snapshot(c):
+    return c.w_sha(), c.get_nodes()
+
+
+def test_sin_rebuild(corpus):
+    sha, nodes = _snapshot(corpus)
+    r = corpus.w_change_since(sha, nodes)
+    assert r["changed"] is False
+    assert r["nodes_changed"] is False
+    assert r["w_version_id_old"] == r["w_version_id_new"]
+    assert r["N_old"] == r["N_new"]
+
+
+def test_rebuild_N_igual_nodos_distintos(corpus):
+    sha, nodes = _snapshot(corpus)
+    corpus.ingest(["police response times matter for community safety"])
+    r = corpus.w_change_since(sha, nodes)
+    assert r["N_old"] == r["N_new"] == 10
+    assert r["changed"] is True
+    assert r["nodes_changed"] is True
+
+
+def test_rebuild_N_distinto(tmp_path):
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=2, top_k=20)
+    c.ingest(["gun control", "gun rights"])
+    sha, nodes = _snapshot(c)
+    c.ingest(TEXTS)
+    r = c.w_change_since(sha, nodes)
+    assert r["changed"] is True
+    assert r["N_old"] != r["N_new"]
+
+
+def test_id_nuevo_coincide_con_config(corpus):
+    sha, nodes = _snapshot(corpus)
+    corpus.ingest(["police response times matter for community safety"])
+    r = corpus.w_change_since(sha, nodes)
+    cfg = CKMlandscapeConfig.from_W(corpus.get_W(), theta_W=0.01,
+                                    sampling_mode="uniform", scale="log")
+    assert r["w_version_id_new"] == cfg.w_version_id

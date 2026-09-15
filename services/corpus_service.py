@@ -117,6 +117,28 @@ class CorpusService:
         """True si W cambió desde la versión sha. Señal de invalidación beta_c_corpus."""
         return self._w_versions.changed_since(sha)
 
+    def w_change_since(self, sha: str, nodes: List[str]) -> dict:
+        """
+        Cómo cambió W desde la versión con la que opera quien consulta.
+
+        Quien consulta pasa su sha y los nodos con los que opera: los nodos
+        por versión no se persisten. Notifica, no invalida — qué hacer con
+        Δ_r, A0 o la config es D2. Ver
+        docs/tasks/TASK_rebuild_consulta_w_version_v1.md.
+
+        nodes_changed cubre conjunto u orden: con N fijo en top_k, cada
+        rebuild puede re-extraer otros nodos en las mismas posiciones.
+        """
+        nodes_new = self.get_nodes()
+        return {
+            "changed"         : self.w_changed_since(sha),
+            "w_version_id_old": sha,
+            "w_version_id_new": self.w_sha(),
+            "N_old"           : len(nodes),
+            "N_new"           : len(nodes_new),
+            "nodes_changed"   : list(nodes) != nodes_new,
+        }
+
     def get_nodes(self) -> List[str]:
         return list(self._nodes)
 

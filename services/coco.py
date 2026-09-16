@@ -186,7 +186,14 @@ class COCO:
         self._n_warmup       = n_warmup if n_warmup is not None else self.N
 
         self._A0             : Optional[int]        = None
+        # Δ_r_compresiones — representación propia de COCO del campo que
+        # regula (D3). Nace en ceros con la W de este ciclo, incorpora el
+        # INCREMENTO del Δ_r de Monitor (lectura, nunca escritura) y
+        # comprime sobre sí misma. Diverge del Δ_r de Monitor desde la
+        # primera compresión. Ver docs/tasks/TASK_delta_compresiones_coco_v1.md.
         self._Delta          : np.ndarray           = np.zeros((self.N, self.N))
+        # última lectura del Δ_r de Monitor — para calcular el incremento
+        self._Delta_leido    : np.ndarray           = np.zeros((self.N, self.N))
         self._history        : list[ThermostatState] = []
         self._t              : int                  = 0
         self._rejections_per_device: dict            = {}
@@ -201,24 +208,29 @@ class COCO:
 
     def observe(self, Delta_new: np.ndarray) -> ThermostatState:
         """
-        Evalúa el campo con el Δ_r actual y aplica STOP si corresponde.
+        Evalúa el campo con su representación propia y aplica
+        OPERADOR_STOP_COCO si corresponde.
 
         Args:
-            Delta_new: Δ_r acumulado por MonitorService (NxN).
+            Delta_new: Δ_r acumulado por MonitorService (NxN). Sólo se lee:
+                se incorpora su incremento desde la observación anterior.
 
         Returns:
             ThermostatState: t, D_ckm (negativo = campo expandido, no es
             error), A_current, A0, frac_rec, zone ("stable"|"degrading"|
             "deep"), stop_applied, alpha_used.
 
-        Side effects (solo si stop_applied):
-            - Δ interno se reemplaza por alpha_used * Δ_new — recuperar
-              con delta_state().
+        Side effects:
+            - Δ_r_compresiones incorpora Delta_new − última lectura.
+        Solo si stop_applied:
+            - Δ_r_compresiones ← alpha_used · Δ_r_compresiones. Persiste en
+              las observaciones siguientes; Monitor no se entera.
             - alpha_trajectory() gana una entrada.
             - si track_landscape=True, landscape_history() gana una
               entrada y self._last_landscape_component se actualiza.
         """
-        self._Delta = Delta_new.copy()
+        self._Delta       = self._Delta + (Delta_new - self._Delta_leido)
+        self._Delta_leido = Delta_new.copy()
         self._t    += 1
 
         W_eff    = self.W + self._Delta
@@ -436,10 +448,9 @@ class COCO:
 
     def delta_state(self) -> np.ndarray:
         """
-        Δ actual, después de cualquier compresión por STOP.
-
-        Llamar después de observe() cuando stop_applied=True, para
-        reasignarlo a MonitorService._Delta_r.
+        Δ_r_compresiones actual — la representación propia de COCO,
+        después de cualquier compresión. Lectura: no se reasigna a
+        MonitorService (D3).
         """
         return self._Delta.copy()
 

@@ -2,7 +2,7 @@
 
 *Sep 2026 — gadanin.delamor + Claude Code (Opus 5)*
 
-*Contexto: PROPUESTA_ckm_landscape_dynamics_v4.md, D3 — último por el orden de cascadas. DEFS_CKM_estado_actual_v11.md, sección `Δ_r_pares y Δ_r_compresiones`. Precondiciones: D6 (`6606b7c`), D1 (`f8d61ef`), D7 (`5b52992`), D2 (`341f612`), landscape_engine (`0d91e4d`).*
+*Contexto: PROPUESTA_ckm_landscape_dynamics_v5.md, D3 — último por el orden de cascadas. DEFS_CKM_estado_actual_v12.md, sección `Δ_r_pares y Δ_r_compresiones`. Precondiciones: D6 (`6606b7c`), D1 (`f8d61ef`), D7 (`5b52992`), D2 (`341f612`), landscape_engine (`0d91e4d`).*
 
 ---
 
@@ -37,7 +37,7 @@ Lectura del Δ_r de Monitor, nunca escritura.
 ## Consecuencias declaradas (no son decisiones)
 
 - El campo de COCO **diverge** del de Monitor a partir de la primera compresión. `D_ckm_coco − D_ckm_monitor` pasa a medir esa divergencia.
-- **El Δ_r de Monitor deja de estar acotado por la compresión.** En REG_wmixta_consolidado_v1 eso es la diferencia entre 62–76 con thermostat y 632 sin él. Los paneles nuevos no son comparables con los anteriores en ese campo — cascada de interpretación histórica que v4 anticipa para D3.
+- **El Δ_r de Monitor deja de estar acotado por la compresión.** En REG_wmixta_consolidado_v1 eso es la diferencia entre 62–76 con thermostat y 632 sin él. Los paneles nuevos no son comparables con los anteriores en ese campo — cascada de interpretación histórica que v5 anticipa para D3. **Implicancia confirmada por delamor** (opción c).
 - La ceguera de Monitor deja de ser cancelación algebraica y pasa a ser separación de objetos: no ve las compresiones porque nunca recibe ese objeto.
 
 ## Verificación
@@ -55,6 +55,7 @@ No toca `_combine_W_Delta`. No cambia el operador de compresión ni su α. No to
 
 ## Abierto
 
-- La forma "cruza umbral → comprime" es la heredada (v4, Parte I: *"STOP es el mismo patrón D_ckm"*). Esta TASK mueve el objeto sobre el que opera, no la forma.
-- DEFS v11 §12 y v4 escriben el operador como `Δ_r ← Δ_r · (1 − alpha)`; el código hace `Δ ← alpha · Δ`. No son la misma operación. Sin resolver, no se toca acá.
+- La forma "cruza umbral → comprime" es la heredada (v5, Parte I: *"STOP es el mismo patrón D_ckm"*). Esta TASK mueve el objeto sobre el que opera, no la forma.
+- ~~Fórmula del operador en los documentos~~ — resuelto en DEFS v12 y PROPUESTA v5 (`f7e975d`): `Δ_r ← alpha · Δ_r`, lo que hace el código.
 - Qué significa D_ckm_coco cuando su campo ya no es el de Monitor.
+- **Surgido en la ejecución:** el supuesto "en el rebuild se resetean los dos" vale para `corpus.coco`, no para el COCO que Monitor recibe como `thermostat` (otro objeto, no renace). Tras un reset de Monitor, el incremento es negativo: medido, 56 valores negativos (mín. −0.09) en `Δ_r_compresiones`. Sin resolver — lleva a TASK_CKMlandscapeConfig_v2 (ciclo vigente único).

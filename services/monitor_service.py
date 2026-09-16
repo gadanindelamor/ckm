@@ -15,9 +15,9 @@ que es justamente lo que codifican los pesos negativos.
 
 COCO (thermostat) es opcional — `thermostat=None` por defecto. Sin él no
 hay compresión de Δ_r, ni β, ni temp_signal, y `panel["thermostat"]` es
-None; el resto del panel se emite igual. Con él, Δ_r del monitor y Δ de
-COCO se sincronizan SOLO cuando se aplica STOP: entre STOPs divergen
-libremente, por diseño (ver evaluate()).
+None; el resto del panel se emite igual. Con él, COCO lee Δ_r y comprime
+su propia representación (Δ_r_compresiones); Δ_r no recibe nada de COCO
+(D3, ver evaluate()).
 
 Este docstring describe lo que el código no dice de sí mismo. La firma del
 constructor, el cuerpo de evaluate() y la escala de _combine_W_Delta viven
@@ -185,14 +185,12 @@ class MonitorService:
             ),
         }
 
-        # thermostat observa el Delta acumulado real
-        # sincroniza _Delta solo si STOP fue aplicado — si no, divergen libremente
+        # COCO lee Δ_r y regula su propia representación (D3). La
+        # regulación no llega a Δ_r: Monitor es su único escritor.
         if self._thermostat is not None:
             if device_id is not None:
                 self._thermostat.register_device_eval(device_id, fi)
             ts = self._thermostat.observe(self._Delta_r)
-            if ts.stop_applied:
-                self._Delta_r = self._thermostat.delta_state()
             panel["thermostat"] = {
                 "zone"        : ts.zone,
                 "D_ckm"       : ts.D_ckm,
@@ -485,7 +483,7 @@ if __name__ == "__main__":
     assert "deviceA" in beta["devices"] or "deviceB" in beta["devices"]
     print(f"\nT4 OK — beta_status: {beta}")
 
-    # T5 — _Delta diverge libremente sin STOP
+    # T5 — Δ_r de Monitor y Δ_r_compresiones de COCO: objetos distintos
     d_monitor  = monitor2._Delta_r.sum()
     d_thermo   = th.delta_state().sum()
     print(f"\nT5 Delta — monitor={d_monitor:.4f}  thermostat={d_thermo:.4f}")

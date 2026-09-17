@@ -27,12 +27,20 @@ reconstruya; la señal usa el min_texts del canal (3).
 
 Medido (Sep 2026), 24 textos, 22 evaluados:
   - W se reconstruye en los 22 y el CONJUNTO de nodos cambia en los 22.
-  - antes de D2 (--ref 5b52992): Δ_r acumula hasta 2316 sobre conjuntos de
-    nodos distintos; A0=4 fijado con N=19 y nunca recalculado; D_ckm entre
-    −1.0 y 0.5 — se mueve pero no mide.
-  - desde D2 (341f612): reset en cada mensaje; D_ckm = 0.0 en los 22, por
-    construcción (A0 y A_actual sobre la misma W_eff).
-  En ninguno D_ckm tiene campo: el conjunto de nodos no se estabiliza.
+  - antes de D2 (--ref 5b52992): Δ_r acumula por índice hasta 2316; A0=4 se
+    fija en la primera evaluación (N=19) y se conserva; D_ckm entre −1.0 y
+    0.5. Es lo que ese marco define: índice como identidad de par, A0 del
+    primer campo evaluado.
+  - desde D2 (341f612): el marco toma a los nodos como identidad y resetea
+    Δ_r y A0 cuando W cambia. Como W cambia en cada mensaje, A0 y A_actual
+    se calculan sobre la misma W_eff y D_ckm = 0.0 en los 22 — consecuencia
+    de la definición, no una medición.
+  Lo que ambos marcos comparten: el conjunto de nodos no se estabiliza, y el
+  instrumento reporta D_ckm, una métrica con los sesgos del conteo de
+  atractores del que sale — n_runs (el conteo no satura:
+  REG_orbitas_conjuntos_invariantes_v1, terminales y órbitas no convergen;
+  la masa de cuenca sí) y la distribución de sigma_0. Cada relajación
+  converge (LaSalle); el sesgo está en el conteo.
 
 Medido --sin-rebuild (Sep 2026), árbol actual:
   bootstrap  N  W_neg  A0  D_ckm                          señal E

@@ -253,3 +253,45 @@ def mean_cS(
         sigma = relax(s0, W_eff)
         cs_values.append(float(np.mean(W_eff[ii, jj] * sigma[ii] * sigma[jj])))
     return float(np.mean(cs_values))
+
+
+# ── Masa de cuenca ──────────────────────────────────────────────────────────
+
+def basin_masses(
+    W_eff    : np.ndarray,
+    *,
+    n_runs   : int,
+    seed     : int,
+    weighted : bool = False,
+    boltzmann: bool = False,
+    n_warmup : Optional[int] = None,
+) -> np.ndarray:
+    """
+    Masa de cuenca por ÓRBITA: fracción de las n_runs muestras de sigma_0 que
+    cae en cada órbita (relax_orbit), ordenada de mayor a menor. Suma 1.
+
+    Mismo muestreo que count_attractors (misma seed → mismas sigma_0), pero
+    count_attractors cuenta ESTADOS TERMINALES y ésta agrupa por órbita: una
+    órbita de período 2 es una sola entrada aunque se alcance por sus dos
+    fases. REG_orbitas_conjuntos_invariantes_v1: los conteos no convergen con
+    n_runs; las masas de las cuencas grandes sí.
+    """
+    rng, beta, probs, n_w = _setup(W_eff, seed, weighted, boltzmann, n_warmup)
+    cuenta: dict = {}
+    for _ in range(n_runs):
+        s0 = _muestra(rng, W_eff, probs, beta, n_w)
+        orbita = relax_orbit(s0, W_eff)[0]
+        cuenta[orbita] = cuenta.get(orbita, 0) + 1
+    masas = np.array(sorted(cuenta.values(), reverse=True), dtype=float)
+    return masas / masas.sum()
+
+
+def n_eff(masas: np.ndarray) -> float:
+    """
+    Número efectivo de órbitas — inverso de Simpson, 1 / Σ m².
+
+    Se comporta como un conteo (k órbitas de igual masa → k) pero converge
+    como una masa: Σ m² lo dominan las cuencas grandes, que aparecen primero.
+    Función canónica de PROPUESTA v5; equivale a exp(H₂) de Rényi.
+    """
+    return float(1.0 / np.square(masas).sum())

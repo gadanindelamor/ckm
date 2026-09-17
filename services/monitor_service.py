@@ -39,7 +39,9 @@ from ckm_landscape_config import CKMlandscapeConfig
 from landscape_engine import (
     beta_c_landscape,
     boltzmann_warmup,
+    basin_masses,
     count_attractors,
+    n_eff,
     node_probs,
     relax,
     relax_orbit,
@@ -107,6 +109,7 @@ class MonitorService:
 
         self._Delta_r : Optional[np.ndarray] = None
         self._A0    : Optional[int]        = None
+        self._N_eff0: Optional[float]      = None   # baseline de N_eff, vive con A0
         # versión de W bajo la que se acumuló Δ_r — ver _invalidar_si_W_cambio
         self._w_sha   : Optional[str]       = None
         self._w_nodes : Optional[list]      = None
@@ -147,6 +150,7 @@ class MonitorService:
         c_s   = self._cS(sigma_relaxed, W)
         fi    = self._fabrication_index(sigma_prompt, sigma_relaxed)
         D_ckm = self._D_ckm(W)
+        N_eff = self._N_eff(W)
 
         # G_state — paralelo a {W, Δ_W}, no retroactivo
         g_state_panel = None
@@ -159,6 +163,12 @@ class MonitorService:
             "c_S"              : round(c_s,  6),
             "fabrication_index": round(fi,   4),
             "D_ckm"            : round(D_ckm, 4),
+            # N_eff = 1/Σm² sobre masas de cuenca por órbita, misma W_eff y
+            # mismas muestras que D_ckm. N_eff0 es su baseline (se fija y se
+            # resetea como A0). D_masa_cuencas no se calcula: la escala
+            # (lineal/log) sigue abierta. TASK_neff_y_frontera_logica_v1.
+            "N_eff"            : round(N_eff, 4),
+            "N_eff0"           : round(self._N_eff0, 4) if self._N_eff0 is not None else None,
             "n_rejected_pairs" : len(rejected),
             "Delta_r_sum"        : float(np.sum(self._Delta_r)),
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],
@@ -250,6 +260,7 @@ class MonitorService:
 
         self._Delta_r = np.zeros((len(nodes), len(nodes)))
         self._A0      = None
+        self._N_eff0  = None
         self._w_sha, self._w_nodes = sha_actual, list(nodes)
         return causa
 
@@ -363,6 +374,22 @@ class MonitorService:
                 return 0.0   # corpus vacío — diferir A0
             self._A0 = A_actual
         return float((self._A0 - A_actual) / self._A0) if self._A0 > 0 else 0.0
+
+    def _N_eff(self, W: np.ndarray) -> float:
+        """N_eff sobre la misma W_eff que _D_ckm. Fija N_eff0 en la primera
+        llamada del ciclo de W (como A0)."""
+        Delta = self._Delta_r if self._Delta_r is not None else np.zeros_like(W)
+        W_eff = self._combine_W_Delta(W, Delta)
+        masas = basin_masses(
+            W_eff, n_runs=self._n_runs, seed=self._count_seed,
+            weighted=self._sampling_mode == "weighted",
+            boltzmann=self._sampling_mode == "boltzmann",
+            n_warmup=self._n_warmup,
+        )
+        valor = n_eff(masas)
+        if self._N_eff0 is None:
+            self._N_eff0 = valor
+        return valor
 
     # ── Paisaje — delegado en landscape_engine ───────────────────────────
     # Cierra la duplicación que REG_monitor_service_unificar_rutinas_v1 dejó

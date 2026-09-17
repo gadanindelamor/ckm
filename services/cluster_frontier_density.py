@@ -11,10 +11,18 @@ Representación estructural CKM: coercitividad de cada frontera entre clusters
 Alta coercitividad(Ci, Cj): la frontera resiste el cruce.
 Baja coercitividad: clusters porosos, la distinción es débil.
 inf: sin aristas inter-cluster (clusters completamente separados en W).
+"oposicion": inter < 0 — oposición estructural activa entre clusters. Otro
+    régimen: min(intra)/inter no aplica. Semánticamente opuesto a inf.
+Cluster de 1 nodo: intra = 0 → coercividad 0, se lee como porosa (anotado).
+
+Claves de frontera: "Ca|Cb" (serializable a JSON).
+Ver docs/tasks/TASK_neff_y_frontera_logica_v1.md.
 """
 
 from __future__ import annotations
 import numpy as np
+
+OPOSICION = "oposicion"
 
 
 def cluster_frontier_density(
@@ -38,9 +46,12 @@ def cluster_frontier_density(
     -------
     dict with keys:
         "intra"      : {label: float}         — mean W within cluster
-        "inter"      : {(Ca, Cb): float}      — mean W across cluster pair
-        "coercivity" : {(Ca, Cb): float}      — min(intra_a, intra_b) / inter
-        "n_pairs"    : {label or (Ca,Cb): int} — pair counts for each entry
+        "inter"      : {"Ca|Cb": float}       — mean W across cluster pair
+        "coercivity" : {"Ca|Cb": float | "oposicion"}
+                       inter > 0 → min(intra_a, intra_b) / inter
+                       inter = 0 → inf
+                       inter < 0 → "oposicion"
+        "n_pairs"    : {label or "Ca|Cb": int} — pair counts for each entry
     """
     node_idx = {n: i for i, n in enumerate(nodes)}
     labels = list(clusters.keys())
@@ -61,9 +72,9 @@ def cluster_frontier_density(
         n_pairs_intra[label] = len(pairs)
 
     # ── inter-cluster and coercivity ──────────────────────────────────────────
-    inter: dict[tuple, float] = {}
-    coercivity: dict[tuple, float] = {}
-    n_pairs_inter: dict[tuple, int] = {}
+    inter: dict[str, float] = {}
+    coercivity: dict[str, object] = {}
+    n_pairs_inter: dict[str, int] = {}
     for ai in range(len(labels)):
         for bi in range(ai + 1, len(labels)):
             a, b = labels[ai], labels[bi]
@@ -73,12 +84,15 @@ def cluster_frontier_density(
                 continue
             pairs = [(i, j) for i in a_idxs for j in b_idxs]
             inter_val = float(np.mean([W[i, j] for i, j in pairs]))
-            inter[(a, b)] = inter_val
-            n_pairs_inter[(a, b)] = len(pairs)
+            clave = f"{a}|{b}"
+            inter[clave] = inter_val
+            n_pairs_inter[clave] = len(pairs)
             if inter_val > 1e-12:
-                coercivity[(a, b)] = min(intra[a], intra[b]) / inter_val
+                coercivity[clave] = min(intra[a], intra[b]) / inter_val
+            elif inter_val < -1e-12:
+                coercivity[clave] = OPOSICION
             else:
-                coercivity[(a, b)] = float("inf")
+                coercivity[clave] = float("inf")
 
     return {
         "intra": intra,
@@ -96,8 +110,8 @@ def cluster_frontier_density(
 # clusters = cluster_nodes(attractors, nodes, n_clusters=4)
 # result = cluster_frontier_density(clusters, nodes, graph.W)
 #
-# for (ca, cb), h in sorted(result["coercivity"].items(),
-#                            key=lambda x: -x[1]):
-#     print(f"{ca}↔{cb}  coercivity={h:.2f}  "
+# for clave, h in result["coercivity"].items():
+#     ca, cb = clave.split("|")
+#     print(f"{ca}↔{cb}  coercivity={h}  "
 #           f"intra=({result['intra'][ca]:.4f}, {result['intra'][cb]:.4f})  "
-#           f"inter={result['inter'][(ca,cb)]:.4f}")
+#           f"inter={result['inter'][clave]:.4f}")

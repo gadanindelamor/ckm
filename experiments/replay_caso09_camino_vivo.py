@@ -91,14 +91,15 @@ MIN_TEXTS_CANAL = 3
 MAX_CICLOS = 10   # iap_chatroom/ckm_monitor.py
 
 
-def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL):
+def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL, panel_jsonl=None):
     sys.path.insert(0, str(services))
     from corpus_service import CorpusService
     from monitor_service import MonitorService
 
     textos = json.loads(CASO.read_text())["texts"]
     tmp = Path(tempfile.mkdtemp())
-    jsonl = str(tmp / "traj.jsonl")
+    jsonl = panel_jsonl or str(tmp / "traj.jsonl")
+    Path(jsonl).unlink(missing_ok=True)
     corpus = CorpusService(storage_path=str(tmp / "c.json"),
                            min_texts=bootstrap if sin_rebuild else MIN_TEXTS_CANAL,
                            top_k=32, monitor_jsonl_path=jsonl)
@@ -137,6 +138,8 @@ def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL):
                 D_ckm=p["D_ckm"],
                 A0=monitor._A0,
                 fi=p["fabrication_index"],
+                N_eff=p.get("N_eff", "n/a"),
+                N_eff0=p.get("N_eff0", "n/a"),
             )
         filas.append(fila)
     return filas
@@ -144,7 +147,7 @@ def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL):
 
 def imprimir(filas):
     cols = ["i", "rebuild", "N", "orden_cambia", "conjunto_cambia", "W_neg",
-            "reset", "pares", "Dr_sum", "D_ckm", "A0", "fi", "senal"]
+            "reset", "pares", "Dr_sum", "D_ckm", "A0", "fi", "N_eff", "N_eff0", "senal"]
     print(" ".join(f"{c[:7]:>7}" for c in cols))
     for f in filas:
         print(" ".join(f"{str(f.get(c, '')):>7}" for c in cols))
@@ -161,6 +164,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", help="commit cuyos services/ usar (default: árbol actual)")
     ap.add_argument("--json", help="guardar filas en este archivo")
+    ap.add_argument("--panel-jsonl", help="conservar el JSONL de paneles de Monitor en este archivo")
     ap.add_argument("--sin-rebuild", action="store_true",
                     help="W una sola vez en el bootstrap; la señal se registra, no se ejecuta")
     ap.add_argument("--bootstrap", type=int, default=MIN_TEXTS_CANAL,
@@ -168,7 +172,8 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     t0 = time.time()
-    filas = replay(_services_dir(args.ref), args.sin_rebuild, args.bootstrap)
+    filas = replay(_services_dir(args.ref), args.sin_rebuild, args.bootstrap,
+                   args.panel_jsonl)
     imprimir(filas)
     modo = f"sin rebuild, bootstrap={args.bootstrap}" if args.sin_rebuild else "rebuild por mensaje"
     print(f"services: {args.ref or 'árbol actual'} | {modo} | {time.time() - t0:.1f}s")

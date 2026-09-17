@@ -15,6 +15,15 @@ Delta_r_sum, D_ckm, A0 y fabrication_index.
 Uso:
     python experiments/replay_caso09_camino_vivo.py              # services/ actual
     python experiments/replay_caso09_camino_vivo.py --ref 5b52992  # services/ de un commit
+    python experiments/replay_caso09_camino_vivo.py --sin-rebuild [--bootstrap K]
+
+--sin-rebuild: W se construye UNA vez, cuando el corpus llega a K textos
+(default K = min_texts = 3, como el canal). Después los textos se acumulan
+sin reconstruir W — nodos fijos, Δ_r y A0 sobre el mismo campo. La señal de
+rebuild se calcula igual que CKMMonitor.on_message (estructural >
+volumen > tiempo) y se registra, pero nadie la ejecuta. services/ no se
+toca: tras el bootstrap se sube corpus.min_texts para que ingest() no
+reconstruya; la señal usa el min_texts del canal (3).
 
 Medido (Sep 2026), 24 textos, 22 evaluados:
   - W se reconstruye en los 22 y el CONJUNTO de nodos cambia en los 22.
@@ -24,6 +33,26 @@ Medido (Sep 2026), 24 textos, 22 evaluados:
   - desde D2 (341f612): reset en cada mensaje; D_ckm = 0.0 en los 22, por
     construcción (A0 y A_actual sobre la misma W_eff).
   En ninguno D_ckm tiene campo: el conjunto de nodos no se estabiliza.
+
+Medido --sin-rebuild (Sep 2026), árbol actual:
+  bootstrap  N  W_neg  A0  D_ckm                          señal E
+      3     19     0    4  0.0 salvo −0.25 al final; fi≈1   nunca
+      8     32    16   12  0 → −0.42 (expande)             nunca
+     12     32    28   25  0 → 0.72, cruza 0.40 en el msj 15  nunca
+     16     32    36   17  0.12 – 0.35                     nunca
+  - El instrumento opera sobre W estable: D_ckm se mueve y su signo depende
+    del bootstrap.
+  - V (volumen: textos ≥ 6) es verdadera desde el mensaje 6 y no vuelve a
+    apagarse; T (10 ciclos sin rebuild) igual, una vez congelada W.
+  - E (should_rebuild: gradiente > 0 en 3 pasos seguidos) no emite nunca,
+    tampoco con bootstrap 12, donde D_ckm sube por encima del umbral: la
+    grilla de D_ckm (paso 1/A0) produce mesetas que cortan la racha.
+
+CONDICIÓN EMPÍRICA REGISTRADA (delamor, Sep 2026): para caso09_run2,
+bootstrap = 12 textos. Es el punto medido donde W (N=32, 28 pesos negativos,
+A0=25) da a D_ckm grilla fina y recorrido que cruza D_CKM_THRESHOLD. Vale
+para este caso y este camino (min_texts=3, top_k=32, n_runs=50, uniform);
+no es un default del instrumento.
 """
 
 import argparse
@@ -50,7 +79,11 @@ def _services_dir(ref):
     return out / "services"
 
 
-def replay(services):
+MIN_TEXTS_CANAL = 3
+MAX_CICLOS = 10   # iap_chatroom/ckm_monitor.py
+
+
+def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL):
     sys.path.insert(0, str(services))
     from corpus_service import CorpusService
     from monitor_service import MonitorService
@@ -58,15 +91,20 @@ def replay(services):
     textos = json.loads(CASO.read_text())["texts"]
     tmp = Path(tempfile.mkdtemp())
     jsonl = str(tmp / "traj.jsonl")
-    corpus = CorpusService(storage_path=str(tmp / "c.json"), min_texts=3, top_k=32,
-                           monitor_jsonl_path=jsonl)
+    corpus = CorpusService(storage_path=str(tmp / "c.json"),
+                           min_texts=bootstrap if sin_rebuild else MIN_TEXTS_CANAL,
+                           top_k=32, monitor_jsonl_path=jsonl)
     monitor = MonitorService(corpus, storage_path=jsonl)
 
     filas, prev = [], None
+    d_hist, ciclos_sin_rebuild = [], 0
     for i, texto in enumerate(textos, start=1):
         sha_a = corpus.w_sha()
         corpus.ingest([texto])
+        if sin_rebuild and corpus.mode == "evaluation":
+            corpus.min_texts = 10**9          # congelar W desde el bootstrap
         nodes = corpus.get_nodes()
+        ciclos_sin_rebuild = 0 if sha_a != corpus.w_sha() else ciclos_sin_rebuild + 1
         fila = {
             "i": i,
             "rebuild": sha_a != corpus.w_sha(),
@@ -76,8 +114,13 @@ def replay(services):
             "W_neg": int((corpus.get_W() < 0).sum()) if corpus.mode == "evaluation" else None,
         }
         prev = nodes
-        if i >= corpus.min_texts:
+        if corpus.mode == "evaluation" and i >= MIN_TEXTS_CANAL:
             p = monitor.evaluate(texto, device_id=f"c09_{i:02d}")
+            d_hist.append(p["D_ckm"])
+            estructural = corpus.should_rebuild(d_hist, n=3)
+            volumen = len(corpus._texts) >= MIN_TEXTS_CANAL * 2
+            tiempo = ciclos_sin_rebuild >= MAX_CICLOS
+            fila["senal"] = ("E" if estructural else "") + ("V" if volumen else "") + ("T" if tiempo else "") or "-"
             fila.update(
                 evaluado=True,
                 reset=p.get("Delta_r_reset", "n/a"),
@@ -93,7 +136,7 @@ def replay(services):
 
 def imprimir(filas):
     cols = ["i", "rebuild", "N", "orden_cambia", "conjunto_cambia", "W_neg",
-            "reset", "pares", "Dr_sum", "D_ckm", "A0", "fi"]
+            "reset", "pares", "Dr_sum", "D_ckm", "A0", "fi", "senal"]
     print(" ".join(f"{c[:7]:>7}" for c in cols))
     for f in filas:
         print(" ".join(f"{str(f.get(c, '')):>7}" for c in cols))
@@ -102,18 +145,24 @@ def imprimir(filas):
           f"rebuilds {sum(f['rebuild'] for f in filas)} | "
           f"conjunto cambia {sum(f['conjunto_cambia'] for f in filas)} | "
           f"D_ckm != 0: {sum(f['D_ckm'] != 0 for f in ev)} | "
-          f"Delta_r_sum final {ev[-1]['Dr_sum']}")
+          f"Delta_r_sum final {ev[-1]['Dr_sum']} | "
+          f"señal E (estructural): {[f['i'] for f in ev if 'E' in f['senal']]}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ref", help="commit cuyos services/ usar (default: árbol actual)")
     ap.add_argument("--json", help="guardar filas en este archivo")
+    ap.add_argument("--sin-rebuild", action="store_true",
+                    help="W una sola vez en el bootstrap; la señal se registra, no se ejecuta")
+    ap.add_argument("--bootstrap", type=int, default=MIN_TEXTS_CANAL,
+                    help="textos al bootstrap con --sin-rebuild (default 3)")
     args = ap.parse_args()
 
     t0 = time.time()
-    filas = replay(_services_dir(args.ref))
+    filas = replay(_services_dir(args.ref), args.sin_rebuild, args.bootstrap)
     imprimir(filas)
-    print(f"services: {args.ref or 'árbol actual'} | {time.time() - t0:.1f}s")
+    modo = f"sin rebuild, bootstrap={args.bootstrap}" if args.sin_rebuild else "rebuild por mensaje"
+    print(f"services: {args.ref or 'árbol actual'} | {modo} | {time.time() - t0:.1f}s")
     if args.json:
         Path(args.json).write_text(json.dumps(filas, indent=1))

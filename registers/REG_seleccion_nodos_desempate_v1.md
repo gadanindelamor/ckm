@@ -84,6 +84,13 @@ N = 0 no ocurre nunca.
 *(delamor: ¿hay que acumular antes de evaluar en los drivers?)* — Sí, y la
 regla dice cuándo alcanza: cuando el dato distingue.
 
+*(delamor: CorpusService nuevo es la decisión correcta para este σ del
+proyecto. Cuando se armen drivers va a saltar por defecto la omisión de la
+regla.)*
+
+*(Code, Opus 5: es la misma regla de completitud, puesta en el propio
+servicio: la omisión no pasa callada.)*
+
 *Estado: verificado.*
 
 ---

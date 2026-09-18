@@ -53,6 +53,7 @@ class CorpusService:
         ngram_max    : int  = 2,
         monitor_jsonl_path: Optional[str] = None,
         force_w_pos  : bool = False,
+        rebuild_suspendido: bool = False,
     ):
         self.storage_path = Path(storage_path)
         self.min_texts    = min_texts
@@ -70,6 +71,12 @@ class CorpusService:
         # forced_w_pos en el estado persistido) para que no sea
         # indistinguible de una W natural.
         self._force_w_pos = force_w_pos
+        # Rebuild suspendido (delamor, sep 2026 — también en vivo): W se
+        # construye UNA vez, cuando el dato distingue (primer build con
+        # nodos), y después los textos se acumulan sin reconstruir. Con la
+        # regla de desempate ese primer build es el bootstrap: sin
+        # precedente, empatados afuera. REG_seleccion_nodos_desempate_v1.
+        self._rebuild_suspendido = rebuild_suspendido
 
         # estado
         self._texts     : List[str]            = []
@@ -93,7 +100,8 @@ class CorpusService:
         if landscape_signal is not None:
             self._last_landscape_signal = landscape_signal
         if len(self._texts) >= self.min_texts:
-            self._rebuild()
+            if not (self._rebuild_suspendido and self._W is not None):
+                self._rebuild()
         self.save()
         return self.status()
 
@@ -170,6 +178,7 @@ class CorpusService:
             "W_sparsity" : self._sparsity() if W is not None else None,
             "W_neg_frac" : neg_frac,
             "w_sha"      : self._w_versions.current_sha(),   # Firma_CKM
+            "rebuild_suspendido": self._rebuild_suspendido,
         }
 
     # ------------------------------------------------------------------

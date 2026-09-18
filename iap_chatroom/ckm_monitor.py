@@ -59,6 +59,9 @@ class CKMMonitor:
             storage_path=str(_STATE_DIR / "corpus_state.json"),
             min_texts=min_texts,  # default=3; configurable por el caller
             top_k=32,
+            # rebuild suspendido también en vivo (delamor): W se construye
+            # cuando el dato distingue y no se reconstruye por mensaje.
+            rebuild_suspendido=True,
             monitor_jsonl_path=_monitor_jsonl_path,
         )
         # G corre en paralelo real a {W, Delta_W} -- cada mensaje que

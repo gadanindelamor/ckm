@@ -87,3 +87,27 @@ def test_corpus_sin_distincion_sigue_en_acumulacion(tmp_path):
     assert c.mode == "accumulation" and c.get_nodes() == []
     c.ingest(TEXTS)
     assert c.mode == "evaluation" and c.get_nodes()
+
+
+def test_rebuild_suspendido_construye_una_vez_y_acumula(tmp_path):
+    """Rebuild suspendido: W se construye cuando el dato distingue y no se
+    reconstruye con textos nuevos (delamor, sep 2026 — también en vivo)."""
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, rebuild_suspendido=True)
+    c.ingest(TEXTS)
+    sha, nodes, n = c.w_sha(), c.get_nodes(), len(c._texts)
+    c.ingest(["bans reduce assault weapons and gun violence"])
+    assert c.w_sha() == sha and c.get_nodes() == nodes
+    assert len(c._texts) == n + 1                       # el texto se acumula
+    assert c.status()["rebuild_suspendido"] is True
+
+
+def test_rebuild_suspendido_espera_a_que_el_dato_distinga(tmp_path):
+    """Sin W todavía (dato que no distingue), la suspensión no impide el
+    primer build: sigue intentando hasta que haya nodos."""
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=1,
+                      top_k=10, rebuild_suspendido=True)
+    c.ingest(["gun control reduces violence and saves lives"])
+    assert c.mode == "accumulation"
+    c.ingest(TEXTS)
+    assert c.mode == "evaluation" and c.get_nodes()

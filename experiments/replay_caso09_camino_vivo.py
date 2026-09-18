@@ -61,6 +61,13 @@ bootstrap = 12 textos. Es el punto medido donde W (N=32, 28 pesos negativos,
 A0=25) da a D_ckm grilla fina y recorrido que cruza D_CKM_THRESHOLD. Vale
 para este caso y este camino (min_texts=3, top_k=32, n_runs=50, uniform);
 no es un default del instrumento.
+
+CORRECCIÓN (Sep 2026, REG_hipotesis_distancia_contextual_v3): la W de
+bootstrap 12 tiene 3 nodos aislados (conversation, about, low). Δ_r los va
+acoplando en W_eff: 2 aislados al fijar A0 (msj 12), 1 desde el msj 15. El
+cruce de 0.40 en el msj 15 coincide con el acople de "conversation" — A pierde
+un factor 2 que A0 conserva. Sin aislados, D queda plano 0.45–0.64 desde el
+msj 13. La subida 0 → 0.72 está mezclada con ese cambio de factor.
 """
 
 import argparse

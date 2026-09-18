@@ -350,3 +350,22 @@ def basin_distance(
         for k in range(1, min(k_max, N) + 1)
     )
     return {"d": None, "exacto": todo_exhaustivo, "evaluadas": evaluadas}
+
+
+def d_masa_cuencas(n_eff_actual: float, n_eff_0: Optional[float]) -> Optional[float]:
+    """
+    Distancia contextual por masa de cuenca, escala logarítmica (delamor):
+
+        D_masa = 1 − ln N_eff / ln N_eff0  =  [H₂(t0) − H₂(t)] / H₂(t0)
+
+    0 sin cambio, 1 en colapso (N_eff → 1), negativo si el paisaje gana
+    diversidad. Es la hipótesis de mayo normalizada (REG_hipotesis_distancia_
+    contextual_v2 §2).
+
+    Borde: N_eff0 ≤ 1 → None. Con una sola cuenca efectiva de partida
+    ln N_eff0 = 0 y no hay distancia que medir. El log es sensible a los
+    bordes (REG v4 §5): cerca de N_eff0 = 1 amplifica cualquier diferencia.
+    """
+    if n_eff_0 is None or n_eff_0 <= 1.0 or n_eff_actual <= 0:
+        return None
+    return 1.0 - np.log(n_eff_actual) / np.log(n_eff_0)

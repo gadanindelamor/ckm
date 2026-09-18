@@ -41,6 +41,7 @@ from landscape_engine import (
     boltzmann_warmup,
     basin_masses,
     count_attractors,
+    d_masa_cuencas,
     n_eff,
     node_probs,
     relax,
@@ -165,10 +166,12 @@ class MonitorService:
             "D_ckm"            : round(D_ckm, 4),
             # N_eff = 1/Σm² sobre masas de cuenca por órbita, misma W_eff y
             # mismas muestras que D_ckm. N_eff0 es su baseline (se fija y se
-            # resetea como A0). D_masa_cuencas no se calcula: la escala
-            # (lineal/log) sigue abierta. TASK_neff_y_frontera_logica_v1.
+            # resetea como A0). D_masa_cuencas en escala log (delamor):
+            # 1 − ln N_eff / ln N_eff0; None si N_eff0 ≤ 1.
             "N_eff"            : round(N_eff, 4),
             "N_eff0"           : round(self._N_eff0, 4) if self._N_eff0 is not None else None,
+            "D_masa_cuencas"   : (lambda d: round(d, 4) if d is not None else None)(
+                                     d_masa_cuencas(N_eff, self._N_eff0)),
             "n_rejected_pairs" : len(rejected),
             "Delta_r_sum"        : float(np.sum(self._Delta_r)),
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],

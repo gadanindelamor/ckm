@@ -155,3 +155,20 @@ def test_panel_lleva_n_eff_y_baseline_que_se_resetea(tmp_path):
 
     lineas = [json.loads(l) for l in (tmp_path / "m.jsonl").read_text().splitlines()]
     assert all("N_eff" in r["panel"] and "N_eff0" in r["panel"] for r in lineas)
+
+
+# ── D_masa_cuencas (log) ────────────────────────────────────────────────────
+
+from landscape_engine import d_masa_cuencas  # noqa: E402
+
+
+def test_d_masa_log_valores():
+    assert d_masa_cuencas(4.0, 4.0) == pytest.approx(0.0)
+    assert d_masa_cuencas(1.0, 4.0) == pytest.approx(1.0)       # colapso
+    assert d_masa_cuencas(8.0, 4.0) == pytest.approx(-0.5)      # gana diversidad
+    assert d_masa_cuencas(2.0, 4.0) == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize("n0", [None, 1.0, 0.5])
+def test_d_masa_borde_none(n0):
+    assert d_masa_cuencas(3.0, n0) is None

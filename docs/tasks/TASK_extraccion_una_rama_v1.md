@@ -32,6 +32,14 @@ caso09, bootstrap 12 (12 textos): 5 activaciones en W y no en σ ("joined **the*
 - Antes/después sobre caso09 bootstrap 12, W congelada: activos de σ_prompt, `fabrication_index`, `n_rejected_pairs`, `Delta_r_sum`, D_ckm.
 - Tests existentes: los que dependan de σ por substring pueden cambiar — se revisan uno por uno.
 
+## Resultado (antes/después, caso09 bootstrap 12, W idéntica)
+
+Pares metabolizados 386 → 246; A0 5 → 9; D_ckm −1.8 → −0.56 (peor caso);
+Δ_r final 772 → 492. Factor dominante: falsos positivos del substring —
+139 de 140 pares que desaparecen involucran un nodo que sólo el substring
+activaba (`low`, `one`, `here`, `back`, `line`, `some`, `now`, `time`).
+Detalle en REG_hipotesis_distancia_contextual_v4 §7.
+
 ## Consecuencia declarada
 
 Cambia σ_prompt en todo panel. `fabrication_index`, Δ_r y D_ckm previos valen en su marco: σ por substring.

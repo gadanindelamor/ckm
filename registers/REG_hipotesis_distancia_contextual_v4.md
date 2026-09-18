@@ -101,7 +101,9 @@ La condición registrada en `c32d22a` —*"D_ckm cruza 0.40 en el msj 15"*— y
 la corrección de v3 §5 valen en el marco de la W recortada. **Con la W
 corregida, caso09 no tiene todavía una condición empírica de referencia.**
 
-*Estado: verificado, una corrida (n_runs=50, seed 0).*
+*Estado: verificado, una corrida (n_runs=50, seed 0).* **Superada en §7**:
+esa corrida usaba σ por substring; la "expansión" era en su mayor parte
+metabolización de nodos que el texto no nombraba.
 
 ---
 
@@ -164,6 +166,36 @@ honesto.)* θ y m sin decidir.
 
 ---
 
+## 7. Antes / después de la extracción en una rama — factor dominante
+
+`7bf485b` hace que `evaluate` (σ_prompt) use el analizador de `accumulate`
+(W). Mismo caso que §3 —caso09, bootstrap 12, W congelada, n_runs 50— con
+`5aa3504` (σ por substring) contra la extracción de una rama. **W idéntica
+en los dos** (mismo sha): lo único que cambia es σ.
+
+| | antes (substring) | después | |
+|---|---:|---:|---|
+| activaciones sólo en esta versión | 23 | 0 | 13 mensajes |
+| pares metabolizados | 386 | 246 | −140 |
+| A0 | 5 | 9 | se fija con el primer Δ_r (M3) |
+| D_ckm (rango msj 13–24) | −0.80 … −1.80 | −0.11 … −0.56 | |
+| Δ_r final | 772 | 492 | |
+
+**Factor dominante: falsos positivos del substring.** De los 140 pares que
+desaparecen, **139** involucran un nodo que sólo el substring activaba:
+`low`, `one`, `here`, `back`, `line`, `some`, `now`, `time` — palabras
+cortas contenidas en otras (`here` en "w**here**", `one` en
+"some**one**"). ~100% del cambio.
+
+Arrastre: la "expansión" de §3 (D_ckm hasta −1.8) era en su mayor parte
+metabolización de nodos que el texto no nombraba. Sin ellos,
+`fabrication_index` queda en 1.0 en casi todos los mensajes: el campo
+metaboliza casi todo lo que el texto sí declara.
+
+*Estado: verificado, una corrida.*
+
+---
+
 ## Lo que este REG no establece
 
 - No establece una condición empírica nueva para caso09.
@@ -203,6 +235,8 @@ honesto.)* θ y m sin decidir.
 - §2 (corrección): **verificado**
 - §3 (bootstrap 12 no se sostiene): **verificado**, una corrida
 - §4, §5: **propuesto**
+- §6: **declarado**
+- §7 (antes/después extracción, factor dominante): **verificado**, una corrida — supera §3
 
 No cierra. Abre.
 

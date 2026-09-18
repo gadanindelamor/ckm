@@ -172,6 +172,11 @@ class MonitorService:
             "N_eff0"           : round(self._N_eff0, 4) if self._N_eff0 is not None else None,
             "D_masa_cuencas"   : (lambda d: round(d, 4) if d is not None else None)(
                                      d_masa_cuencas(N_eff, self._N_eff0)),
+            # Condiciones de la medición — no se excluye nada, se declara.
+            # Un aislado (fila de W en cero) duplica cada atractor acoplado;
+            # Δ_r puede acoplarlo en W_eff durante el run (REG v3 §4).
+            # REG_hipotesis_distancia_contextual_v4.
+            "condicion_W"      : self._condicion_W(W, nodes),
             "n_rejected_pairs" : len(rejected),
             "Delta_r_sum"        : float(np.sum(self._Delta_r)),
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],
@@ -377,6 +382,18 @@ class MonitorService:
                 return 0.0   # corpus vacío — diferir A0
             self._A0 = A_actual
         return float((self._A0 - A_actual) / self._A0) if self._A0 > 0 else 0.0
+
+    def _condicion_W(self, W: np.ndarray, nodes: list) -> dict:
+        """Bajo qué W y con qué muestreo se midió este panel."""
+        W_eff = self._combine_W_Delta(W, self._Delta_r)
+        return {
+            "w_sha"         : self.corpus.w_sha(),
+            "N"             : len(nodes),
+            "n_runs"        : self._n_runs,
+            "count_seed"    : self._count_seed,
+            "aislados_W"    : [nodes[i] for i in np.where(~W.any(axis=1))[0]],
+            "aislados_W_eff": [nodes[i] for i in np.where(~W_eff.any(axis=1))[0]],
+        }
 
     def _N_eff(self, W: np.ndarray) -> float:
         """N_eff sobre la misma W_eff que _D_ckm. Fija N_eff0 en la primera

@@ -172,3 +172,15 @@ def test_d_masa_log_valores():
 @pytest.mark.parametrize("n0", [None, 1.0, 0.5])
 def test_d_masa_borde_none(n0):
     assert d_masa_cuencas(3.0, n0) is None
+
+
+def test_panel_declara_condicion_W(tmp_path):
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c.ingest(TEXTS)
+    m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=20)
+    cw = m.evaluate("rights weapons")["condicion_W"]
+    assert cw["w_sha"] == c.w_sha() and cw["N"] == len(c.get_nodes())
+    assert cw["n_runs"] == 20 and cw["count_seed"] == 0
+    W = c.get_W()
+    assert cw["aislados_W"] == [c.get_nodes()[i] for i in range(len(W)) if not W[i].any()]
+    assert set(cw["aislados_W_eff"]) <= set(cw["aislados_W"])

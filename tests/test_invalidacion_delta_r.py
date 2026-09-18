@@ -55,7 +55,9 @@ def test_reset_por_nodos(corpus, tmp_path):
     m = _monitor(corpus, tmp_path)
     m.evaluate(PROMPT)
     nodes_antes = corpus.get_nodes()
-    corpus.ingest(["police response times matter for community safety"])
+    # texto que cambia los nodos con N igual BAJO LA REGLA DE DESEMPATE
+    # (conserva precedente): el anterior ("police response…") ahora sube N.
+    corpus.ingest(["bans reduce assault weapons and gun violence"])
     assert len(corpus.get_nodes()) == len(nodes_antes)   # N igual
     assert corpus.get_nodes() != nodes_antes             # nodos distintos
 
@@ -95,7 +97,9 @@ def test_delta_r_y_A0_en_cero_tras_reset(corpus, tmp_path):
     m = _monitor(corpus, tmp_path)
     m.evaluate(PROMPT)
     A0_viejo = m._A0
-    corpus.ingest(["police response times matter for community safety"])
+    # texto que cambia los nodos con N igual BAJO LA REGLA DE DESEMPATE
+    # (conserva precedente): el anterior ("police response…") ahora sube N.
+    corpus.ingest(["bans reduce assault weapons and gun violence"])
 
     # estado justo después de invalidar, antes de volver a acumular
     causa = m._invalidar_si_W_cambio(corpus.get_nodes())

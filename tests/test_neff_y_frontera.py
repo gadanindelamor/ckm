@@ -148,7 +148,9 @@ def test_panel_lleva_n_eff_y_baseline_que_se_resetea(tmp_path):
     m.evaluate("rights bans")
     assert m._N_eff0 == base                      # se conserva sin cambio de W
 
-    c.ingest(["police response times matter for community safety"])
+    # texto que cambia los nodos con N igual BAJO LA REGLA DE DESEMPATE
+    # (conserva precedente): el anterior ("police response…") ahora sube N.
+    c.ingest(["bans reduce assault weapons and gun violence"])
     p3 = m.evaluate("rights weapons")
     assert p3["Delta_r_reset"] == "nodos"
     assert p3["N_eff0"] == p3["N_eff"]            # nuevo baseline con la W nueva

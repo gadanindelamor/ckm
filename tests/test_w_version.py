@@ -131,10 +131,14 @@ def test_corpus_service_w_sha_after_ingest():
         corpus = CorpusService(storage_path=tmp, min_texts=3, top_k=5)
         assert corpus.w_sha() is None
 
+        # corpus que distingue (ver test_firma_ckm): con 3 textos cortos el
+        # dato no separa términos y el corpus sigue en acumulación.
         texts = [
-            "gun control reduces violence",
-            "the second amendment protects rights",
-            "background checks prevent crime",
+            "gun control reduces violence and saves lives",
+            "the second amendment protects the right to bear arms",
+            "background checks prevent criminals from buying weapons",
+            "assault weapons bans reduce mass shootings",
+            "gun rights are constitutional rights not subject to restriction",
         ]
         status = corpus.ingest(texts)
 

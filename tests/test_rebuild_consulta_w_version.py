@@ -49,7 +49,9 @@ def test_sin_rebuild(corpus):
 
 def test_rebuild_N_igual_nodos_distintos(corpus):
     sha, nodes = _snapshot(corpus)
-    corpus.ingest(["police response times matter for community safety"])
+    # texto que cambia los nodos con N igual BAJO LA REGLA DE DESEMPATE
+    # (conserva precedente): el anterior ("police response…") ahora sube N.
+    corpus.ingest(["bans reduce assault weapons and gun violence"])
     r = corpus.w_change_since(sha, nodes)
     assert r["N_old"] == r["N_new"] == 10
     assert r["changed"] is True
@@ -68,8 +70,20 @@ def test_rebuild_N_distinto(tmp_path):
 
 def test_id_nuevo_coincide_con_config(corpus):
     sha, nodes = _snapshot(corpus)
-    corpus.ingest(["police response times matter for community safety"])
+    # texto que cambia los nodos con N igual BAJO LA REGLA DE DESEMPATE
+    # (conserva precedente): el anterior ("police response…") ahora sube N.
+    corpus.ingest(["bans reduce assault weapons and gun violence"])
     r = corpus.w_change_since(sha, nodes)
     cfg = CKMlandscapeConfig.from_W(corpus.get_W(), theta_W=0.01,
                                     sampling_mode="uniform", scale="log")
     assert r["w_version_id_new"] == cfg.w_version_id
+
+
+def test_corpus_sin_distincion_sigue_en_acumulacion(tmp_path):
+    """Un texto: todos los términos empatan; sin precedente no hay nodos, no
+    hay W — el corpus sigue en acumulación hasta que el dato distinga."""
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=1, top_k=10)
+    c.ingest(["gun control reduces violence and saves lives"])
+    assert c.mode == "accumulation" and c.get_nodes() == []
+    c.ingest(TEXTS)
+    assert c.mode == "evaluation" and c.get_nodes()

@@ -205,7 +205,7 @@ class CorpusService:
         t = text.lower()
         return any(m in t for m in _OPPOSITION_MARKERS)
 
-    def _accumulate_safe(self, texts: List[str]) -> Dict:
+    def _accumulate_safe(self, texts: List[str], seleccion_anterior=None) -> Dict:
         """
         Wrapper de self._extractor.accumulate() que absorbe el ValueError de
         TfidfVectorizer cuando un texto (o el batch) no aporta vocabulario
@@ -216,7 +216,7 @@ class CorpusService:
         rompe todo ingest() futuro hasta reiniciar el proceso.
         """
         try:
-            return self._extractor.accumulate(texts)
+            return self._extractor.accumulate(texts, seleccion_anterior=seleccion_anterior)
         except ValueError:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
@@ -230,7 +230,10 @@ class CorpusService:
         W[i,j] = (pos[i,j] - neg[i,j]) / max(|pos - neg|)
         Rango resultante: [−1, +1].
         """
-        result = self._accumulate_safe(self._texts)
+        # la selección anterior resuelve los empates en el borde del top_k
+        # (regla de la relajación: empate conserva). TASK_desempate_seleccion_nodos_v1.
+        result = self._accumulate_safe(self._texts, seleccion_anterior=self._nodes or None)
+        self._registro_borde = result.get("registro_borde", [])
         nodes  = result["nodes"]
 
         if not nodes:
@@ -300,6 +303,8 @@ class CorpusService:
             "W"               : self._W.tolist() if self._W is not None else None,
             "w_version_history": self._w_versions.to_list(),
             "forced_w_pos"    : self._force_w_pos,
+            # registro continuo del borde de la última selección de nodos
+            "registro_borde"  : getattr(self, "_registro_borde", []),
         }
         self.storage_path.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
@@ -310,6 +315,7 @@ class CorpusService:
         raw_W       = state.get("W")
         self._W     = np.array(raw_W) if raw_W is not None else None
         self._w_versions.from_list(state.get("w_version_history", []))
+        self._registro_borde = state.get("registro_borde", [])
 
 
 # ---------------------------------------------------------------------------

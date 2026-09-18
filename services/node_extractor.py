@@ -14,7 +14,7 @@ Sin LLM. Sin estado entre llamadas.
 from __future__ import annotations
 from collections import defaultdict
 from itertools import combinations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -79,16 +79,36 @@ class NodeExtractorService:
     # Modo acumulación
     # ------------------------------------------------------------------
 
-    def accumulate(self, texts: List[str]) -> Dict:
+    # Tolerancia DE LA REGLA de desempate (no del registro): dos puntajes a
+    # esta distancia del corte son indistinguibles para el criterio.
+    TOL_EMPATE = 1e-12
+
+    def accumulate(
+        self,
+        texts: List[str],
+        seleccion_anterior: Optional[List[str]] = None,
+    ) -> Dict:
         """
         Extrae nodos y co-activaciones desde un corpus de textos.
 
+        Selección: top_k por TF-IDF medio, dentro de los top_k·3 más
+        frecuentes. En el borde del top_k, un empate es indecidible con el
+        propio criterio; se resuelve con la regla de la relajación (h = 0 →
+        conserva el estado): con seleccion_anterior, un término empatado en el
+        borde conserva su pertenencia; sin ella (bootstrap: el estado inicial
+        es "ningún nodo") los empatados quedan afuera. N puede diferir de
+        top_k. TASK_desempate_seleccion_nodos_v1.
+
         Returns:
             {
-              "nodes":  [str, ...]          — top_k por TF-IDF medio, dentro
-                                              de los top_k·3 más frecuentes
+              "nodes":  [str, ...]          — seleccionados, orden por puntaje
               "pairs":  {(ni, nj): count}   — pares que co-ocurren en mismo texto
               "node_freq": {str: int}       — frecuencia por nodo
+              "pairs_by_text": [dict, ...]  — pares por texto, alineado
+              "registro_borde": [dict, ...] — por término del pool: score,
+                    distancia_al_corte (con signo), pertenencia_anterior.
+                    Continuo: no guarda categorías; "empate" se deriva al
+                    leer, con la tolerancia que se elija entonces.
             }
         """
         if not texts:
@@ -107,10 +127,8 @@ class NodeExtractorService:
         tfidf_matrix = vec.fit_transform(texts)
         terms        = vec.get_feature_names_out()
 
-        # Top-k por TF-IDF promedio
         mean_scores  = np.asarray(tfidf_matrix.mean(axis=0)).flatten()
-        top_idx      = np.argsort(mean_scores)[::-1][: self.top_k]
-        nodes        = [terms[i] for i in top_idx]
+        nodes, registro = self._seleccionar(terms, mean_scores, seleccion_anterior)
         node_set     = set(nodes)
 
         # Co-ocurrencias: pares que aparecen en el mismo texto
@@ -135,11 +153,50 @@ class NodeExtractorService:
             pairs_by_text[idx_orig[row_idx]] = del_texto
 
         return {
-            "nodes"        : nodes,
-            "pairs"        : dict(pairs),
-            "node_freq"    : dict(node_freq),
-            "pairs_by_text": pairs_by_text,
+            "nodes"         : nodes,
+            "pairs"         : dict(pairs),
+            "node_freq"     : dict(node_freq),
+            "pairs_by_text" : pairs_by_text,
+            "registro_borde": registro,
         }
+
+    def _seleccionar(self, terms, scores, anterior):
+        """
+        Top_k con la regla de desempate de la relajación.
+
+        corte = puntaje del top_k-ésimo. Por encima del corte (más allá de
+        TOL_EMPATE) entra; por debajo, queda afuera; a distancia ≤ TOL_EMPATE
+        del corte es empate: conserva su pertenencia anterior, o queda afuera
+        si no hay anterior. Si los empatados caben todos en los lugares que
+        quedan, no hay empate que decidir y entran.
+        """
+        orden = sorted(range(len(terms)), key=lambda i: (-scores[i], terms[i]))
+        if len(orden) <= self.top_k:
+            elegidos = orden
+            corte = scores[orden[-1]] if orden else 0.0
+        else:
+            corte = scores[orden[self.top_k - 1]]
+            arriba = [i for i in orden if scores[i] - corte > self.TOL_EMPATE]
+            empate = [i for i in orden if abs(scores[i] - corte) <= self.TOL_EMPATE]
+            libres = self.top_k - len(arriba)
+            if len(empate) <= libres:
+                elegidos = arriba + empate
+            elif anterior is None:
+                elegidos = arriba
+            else:
+                prev = set(anterior)
+                elegidos = arriba + [i for i in empate if terms[i] in prev]
+        prev = set(anterior) if anterior is not None else None
+        registro = [
+            {
+                "termino"             : str(terms[i]),
+                "score"               : float(scores[i]),
+                "distancia_al_corte"  : float(scores[i] - corte),
+                "pertenencia_anterior": (terms[i] in prev) if prev is not None else None,
+            }
+            for i in orden
+        ]
+        return [str(terms[i]) for i in elegidos], registro
 
     # ------------------------------------------------------------------
     # Modo evaluación

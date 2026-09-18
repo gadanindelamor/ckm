@@ -295,3 +295,58 @@ def n_eff(masas: np.ndarray) -> float:
     Función canónica de PROPUESTA v5; equivale a exp(H₂) de Rényi.
     """
     return float(1.0 / np.square(masas).sum())
+
+
+# ── Distancia a la frontera de cuenca ───────────────────────────────────────
+
+def basin_distance(
+    sigma        : np.ndarray,
+    W            : np.ndarray,
+    *,
+    k_max        : int = 4,
+    k_exhaustivo : int = 2,
+    n_muestras   : int = 500,
+    seed         : int = 0,
+) -> dict:
+    """
+    d(σ): mínimo número de flips que cambian la ÓRBITA a la que relaja σ —
+    distancia de σ a la frontera de su cuenca (REG_hipotesis_distancia_
+    contextual_v2 §4, §11).
+
+    Se comparan órbitas, no estados: caer en la otra fase de la misma órbita
+    de período 2 no es cambio de cuenca.
+
+    Búsqueda exhaustiva para k ≤ k_exhaustivo; para k mayores, n_muestras
+    subconjuntos al azar. Con muestreo, el d encontrado es cota superior.
+
+    Returns: {"d": int | None, "exacto": bool, "evaluadas": int}
+        d = None si ninguna perturbación hasta k_max cambió la órbita.
+        exacto = True si d salió de la búsqueda exhaustiva (o si todo k
+        hasta k_max fue exhaustivo y no hubo cambio).
+    """
+    from itertools import combinations
+    from math import comb
+
+    N = sigma.shape[0]
+    orbita_0 = relax_orbit(sigma, W)[0]
+    rng = np.random.default_rng(seed)
+    evaluadas = 0
+
+    for k in range(1, min(k_max, N) + 1):
+        exhaustivo = k <= k_exhaustivo or comb(N, k) <= n_muestras
+        if exhaustivo:
+            conjuntos = combinations(range(N), k)
+        else:
+            conjuntos = (rng.choice(N, k, replace=False) for _ in range(n_muestras))
+        for idx in conjuntos:
+            s = sigma.copy()
+            s[list(idx)] *= -1
+            evaluadas += 1
+            if relax_orbit(s, W)[0] != orbita_0:
+                return {"d": k, "exacto": exhaustivo, "evaluadas": evaluadas}
+
+    todo_exhaustivo = all(
+        k <= k_exhaustivo or comb(N, k) <= n_muestras
+        for k in range(1, min(k_max, N) + 1)
+    )
+    return {"d": None, "exacto": todo_exhaustivo, "evaluadas": evaluadas}

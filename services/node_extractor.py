@@ -76,7 +76,9 @@ class NodeExtractorService:
         """
         if not texts:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
-        texts = [t for t in texts if t and t.strip()]
+        n_original = len(texts)
+        idx_orig   = [k for k, t in enumerate(texts) if t and t.strip()]
+        texts      = [texts[k] for k in idx_orig]
         if not texts:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
@@ -99,19 +101,29 @@ class NodeExtractorService:
         # Co-ocurrencias: pares que aparecen en el mismo texto
         pairs: Dict[Tuple[str, str], int] = defaultdict(int)
         node_freq: Dict[str, int]         = defaultdict(int)
+        # pares de cada texto entre NODOS GLOBALES — para quien necesite
+        # rutear por texto (CorpusService: pos/neg) sin volver a extraer.
+        # Volver a llamar accumulate([texto]) hace otro top_k dentro del
+        # texto y pierde pares. TASK_pares_por_texto_nodos_globales_v1.
+        # alineado con la lista RECIBIDA: textos vacíos quedan con {}.
+        pairs_by_text: List[Dict[Tuple[str, str], int]] = [{} for _ in range(n_original)]
 
         for row_idx in range(tfidf_matrix.shape[0]):
             row      = tfidf_matrix[row_idx]
             active   = [terms[i] for i in row.nonzero()[1] if terms[i] in node_set]
             for node in active:
                 node_freq[node] += 1
+            del_texto: Dict[Tuple[str, str], int] = {}
             for a, b in combinations(sorted(active), 2):
                 pairs[(a, b)] += 1
+                del_texto[(a, b)] = 1
+            pairs_by_text[idx_orig[row_idx]] = del_texto
 
         return {
-            "nodes"    : nodes,
-            "pairs"    : dict(pairs),
-            "node_freq": dict(node_freq),
+            "nodes"        : nodes,
+            "pairs"        : dict(pairs),
+            "node_freq"    : dict(node_freq),
+            "pairs_by_text": pairs_by_text,
         }
 
     # ------------------------------------------------------------------

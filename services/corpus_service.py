@@ -242,10 +242,14 @@ class CorpusService:
         pos_counts = np.zeros((N, N))
         neg_counts = np.zeros((N, N))
 
-        # reconstruir pares por texto individual (granularidad texto)
-        for text in self._texts:
-            text_result = self._accumulate_safe([text])
-            t_pairs     = text_result.get("pairs", {})
+        # pares por texto entre los NODOS GLOBALES, de la misma extracción
+        # que eligió los nodos. Antes se re-extraía cada texto con
+        # accumulate([texto]), que hace otro top_k dentro del texto y
+        # perdía pares (46% en caso09 bootstrap 12; nodos aislados).
+        # TASK_pares_por_texto_nodos_globales_v1.
+        por_texto = result.get("pairs_by_text", [])
+        for k, text in enumerate(self._texts):
+            t_pairs     = por_texto[k] if k < len(por_texto) else {}
             is_opp      = False if self._force_w_pos else self._has_opposition(text)
 
             for (ni, nj), count in t_pairs.items():

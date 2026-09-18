@@ -68,6 +68,13 @@ acoplando en W_eff: 2 aislados al fijar A0 (msj 12), 1 desde el msj 15. El
 cruce de 0.40 en el msj 15 coincide con el acople de "conversation" — A pierde
 un factor 2 que A0 conserva. Sin aislados, D queda plano 0.45–0.64 desde el
 msj 13. La subida 0 → 0.72 está mezclada con ese cambio de factor.
+
+W CORREGIDA (5aa3504, REG_hipotesis_distancia_contextual_v4): los aislados
+venían de la re-extracción por texto en CorpusService. Con pares entre nodos
+globales, bootstrap 12 tiene 0 aislados, A0 = 5 y D_ckm 0 → −1.8 (Δ_r
+expande). La condición de bootstrap 12 y las mediciones de arriba valen en
+el marco de la W recortada; con la W corregida caso09 no tiene todavía
+condición de referencia.
 """
 
 import argparse

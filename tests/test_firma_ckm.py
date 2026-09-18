@@ -31,10 +31,18 @@ def make_corpus_monitor(texts=None, with_thermostat=False):
     corpus = CorpusService(storage_path=tmp, min_texts=3, top_k=8)
 
     if texts is None:
+        # 7 textos: el dato distingue (N = top_k). Con 3 textos cortos todos
+        # los términos puntúan igual y, con la regla de desempate (sin
+        # precedente, los empatados quedan afuera), el corpus sigue en
+        # acumulación. TASK_desempate_seleccion_nodos_v1.
         texts = [
             "gun control reduces violence and saves lives",
             "the second amendment protects the right to bear arms",
             "background checks prevent criminals from buying weapons",
+            "assault weapons bans reduce mass shootings",
+            "gun rights are constitutional rights not subject to restriction",
+            "mental health is the real cause of gun violence",
+            "armed citizens deter crime and protect communities",
         ]
     corpus.ingest(texts)
 

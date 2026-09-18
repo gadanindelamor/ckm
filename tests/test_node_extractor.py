@@ -100,21 +100,58 @@ def test_top_k_nodos_y_pool_por_frecuencia():
     assert all(sc[t] <= umbral + 1e-12 for t in fuera)
 
 
-# ── 3. Empates en el borde del top_k ────────────────────────────────────────
+# ── 3. Empates en el borde del top_k — regla de la relajación ─────────────
+# TASK_desempate_seleccion_nodos_v1. Empate = indecidible con el propio
+# criterio. Con precedente: conserva. Sin precedente (bootstrap): afuera.
 
-@pytest.mark.xfail(strict=True, reason=(
-    "Medido sep 2026: 94/210 W con empate en el borde del top-32; en 85 la "
-    "selección depende del orden de desempate (argsort no estable sobre el "
-    "orden alfabético de sklearn). Criterio de desempate: decisión pendiente."))
-def test_seleccion_no_depende_del_orden_de_desempate():
-    textos = _caso09()[:10]          # caso09 con empate en el borde que cambia
-                                     # la selección: k = 4–10 y 18 (medido)
+def _empate_en_borde(textos, top_k):
+    ex = NodeExtractorService(top_k=top_k)
+    sc = np.asarray(ex._vectorizer(max_features=top_k * 3)
+                    .fit_transform(textos).mean(axis=0)).ravel()
+    o = np.sort(sc)[::-1]
+    return len(sc) > top_k and np.isclose(o[top_k - 1], o[top_k], rtol=0, atol=1e-12)
+
+
+def test_caso09_tiene_empate_en_el_borde():
+    assert _empate_en_borde(_caso09()[:10], 32)       # medido: k = 4–10 y 18
+
+
+def test_bootstrap_empatados_quedan_afuera():
     ex = NodeExtractorService(top_k=32)
-    v = ex._vectorizer(max_features=96)
-    sc = np.asarray(v.fit_transform(textos).mean(axis=0)).ravel()
-    a = set(np.argsort(sc)[::-1][:32])
-    b = set(np.argsort(-sc, kind="stable")[:32])
-    assert a == b
+    r = ex.accumulate(_caso09()[:10])
+    reg = {d["termino"]: d for d in r["registro_borde"]}
+    empatados = [t for t, d in reg.items() if abs(d["distancia_al_corte"]) <= 1e-12]
+    assert empatados and not set(empatados) & set(r["nodes"])
+    assert all(reg[n]["distancia_al_corte"] > 1e-12 for n in r["nodes"])
+
+
+def test_con_precedente_empatados_conservan():
+    ex = NodeExtractorService(top_k=32)
+    textos = _caso09()[:10]
+    reg = ex.accumulate(textos)["registro_borde"]
+    empatados = [d["termino"] for d in reg if abs(d["distancia_al_corte"]) <= 1e-12]
+    previos = empatados[: len(empatados) // 2]
+    r = ex.accumulate(textos, seleccion_anterior=previos)
+    assert set(previos) <= set(r["nodes"])
+    assert not (set(empatados) - set(previos)) & set(r["nodes"])
+
+
+def test_fuera_de_empate_manda_el_dato():
+    """Precedente con términos claramente fuera del corte: no los conserva."""
+    ex = NodeExtractorService(top_k=32)
+    textos = _caso09()
+    reg = ex.accumulate(textos)["registro_borde"]
+    lejos = [d["termino"] for d in reg if d["distancia_al_corte"] < -1e-6][:5]
+    r = ex.accumulate(textos, seleccion_anterior=lejos)
+    assert not set(lejos) & set(r["nodes"])
+
+
+def test_registro_borde_es_continuo_y_completo():
+    ex = NodeExtractorService(top_k=32)
+    r = ex.accumulate(_caso09(), seleccion_anterior=["gun"])
+    claves = {"termino", "score", "distancia_al_corte", "pertenencia_anterior"}
+    assert r["registro_borde"] and all(set(d) == claves for d in r["registro_borde"])
+    assert all(isinstance(d["distancia_al_corte"], float) for d in r["registro_borde"])
 
 
 # ── 4. Stopwords y bigramas ─────────────────────────────────────────────────

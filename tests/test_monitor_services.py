@@ -114,9 +114,22 @@ class TestNodeExtractor:
         assert isinstance(result["pairs"], dict)
 
     def test_accumulate_nodes_nonempty_for_real_text(self):
-        """Texto con contenido real → al menos un nodo."""
-        result = self.ext.accumulate(["gun control reduces violence and saves lives"])
+        """Corpus que distingue → nodos. (Antes: un solo texto → nodos; con
+        la regla de desempate un solo texto no distingue — ver el test
+        siguiente.)"""
+        result = self.ext.accumulate([
+            "gun control reduces violence and saves lives",
+            "the second amendment protects the right to bear arms",
+            "assault weapons bans reduce mass shootings",
+            "mental health is the real cause of gun violence",
+        ])
         assert len(result["nodes"]) > 0
+
+    def test_un_texto_no_distingue_sin_precedente(self):
+        """Un texto: todos los términos puntúan igual; sin precedente los
+        empatados quedan afuera → 0 nodos. El dato todavía no distingue."""
+        result = self.ext.accumulate(["gun control reduces violence and saves lives"])
+        assert result["nodes"] == []
 
     def test_accumulate_empty_text_no_crash(self):
         """Texto vacío no lanza excepción."""

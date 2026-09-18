@@ -184,3 +184,20 @@ def test_panel_declara_condicion_W(tmp_path):
     W = c.get_W()
     assert cw["aislados_W"] == [c.get_nodes()[i] for i in range(len(W)) if not W[i].any()]
     assert set(cw["aislados_W_eff"]) <= set(cw["aislados_W"])
+
+
+def test_panel_lleva_senal_de_saturacion(tmp_path):
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c.ingest(TEXTS)
+    m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=40)
+    p = m.evaluate("rights weapons")
+    s = p["saturacion"]
+    assert s["N_eff_sobre_n_runs"] == pytest.approx(p["N_eff"] / 40, abs=1e-3)
+    assert 0.0 <= s["orbitas_unicas_frac"] <= 1.0
+
+
+def test_n_runs_default_es_1000(tmp_path):
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c.ingest(TEXTS)
+    m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"))
+    assert m.evaluate("rights weapons")["condicion_W"]["n_runs"] == 1000

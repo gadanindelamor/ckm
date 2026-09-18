@@ -3,8 +3,10 @@ coco.py — Collective COCO-thermostat (prototipo mínimo)
 
 No almacena capacidades declaradas (eso es COCO-registry, se vuelve stale).
 Observa D_ckm(t) del corpus colectivo emergido de interacción real A2A.
-Emite señal STOP cuando el campo cruza umbral de degradación.
-Aplica STOP (Delta → alpha * Delta) sobre el CorpusService compartido.
+Cuando el campo cruza el umbral, aplica OPERADOR_STOP_COCO
+(Δ_r_compresiones ← alpha · Δ_r_compresiones) sobre su PROPIA representación.
+Desde D3 (TASK_delta_compresiones_coco_v1) COCO lee el Δ_r de Monitor —
+incorpora su incremento— y nunca lo escribe: la regulación no llega a Δ_r.
 
 β_collective es la mediana de los β_i individuales — se calcula, 
 se reporta en el panel. Pero no regula nada. Es observación, no termostat.
@@ -35,9 +37,11 @@ TEMP_SIGNAL emitida cuando β_collective se aleja de β_c en cualquier direcció
 
 Precondición: W debe ser el suelo del corpus en modo evaluación.
 W es inmutable para el thermostat — es el campo original al que
-el sistema puede regresar. COCO-thermostat actúa solo sobre Δ.
+el sistema puede regresar. COCO actúa solo sobre su Δ_r_compresiones.
 Si W cambia (corpus crece, nuevos nodos), instanciar un nuevo
-COCO con la W actualizada.
+COCO con la W actualizada. Un COCO pasado a Monitor como thermostat no
+renace solo en el rebuild: tras un reset de Monitor el incremento es
+negativo (abierto — TASK_delta_compresiones_coco_v1).
 Uso correcto con CorpusService:
     assert corpus.mode == "evaluation", "corpus insuficiente"
     thermostat = COCO(W=corpus.get_W())

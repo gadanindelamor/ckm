@@ -2,11 +2,17 @@
 monitor_service.py — Collective MonitorService
 
 Stateful. Evalúa prompts contra el corpus acumulado.
-Mide fabricación: lo que σ_prompt declaró y el campo rechazó.
+Mide fabricación: lo que σ_prompt declaró y el campo no sostuvo.
 
-Δ_r acumula co-ocurrencias de rechazos:
-  pares (i,j) que σ_prompt declaró activos pero relax expulsó.
-  Δ_r[i,j] += 1 por cada evaluación donde el par fue rechazado.
+Δ_r acumula la metabolización del campo:
+  pares (i,j) que σ_prompt declaró activos y la relajación no sostuvo
+  (al menos uno de los dos queda en −1). Quedan adentro, como deformación en
+  W_eff — no se expulsan. Δ_r[i,j] += 1 por cada evaluación.
+  Los nombres en código (`_rejected_pairs`, panel["rechazados"]) se conservan:
+  son claves de JSONLs históricos. DEFS v12 §9, PROPUESTA v5 D4.
+
+σ_prompt sale del mismo analizador que construye W (NodeExtractor, una sola
+rama — 7bf485b). Δ_r y A0 se descartan en cualquier reconstrucción de W (D2).
 
 Rango de W (heredado de CorpusService): W ∈ [−1, +1]. `_rebuild()` calcula
 (pos_counts − neg_counts) / max|·|, y rutea a neg_counts los textos con
@@ -62,7 +68,7 @@ class MonitorService:
         self,
         corpus          : CorpusService,
         storage_path    : str = "monitor_trajectory.jsonl",
-        n_runs_attractors: int = 50,
+        n_runs_attractors: int = 1000,
         thermostat      : Optional[COCO] = None,
         behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
         count_seed      : int = 0,
@@ -77,6 +83,12 @@ class MonitorService:
         el comportamiento numerico no cambia. Ver TASK_monitor_service_
         unificar_rutinas_v1.md: la equivalencia con COCO(seed=0) fue
         verificada exacta antes de unificar.
+
+        n_runs_attractors: muestras de sigma_0 para contar atractores (D_ckm)
+        y masas de cuenca (N_eff). Default 1000: en casos IAP N_eff converge
+        ahí (±2% de 5000); con 50 quedaba 5–20% bajo. El conteo de A no
+        satura con ningún n_runs. El panel lleva "saturacion" para cuando
+        N_eff tampoco converge. TASK_n_runs_panel_saturacion_v1.
 
         landscape_config: config que produjo este run, ya construida por
         quien arma el run — Monitor no decide calibración. Viaja serializada
@@ -172,6 +184,7 @@ class MonitorService:
             "N_eff0"           : round(self._N_eff0, 4) if self._N_eff0 is not None else None,
             "D_masa_cuencas"   : (lambda d: round(d, 4) if d is not None else None)(
                                      d_masa_cuencas(N_eff, self._N_eff0)),
+            "saturacion"       : self._saturacion,
             # Condiciones de la medición — no se excluye nada, se declara.
             # Un aislado (fila de W en cero) duplica cada atractor acoplado;
             # Δ_r puede acoplarlo en W_eff durante el run (REG v3 §4).
@@ -407,6 +420,12 @@ class MonitorService:
             n_warmup=self._n_warmup,
         )
         valor = n_eff(masas)
+        # señal de saturación — continua, sin umbral: cerca de 1, N_eff es del
+        # muestreo y no del paisaje. TASK_n_runs_panel_saturacion_v1.
+        self._saturacion = {
+            "N_eff_sobre_n_runs" : round(valor / self._n_runs, 4),
+            "orbitas_unicas_frac": round(float(np.mean(masas * self._n_runs < 1.5)), 4),
+        }
         if self._N_eff0 is None:
             self._N_eff0 = valor
         return valor

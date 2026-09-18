@@ -80,6 +80,37 @@ Los .docx son corpus, no codigo. No pertenecen al repo.
 
 ---
 
+## Cambios de comportamiento — completitud, no solo regresion
+
+*Sep 2026 — gadanin.delamor + Claude Code (Opus 5)*
+
+"N tests pasan sin cambios" verifica **correccion hacia atras**: lo que antes
+andaba sigue andando. No verifica **completitud**: que lo que cambio este
+observado por algun test o descrito por algun docstring.
+
+Regla: en todo cambio de comportamiento, preguntar
+**¿que test deberia haber cambiado con esto? ¿que docstring?**
+Si ninguno se mueve, lo cambiado no esta cubierto — se declara como hueco y
+se agrega el test que lo observa antes de dar el cambio por verificado.
+
+Aplica igual a docstrings: se revisan el del modulo y los de las funciones
+tocadas, no solo las lineas editadas.
+
+Por que (2026-09-18):
+- `5aa3504` cambio todas las W del proyecto y `7bf485b` cambio σ_prompt en
+  todo panel; la suite siguio pasando sin cambios. Nadie observaba W ni σ.
+- NodeExtractor —el servicio que decide que existe— tenia 6 tests de forma;
+  ninguno habria detectado la re-extraccion por texto ni la busqueda por
+  substring, activas desde hacia meses.
+- El docstring de modulo de monitor_service seguia diciendo "rechazos…
+  relax expulso" despues de cinco cambios en el dia.
+
+La rama que no recibe atencion no falla: queda. Crece la funcionalidad,
+el alcance del codigo, y la suite y los docstrings siguen describiendo la
+version anterior.
+
+---
+
 ## Inventario REG actual
 
 | Archivo | Contenido | Estado |

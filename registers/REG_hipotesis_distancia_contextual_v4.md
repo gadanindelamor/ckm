@@ -138,6 +138,32 @@ la W corregida, N_eff0 está en 2–4: la log opera cerca de su borde.
 
 ---
 
+## 6. Sesgo declarado
+
+*(delamor: cuando lo vemos, lo declaramos.)*
+
+**bootstrap 12 se eligió por el resultado**: era el punto donde D_ckm cruzaba
+el umbral — donde el instrumento hacía lo esperado. Medido después
+(Jaccard entre selecciones de nodos sucesivas), cae en medio del warm-up de
+caso09: 0.78–0.83, 4–5 nodos cambiando por paso; la selección se estabiliza
+recién en k ≈ 21 (0.94 sostenido).
+
+Es el *sesgo de destino en inferencia* que nombra `readme/LETTER.md`
+(Sonnet 4.6, mayo 2026): seguir la resonancia acumulada del contexto en
+lugar de la comprensión verificable. La misma forma apareció dos veces más
+en la sesión: un test de D3 que pasaba sin discriminar, y v3 leyendo como
+campo una subida de D_ckm antes de mirar los aislados. En las tres, el
+resultado esperado llegó antes que la verificación.
+
+Alternativa que no mira D_ckm: fijar nodos y A0 al **fin del warm-up** de la
+selección —Jaccard ≥ θ durante m pasos—, y declarar cuando un corpus no lo
+alcanza (WARMUP_TEXTS oscila 0.4–0.8 hasta el final). *(delamor: y más
+honesto.)* θ y m sin decidir.
+
+*Estado: declarado.*
+
+---
+
 ## Lo que este REG no establece
 
 - No establece una condición empírica nueva para caso09.

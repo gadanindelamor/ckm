@@ -59,6 +59,22 @@ class NodeExtractorService:
         self.top_k     = top_k
         self.ngram_max = ngram_max
 
+    def _vectorizer(self, **extra) -> TfidfVectorizer:
+        """
+        Único lugar donde se define cómo se reconoce un término.
+
+        accumulate() lo ajusta sobre el corpus; evaluate() usa su analizador
+        sobre el texto. Las dos ramas no pueden volver a divergir: antes
+        evaluate buscaba substring crudo ("now" dentro de "know") mientras W
+        salía de esta tokenización. TASK_extraccion_una_rama_v1.
+        """
+        return TfidfVectorizer(
+            ngram_range   = (1, self.ngram_max),
+            stop_words    = list(_STOPWORDS),
+            token_pattern = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}",
+            **extra,
+        )
+
     # ------------------------------------------------------------------
     # Modo acumulación
     # ------------------------------------------------------------------
@@ -69,7 +85,8 @@ class NodeExtractorService:
 
         Returns:
             {
-              "nodes":  [str, ...]          — top_k términos por TF-IDF
+              "nodes":  [str, ...]          — top_k por TF-IDF medio, dentro
+                                              de los top_k·3 más frecuentes
               "pairs":  {(ni, nj): count}   — pares que co-ocurren en mismo texto
               "node_freq": {str: int}       — frecuencia por nodo
             }
@@ -82,12 +99,10 @@ class NodeExtractorService:
         if not texts:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
-        vec = TfidfVectorizer(
-            ngram_range   = (1, self.ngram_max),
-            stop_words    = list(_STOPWORDS),
-            max_features  = self.top_k * 3,   # pool amplio, luego filtramos
-            token_pattern = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}",
-        )
+        # pool: los top_k·3 términos MÁS FRECUENTES del corpus; de ese pool,
+        # los top_k de mayor TF-IDF medio. La selección es "TF-IDF entre los
+        # más frecuentes", no TF-IDF sobre todo el vocabulario.
+        vec = self._vectorizer(max_features=self.top_k * 3)
 
         tfidf_matrix = vec.fit_transform(texts)
         terms        = vec.get_feature_names_out()
@@ -134,17 +149,12 @@ class NodeExtractorService:
         """
         Dado un texto y una lista de nodos conocidos, devuelve σ ∈ {+1,-1}^N.
 
-        σ_i = +1 si el nodo_i (o su raíz) aparece en el texto
-        σ_i = -1 si no
-
-        Matching: substring case-insensitive sobre el texto normalizado.
+        σ_i = +1 si el nodo_i está entre los términos que produce el
+        analizador de accumulate() sobre el texto — misma tokenización,
+        mismas stopwords, mismos bigramas. σ_i = -1 si no.
         """
-        text_lower = text.lower()
-        sigma      = np.full(len(nodes), -1.0)
-        for i, node in enumerate(nodes):
-            if node.lower() in text_lower:
-                sigma[i] = 1.0
-        return sigma
+        terminos = set(self._vectorizer().build_analyzer()(text))
+        return np.array([1.0 if n in terminos else -1.0 for n in nodes])
 
 
 # ---------------------------------------------------------------------------

@@ -39,7 +39,7 @@ sys.path.insert(0, str(REPO / "services"))
 sys.path.insert(0, str(REPO / "experiments"))
 from corpus_service import CorpusService                      # noqa: E402
 from node_extractor import NodeExtractorService, _STOPWORDS   # noqa: E402
-from corpus_informes_limpio import paginar                    # noqa: E402
+from corpus_informes_limpio import paginar, construir, _orden  # noqa: E402
 
 PAT = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}"
 PARRAFOS = REPO / "process/corpus_informes/corpus_informes.txt"
@@ -48,10 +48,33 @@ IAP = {"IAP caso09": "1784685610_caso09_run2", "IAP caso13": "1785135692_caso13"
 VENTANAS = (0, 40, 60, 100, 150, 200, 300, 500)
 
 
+def por_version():
+    """Un texto = un informe. Con los informes deduplicados (v1-v24 son
+    acumulativos), el texto de una version es LO QUE ESA VERSION AGREGO, no
+    lo que contiene. No hay otra opcion: sin deduplicar, un parrafo pesa
+    hasta 24 veces. Es la unidad mas cercana a la ingesta incremental: cada
+    texto es un incremento real del trabajo, no un corte del formato."""
+    import glob
+    inf = sorted((Path(x) for x in glob.glob(str(REPO / "docs/CKM_Informe_Trabajo*.docx"))),
+                 key=_orden)
+    if not inf:
+        return []
+    par, por = construir(inf)
+    textos, i = [], 0
+    for n in por.values():
+        if n:
+            textos.append(" ".join(par[i:i + n]))
+        i += n
+    return textos
+
+
 def corpora():
     P = [l.strip() for l in PARRAFOS.read_text(encoding="utf8").splitlines() if l.strip()]
     for w in VENTANAS:
         yield ("párrafo" if w == 0 else f"página {w}"), (P if w == 0 else paginar(P, w))
+    V = por_version()
+    if V:
+        yield "versión", V
     for nom, f in IAP.items():
         p = REPO / f"process/iap/corpus_state.json.bak_{f}"
         if p.exists():

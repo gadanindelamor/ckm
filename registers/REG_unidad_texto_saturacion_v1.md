@@ -20,6 +20,10 @@ Este REG mide la dependencia, y encuentra que la cantidad que explica el
 colapso del paisaje no es la densidad ni la tensión: es la **saturación de
 pares distintos**.
 
+Se miden tres unidades: **párrafo**, **página** (de 40 a 500 palabras) y
+**versión** (un informe = un texto). Las dos primeras son tipográficas; la
+tercera no.
+
 Instrumento: `experiments/driver_unidad_texto.py`
 (`--activacion`, `--coocurrencia`). Corpus de informes: 870 párrafos únicos,
 15.557 palabras (`experiments/corpus_informes_limpio.py`). top_k = 32
@@ -39,6 +43,7 @@ Instrumento: `experiments/driver_unidad_texto.py`
 | página 200 | 74 | 201 / 210 / 227 | 12 | 0% | 0.899 | 81 |
 | página 300 | 50 | 301 / 310 / 325 | 14 | 0% | 0.831 | 210 |
 | página 500 | 31 | 503 / 511 / 530 | 18 | 0% | 0.909 | 420 |
+| **versión** | 27 | 232 / 368 / 1027 | 15 | 0% | 0.946 | 461 |
 | IAP caso09 | 24 | 18 / 76 / 147 | 7 | 0% | **0.514** | 100 |
 | IAP caso13 | 26 | 10 / 73 / 178 | 12 | 0% | 0.780 | 47 |
 | IAP caso14 | 18 | 4 / 224 / 512 | 20 | 0% | 0.976 | 481 |
@@ -66,6 +71,7 @@ Instrumento: `experiments/driver_unidad_texto.py`
 | página 200 | 74 | 4532 | 12 | 60 | 105 | 153 | 0% | 491 | 99% | 29.1 |
 | página 300 | 50 | 4624 | 28 | 91 | 155 | 210 | 0% | 478 | 96% | 29.7 |
 | página 500 | 31 | 4598 | 28 | 153 | 231 | 253 | 0% | 495 | 100% | 29.6 |
+| **versión** | 27 | 4023 | 58 | 105 | 240 | 435 | 0% | **496** | **100%** | 25.9 |
 | IAP caso09 | 24 | 636 | 6 | 21 | 45 | 91 | 0% | **307** | **62%** | 30.9 |
 | IAP caso13 | 26 | 1834 | 6 | 66 | 136 | 171 | 0% | 434 | 88% | 58.2 |
 | IAP caso14 | 18 | 3205 | 1 | 200 | 283 | 351 | 6% | 492 | 99% | 64.9 |
@@ -101,7 +107,7 @@ canal se saturan (caso13 88%, caso14 99%) — el canal fue perdiendo la
 estructura que caso09 todavía tenía.
 
 **Candidato a criterio de unidad de texto**: la saturación de pares
-distintos. A diferencia de la tensión (§4), no premia el texto largo: crece
+distintos. A diferencia de la tensión (§5), no premia el texto largo: crece
 monótona con el largo hasta 100% y ahí deja de informar, de modo que el
 criterio es *mantenerse lejos de la saturación*, no maximizar nada.
 
@@ -109,7 +115,53 @@ criterio es *mantenerse lejos de la saturación*, no maximizar nada.
 
 ---
 
-## 4. La tensión no es criterio fuera de corpus adversariales
+## 4. La versión satura del todo — y el cero de W cambia de significado
+
+*(delamor: faltó probar por versión como unidad de texto.)*
+
+Un informe = un texto: 27 textos, la única unidad medida que **no** es
+tipográfica. Viene del ritmo del trabajo, no del formato del documento. Con
+los informes deduplicados (v1–v24 son acumulativos), el texto de una versión
+es **lo que esa versión agregó**, no lo que contiene — y no hay alternativa:
+sin deduplicar un párrafo pesaría hasta 24 veces.
+
+| | versión |
+|---|---:|
+| textos | 27 |
+| palabras p10 / med / p90 | 232 / 368 / 1027 |
+| pares distintos | **496 / 496 (100%)** |
+| pares negativos | 461 |
+| ceros de W | 27 |
+| A@1000 / N_eff@1000 | 3 / **1.00** |
+| `force_w_pos`: A / N_eff | 7 / 2.02 |
+
+**Es el corpus más saturado de todos: ocurren los 496 pares posibles.** No
+queda un solo par que no haya co-ocurrido alguna vez. Y el paisaje es el
+peor de la serie: N_eff = 1.00 — ni siquiera los dos estados espejo del
+régimen G2, sino uno solo que se lleva toda la masa.
+
+**El hallazgo del cero.** W tiene 27 ceros fuera de la diagonal. Verificado
+par por par: **los 27 son cancelaciones** (el mismo par ocurrió en los dos
+signos y se anularon); **ninguno es ausencia**. Con saturación total, el
+cero de W deja de significar "estos dos nunca co-ocurrieron" y pasa a
+significar "co-ocurrieron por igual en los dos sentidos". Dos objetos bajo
+un mismo número, y el paisaje no puede distinguirlos: para el relax, la
+ausencia y el empate perfecto son el mismo 0.
+
+*(delamor, sobre la ceguera de Fabricación: lo que la garantiza es la
+función matemática `cancelar(...)`.)* Acá la misma operación produce, en el
+otro extremo, una ceguera que no se buscó.
+
+**Para la ingesta incremental**: la versión es la unidad más cercana a un
+incremento real, y aun así cada texto llega saturado. Ingerir por versión
+significa que la primera ingesta ya trae casi todos los pares; la
+trayectoria de saturación en el tiempo empieza arriba, no abajo.
+
+*Estado: verificado (ceros por cancelación, 27/27; ausencia 0/496).*
+
+---
+
+## 5. La tensión no es criterio fuera de corpus adversariales
 
 *(delamor: [el ruteo por marcadores aplica] sólo a corpus polarizados o
 adversariales. Y: ¿qué hasta tensión? Ese no es un criterio aplicable.)*
@@ -147,14 +199,17 @@ no verificadas.*
 
 ---
 
-## 5. Lo que esto le hace a la unidad de texto
+## 6. Lo que esto le hace a la unidad de texto
 
-Ninguna de las dos unidades tipográficas es la del campo:
+Ninguna de las tres unidades probadas es la del campo:
 
 - **párrafo**: la mayoría de los textos no aporta pares (mediana 0); W se
   arma con la minoría larga.
 - **página**: satura los pares distintos y produce negativos por longitud;
   el paisaje que aparece es el de la frustración de esos negativos.
+- **versión**: satura del todo (496/496); los únicos ceros que quedan son
+  cancelaciones. No ser tipográfica no alcanza: la unidad natural del
+  trabajo no es la unidad natural de W.
 
 La unidad tendría que definirse por cantidades de W —activación por texto,
 saturación de pares distintos— y no por el formato del documento. Es
@@ -185,9 +240,9 @@ comparten unidad, y por eso tampoco comparten calibración.
 
 ## Estado
 
-- §1, §2, §3 (medición): **verificado**
-- §3 (criterio), §5: **propuesto**
-- §4: alcance **decidido**; consecuencias **declaradas**
+- §1, §2, §3 (medición), §4: **verificado**
+- §3 (criterio), §6: **propuesto**
+- §5: alcance **decidido**; consecuencias **declaradas**
 
 No cierra. Acota.
 

@@ -256,7 +256,8 @@ rama de extracción que decide qué existe antes de que haya medición.
 **c. Una palabra en un prompt decide qué existe en el campo.**
 *(delamor: el argumento es que hay una palabra en los prompts de
 configuración de los devices que resulta que está en español. Una. Y difiere
-del inglés en una letra.)* Es `trazable`, en
+del inglés en una letra — corregido por él mismo: difiere en más.)* Es
+`trazable`, en
 `TINKER_GOAL_PROMPT` de caso13 — la única palabra no inglesa de los tres
 prompts:
 
@@ -266,7 +267,8 @@ Sólo estaba en el prompt de TinkerBellucio. La cadena, verificada de punta a
 punta:
 
 ```
-una palabra ("trazable", a una letra de "traceable")
+una palabra: "trazable" vs "traceable" — 8 y 9 letras, distancia de
+edición 2 (z→c, más una e insertada)
   → TinkerBellucio escribe su mapa entero en castellano (texto 20, 1043
     palabras: el texto MÁS LARGO del corpus)
   → activa 3 de 32 nodos (markopolus, peterplam, real — dos nombres de

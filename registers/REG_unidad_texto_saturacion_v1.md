@@ -207,13 +207,53 @@ Condiciones previas que fija delamor, antes de cualquier ingesta:
 1. **Revisión por temas personales.** Precede a todo lo técnico.
 2. **Escritura errática** — las unidades tipográficas son todavía menos
    aplicables ahí que en los informes.
-3. **Inglés y español mezclados.** Las stopwords ya son la unión es+en
-   (703), pero eso no cubre lo otro: el mismo concepto en dos idiomas son
-   dos términos distintos para TF-IDF, así que compiten entre sí por entrar
-   al top_k y su co-ocurrencia se parte en dos. Es una forma de Babel dentro
-   del extractor, y no está medida.
+3. **Inglés y español mezclados** — medido, ver §4.3.
 
-*Estado: **declarado**, no medido.*
+*Estado: **declarado**, no medido (salvo §4.3).*
+
+### 4.3 El idioma mezclado — medido
+
+*(delamor: el idioma es un tema. Mezclado, digo.)* Dentro del mismo texto,
+no dos corpus distintos. Lo que sigue ya está ocurriendo, no es prospectivo.
+
+**a. La lista unión se lleva términos del dominio, en los dos sentidos.**
+`_STOPWORDS` es la unión NLTK-es + NLTK-en + sklearn-en. Cada lista aporta
+sus propios falsos positivos:
+
+| término | por qué se quita | qué es en CKM | ocurrencias |
+|---|---|---|---:|
+| `estado` | NLTK-es lo lista (participio de *estar*) | σ, el estado del campo | 84 en informes, 3 en caso13 |
+| `estados` | ídem | ídem | 16 en informes |
+| `system` | está en sklearn ENGLISH_STOP_WORDS | término de dominio | 0 en caso13 |
+| `sentido` | NLTK-es | dirección / significado | 18 en informes |
+
+`estado` es el caso claro: es el nombre del objeto central del modelo y el
+extractor no lo ve. Ninguna de las dos listas fue hecha para prosa técnica,
+y la unión suma los dos errores en vez de compensarlos.
+
+**b. En texto mezclado el concepto se parte — y se parte asimétrico.**
+caso13 es el único corpus mezclado de los medidos (172 de 2390 tokens, 7.2%,
+se quitan por razón castellana):
+
+| concepto | castellano | inglés | total real | lo que ve W |
+|---|---|---|---:|---|
+| estado / state | `estado` 3 — **quitado como stopword** | `state` 7 — **nodo** | 10 | 7, y sólo del lado inglés |
+| señal / signal | `señal` 0 | `signal` 5 | 5 | 5 |
+| sistema / system | `sistema` 2 | `system` 0 — sería stopword | 2 | 2 |
+| error | 2 | 2 | 4 | 4 sumados (misma grafía) |
+
+No es sólo que TF-IDF trate dos idiomas como dos términos que compiten por
+el top_k. Es que **las dos listas no borran lo mismo**, así que una mitad
+del concepto se elimina y la otra sobrevive: el nodo `state` de caso13 lleva
+7 de 10 ocurrencias reales del concepto, y el desbalance no queda declarado
+en ningún lado. `error` muestra el otro extremo: la grafía compartida los
+fusiona sin que nadie lo decida.
+
+**Consecuencia**: en un corpus mezclado, la frecuencia sobre la que se
+selecciona el top_k no es la frecuencia del concepto. Es otra cosa más de la
+rama de extracción que decide qué existe antes de que haya medición.
+
+*Estado: **verificado** (a y b); no corregido.*
 
 ---
 

@@ -332,6 +332,78 @@ Consecuencias que quedan registradas, no resueltas:
 *Estado: alcance **decidido** (delamor); consecuencias 1 y 2 **declaradas**,
 no verificadas.*
 
+### 5.1 Autor único — la tensión no está debilitada, no tiene objeto
+
+*(delamor: el corpus de CKM, los informes de trabajo, son reportes con
+lenguaje formal a científico en casos. ¿Dónde va a existir tensión, si los
+escribe el mismo device siempre?)*
+
+Cierra antes que el mecanismo. La tensión adversarial necesita al menos dos
+posiciones que se opongan; un informe formal de un mismo autor no tiene
+dónde alojarlas. Los 461 pares negativos de la unidad versión no son tensión
+débil ni tensión mal medida: **no hay objeto**.
+
+| corpus | posiciones | ¿existe tensión? | negativos medidos |
+|---|---|---|---:|
+| caso09 — debate gun control | dos, por diseño | **sí** | 100 |
+| informes CKM | una, un registro | **no** | 461 |
+| canal IAP — coordinación | varias voces, ninguna opuesta | **no** | 47–481 |
+
+Los que más negativos tienen son los que no tienen tensión: la relación es
+inversa a la que el número sugiere.
+
+Da un criterio anterior y más barato que la saturación: **pluralidad de
+posición**. Si el corpus no fue elicitado con posiciones que se oponen, el
+ruteo a negativos no tiene referente y W debería ser W_pos. No hay que medir
+para saberlo — se sabe al declarar el corpus.
+
+### 5.2 Néel es quien puede decir "acá no pasa nada"
+
+*(delamor: va a ser Néel. Néel es quien va a decir acá no pasa nada.)*
+
+Hoy **no hay estado nulo**. `_has_opposition(text)` siempre encuentra algo,
+porque siempre hay un "pero" en algún texto: produce negativos en autor
+único, en coordinación y en debate real, sin distinguirlos. Un procedimiento
+que no puede dar negativo no mide — confirma.
+
+Consecuencia hacia atrás: **ninguna W_mixta del proyecto fue verificada.**
+Todas se construyeron por un procedimiento sin nulo, así que ninguna pudo
+haber salido W_pos. No están mal medidas: están sin contrastar.
+
+Néel (DEFS §15) y SALAMANCA (§16) son estructurales — los negativos salen de
+la forma de W_pos, no de que alguien haya escrito "pero" — y tienen dos
+salidas posibles. Lo medido hoy les da además condición de referencia, que
+no tenían: caso09 debe dar estructura; informes y canal IAP, nada. Si dan lo
+contrario, el criterio está mal. Y §3 agrega una precondición: **un W
+saturado no tiene ceros, y sin ceros no hay cut bajo que separar** — caso09
+es el único corpus no saturado de los medidos.
+
+### 5.3 El drift: contar "pero" en vez de medir tensión
+
+*(delamor: de allí el drift de contar ":pero:" en vez de medir tensión.)*
+
+Es el nombre exacto y no fue una decisión de nadie. `_has_opposition(text)`
+cuenta un marcador léxico; el panel lo llama "pares negativos"; el PAPER lo
+llama "tensión". La sustitución ocurrió una vez y después cada capa leyó el
+nombre de la capa anterior.
+
+La misma forma aparece cuatro veces en este REG, siempre con el proxy del
+lado medible:
+
+| se quiso medir | se midió | dónde |
+|---|---|---|
+| tensión | ocurrencias de "pero" | §5 |
+| unidad del campo | unidad tipográfica (párrafo, página) | §1–§3 |
+| frecuencia del concepto | frecuencia del token | §4.3 |
+| lo que un device aportó | lo que escribió en el idioma de los nodos | §4.3c |
+
+En los cuatro, el proxy devuelve un número siempre y el objeto no. Por eso
+el drift no se nota: nada falla, todo sigue dando resultado. Lo que lo hace
+visible no es un test — es tener un corpus donde la respuesta correcta es
+*nada*.
+
+*Estado: §5.1 **decidido** (delamor); §5.2 y §5.3 **declarados**.*
+
 ---
 
 ## 6. Lo que esto le hace a la unidad de texto
@@ -379,8 +451,9 @@ comparten unidad, y por eso tampoco comparten calibración.
 - §4.2: **declarado**
 - §3 (criterio), §6: **propuesto**
 - §5: alcance **decidido**; consecuencias **declaradas**
+- §5.1: **decidido** (delamor) · §5.2, §5.3: **declarados**
 
-No cierra. Acota.
+No cierra. Acota, y nombra el drift.
 
 ---
 

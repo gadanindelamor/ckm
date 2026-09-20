@@ -253,7 +253,44 @@ fusiona sin que nadie lo decida.
 selecciona el top_k no es la frecuencia del concepto. Es otra cosa más de la
 rama de extracción que decide qué existe antes de que haya medición.
 
-*Estado: **verificado** (a y b); no corregido.*
+**c. Una palabra en un prompt decide qué existe en el campo.**
+*(delamor: el argumento es que hay una palabra en los prompts de
+configuración de los devices que resulta que está en español. Una. Y difiere
+del inglés en una letra.)* Es `trazable`, en
+`TINKER_GOAL_PROMPT` de caso13 — la única palabra no inglesa de los tres
+prompts:
+
+> `- Publish your map in the channel. Be precise. Be trazable.`
+
+Sólo estaba en el prompt de TinkerBellucio. La cadena, verificada de punta a
+punta:
+
+```
+una palabra ("trazable", a una letra de "traceable")
+  → TinkerBellucio escribe su mapa entero en castellano (texto 20, 1043
+    palabras: el texto MÁS LARGO del corpus)
+  → activa 3 de 32 nodos (markopolus, peterplam, real — dos nombres de
+    device y un cognado que se escribe igual en los dos idiomas)
+  → aporta 3 pares de 496
+  → W no contiene el mapa: contiene la conversación EN INGLÉS sobre el mapa
+    (texto 24, 457 palabras, 11 nodos, 55 pares)
+```
+
+Caso14 aisló la variable: `trazable` → `traceable`, único cambio de texto, y
+desapareció todo el castellano (n = 2).
+
+Esto invierte §4.1. Ahí el texto más largo barría el campo él solo (406 de
+496 pares); acá el más largo aporta 3. La diferencia entera es el idioma —
+no el tamaño, no el formato, no el contenido. El device que puso la
+sustancia se cayó del campo, y los que comentaron lo construyeron.
+
+*Estado: **verificado** (a, b y c); no corregido.*
+
+*(Code, Opus 5: hay dos hallazgos acá y no son el mismo. Que una palabra
+cambie el idioma de salida ya estaba registrado en caso14. Lo nuevo es la
+segunda mitad: que ese cambio de idioma determina qué entra a W. Un
+parámetro de configuración de un device decide qué existe en el campo, sin
+pasar por ninguna decisión del modelo.)*
 
 ---
 

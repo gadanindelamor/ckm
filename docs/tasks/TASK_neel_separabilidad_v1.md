@@ -149,3 +149,77 @@ Si los saturados no dan partición, hay que distinguir "no hay estructura" de
   pesos conservando el grado, que es más barato y no necesita los textos.
 - Qué hacer con los candidatos a pares negativos que el pico identifique —
   esta TASK los deja listados, no los incorpora a W.
+
+
+---
+
+## Resultado — primera corrida (caso09, sep 2026)
+
+Instrumento: `experiments/driver_neel_salamanca.py`.
+
+### R0. Error en el pre-registro (Code, Opus 5)
+
+`caso09` **no es el debate de gun control**: es el canal IAP (caso 0.9,
+heterogeneidad de proveedor). Los nodos lo dicen — `claudesonnet_`,
+`groqllama_`, `ava`, `cartographer`, `bell`, `story`. El corpus adversarial
+real es **fourforums** (`process/experiments/`, once REGs). La condición de
+referencia declarada en esta TASK **no tenía ningún corpus adversarial**, y
+el ✓ que imprimió el driver comparó contra una expectativa mal asignada.
+
+### R1. SALAMANCA encuentra partición, y es real
+
+| | valor |
+|---|---:|
+| ncut observado | **0.633** |
+| nulo: media / p10 (20 barajados) | 0.873 / 0.840 |
+| p | **< 0.001** |
+
+- **T0** — `claudesonnet_` `groqllama_` `joined` `channel` `task` `topic` `conversation`
+- **T1** — `ava` `cartographer` `bell` `eyes` `paper` `story` `memory`
+
+Es el corte **protocolo/identidad contra contenido**, el mismo de
+REG_unidad_texto §4.3. Estructura hay.
+
+### R2. Néel: la frontera tiene profundidad cero
+
+Leído por la **cola**, no por la media *(delamor: no soy adepto a los
+promedios, ni a las distribuciones normales inexistentes; habito las
+colas)*. Discriminante entre cola real y cola de ruido: **persistencia** —
+una cola de ruido se rebaraja con la semilla.
+
+| β | de los 20 pares menos correlacionados, cuántos persisten en 3 semillas | por azar |
+|---:|---:|---:|
+| 0.244 | **1** (interno, `joined channel — language`) | 0.03 |
+| 0.122 | **0** | 0.03 |
+| 0.068 | **0** | 0.03 |
+
+La cola es ruido. En frío, interno y cruzado son ambos +0.999: W_pos no
+tiene frustración, así que todo se alinea, también a través de la frontera.
+
+### R3. Modularidad no es adversarialidad
+
+*(delamor)*
+
+Ninguno de los dos criterios dice esto solo:
+
+- SALAMANCA: **hay dos módulos**.
+- Néel: **esa frontera no tiene profundidad**.
+
+Módulos sin frontera. **SALAMANCA sola habría admitido W_mixta en un canal
+de coordinación** — que es el error que esta TASK venía a evitar.
+
+**Corrección a DEFS §16**: dice *"detecta si W_pos tiene estructura
+adversarial"*. Lo que detecta es **modularidad**. Una palabra, dos objetos —
+Babel, y es la razón de que el criterio admita de más. La admisión requiere
+los dos pasos, no el primero.
+
+Y salva a §15 de lo que Code le había achacado en el camino ("Néel no puede
+funcionar sobre W_pos"): **Néel funcionó** — devolvió el vacío, que es
+aquello para lo que delamor lo eligió. No hace falta frustración para que
+haya señal; alcanza con que dos módulos se alineen internamente antes que
+entre sí.
+
+### Pendiente
+
+Control positivo con **fourforums**. Si ahí tampoco hay cola persistente, el
+que no ve es el instrumento.

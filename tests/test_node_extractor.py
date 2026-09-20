@@ -104,21 +104,34 @@ def test_top_k_nodos_y_pool_por_frecuencia():
 # TASK_desempate_seleccion_nodos_v1. Empate = indecidible con el propio
 # criterio. Con precedente: conserva. Sin precedente (bootstrap): afuera.
 
-def _empate_en_borde(textos, top_k):
+# El caso tiene que ser uno donde la regla DECIDA: más empatados que lugares
+# libres. Con menos empatados que lugares, entran todos y no hay nada que
+# decidir. Medido con la lista de stopwords vigente: k = 8 (28 arriba,
+# 9 empatados, 4 libres).
+K_EMPATE = 8
+
+
+def _borde(textos, top_k=32):
+    """(arriba del corte, empatados en el corte, lugares libres)."""
     ex = NodeExtractorService(top_k=top_k)
     sc = np.asarray(ex._vectorizer(max_features=top_k * 3)
                     .fit_transform(textos).mean(axis=0)).ravel()
-    o = np.sort(sc)[::-1]
-    return len(sc) > top_k and np.isclose(o[top_k - 1], o[top_k], rtol=0, atol=1e-12)
+    if len(sc) <= top_k:
+        return 0, 0, top_k
+    corte = np.sort(sc)[::-1][top_k - 1]
+    arriba = int((sc - corte > 1e-12).sum())
+    empatados = int((np.abs(sc - corte) <= 1e-12).sum())
+    return arriba, empatados, top_k - arriba
 
 
-def test_caso09_tiene_empate_en_el_borde():
-    assert _empate_en_borde(_caso09()[:10], 32)       # medido: k = 4–10 y 18
+def test_caso09_tiene_empate_que_decide():
+    arriba, empatados, libres = _borde(_caso09()[:K_EMPATE])
+    assert empatados > libres > 0
 
 
 def test_bootstrap_empatados_quedan_afuera():
     ex = NodeExtractorService(top_k=32)
-    r = ex.accumulate(_caso09()[:10])
+    r = ex.accumulate(_caso09()[:K_EMPATE])
     reg = {d["termino"]: d for d in r["registro_borde"]}
     empatados = [t for t, d in reg.items() if abs(d["distancia_al_corte"]) <= 1e-12]
     assert empatados and not set(empatados) & set(r["nodes"])
@@ -127,7 +140,7 @@ def test_bootstrap_empatados_quedan_afuera():
 
 def test_con_precedente_empatados_conservan():
     ex = NodeExtractorService(top_k=32)
-    textos = _caso09()[:10]
+    textos = _caso09()[:K_EMPATE]
     reg = ex.accumulate(textos)["registro_borde"]
     empatados = [d["termino"] for d in reg if abs(d["distancia_al_corte"]) <= 1e-12]
     previos = empatados[: len(empatados) // 2]
@@ -210,6 +223,8 @@ def test_minusculas_acentos_y_minimo_tres_letras():
 
 
 def test_evaluate_no_activa_por_substring():
+    """Términos de contenido: los de antes ("one", "now", "here", "someone")
+    pasaron a ser stopwords con la lista ampliada."""
     ex = NodeExtractorService()
-    sig = ex.evaluate("someone knows where", ["one", "now", "here", "someone"])
-    assert list(sig) == [-1.0, -1.0, -1.0, 1.0]
+    sig = ex.evaluate("gunfire and weapons downtown", ["gun", "arm", "gunfire"])
+    assert list(sig) == [-1.0, -1.0, 1.0]

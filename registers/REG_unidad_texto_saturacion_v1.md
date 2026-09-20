@@ -159,6 +159,62 @@ trayectoria de saturación en el tiempo empieza arriba, no abajo.
 
 *Estado: verificado (ceros por cancelación, 27/27; ausencia 0/496).*
 
+### 4.1 Control — no es el formato incremental, es el tamaño
+
+*(delamor: es por el formato de versión incremental, imagino.)* Se probó.
+Control: **mismos tamaños, párrafos repartidos al azar** — rompe la
+coherencia de versión y conserva el formato de tamaños.
+
+| corpus | txt | pal med | distintos | neg | ceros | N_eff |
+|---|---:|---:|---:|---:|---:|---:|
+| versión (real) | 27 | 368 | 496/496 | 461 | **27** | 1.00 |
+| versión barajada seed 0 | 27 | 390 | 496/496 | 496 | 0 | 1.00 |
+| versión barajada seed 1 | 27 | 374 | 496/496 | 494 | 2 | 1.01 |
+| versión barajada seed 2 | 27 | 371 | 496/496 | 496 | 0 | 1.00 |
+| página 576 (secuencial) | 27 | 584 | 478/496 | 449 | 34 | 1.00 |
+
+Destruir la coherencia de versión **no baja la saturación**. Si el formato
+incremental fuera la causa, barajar tendría que moverla.
+
+Lo que la produce es el tamaño, y sobre todo su **heterogeneidad**: los
+tamaños de versión son muy desparejos (p10 232, p90 1027). Acumulando por
+tamaño, **un solo texto** (1659 palabras, 11% del corpus) aporta **406 de
+496** pares distintos; tres aportan 441; cinco, 492. Un informe largo barre
+el campo él solo. Por eso `página 576` —textos parejos y más grandes en
+mediana— satura *menos* (478): no tiene ese texto que barre.
+
+**Dónde sí aparece la versión**: en los ceros. Los 27 por cancelación son
+del corpus real; barajado quedan 0–2 y los 496 pares pasan a ser todos
+negativos. La coherencia de versión es lo único que sostiene que algunos
+pares aparezcan en los dos sentidos en cantidades iguales.
+
+*(Code, Opus 5: tenía "versión" y "tamaño" como un solo objeto; son dos.)*
+
+*Estado: verificado, 3 seeds de barajado.*
+
+### 4.2 Alcance del corpus
+
+*(delamor: no es un corpus representativo del dominio, de Devices.)*
+
+Los informes son prosa técnica de un autor, revisada. El dominio del
+proyecto es otro: **intercambio entre devices**. Lo medido acá vale como
+prueba de volumen y como medición del instrumento, no como caracterización
+del dominio.
+
+Los **chats** serían el corpus del dominio, y no están disponibles todavía.
+Condiciones previas que fija delamor, antes de cualquier ingesta:
+
+1. **Revisión por temas personales.** Precede a todo lo técnico.
+2. **Escritura errática** — las unidades tipográficas son todavía menos
+   aplicables ahí que en los informes.
+3. **Inglés y español mezclados.** Las stopwords ya son la unión es+en
+   (703), pero eso no cubre lo otro: el mismo concepto en dos idiomas son
+   dos términos distintos para TF-IDF, así que compiten entre sí por entrar
+   al top_k y su co-ocurrencia se parte en dos. Es una forma de Babel dentro
+   del extractor, y no está medida.
+
+*Estado: **declarado**, no medido.*
+
 ---
 
 ## 5. La tensión no es criterio fuera de corpus adversariales
@@ -240,7 +296,8 @@ comparten unidad, y por eso tampoco comparten calibración.
 
 ## Estado
 
-- §1, §2, §3 (medición), §4: **verificado**
+- §1, §2, §3 (medición), §4, §4.1: **verificado**
+- §4.2: **declarado**
 - §3 (criterio), §6: **propuesto**
 - §5: alcance **decidido**; consecuencias **declaradas**
 

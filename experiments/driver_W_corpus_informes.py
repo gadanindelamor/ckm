@@ -25,8 +25,28 @@ Medido (Sep 2026, top_k=32, stopwords 703, rebuild suspendido):
     ocurrencias de "pero" (25 vs 19). Tensión estructural y longitud del
     texto quedan confundidas.
 
+Barridos (--barrido):
+  - top_k 32/64/128/256 en las dos unidades: van en sentidos opuestos. Con
+    párrafos, subir top_k mejora cobertura (textos sin ningún nodo 34% → 4%)
+    y el paisaje sigue en N_eff = 2. Con páginas, llena cada texto de nodos
+    (51.9 de 256 activos) y hace explotar los negativos (9656): N_eff cae de
+    9.52 a 2.01.
+  - tamaño de página con top_k=64: sólo la de 300 palabras da paisaje
+    (N_eff 6.68); 40, 60, 100 y 150 colapsan en 2.00 aunque tengan hasta 249
+    pares negativos. No es gradual.
+  - contrafáctico force_w_pos (misma W sin traducir marcadores a negativos):
+    N_eff = 2.00 EXACTO con top_k 32 y 64. Todo el paisaje de este corpus
+    viene de la frustración que introducen los negativos, y los negativos
+    vienen del largo del texto:
+        largo → chance de contener un marcador → pares negativos →
+        frustración → N_eff.
+    En este corpus N_eff mide densidad de marcadores, no estructura
+    conceptual. Néel (DEFS §15) sería la forma de elicitar pares sin que la
+    longitud los produzca.
+
 Uso:
     python experiments/driver_W_corpus_informes.py [--top-k 32] [--json out.json]
+    python experiments/driver_W_corpus_informes.py --barrido
 """
 
 import argparse
@@ -76,11 +96,52 @@ def medir(path: Path, etiqueta: str, top_k: int, n_runs=(1000, 5000)) -> dict:
     return fila
 
 
+def barrido():
+    """top_k por unidad, tamaño de página con top_k=64, y el contrafáctico."""
+    sys.path.insert(0, str(REPO / "experiments"))
+    from corpus_informes_limpio import paginar
+
+    print("== top_k por unidad")
+    for etq, p in UNIDADES.items():
+        for k in (32, 64, 128, 256):
+            f = medir(p, etq, k, n_runs=(1000,))
+            print(f"{etq:11s} top_k {k:4d} | dens {f['densidad']:.3f} | neg {f['pares_negativos']:5d} "
+                  f"| A {f['A_1000']:4d} | N_eff {f['N_eff_1000']:6.2f}")
+
+    print("\n== tamaño de página, top_k=64")
+    parrafos = [l.strip() for l in (CORPUS / "corpus_informes.txt").read_text(encoding="utf8").splitlines() if l.strip()]
+    for w in (0, 40, 60, 100, 150, 300):
+        textos = parrafos if w == 0 else paginar(parrafos, w)
+        tmp = Path(tempfile.mktemp(suffix=".txt"))
+        tmp.write_text("\n".join(textos), encoding="utf8")
+        f = medir(tmp, "párrafo" if w == 0 else f"página {w}", 64, n_runs=(1000,))
+        print(f"{f['unidad']:11s} | textos {f['textos']:4d} | c/marcador {f['frac_con_marcador']:5.0%} "
+              f"| neg {f['pares_negativos']:5d} | N_eff {f['N_eff_1000']:6.2f}")
+
+    print("\n== contrafáctico force_w_pos (página 300)")
+    textos = [l.strip() for l in (UNIDADES["página 300"]).read_text(encoding="utf8").splitlines() if l.strip()]
+    for k in (32, 64):
+        for forzada in (False, True):
+            c = CorpusService(storage_path=tempfile.mktemp(suffix=".json"), min_texts=len(textos),
+                              top_k=k, rebuild_suspendido=True, force_w_pos=forzada)
+            c.ingest(textos)
+            W = c.get_W()
+            ii, jj = np.triu_indices(len(W), 1)
+            neg = int((W[ii, jj] < 0).sum())
+            ne = n_eff(basin_masses(W, n_runs=1000, seed=0))
+            print(f"top_k {k} | {'W_pos forzada' if forzada else 'natural':14s} | neg {neg:5d} | N_eff {ne:6.2f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--barrido", action="store_true", help="top_k, tamaño de página y contrafáctico")
     ap.add_argument("--top-k", type=int, default=32)
     ap.add_argument("--json")
     args = ap.parse_args()
+
+    if args.barrido:
+        barrido()
+        return
 
     filas = [medir(p, etq, args.top_k) for etq, p in UNIDADES.items() if p.exists()]
     if not filas:

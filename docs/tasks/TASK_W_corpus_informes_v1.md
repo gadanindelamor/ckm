@@ -55,6 +55,41 @@ palabras (una carilla a espacio simple), sin cortar ninguno.
   perspectiva, escenario). `apos` era un artefacto del extractor de Code
   (`&apos;` sin decodificar), corregido.
 
+### Barridos (`driver_W_corpus_informes.py --barrido`)
+
+**top_k, por unidad** — van en sentidos opuestos:
+
+| unidad | top_k | densidad | neg | N_eff@1000 |
+|---|---:|---:|---:|---:|
+| párrafo | 32 / 64 / 128 / 256 | 0.766 / 0.520 / 0.310 / 0.179 | 1 / 32 / 144 / 372 | 2.00 / 2.00 / 2.00 / 3.02 |
+| página 300 | 32 / 64 / 128 / 256 | 0.831 / 0.778 / 0.713 / 0.621 | 210 / 731 / 2984 / 9656 | 9.52 / 6.68 / 2.25 / 2.01 |
+
+Con párrafos, subir top_k mejora la cobertura (textos sin ningún nodo 34% → 4%) y el paisaje no cambia. Con páginas, llena cada texto de nodos (51.9 activos de 256) y hace explotar los negativos: el paisaje colapsa.
+
+**Tamaño de página, top_k = 64** — no es gradual: sólo la de 300 da paisaje.
+
+| unidad | textos | % textos con marcador | neg | N_eff@1000 |
+|---|---:|---:|---:|---:|
+| párrafo | 870 | 4% | 32 | 2.00 |
+| página 40 / 60 / 100 / 150 | 300 / 217 / 139 / 95 | 11% / 16% / 22% / 30% | 89 / 112 / 151 / 249 | 2.00 en las cuatro |
+| página 300 | 50 | 50% | 731 | 6.68 |
+
+**Contrafáctico `force_w_pos`** (misma W sin traducir marcadores a negativos):
+
+| top_k | W | neg | N_eff@1000 |
+|---:|---|---:|---:|
+| 32 | natural / forzada | 210 / 0 | 9.52 / **2.00** |
+| 64 | natural / forzada | 731 / 0 | 6.68 / **2.00** |
+
+**Mecanismo cerrado:** sin negativos, N_eff = 2.00 exacto. Todo el paisaje de este corpus viene de la frustración que introducen los negativos, y los negativos vienen del largo del texto:
+
+```
+largo del texto → chance de contener un marcador → pares negativos →
+frustración → N_eff
+```
+
+En este corpus **N_eff mide densidad de marcadores, no estructura conceptual.** Es lo que Néel (DEFS §15) vendría a resolver: elicitar los pares sin que la longitud los produzca.
+
 ## Qué no hace
 
 - No conecta nada al canal. No decide bootstrap ni umbral.

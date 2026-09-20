@@ -105,7 +105,8 @@ MIN_TEXTS_CANAL = 3
 MAX_CICLOS = 10   # iap_chatroom/ckm_monitor.py
 
 
-def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL, panel_jsonl=None):
+def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL, panel_jsonl=None,
+           n_runs=None, seed=0):
     sys.path.insert(0, str(services))
     from corpus_service import CorpusService
     from monitor_service import MonitorService
@@ -117,7 +118,10 @@ def replay(services, sin_rebuild=False, bootstrap=MIN_TEXTS_CANAL, panel_jsonl=N
     corpus = CorpusService(storage_path=str(tmp / "c.json"),
                            min_texts=bootstrap if sin_rebuild else MIN_TEXTS_CANAL,
                            top_k=32, monitor_jsonl_path=jsonl)
-    monitor = MonitorService(corpus, storage_path=jsonl)
+    kw = {"count_seed": seed}
+    if n_runs is not None:
+        kw["n_runs_attractors"] = n_runs
+    monitor = MonitorService(corpus, storage_path=jsonl, **kw)
 
     filas, prev = [], None
     d_hist, ciclos_sin_rebuild = [], 0
@@ -179,6 +183,8 @@ if __name__ == "__main__":
     ap.add_argument("--ref", help="commit cuyos services/ usar (default: árbol actual)")
     ap.add_argument("--json", help="guardar filas en este archivo")
     ap.add_argument("--panel-jsonl", help="conservar el JSONL de paneles de Monitor en este archivo")
+    ap.add_argument("--n-runs", type=int, help="muestras de sigma_0 (default: el de MonitorService)")
+    ap.add_argument("--seed", type=int, default=0, help="count_seed del muestreo")
     ap.add_argument("--sin-rebuild", action="store_true",
                     help="W una sola vez en el bootstrap; la señal se registra, no se ejecuta")
     ap.add_argument("--bootstrap", type=int, default=MIN_TEXTS_CANAL,
@@ -187,7 +193,7 @@ if __name__ == "__main__":
 
     t0 = time.time()
     filas = replay(_services_dir(args.ref), args.sin_rebuild, args.bootstrap,
-                   args.panel_jsonl)
+                   args.panel_jsonl, args.n_runs, args.seed)
     imprimir(filas)
     modo = f"sin rebuild, bootstrap={args.bootstrap}" if args.sin_rebuild else "rebuild por mensaje"
     print(f"services: {args.ref or 'árbol actual'} | {modo} | {time.time() - t0:.1f}s")

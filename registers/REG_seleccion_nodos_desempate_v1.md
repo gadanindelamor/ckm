@@ -155,6 +155,41 @@ Corrección al PAPER: pendiente, al cierre del proceso de ajustes.
 
 ---
 
+## 8. Addendum — estabilidad bajo n_runs y seed *(sep 2026)*
+
+Con el marco de este REG ya aplicado (extracción corregida, regla de
+desempate, W congelada), caso09 medido variando **n_runs** y **count_seed**:
+
+| bootstrap | n_runs | A0 (seed 0/1/2) | D_ckm rango (seed 0/1/2) | N_eff0 (seed 0/1/2) |
+|---:|---:|---|---|---|
+| 12 | 50 | 9 / 12 / 11 | −0.44..0 / **0..0.25** / 0..0.27 | 2.77 / 4.39 / 4.14 |
+| 12 | 1000 | 23 / 27 / 25 | −0.43..0 / −0.22..0.19 / −0.36..0 | 3.97 / 4.28 / 3.91 |
+| 16 | 50 | 4 / 5 / 8 | **−1.00..0** / −1.00..0 / −0.50..0 | 2.85 / 2.31 / 3.08 |
+| 16 | 1000 | 25 / 21 / 24 | **0..0.24** / 0..0.19 / 0..0.29 | 3.00 / 3.02 / 2.98 |
+| 21 | 50 | 2 / 2 / 3 | 0..0 / 0..0 / 0..0.33 | 1.81 / 1.97 / 2.06 |
+| 21 | 1000 | 3 / 3 / 4 | −0.33..0.33 / 0..0 / −0.50..0 | 2.00 / 2.01 / 2.01 |
+
+- **El signo de D_ckm depende del muestreo.** bootstrap 12 con n_runs=50:
+  seed 0 → hasta −0.44 (expande), seed 1 → hasta +0.25 (degrada). bootstrap
+  16: cambiar n_runs de 50 a 1000 invierte el signo (−1.00..0 → 0..0.24).
+  Misma W, mismos textos.
+- **N_eff es estable entre seeds con n_runs = 1000**: ±1% (bootstrap 16 y
+  21), ±5% (bootstrap 12). Con 50 runs varía hasta ±40%.
+- **A0 crece con n_runs** (bootstrap 16: 4–8 → 21–25). A0 y A_actual crecen
+  a ritmos distintos: de ahí el cambio de signo.
+
+Lo que REG_orbitas había medido sobre W sola —el conteo no converge, la masa
+sí— queda medido acá en condición de operación, con Δ_r acumulando: **D_ckm
+no es estable ni en signo bajo variación de seed o n_runs; N_eff sí, con
+n_runs suficiente.**
+
+Instrumento: `experiments/replay_caso09_camino_vivo.py --sin-rebuild
+--bootstrap K --n-runs R --seed S`.
+
+*Estado: verificado, una corrida por celda (18 celdas).*
+
+---
+
 ## Abierto
 
 - **Volumen** *(delamor: otro orden de magnitud de textos en tests y
@@ -170,7 +205,7 @@ Corrección al PAPER: pendiente, al cierre del proceso de ajustes.
 
 ## Estado
 
-- §1, §3, §4, §5, §6: **verificado**
+- §1, §3, §4, §5, §6, §8: **verificado**
 - §2: regla **decidida** (delamor), implementada
 - §7: **declarado**
 

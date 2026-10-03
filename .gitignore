@@ -58,3 +58,6 @@ Thumbs.db
 
 # pid files de tooling operativo
 *.pid
+
+# Replay de sesiones — contiene conversación personal (TASK_replay_sesion_trust_v2_code_paso1_v3)
+process/replay/_private/

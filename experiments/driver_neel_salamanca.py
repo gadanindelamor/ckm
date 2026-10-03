@@ -210,12 +210,17 @@ def main():
     ap.add_argument("--sin-neel", action="store_true")
     ap.add_argument("--periodos", action="store_true", help="F1: distribucion de periodos")
     ap.add_argument("--adaptador", action="store_true", help="F2: adaptador y control")
+    ap.add_argument("--salamanca", action="store_true", help="S1: SALAMANCA desde W")
+    ap.add_argument("--solo", help="corpus separados por coma")
     a = ap.parse_args()
     if a.periodos:
         paso_F1(a.top_k)
         return
     if a.adaptador:
         paso_F2(a.top_k)
+        return
+    if a.salamanca:
+        paso_S1(a.top_k, a.nulos, solo=(a.solo.split(",") if a.solo else None))
         return
     for nom in (CORPORA if a.todos else [a.corpus]):
         correr(nom, a.top_k, a.nulos, a.seed, not a.sin_neel)
@@ -345,6 +350,196 @@ def paso_F2(top_k=32, n_runs=1000, seed=0):
         print(f"  {nom:20s} claves {len(sin):3d} · max|dif| vs analytics {d:.2e} · "
               f"corr media sin peso {mia[ii, jj].mean():+.3f} · con peso {mc[ii, jj].mean():+.3f} "
               f"· pares con corr>0.999 con peso: {int((mc[ii, jj] > 0.999).sum())}/{len(ii)}")
+
+
+# ── S1 — SALAMANCA desde W (TASK_salamanca_neel_coercividad_v4 §13-§14) ──────
+# Metodo declarado ANTES de correr, en la TASK. El nulo vuelve a particionar
+# cada W barajada con el mismo metodo y el mismo k: reusar la particion
+# observada mediria la particion, no la estructura.
+
+K_RANGO   = range(2, 9)
+N_NULOS   = 20
+SAT_MAX   = 0.98     # (a) W saturada: sin ceros no hay corte barato
+COLA_MAX  = 3.0      # (b) nulo inestable: p90 > 3 * mediana
+P_CORTE   = 0.05
+# Correccion por comparaciones multiples: se prueban 7 valores de k por
+# corpus, asi que el umbral por k es 0.05/7. Con n barajados la resolucion
+# de p es 1/n: con 100 no se puede resolver 0.0071 y hace falta n=1000.
+N_K       = 7
+P_BONF    = P_CORTE / N_K
+
+
+def particion_k(W: np.ndarray, k: int, seed: int = 0):
+    """Espectral: k primeros autovectores del laplaciano normalizado, filas
+    normalizadas, k-means determinista. None si algun nodo tiene grado 0."""
+    A = np.abs(W).copy()
+    np.fill_diagonal(A, 0.0)
+    d = A.sum(axis=1)
+    if (d <= 0).any() or len(A) < k:
+        return None
+    dm = 1.0 / np.sqrt(d)
+    L = np.eye(len(A)) - (dm[:, None] * A * dm[None, :])
+    _, v = np.linalg.eigh(L)
+    X = v[:, :k]
+    nrm = np.linalg.norm(X, axis=1, keepdims=True)
+    X = X / np.where(nrm > 0, nrm, 1.0)
+    rng = np.random.default_rng(seed)
+    cen = X[rng.choice(len(X), k, replace=False)].copy()
+    lab = np.zeros(len(X), dtype=int)
+    for _ in range(100):
+        lab = np.argmin(((X[:, None, :] - cen[None]) ** 2).sum(-1), axis=1)
+        nue = np.array([X[lab == c].mean(0) if (lab == c).any() else cen[c]
+                        for c in range(k)])
+        if np.allclose(nue, cen):
+            break
+        cen = nue
+    return lab
+
+
+# POST-HOC, declarado: el corte de 8 pares se fijo DESPUES de ver el dato
+# (las candidatas de caso09 k=3 tenian 60-160 pares cruzando; los casos que
+# explotaban, 6-32). Elegir un umbral mirando el resultado es lo que este
+# trabajo viene evitando, asi que no se adopta a ciegas: se reporta la
+# sensibilidad en 4, 8 y 16, y si el veredicto no cambia, la guarda no esta
+# decidiendo nada.
+GUARDAS_PARES = (4, 8, 16)
+
+
+def coercitividades(W: np.ndarray, nodos: list, k: int, seed: int = 0):
+    """Devuelve (vals, chicos, opos, separados).
+
+    vals = [(porosidad, coercitividad, clave, n_pares_inter)]. Se compara la POROSIDAD
+    (inter / min(intra)), que es finita siempre; la coercitividad es su
+    inverso y explota cuando inter -> 0, rompiendo los percentiles del nulo.
+    El orden se conserva: menos poroso = mas coercitivo.
+    Excluidos: cluster de 1 nodo (intra = 0, se lee porosa por el servicio),
+    inter < 0 ("oposicion", otro regimen), inter = 0 (separados: resistencia
+    maxima, se cuentan aparte), y inter sobre menos de MIN_PARES_INTER pares.
+    """
+    from cluster_frontier_density import cluster_frontier_density, OPOSICION
+    lab = particion_k(W, k, seed)
+    if lab is None:
+        return None, 0, 0, 0, []
+    clusters = {f"C{c+1}": [nodos[i] for i in range(len(nodos)) if lab[i] == c]
+                for c in range(k)}
+    chicos = {lbl for lbl, ns in clusters.items() if len(ns) < 2}
+    r = cluster_frontier_density(clusters, nodos, W)
+    tams = sorted(len(ns) for ns in clusters.values())
+    vals, opos, sep = [], 0, 0
+    for clave, h in r["coercivity"].items():
+        a, b = clave.split("|")
+        if a in chicos or b in chicos:
+            continue
+        if h == OPOSICION:
+            opos += 1
+            continue
+        if not np.isfinite(h):
+            sep += 1
+            continue
+        # coercitividad 0 = min(intra) 0: cluster sin peso interno, porosidad
+        # maxima. Se conserva con inf: es valido y nunca es el minimo.
+        poro = (1.0 / float(h)) if float(h) > 0 else float("inf")
+        vals.append((poro, float(h), clave, int(r["n_pairs"][clave])))
+    return vals, len(chicos), opos, sep, tams
+
+
+def paso_S1(top_k=32, n_nulos=100, seed=0, solo=None):
+    """SALAMANCA desde W. Estadistico pareado: el nulo es la distribucion del
+    MINIMO de porosidad POR BARAJADO, no el pool de todas sus fronteras —
+    comparar el minimo observado contra valores individuales del nulo sesga
+    hacia FRONTERA."""
+    import json as _json
+    print(f"S1 — SALAMANCA desde W · k 2..8 · {n_nulos} barajados · seed {seed}")
+    print(f"nulo = minimo de porosidad POR barajado (estadistico pareado)")
+    print(f"guarda de pares de inter barrida en {GUARDAS_PARES} (post-hoc, declarada)\n")
+    for nom in CORPORA + ["categorias"]:
+        if solo and nom not in solo:
+            continue
+        if nom == "categorias":
+            priv = REPO / "process/replay/_private/tramo_categorias_originales.json"
+            if not priv.exists():
+                continue
+            T = [t["texto"] for t in _json.loads(priv.read_text(encoding="utf8"))]
+        else:
+            T = corpus(nom)
+        if not T:
+            continue
+        W, nodos = W_pos(T, top_k)
+        if W is None:
+            print(f"{nom:20s} NO MEDIBLE — sin W\n")
+            continue
+        N = len(nodos)
+        ii, jj = np.triu_indices(N, 1)
+        sat = float((W[ii, jj] != 0).mean())
+        print(f"{nom:20s} N {N} · saturación {sat:.3f}")
+        if sat >= SAT_MAX:
+            print(f"   NO MEDIBLE (a) — saturación {sat:.3f} ≥ {SAT_MAX}\n")
+            continue
+        Wn = [W_pos(barajar(T, sx), top_k) for sx in range(n_nulos)]
+        # coercitividades crudas una sola vez por (W, k); las guardas filtran
+        obs_k, nul_k, tam_k, sep_k = {}, {}, {}, {}
+        for k in range(2, 9):
+            if N < 4 * k:
+                continue
+            o, chicos, opos, sep, tams = coercitividades(W, nodos, k, seed)
+            if not o:
+                continue
+            obs_k[k], tam_k[k], sep_k[k] = o, tams, sep
+            lista = []
+            for Wx, nx in Wn:
+                if Wx is None:
+                    continue
+                v, _, _, _, _ = coercitividades(Wx, nx, k, seed)
+                if v:
+                    lista.append(v)
+            nul_k[k] = lista
+        if not obs_k:
+            print("   => NO MEDIBLE — ningún k con fronteras evaluables\n")
+            continue
+        for g in GUARDAS_PARES:
+            pasaron, nulos_mas_coerc = [], []
+            print(f"   guarda ≥{g:2d} pares:", end="")
+            lineas = []
+            for k in sorted(obs_k):
+                o = [x for x in obs_k[k] if x[3] >= g]
+                if not o:
+                    lineas.append(f"      k={k}: sin fronteras tras la guarda")
+                    continue
+                nul = [min(x[0] for x in v if x[3] >= g)
+                       for v in nul_k[k] if any(x[3] >= g for x in v)]
+                if len(nul) < 20:
+                    lineas.append(f"      k={k}: nulo con {len(nul)} barajados — no legible")
+                    continue
+                nul = np.array(nul)
+                poro, coerc, clave, npar = min(o)
+                cuenta = int((nul <= poro).sum())
+                pv = cuenta / len(nul)
+                res = 1.0 / len(nul)
+                ptxt = f"<{res:.4f}" if cuenta == 0 else f"{pv:.4f}"
+                ef = float(np.median(nul)) / poro if poro > 0 else float("inf")
+                # criterio (e): el nulo es MAS coercitivo que el observado
+                e_flag = float(np.median(nul)) < poro
+                nulos_mas_coerc.append(e_flag)
+                # con cuenta = 0 lo unico afirmable es p < 1/n: para sostener
+                # el umbral corregido hace falta que esa resolucion alcance.
+                ok = (pv < P_BONF) and (cuenta > 0 or res <= P_BONF)
+                marca = f"FRONTERA {ef:5.2f}x" if ok else ("" if not e_flag else "(e)")
+                if ok:
+                    pasaron.append(k)
+                lineas.append(f"      k={k}: {len(o):2d} front · coerc {coerc:6.2f} ({clave}) "
+                              f"· poros {poro:.3f} vs nulo med {np.median(nul):.3f} p10 "
+                              f"{np.percentile(nul,10):.3f} · p={ptxt:>7s} · cl.mín {tam_k[k][0]} "
+                              f"· sep {sep_k[k]}  {marca}")
+            if pasaron:
+                print(f" FRONTERA (Bonferroni p<{P_BONF:.4f}) en k={pasaron}")
+            elif nulos_mas_coerc and sum(nulos_mas_coerc) > len(nulos_mas_coerc) / 2:
+                print(f" NO MEDIBLE (e) — el nulo es más coercitivo que el "
+                      f"observado en {sum(nulos_mas_coerc)}/{len(nulos_mas_coerc)} k")
+            else:
+                print(" NADA")
+            for ln in lineas:
+                print(ln)
+        print()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 # TASK_representacion_atractores_adaptador_v1
 
 *Clase T — Oct 2026 — gadanin.delamor + Claude Code (Opus 5)*
-*Desprende de TASK_salamanca_neel_coercividad_v2, CP1. Precondición del paso 1 de esa TASK.*
+*Desprende de TASK_salamanca_neel_coercividad_v2, CP1.*
+*CERRADA. F1 y F2 ejecutados. El resultado cambió su propio motivo: la partición de SALAMANCA sale de W, no de los atractores (v3 §12), así que el adaptador no se usa ahí. Queda escrito y verificado para W_mixta.*
 *Antecedentes: PROPUESTA_capa_analisis_services_v1 §Nivel B ("Advertencia sobre el tipo de dato"); REG_orbitas_conjuntos_invariantes_v1; DEFS §4.2 (GOLES/LaSalle).*
 
 ---
@@ -117,3 +118,56 @@ Suite: 172 passed, sin cambios.
 **`core.py` no se movió.** `CKMGraph` aparece una sola vez en `analytics`, como anotación de `optimal_density`, y con `from __future__ import annotations` no se evalúa. Mover `core.py` habría roto `hopfield.py` y `mcp_adapter.py` (que lo importan con `from .core`), y `mcp_adapter` es el Gatekeeper que el paper §4.5 declara verificado a 0.092 ms.
 
 **El testigo en `process/` pierde `analytics.py`** *(decidido: delamor)*. Entra en uso **sin cambios**, así que no hay pérdida que atestiguar que el historial de git no tenga. Distinto de FabricationService, que fue a `process/` porque se reescribe.
+
+
+---
+
+## 8. Resultado
+
+### F1 — distribución de periodos (W_pos, top_k 32, n_runs 1000, seeds 0/1/2)
+
+`p > 2` es **cero** en los seis corpus: GOLES se cumple (DEFS §4.2), control pasado.
+
+| corpus | masa en periodo 2 |
+|---|---:|
+| caso09 | 0.001 – 0.009 |
+| caso13 | 0.001 – 0.002 |
+| caso14 | 0.004 – 0.006 |
+| informes versión | 0.004 – 0.005 |
+| informes página 300 | 0.000 – 0.004 |
+| tramo `categorias` | **0.36** |
+
+Así que **no** salió cero periodo 2, y el paso 2 no se reducía a declararlo. Pero la masa es ínfima en cinco de seis. `categorias` es el único donde el periodo no es despreciable.
+
+Composición de las dominantes (seed 0): en caso09, informes versión e informes página 300, el **99.9% de la masa está en dos órbitas — las 32 en +1 y las 32 en −1**. Las de periodo 2 tienen 10–16 nodos prendidos.
+
+### F2 — el adaptador, con el control de impacto cero
+
+**Elección tomada: (b) con peso, masa de la órbita repartida entre sus estados.**
+
+El motivo medido no fue el periodo: `copresence_matrix` **descarta el `int` que recibe** (`unique = list(attractors.keys())`, una fila por clave). Hoy ya trata una órbita del 0.1% igual que una del 50%.
+
+**Control:** con pesos uniformes, `copresencia_pesada` contra `analytics.copresence_matrix` da **`max|dif| = 1e-16`** en los cinco corpus. Es la misma función.
+
+| corpus | claves | corr. media sin peso | con peso |
+|---|---:|---:|---:|
+| caso09 | 4 | +0.680 | +0.999 |
+| caso13 | 6 | +0.336 | +0.998 |
+| caso14 | 10 | +0.176 | +0.996 |
+| informes versión | 12 | +0.140 | +0.995 |
+| informes página 300 | 2 | +1.000 | +1.000 |
+
+### Lo que el resultado hizo con la TASK
+
+Con peso, la matriz de co-presencia es casi todo unos: lo que el campo ocupa en W_pos son los dos extremos, y ahí todos los nodos se mueven juntos. **No hay co-movimiento diferencial que agrupar.**
+
+Eso no invalida la elección — la confirma, y muestra que el objeto no servía para lo que esta TASK venía a habilitar. La partición de SALAMANCA sale de W. El razonamiento está en TASK_salamanca_neel_coercividad_v3 §12.
+
+El adaptador y `analytics.py` quedan escritos y verificados **para W_mixta**, cuando la frustración exista y los atractores tengan algo que mostrar.
+
+### Abiertas que siguen abiertas
+
+- §4.4 — reparto de masa entre estados vs masa completa en cada fila: **decidida por el reparto**, pero su efecto sólo aparece con cuencas que no sean los extremos. Sin verificar ahí.
+- §4.5 — dos estados distintos con el mismo conjunto activo siguen colapsando en una clave. No resuelto.
+
+Instrumento: `experiments/driver_neel_salamanca.py --periodos` y `--adaptador`.

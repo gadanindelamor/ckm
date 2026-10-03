@@ -7,13 +7,14 @@ Co-presence clustering, attractor hierarchy, optimal density (P4).
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
-from .core import CKMGraph
+if TYPE_CHECKING:                      # solo anotacion: optimal_density(graph)
+    from core import CKMGraph          # noqa: F401  (process/initial_static_model/)
 
 
 # ─── Co-presence clustering ───────────────────────────────────────────────────

@@ -168,6 +168,6 @@ El adaptador y `analytics.py` quedan escritos y verificados **para W_mixta**, cu
 ### Abiertas que siguen abiertas
 
 - §4.4 — reparto de masa entre estados vs masa completa en cada fila: **decidida por el reparto**, pero su efecto sólo aparece con cuencas que no sean los extremos. Sin verificar ahí.
-- §4.5 — dos estados distintos con el mismo conjunto activo siguen colapsando en una clave. No resuelto.
+- §4.5 — **CERRADA, era vacía.** Un estado σ ∈ {−1,+1}^N está determinado por qué índices están en +1: la correspondencia estado ↔ conjunto activo es biyectiva, así que "dos estados distintos con el mismo conjunto activo" no existe. Y REG_orbitas_conjuntos_invariantes_v1 §5 ya había demostrado la otra mitad en septiembre —dos órbitas no comparten estados, porque el mapa es determinista—, así que el conjunto identifica unívocamente a la órbita. Code la abrió sin leer lo que la cerraba *(lo señaló Opus 5.5)*. La única pérdida real era el **periodo**, que es la que el adaptador trata.
 
 Instrumento: `experiments/driver_neel_salamanca.py --periodos` y `--adaptador`.

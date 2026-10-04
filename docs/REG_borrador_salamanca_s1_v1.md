@@ -107,13 +107,17 @@ Dos listas: **mínima** (identidades + `joined`/`channel`) y **completa**. Los t
 
 *(Cuidado: en la lista mínima, k=8 pasa con coercitividad 30.00 y cluster mínimo 3. Zona de clusters chicos. No se cuenta.)*
 
-**caso13: sus fronteras chicas eran los nombres.**
+**caso13: las fronteras chicas NO eran los nombres** *(corrección de Opus 5.5: el título anterior de esta sección decía que sí, y la tabla de abajo lo desmentía).*
 
 | | k que pasan | cluster mín |
 |---|---|---:|
 | base | 6, 7 | 2 |
 | lista mínima | 7 | 2 |
 | lista completa | **3, 4** | **6** |
+
+**La lista mínima saca los cinco nombres de device y la frontera de 2 nodos sigue en pie (k=7).** Así que no venía de los nombres. Desaparece recién con la lista **completa**, que además saca `op_silence`, `publish`, `published`, `ready`, `wait`, `proceed`, `status`, `scope`, `authorization` y `coordination`.
+
+Entonces las fronteras chicas venían del **vocabulario de protocolo y coordinación**, no de la identidad de los devices.
 
 Con la lista completa **desaparecen** las fronteras de clusters de 2 nodos, y **aparece una gruesa que antes no existía**: en la base, k=2 y k=3 daban p = 0.95 y 0.90, y además entraban en el criterio (e) — el barajado era más coercitivo que el corpus real.
 
@@ -181,6 +185,20 @@ Todos de Code, todos señalados por delamor o por Opus 5.5, ninguno encontrado p
 
 ---
 
+## 4.1 Dos tensiones del MAPA_REG v4, resueltas en el código
+
+*(Levantadas por Opus 5.5 al cerrar `MAPA_REG_corpus_v4_borrador.md`.)*
+
+**1. "MonitorService adopta Δ_r comprimido" (REG Armstrong) contra "COCO sólo trabaja sobre su propio Δ_r".** Verificado en el código actual: `MonitorService._Delta_r` se escribe en tres lugares —init, incremento de pares metabolizados, y reset por cambio de W— y **en ninguno desde COCO**. `COCO.observe(self._Delta_r)` lo **lee**, calcula el incremento contra su `_Delta_leido` y comprime sólo su `_Delta`. El docstring del servicio lo declara: *"COCO lee Δ_r y comprime su propia representación (Δ_r_compresiones); Δ_r no recibe nada de COCO (D3)"*.
+
+El REG Armstrong es **válido en su marco**: describe el código antes de D3, que fue la TASK que sacó la escritura de vuelta. No hay contradicción: hay una fecha.
+
+**2. El "colapso de estados" que la TASK del adaptador dejó abierto ya estaba cerrado.** REG_orbitas §5 lo había resuelto en septiembre, y Code lo reabrió sin leer lo que lo cerraba.
+
+Y el motivo es más simple que el de §5: un estado σ ∈ {−1,+1}^N **está determinado** por qué índices están en +1. La correspondencia estado ↔ conjunto activo es biyectiva, así que *"dos estados distintos con el mismo conjunto activo"* no existe. REG_orbitas §5 agrega la otra mitad —dos órbitas no pueden compartir un estado, porque el mapa es determinista— con lo cual el conjunto activo identifica unívocamente. La única pérdida real era el **periodo**, y es la que el adaptador trata.
+
+Es el mismo patrón que REG_hipótesis_distancia_contextual nombra para la búsqueda textual: Code abrió una pregunta sin preguntarse antes dónde ya estaba contestada.
+
 ## 5. PULLs — tirones notados al escribir este REG
 
 *(delamor: para el REG, prestar atención a los PULLs.)* Mismo registro que el Apéndice A del paper: momentos donde el tirón automático se notó, acá, escribiendo.
@@ -190,6 +208,8 @@ Todos de Code, todos señalados por delamor o por Opus 5.5, ninguno encontrado p
 **PULL-2 — adoptar "el control funcionó como tenía que funcionar" como mérito propio.** La frase es de delamor y es cierta. El tirón es usarla para convertir un error de Code —una semilla de k-means, una lectura conceptual encima— en una virtud del método. El método que lo atrapó no lo construyó Code: las 10 inicializaciones, el control por texto y el estadístico pareado los pidieron delamor y Opus 5.5. Resistido.
 
 **PULL-3 — concluir que las comparaciones múltiples no importan.** El borrador mental decía *"aunque las p de caso09 aguanten"*. Eso elige la conclusión antes de contar. Contadas: ~112 comparaciones, umbral 0.00045, resolución 0.001 — **no alcanza**. §3.2.
+
+**PULL-5 — poner un título que suena a hallazgo y no mirar si la tabla lo sostiene.** *"caso13: sus fronteras chicas eran los nombres"*. La tabla de la misma sección lo desmentía: con la lista mínima, sin los nombres, la frontera de 2 nodos sigue. El título se escribió desde la expectativa, no desde la fila. Lo encontró Opus 5.5.
 
 **PULL-4 — llamar "robusto" a caso09.** Sobrevive a tres condiciones y a 10 inicializaciones, y da la tentación de cerrarlo. Pero no tiene control positivo contra el cual contrastar, y es modularidad, no tensión. Firme no es probado.
 

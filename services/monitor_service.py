@@ -43,6 +43,7 @@ from corpus_service  import CorpusService
 from coco import COCO, ThermostatState, BETA_RHO_STAR
 from ckm_landscape_config import CKMlandscapeConfig
 from landscape_engine import (
+    d_ckm,
     beta_c_landscape,
     boltzmann_warmup,
     basin_masses,
@@ -394,7 +395,7 @@ class MonitorService:
             if A_actual == 0:
                 return 0.0   # corpus vacío — diferir A0
             self._A0 = A_actual
-        return float((self._A0 - A_actual) / self._A0) if self._A0 > 0 else 0.0
+        return d_ckm(A_actual, self._A0)
 
     def _condicion_W(self, W: np.ndarray, nodes: list) -> dict:
         """Bajo qué W y con qué muestreo se midió este panel."""

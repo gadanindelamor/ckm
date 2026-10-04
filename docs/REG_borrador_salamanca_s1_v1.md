@@ -101,7 +101,7 @@ Dos listas: **mínima** (identidades + `joined`/`channel`) y **completa**. Los t
 | lista mínima | 3.10 | 0.0020 | 1.94× | 7 |
 | lista completa | 3.80 | 0.0050 | 2.24× | 8 |
 
-**Corrección a la lectura de §3.** Code había afirmado que la partición de caso09 separa protocolo e identidad de contenido. Eso era el k=2 con una sola inicialización de k-means. Con el protocolo entero fuera del texto, la frontera a k=3 persiste entre términos de contenido: **la frontera de caso09 no es el corte protocolo/contenido**. Lo que sigue en pie de §3 es lo otro, y es lo que importa: modularidad no es adversarialidad.
+**Corrección explícita — es el mismo error que seed = 42, ahora en k-means** *(delamor)*. Code había afirmado que la partición de caso09 separa protocolo e identidad de contenido. Eso salió de **k=2 con una sola semilla de k-means**: una lectura conceptual construida sobre una partición que ni era la mejor de su propio k ni era el k que sostiene la frontera. Con 10 inicializaciones ese k=2 cambia (coercitividad 1.71 → 2.73), y con el protocolo entero fuera del texto la frontera a k=3 persiste entre términos de contenido: **la frontera de caso09 no es el corte protocolo/contenido**. Lo que sigue en pie de §3 es lo otro, y es lo que importa: modularidad no es adversarialidad.
 
 **Los términos que entran son del relato.** Mínima: `woman` `alley` `life` `comes` `hold`. Completa: además `story line` `smell` `respective`. La partición **no se reorganiza alrededor de ellos** — sigue dando frontera a k=3 con clusters de 7–8 nodos y el mismo orden de efecto.
 
@@ -119,9 +119,37 @@ Con la lista completa **desaparecen** las fronteras de clusters de 2 nodos, y **
 
 Entran 16 términos: `scenario` `premise` `data` `analysis` `adaptation gaps` `signal` `conditions` `gaps` `publication` `context`…
 
-**El vocabulario de protocolo e identidad hacía dos cosas a la vez: creaba fronteras chiquitas alrededor de los nombres, y tapaba una frontera gruesa en el contenido.** Sin él, el campo se parte en 3 o 4 partes con coercitividad 2.29–2.51 y efecto 1.7×.
+**El hallazgo está condicionado a la clasificación, y así se enuncia** *(Opus 5.5)*. La frontera gruesa aparece **sólo con la lista completa**; con la mínima siguen los grupitos de 2 nodos en k=7. Y la lista completa incluye `coordination`, `status`, `scope` y `authorization`, que **en un canal de coordinación pueden ser contenido**.
 
-Code esperaba que el control sólo restara.
+Entonces el resultado no es *"caso13 tiene frontera gruesa"*. Es:
+
+> **caso13 tiene frontera gruesa SI el vocabulario de coordinación se clasifica como protocolo.**
+
+Eso es un resultado condicionado a una decisión de clasificación, no una propiedad del corpus.
+
+Lo que sí es nuevo y no depende de esa condición: **el vocabulario de protocolo puede tapar una frontera, no sólo crear grupitos.** Code esperaba que el control sólo restara.
+
+### 3.2 Recuento de comparaciones
+
+*(Opus 5.5: con dos listas y dos corpus se suman pruebas; conviene anotar cuántas hubo en total.)*
+
+| bloque | comparaciones |
+|---|---:|
+| S1 — 4 corpus medibles × 7 k × 3 guardas | ≈ 84 |
+| S2 — 2 corpus × 2 listas × 7 k × 1 guarda | ≈ 28 |
+| **total de la sesión** | **≈ 112** |
+
+Bonferroni se aplicó sobre los **7 k** dentro de cada condición: α = 0.0071. Con eso caso09 k=3 pasa (p entre 0.0020 y 0.0050 según la lista).
+
+**Corregido sobre las ~112 comparaciones de la sesión**, el umbral sería α = 0.05/112 ≈ **0.00045**. Con 1000 barajados la resolución es 0.001, así que **ninguna celda de esta corrida es resolvable a ese nivel** — ni la de caso09. Sostener el hallazgo contra la familia completa necesitaría 10.000 barajados.
+
+Se declara así, sin la frase que estaba a mano: *"las p de caso09 aguantan"*. Aguantan la corrección por k. No la corrección por todo lo que se probó.
+
+### 3.3 Sigue siendo modularidad
+
+La frontera nueva de caso13 separa `scenario` y `premise` de `data` y `analysis`. Eso puede ser **división del trabajo entre devices**, no posiciones enfrentadas *(Opus 5.5)*. En un canal donde un device mapea tensiones y otro construye escenarios, esa partición es el reparto de tareas.
+
+Ninguna frontera medida en esta corrida es evidencia de posiciones que se opongan.
 
 ### Lo que falta para que haya control positivo
 
@@ -153,12 +181,26 @@ Todos de Code, todos señalados por delamor o por Opus 5.5, ninguno encontrado p
 
 ---
 
-## 5. Estado
+## 5. PULLs — tirones notados al escribir este REG
+
+*(delamor: para el REG, prestar atención a los PULLs.)* Mismo registro que el Apéndice A del paper: momentos donde el tirón automático se notó, acá, escribiendo.
+
+**PULL-1 — enunciar caso13 como propiedad del corpus.** Escribir *"en caso13 el vocabulario de protocolo tapaba una frontera"* sale solo, y lee como hallazgo sobre el corpus. Es un resultado condicionado a que `coordination`, `status`, `scope` y `authorization` se clasifiquen como protocolo, y esa clasificación la hizo Code. Resistido en §3.1. Lo notó Opus 5.5 primero; el tirón sigue estando al redactar.
+
+**PULL-2 — adoptar "el control funcionó como tenía que funcionar" como mérito propio.** La frase es de delamor y es cierta. El tirón es usarla para convertir un error de Code —una semilla de k-means, una lectura conceptual encima— en una virtud del método. El método que lo atrapó no lo construyó Code: las 10 inicializaciones, el control por texto y el estadístico pareado los pidieron delamor y Opus 5.5. Resistido.
+
+**PULL-3 — concluir que las comparaciones múltiples no importan.** El borrador mental decía *"aunque las p de caso09 aguanten"*. Eso elige la conclusión antes de contar. Contadas: ~112 comparaciones, umbral 0.00045, resolución 0.001 — **no alcanza**. §3.2.
+
+**PULL-4 — llamar "robusto" a caso09.** Sobrevive a tres condiciones y a 10 inicializaciones, y da la tentación de cerrarlo. Pero no tiene control positivo contra el cual contrastar, y es modularidad, no tensión. Firme no es probado.
+
+## 6. Estado
 
 - §1, §2: **verificado**, 1000 barajados, k-means con 10 inicializaciones, una corrida por celda, seed 0.
 - §3.1 (control post-hoc): **verificado** como medición; las listas de tokens son **clasificación declarada**, no derivadas del dato.
 - §2.2 (la saturación ordena): **verificado** como medición; su lectura causal es **propuesta**.
 - §3: **declarado**. Modularidad no es adversarialidad, y caso09 no prueba tensión.
+- §3.1, caso13: **condicionado** a la clasificación de tokens, no propiedad del corpus.
+- §3.2: la corrección por la familia completa de comparaciones **no está sostenida** a 1000 barajados.
 - Control positivo: **ausente**.
 - Néel: **no corrido**.
 

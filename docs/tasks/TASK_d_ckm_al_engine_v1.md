@@ -73,3 +73,50 @@ Tras verificar el criterio de cero diferencias, no antes. Forma de `REG_monitor_
 - El borde `0.0` contra `None`.
 - Qué cantidad gobierna la regulación de COCO — §8.3 del paper. Con `d_ckm` y `d_masa_cuencas` una al lado de la otra, pasa de pregunta conceptual a un argumento en el call site. *(delamor: reemplazaremos D_ckm por N_eff, o como se llame en el engine; el nombre queda. La cantidad declarada en la config o en `condicion_W`, porque los 253 paneles históricos llevan la de conteo bajo la misma clave.)*
 - `frac_rec` (coco L250) y `recovery` (fabrication L109): misma cantidad, dos nombres, dos bordes.
+
+---
+
+## Lo que apareció al preguntar de dónde sale A0 *(4 oct, delamor)*
+
+La extracción dejó una sola pregunta abierta y es la que sostiene cada afirmación determinada sobre D_ckm: **¿de dónde sale A0?**
+
+*(delamor: A0 es un colector de confusión — si no es también un atractor espurio.)*
+
+### A0 son tres capas, y la primera no es ruido
+
+**1. Copias espurias.** `monitor_service.py:190`, ya escrito en el código: *"Un aislado (fila de W en cero) duplica cada atractor acoplado; Δ_r puede acoplarlo en W_eff durante el run"*. Con **k** aislados el conteo es `2^k · A_real`. Los extra no son atractores: son el mismo estado del campo con un spin libre. **El conteo cuenta otro objeto.**
+
+Y no es estático: Δ_r puede acoplar un aislado **dentro** del run. A0 quedó fijo con un k, A_actual se cuenta con otro.
+
+**La aritmética:**
+
+```
+A0 = 2^k     · A_real
+A  = 2^(k-1) · A_real        (se acopló UN aislado)
+
+D_ckm = (2^k − 2^(k-1)) / 2^k = 1/2 = 0.5
+```
+
+**Exactamente 0.5, sin importar k ni A_real.** Y `D_CKM_THRESHOLD = 0.40`. Entonces **un solo nodo aislado que consigue un par cruza el umbral y dispara STOP**, sin que el campo haya perdido nada: la mitad del conteo que desapareció eran copias.
+
+**2. El cofound_collector** *(término de delamor, `docs/El problema del testeo uniforme en el cofound_collector.md` L224 y §541)*. `sample_s0` muestrea σ₀ **uniforme** sobre un paisaje **anisotrópico**: sobremuestrea las zonas muertas y submuestrea las líneas de tensión. El sesgo **no se cancela** entre numerador y denominador, porque la forma del paisaje cambió entre el instante de A0 y ahora. La alternativa existe —`sampling_mode` acepta `weighted` y `boltzmann`— y el default de Monitor es `uniform`.
+
+**3. El instante.** A0 es lo que el muestreador contó en la **primera** llamada con corpus establecido, con el `n_runs` y `seed` de entonces, y el conteo **no converge**: crece monótono con `n_runs`. En Monitor además se **re-fija** cuando W cambia, así que "baseline" no es el principio: es la última vez que W cambió.
+
+### Decisión *(delamor)*
+
+**A0 va a ser lo que `CKMlandscapeConfig` defina.** Declarado, no descubierto — entra en la lista de `theta_W`, `sampling_mode` y `scale`, que son obligatorios sin default, *"no hay default hasta que el modelo los decida"*.
+
+Eso **cierra el abierto de los dos baselines**, y no eligiendo entre ellos: saca lo que los hacía dos. Ningún servicio lo fija más.
+
+**Lo que no arregla:** el número sigue saliendo de un contador sesgado. Lo que cambia es que el sesgo queda **declarado** al lado de `sampling_mode` y `w_version_id` — con qué muestreador y sobre qué W se colectó.
+
+**Pendiente de diseño:** si la config lleva A0 como **valor** (un int que el modelo declara, y alguien lo midió una vez) o como **política** (sobre qué W, en qué momento, con qué muestreador y n_runs, y el número se deriva). Code se inclina por política, porque es lo que `from_W` ya hace con `mu_W` y `beta_c`: mide y declara cómo midió.
+
+### Chequeable y no calculado
+
+`condicion_W` de cada panel ya registra `aislados_W` y `aislados_W_eff`. Cuántos paneles tenían aislados cuando se fijó su A0 está declarado y nunca se contó.
+
+### Alcance en el proyecto
+
+Esto no es una línea de código: toca **todo lo que reportó D_ckm**. El umbral `0.40` se calibró contra una cantidad que salta 0.5 de un solo acoplamiento, y cada valor publicado arrastra el `2^k` del instante en que su A0 quedó fijo.

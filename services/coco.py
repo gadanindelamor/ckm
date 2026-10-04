@@ -60,6 +60,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from landscape_engine import (
+    d_ckm,
     BETA_RHO_STAR,
     beta_c_landscape,
     boltzmann_warmup,
@@ -246,7 +247,7 @@ class COCO:
         if self._A0 is None:
             self._A0 = self._count_attractors(self.W, **smp)  # baseline sin Delta
 
-        D_ckm    = (self._A0 - A_current) / self._A0 if self._A0 > 0 else 0.0
+        D_ckm    = d_ckm(A_current, self._A0)
         frac_rec = A_current / self._A0 if self._A0 > 0 else 1.0
 
         zone = self._classify_zone(D_ckm, frac_rec)

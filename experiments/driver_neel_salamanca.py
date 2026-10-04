@@ -212,12 +212,16 @@ def main():
     ap.add_argument("--adaptador", action="store_true", help="F2: adaptador y control")
     ap.add_argument("--salamanca", action="store_true", help="S1: SALAMANCA desde W")
     ap.add_argument("--solo", help="corpus separados por coma")
+    ap.add_argument("--control", action="store_true", help="S2: control post-hoc")
     a = ap.parse_args()
     if a.periodos:
         paso_F1(a.top_k)
         return
     if a.adaptador:
         paso_F2(a.top_k)
+        return
+    if a.control:
+        paso_S2(a.top_k, a.nulos)
         return
     if a.salamanca:
         paso_S1(a.top_k, a.nulos, solo=(a.solo.split(",") if a.solo else None))
@@ -352,6 +356,42 @@ def paso_F2(top_k=32, n_runs=1000, seed=0):
               f"· pares con corr>0.999 con peso: {int((mc[ii, jj] > 0.999).sum())}/{len(ii)}")
 
 
+# POST-HOC declarado (delamor): control quitando de W los nodos de identidad
+# de device y de protocolo del canal, para ver si la frontera sobrevive sin
+# ellos. Las listas son clasificacion de Code, no derivadas del dato.
+IDENTIDAD = {"claudesonnet_", "groqllama_", "tinkerbellucio", "markopolus",
+             "peterplam"}
+PROTOCOLO = {"channel", "joined", "joined channel", "op_silence", "publish",
+             "published", "task", "topic", "turn", "ready", "wait", "proceed",
+             "status", "authorization", "scope", "coordination"}
+# NO incluidos por ambiguos: work, conversation, state, current, real, line,
+# low, non. En caso09, ava/cartographer/bell son personajes del relato. En
+# informes, device/stop/portero/ckm son vocabulario del dominio.
+EXCLUIR = IDENTIDAD | PROTOCOLO
+
+
+LISTA_MINIMA = IDENTIDAD | {"joined", "channel"}
+LISTA_COMPLETA = IDENTIDAD | PROTOCOLO
+
+
+def limpiar_tokens(textos: list, fuera: set) -> list:
+    """Saca los tokens del TEXTO (delamor), para que NodeExtractor vuelva a
+    decidir qué existe: al liberar lugares del top_k entran términos nuevos.
+    Recortar nodos de W no es el contrafáctico — solo recorta."""
+    import re as _re
+    # frases primero, para que "joined channel" no quede partida
+    orden = sorted(fuera, key=lambda t: -len(t.split()))
+    pats = [_re.compile(r"(?<![a-záéíóúüñA-ZÁÉÍÓÚÜÑ_])" + _re.escape(t) +
+                        r"(?![a-záéíóúüñA-ZÁÉÍÓÚÜÑ_])", _re.IGNORECASE)
+            for t in orden]
+    out = []
+    for t in textos:
+        for pat in pats:
+            t = pat.sub(" ", t)
+        out.append(_re.sub(r"\s+", " ", t).strip())
+    return out
+
+
 # ── S1 — SALAMANCA desde W (TASK_salamanca_neel_coercividad_v4 §13-§14) ──────
 # Metodo declarado ANTES de correr, en la TASK. El nulo vuelve a particionar
 # cada W barajada con el mismo metodo y el mismo k: reusar la particion
@@ -366,6 +406,7 @@ P_CORTE   = 0.05
 # corpus, asi que el umbral por k es 0.05/7. Con n barajados la resolucion
 # de p es 1/n: con 100 no se puede resolver 0.0071 y hace falta n=1000.
 N_K       = 7
+N_INIT    = 10        # inicializaciones de k-means (delamor)
 P_BONF    = P_CORTE / N_K
 
 
@@ -383,17 +424,25 @@ def particion_k(W: np.ndarray, k: int, seed: int = 0):
     X = v[:, :k]
     nrm = np.linalg.norm(X, axis=1, keepdims=True)
     X = X / np.where(nrm > 0, nrm, 1.0)
+    # 10 inicializaciones (delamor), se queda la de menor inercia. Sigue
+    # siendo determinista dado (W, k, seed).
     rng = np.random.default_rng(seed)
-    cen = X[rng.choice(len(X), k, replace=False)].copy()
-    lab = np.zeros(len(X), dtype=int)
-    for _ in range(100):
-        lab = np.argmin(((X[:, None, :] - cen[None]) ** 2).sum(-1), axis=1)
-        nue = np.array([X[lab == c].mean(0) if (lab == c).any() else cen[c]
-                        for c in range(k)])
-        if np.allclose(nue, cen):
-            break
-        cen = nue
-    return lab
+    mejor_lab, mejor_in = None, np.inf
+    for _ in range(N_INIT):
+        cen = X[rng.choice(len(X), k, replace=False)].copy()
+        lab = np.zeros(len(X), dtype=int)
+        for _ in range(100):
+            d2 = ((X[:, None, :] - cen[None]) ** 2).sum(-1)
+            lab = np.argmin(d2, axis=1)
+            nue = np.array([X[lab == c].mean(0) if (lab == c).any() else cen[c]
+                            for c in range(k)])
+            if np.allclose(nue, cen):
+                break
+            cen = nue
+        inercia = float(((X - cen[lab]) ** 2).sum())
+        if inercia < mejor_in:
+            mejor_in, mejor_lab = inercia, lab
+    return mejor_lab
 
 
 # POST-HOC, declarado: el corte de 8 pares se fijo DESPUES de ver el dato
@@ -540,6 +589,77 @@ def paso_S1(top_k=32, n_nulos=100, seed=0, solo=None):
             for ln in lineas:
                 print(ln)
         print()
+
+
+
+# ── S2 — control post-hoc: sin identidad de device ni protocolo ──────────────
+
+def paso_S2(top_k=32, n_nulos=1000, seed=0, guarda=8):
+    """Control post-hoc (delamor): se sacan los tokens del TEXTO y se
+    reconstruye W con NodeExtractor; el nulo baraja los textos LIMPIOS. Dos
+    listas: minima (identidades + joined/channel) y completa."""
+    print(f"S2 — control post-hoc · tokens fuera del TEXTO, W reconstruida")
+    print(f"guarda ≥{guarda} · {n_nulos} barajados · Bonferroni p<{P_BONF:.4f}\n")
+    for nom in ("caso09", "caso13"):
+        T = corpus(nom)
+        if not T:
+            continue
+        W0, n0 = W_pos(T, top_k)
+        print(f"=== {nom} · N original {len(n0)}")
+        for etq, lista in (("mínima", LISTA_MINIMA), ("completa", LISTA_COMPLETA)):
+            presentes = sorted(n for n in n0 if n in lista)
+            Tl = limpiar_tokens(T, lista)
+            W, nodos = W_pos(Tl, top_k)
+            if W is None:
+                print(f"  lista {etq}: sin W tras limpiar\n")
+                continue
+            nuevos = [n for n in nodos if n not in n0]
+            perdidos = [n for n in n0 if n not in nodos]
+            ii, jj = np.triu_indices(len(W), 1)
+            sat = float((W[ii, jj] != 0).mean())
+            print(f"  lista {etq} ({len(lista)} tokens; en los nodos originales: {presentes})")
+            print(f"    N {len(n0)} → {len(nodos)} · saturación {sat:.3f}")
+            print(f"    entran ({len(nuevos)}): {nuevos}")
+            print(f"    salen  ({len(perdidos)}): {perdidos}")
+            Wn = []
+            for sx in range(n_nulos):
+                Wx, nx = W_pos(barajar(Tl, sx), top_k)
+                if Wx is not None:
+                    Wn.append((Wx, nx))
+            pasaron = []
+            for k in range(2, 9):
+                if len(nodos) < 4 * k:
+                    continue
+                o, chicos, opos, sep, tams = coercitividades(W, nodos, k, seed)
+                if not o:
+                    continue
+                o = [x for x in o if x[3] >= guarda]
+                if not o:
+                    continue
+                nul = []
+                for Wx, nx in Wn:
+                    v, _, _, _, _ = coercitividades(Wx, nx, k, seed)
+                    if v:
+                        vg = [x[0] for x in v if x[3] >= guarda]
+                        if vg:
+                            nul.append(min(vg))
+                if len(nul) < 20:
+                    continue
+                nul = np.array(nul)
+                poro, coerc, clave, _ = min(o)
+                cuenta = int((nul <= poro).sum())
+                pv, res = cuenta / len(nul), 1.0 / len(nul)
+                ptxt = f"<{res:.4f}" if cuenta == 0 else f"{pv:.4f}"
+                ef = float(np.median(nul)) / poro if poro > 0 else float("inf")
+                ok = (pv < P_BONF) and (cuenta > 0 or res <= P_BONF)
+                if ok:
+                    pasaron.append(k)
+                print(f"    k={k}: coerc {coerc:6.2f} ({clave}) · poros {poro:.3f} "
+                      f"vs nulo med {np.median(nul):.3f} · p={ptxt:>7s} "
+                      f"· cl.mín {tams[0]} {'FRONTERA ' + format(ef, '.2f') + 'x' if ok else ''}")
+            print(f"    => {'FRONTERA en k=' + str(pasaron) if pasaron else 'NADA'}\n")
+    print("informes_pagina300 y categorias: control VACÍO declarado — no "
+          "contienen tokens de identidad de device ni de protocolo de canal.")
 
 
 if __name__ == "__main__":

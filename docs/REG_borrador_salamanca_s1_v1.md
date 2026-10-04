@@ -28,6 +28,8 @@ W_pos de cada corpus (`force_w_pos`, `rebuild_suspendido`, top_k 32; 27 en `cate
 
 **Nulo:** el mismo corpus barajado palabra por palabra —conserva frecuencias y largos, destruye la co-ocurrencia—, W reconstruida con los servicios reales, y **cada W barajada se vuelve a particionar** con el mismo método y el mismo k. 1000 barajados.
 
+**k-means con 10 inicializaciones**, se queda la de menor inercia *(delamor)*. Con una sola, el corte de caso09 en k=2 daba coercitividad 1.71; con diez da 2.73 — parte de los números de la primera corrida eran inicialización pobre, no estructura.
+
 **Estadístico:** el nulo es la distribución del **mínimo de porosidad por barajado**; se compara contra el mínimo observado. Umbral **Bonferroni α = 0.05/7 = 0.0071** por los 7 k. `p` se reporta con su resolución: cero coincidencias es `p < 0.001`, no `p = 0`.
 
 ---
@@ -77,9 +79,57 @@ Y la evidencia de eso está en el mismo trabajo: la partición de caso09 encontr
 
 La admisión necesita los dos pasos. Néel —qué profundidad tiene esa frontera— es el segundo, y no está corrido.
 
+### 3.1 Control post-hoc — sin identidad de device ni protocolo de canal
+
+*(delamor: sacar los tokens del texto y reconstruir W con NodeExtractor; el nulo baraja los textos limpios; reportar el N nuevo y los términos que entran.)*
+
+**Declarado post-hoc.** Las listas son clasificación de Code, no derivadas del dato:
+
+- **identidad de device**: `claudesonnet_` `groqllama_` `tinkerbellucio` `markopolus` `peterplam`
+- **protocolo de canal**: `channel` `joined` `joined channel` `op_silence` `publish` `published` `task` `topic` `turn` `ready` `wait` `proceed` `status` `authorization` `scope` `coordination`
+- **no incluidos, por ambiguos**: `work` `conversation` `state` `current` `real` `line` `low` `non`. En caso09, `ava` `cartographer` `bell` son personajes del relato. En informes, `device` `stop` `portero` `ckm` son vocabulario del dominio.
+
+Dos listas: **mínima** (identidades + `joined`/`channel`) y **completa**. Los tokens salen del **texto**, y `NodeExtractorService` vuelve a decidir qué existe: al liberar lugares del top_k entran términos nuevos. Recortar nodos de W no es el contrafáctico, sólo recorta.
+
+**informes página 300 y `categorias`: control vacío declarado** — no contienen esos tokens.
+
+**caso09 k=3 sobrevive con las dos listas:**
+
+| | coerc | p | efecto | cluster mín |
+|---|---:|---:|---:|---:|
+| base (32 nodos) | 4.16 | 0.0020 | 2.66× | 8 |
+| lista mínima | 3.10 | 0.0020 | 1.94× | 7 |
+| lista completa | 3.80 | 0.0050 | 2.24× | 8 |
+
+**Corrección a la lectura de §3.** Code había afirmado que la partición de caso09 separa protocolo e identidad de contenido. Eso era el k=2 con una sola inicialización de k-means. Con el protocolo entero fuera del texto, la frontera a k=3 persiste entre términos de contenido: **la frontera de caso09 no es el corte protocolo/contenido**. Lo que sigue en pie de §3 es lo otro, y es lo que importa: modularidad no es adversarialidad.
+
+**Los términos que entran son del relato.** Mínima: `woman` `alley` `life` `comes` `hold`. Completa: además `story line` `smell` `respective`. La partición **no se reorganiza alrededor de ellos** — sigue dando frontera a k=3 con clusters de 7–8 nodos y el mismo orden de efecto.
+
+*(Cuidado: en la lista mínima, k=8 pasa con coercitividad 30.00 y cluster mínimo 3. Zona de clusters chicos. No se cuenta.)*
+
+**caso13: sus fronteras chicas eran los nombres.**
+
+| | k que pasan | cluster mín |
+|---|---|---:|
+| base | 6, 7 | 2 |
+| lista mínima | 7 | 2 |
+| lista completa | **3, 4** | **6** |
+
+Con la lista completa **desaparecen** las fronteras de clusters de 2 nodos, y **aparece una gruesa que antes no existía**: en la base, k=2 y k=3 daban p = 0.95 y 0.90, y además entraban en el criterio (e) — el barajado era más coercitivo que el corpus real.
+
+Entran 16 términos: `scenario` `premise` `data` `analysis` `adaptation gaps` `signal` `conditions` `gaps` `publication` `context`…
+
+**El vocabulario de protocolo e identidad hacía dos cosas a la vez: creaba fronteras chiquitas alrededor de los nombres, y tapaba una frontera gruesa en el contenido.** Sin él, el campo se parte en 3 o 4 partes con coercitividad 2.29–2.51 y efecto 1.7×.
+
+Code esperaba que el control sólo restara.
+
 ### Lo que falta para que haya control positivo
 
-Ninguno de los seis corpus fue elicitado con posiciones opuestas por diseño. El único del proyecto que sí es **fourforums**, y su W del paper es **relacional**: `SKIP_TABLES` incluye `'text'`, los nodos son **autores**. Hace falta una W de términos desde los posts del topic 9, y el dump no está en el filesystem (v5 §11).
+Ninguno de los seis corpus fue elicitado con posiciones opuestas por diseño. El único del proyecto que sí es **fourforums**, y su W del paper es **relacional**: `SKIP_TABLES` incluye `'text'`, los nodos son **autores**. Hace falta una W de términos desde los posts del topic 9.
+
+**El dump no está en el Codespace** *(delamor: sí está en `ckmdatasets` local)*. La extracción por streaming está propuesta en v5 §11, con su estimación de RAM, y espera el dump.
+
+**Control positivo previsto: RfA** *(delamor)* — Wikipedia Requests for Adminship. Discusión con posiciones declaradas y voto registrado, así que trae su propia verdad de terreno, y no depende del dump de IAC v2.
 
 **Sin control positivo, "frontera" en estos corpus no se puede contrastar con un corpus donde la respuesta correcta sea conocida.**
 
@@ -97,12 +147,16 @@ Todos de Code, todos señalados por delamor o por Opus 5.5, ninguno encontrado p
 6. **`p = 0`.** Con n barajados lo afirmable es `p < 1/n`.
 7. **Umbral post-hoc.** La guarda de 8 pares se fijó mirando el dato. Declarada, barrida en 4/8/16, y **a este nivel de corrección decide** (v5 §15.5).
 8. **"Fronteras reales"** antes de pasar por el nulo. Son candidatas.
+9. **Una sola inicialización de k-means.** Con 10, el k=2 de caso09 pasa de coercitividad 1.71 a 2.73 y de no pasar a pasar. Parte de la primera corrida era inicialización pobre.
+10. **El control por recorte de W.** Quitar nodos de W no es el contrafáctico: hay que sacar los tokens del texto y dejar que la extracción vuelva a decidir, porque al liberar lugares del top_k entran términos nuevos. *(delamor.)*
+11. **La lectura "protocolo contra contenido"** de la partición de caso09. Era el k=2 con una inicialización, y el control la desmiente.
 
 ---
 
 ## 5. Estado
 
-- §1, §2: **verificado**, 1000 barajados, una corrida por celda, seed 0.
+- §1, §2: **verificado**, 1000 barajados, k-means con 10 inicializaciones, una corrida por celda, seed 0.
+- §3.1 (control post-hoc): **verificado** como medición; las listas de tokens son **clasificación declarada**, no derivadas del dato.
 - §2.2 (la saturación ordena): **verificado** como medición; su lectura causal es **propuesta**.
 - §3: **declarado**. Modularidad no es adversarialidad, y caso09 no prueba tensión.
 - Control positivo: **ausente**.

@@ -51,8 +51,14 @@ En el driver (Clase T). **No toca `services/`**: ni `analytics.py` ni `landscape
 
 Regla: **cada órbita aporta una fila por cada estado de su conjunto invariante, pesada por la masa de la cuenca.**
 
-- periodo 1 → una fila. **Idéntico al comportamiento de hoy.**
+- periodo 1 → una fila.
 - periodo 2 → dos filas.
+
+**CORRECCIÓN (Code, 4 oct, tras SUPERTASK v3 §4.1.2).** Esta TASK decía que con periodo 1 el resultado era *"idéntico al comportamiento de hoy"*. **Es falso:** las órbitas de periodo 1 también tienen masas distintas entre sí, así que pesarlas cambia la matriz aunque no haya ningún periodo 2. El impacto cero vale sólo para el camino **sin** peso.
+
+Y está medido en el propio F2: caso09, cuya masa es casi toda de periodo 1, pasó de correlación media **+0.680 sin peso a +0.999 con peso**. El número estaba en la tabla de §8 y la conclusión escrita acá lo contradecía.
+
+Precisión sobre §4.1.2 del SUPERTASK: el peso **sí** se puede aplicar desde afuera —`copresencia_pesada`, en el driver, verificada a 1e-16 contra `analytics.copresence_matrix` con pesos uniformes—. Lo que no se puede es aplicarlo **y** seguir siendo impacto cero. Esa es la parte que decide, y ahí §4.1.2 tiene razón: la opción (b) requiere un cambio declarado a `copresence_matrix` por la regla §4.4, con test, y volver a medir todo el pre-registro.
 
 No es un parche sobre `copresence_matrix`: es lo que esa función mide. Correlaciona nodos por co-presencia **entre atractores**, y una órbita de periodo 2 tiene genuinamente dos conjuntos activos. Meter los dos es describir la órbita, no repararla.
 
@@ -168,6 +174,7 @@ El adaptador y `analytics.py` quedan escritos y verificados **para W_mixta**, cu
 ### Abiertas que siguen abiertas
 
 - §4.4 — reparto de masa entre estados vs masa completa en cada fila: **decidida por el reparto**, pero su efecto sólo aparece con cuencas que no sean los extremos. Sin verificar ahí.
+- **La elección (a) sin peso vs (b) con peso vuelve a estar abierta y es de D1** (SUPERTASK v3 §4.1.2). Code había elegido (b); (b) no es impacto cero y arrastra un cambio a `services/`.
 - §4.5 — **CERRADA, era vacía.** Un estado σ ∈ {−1,+1}^N está determinado por qué índices están en +1: la correspondencia estado ↔ conjunto activo es biyectiva, así que "dos estados distintos con el mismo conjunto activo" no existe. Y REG_orbitas_conjuntos_invariantes_v1 §5 ya había demostrado la otra mitad en septiembre —dos órbitas no comparten estados, porque el mapa es determinista—, así que el conjunto identifica unívocamente a la órbita. Code la abrió sin leer lo que la cerraba *(lo señaló Opus 5.5)*. La única pérdida real era el **periodo**, que es la que el adaptador trata.
 
 Instrumento: `experiments/driver_neel_salamanca.py --periodos` y `--adaptador`.

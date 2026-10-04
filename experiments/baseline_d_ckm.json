@@ -1,0 +1,218 @@
+{
+ "monitor": [
+  {
+   "i": 3,
+   "D_ckm": 0.0,
+   "c_S": NaN,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "weapons"
+   ],
+   "N_eff": 1.0,
+   "D_masa_cuencas": null,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 4,
+   "D_ckm": 0.0,
+   "c_S": 0.333333,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "rights",
+    "gun"
+   ],
+   "N_eff": 3.6657,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 5,
+   "D_ckm": 0.0,
+   "c_S": 0.307692,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "gun",
+    "rights",
+    "violence"
+   ],
+   "N_eff": 6.9061,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 6,
+   "D_ckm": 0.0,
+   "c_S": 0.215686,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [],
+   "N_eff": 5.8962,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 7,
+   "D_ckm": 0.0,
+   "c_S": 0.15614,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "gun",
+    "violence",
+    "weapons",
+    "rights",
+    "assault",
+    "assault weapons",
+    "bans",
+    "bans reduce",
+    "reduce",
+    "gun violence",
+    "reduce assault",
+    "mass",
+    "mass shootings",
+    "reduce mass"
+   ],
+   "N_eff": 3.5112,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 8,
+   "D_ckm": 0.0,
+   "c_S": 0.149123,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [],
+   "N_eff": 14.7059,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 9,
+   "D_ckm": 0.0,
+   "c_S": 0.147368,
+   "fabrication_index": 1.0,
+   "n_rejected_pairs": 3,
+   "Delta_r_sum": 6.0,
+   "activos_relajado": [],
+   "N_eff": 8.8028,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 10,
+   "D_ckm": 0.0,
+   "c_S": 0.112698,
+   "fabrication_index": 0.25,
+   "n_rejected_pairs": 3,
+   "Delta_r_sum": 6.0,
+   "activos_relajado": [
+    "checks",
+    "criminals",
+    "home",
+    "matters",
+    "matters weapons"
+   ],
+   "N_eff": 18.3824,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "i": 11,
+   "D_ckm": 0.0,
+   "c_S": 0.122807,
+   "fabrication_index": 0.5,
+   "n_rejected_pairs": 1,
+   "Delta_r_sum": 2.0,
+   "activos_relajado": [
+    "deaths"
+   ],
+   "N_eff": 13.4409,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float"
+  }
+ ],
+ "coco": [
+  {
+   "modo": "uniform",
+   "seed": 0,
+   "D_ckm": -15.0,
+   "A0": 2,
+   "A_current": 32,
+   "frac_rec": 16.0,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "modo": "uniform",
+   "seed": 42,
+   "D_ckm": -14.5,
+   "A0": 2,
+   "A_current": 31,
+   "frac_rec": 15.5,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "modo": "weighted",
+   "seed": 0,
+   "D_ckm": -13.5,
+   "A0": 2,
+   "A_current": 29,
+   "frac_rec": 14.5,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "modo": "weighted",
+   "seed": 42,
+   "D_ckm": -33.0,
+   "A0": 1,
+   "A_current": 34,
+   "frac_rec": 34.0,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "modo": "boltzmann",
+   "seed": 0,
+   "D_ckm": -12.5,
+   "A0": 2,
+   "A_current": 27,
+   "frac_rec": 13.5,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  },
+  {
+   "modo": "boltzmann",
+   "seed": 42,
+   "D_ckm": -10.0,
+   "A0": 2,
+   "A_current": 22,
+   "frac_rec": 11.0,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float"
+  }
+ ]
+}

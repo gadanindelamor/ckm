@@ -352,6 +352,41 @@ def basin_distance(
     return {"d": None, "exacto": todo_exhaustivo, "evaluadas": evaluadas}
 
 
+def d_ckm(A_actual: int, A0: int) -> float:
+    """
+    Distancia contextual por CONTEO de atractores:
+
+        D_ckm = (A0 − A_actual) / A0
+
+    0 sin cambio, positivo si el paisaje perdió atractores, **negativo si
+    ganó** — el signo es dirección, no déficit, y el nombre "distancia" es
+    incorrecto en ese sentido. Como `count_attractors`, es un nombre que se
+    conserva por regresión: los paneles históricos y los tests lo leen así.
+
+    **PASO 1 — duplicación exacta.** El cuerpo es, caracter por caracter, la
+    línea que hoy viven `monitor_service._D_ckm` (L397) y `coco.observe`
+    (L249). No se corrige nada acá: el borde `A0 <= 0 -> 0.0` se conserva
+    aunque diga "sin cambio" donde no hubo medición. Cambiarlo es una
+    decisión aparte, declarada, y no entra en una extracción.
+
+    A0 se anota `int`, no `Optional[int]`: el cuerpo de hoy rompe con None
+    (`None > 0`). Ningún llamador pasa None — Monitor difiere antes de
+    llegar acá y COCO fija A0 en la misma llamada. Aceptar None sería
+    agregar comportamiento, no duplicar.
+
+    **No es la cantidad canónica.** El conteo no converge: crece monótono
+    con n_runs (coupon-collector) y su signo se invierte cambiando sólo seed
+    o n_runs sobre la misma W y los mismos textos
+    (REG_seleccion_nodos_desempate_v1 §8). La canónica es `n_eff` sobre
+    masas de cuenca, y su forma de distancia es `d_masa_cuencas`.
+
+    Quién fija A0 NO se extrae: es política de cada servicio. Monitor lo
+    cuenta sobre W + Delta_r y lo resetea cuando W cambia; COCO sobre W sola
+    ("baseline sin Delta") y no lo resetea.
+    """
+    return float((A0 - A_actual) / A0) if A0 > 0 else 0.0
+
+
 def d_masa_cuencas(n_eff_actual: float, n_eff_0: Optional[float]) -> Optional[float]:
     """
     Distancia contextual por masa de cuenca, escala logarítmica (delamor):

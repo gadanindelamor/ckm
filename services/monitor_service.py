@@ -383,10 +383,14 @@ class MonitorService:
         return float(rejected / declared)
 
     def _D_ckm(self, W: np.ndarray) -> float:
-        """D_ckm = (A0 - A_actual) / A0. Puede ser negativo.
+        """La distancia por conteo es landscape_engine.d_ckm — ahi esta la
+        definicion, el signo y por que no es la cantidad canonica. Aca vive
+        lo que NO se unifica: de donde sale A0.
 
-        A0 se fija en la primera llamada con corpus establecido (mode != accumulation).
-        Se usa _combine_W_Delta para escala compatible W + Delta_r.
+        A0 se fija en la primera llamada con corpus establecido (mode !=
+        accumulation), se cuenta sobre _combine_W_Delta(W, Delta_r) — escala
+        compatible W + Delta_r — y se resetea cuando W cambia. COCO fija el
+        suyo sobre W sola y no lo resetea: una cantidad, dos baselines.
         """
         Delta    = self._Delta_r if self._Delta_r is not None else np.zeros_like(W)
         W_eff    = self._combine_W_Delta(W, Delta)

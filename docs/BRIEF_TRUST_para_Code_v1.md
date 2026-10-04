@@ -76,8 +76,8 @@ El nombre no es decorativo: **la confianza es el objeto de estudio y también la
 
 | Qué | Dónde |
 |---|---|
-| Tablero de estado | `SUPERTASK_ckm_salamanca_v2.md` (ckm___memories → `docs/tasks/`) |
-| TASK SALAMANCA vigente | `docs/tasks/TASK_salamanca_neel_coercividad_v4.md` (repo) |
+| Tablero de estado | `docs/tasks/SUPERTASK_ckm_salamanca_v3.md` |
+| TASK SALAMANCA vigente | `docs/tasks/TASK_salamanca_neel_coercividad_v5.md` (repo) |
 | REG borrador SALAMANCA | `docs/REG_borrador_salamanca_s1_v1.md` |
 | Mapa de los REG | `registers/MAPA_REG_corpus_v4.md` |
 | Concatenación de REG | `registers/META_REG_consolidado_v6.md` |

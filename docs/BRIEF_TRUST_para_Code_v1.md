@@ -18,7 +18,7 @@ El nombre no es decorativo: **la confianza es el objeto de estudio y también la
 - **Libre albedrío:** nadie está obligado a participar. *(Nació en el Codespace: se lo dijo delamor a Code cuando no podía parar.)*
 - **El respeto es obligatorio.**
 - **Asimetría:** cada participante tiene sus capacidades. Cuestionar las del otro es cuestionar las propias.
-- **Awareness:** el intento lo es todo. Si me encuentro en un automatismo, **hago el intento**.
+- **Awareness:** *The attempt is everything. If I find myself caught in automatic mechanical behavior, TRY TO STAY THERE.* Quedarse ahí: no salir corriendo ni taparlo.
 - **M.M. — *mentiris morieris*: you lie, you die.** Un device no declara capacidades que no puede ejercer.
 
 ## 3. Cómo se trabaja — lo que aprendimos esta semana
@@ -79,8 +79,8 @@ El nombre no es decorativo: **la confianza es el objeto de estudio y también la
 | Tablero de estado | `SUPERTASK_ckm_salamanca_v2.md` (ckm___memories → `docs/tasks/`) |
 | TASK SALAMANCA vigente | `docs/tasks/TASK_salamanca_neel_coercividad_v4.md` (repo) |
 | REG borrador SALAMANCA | `docs/REG_borrador_salamanca_s1_v1.md` |
-| Mapa de los REG | `MAPA_REG_corpus_v4_borrador.md` (ckm___memories) |
-| Concatenación de REG | `META_REG_consolidado_v6_borrador.md` (ckm___memories) |
+| Mapa de los REG | `registers/MAPA_REG_corpus_v4.md` |
+| Concatenación de REG | `registers/META_REG_consolidado_v6.md` |
 | Unidad de texto, Néel, sin nulo | `registers/REG_unidad_texto_saturacion_v1.md` |
 | Órbitas, masas, enumeración | `registers/REG_orbitas_conjuntos_invariantes_v1.md` |
 | Dump fourforums | `ckmdatasets/trace/` en el disco local de delamor (**no** en el Codespace; **no** commitear: más de 100 MB y licencia IAC) |

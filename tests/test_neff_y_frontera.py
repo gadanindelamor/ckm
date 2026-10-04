@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
-from landscape_engine import basin_masses, count_attractors, n_eff
+from landscape_engine import basin_masses, count_attractors, d_ckm, n_eff
 from cluster_frontier_density import OPOSICION, cluster_frontier_density
 from corpus_service import CorpusService
 from monitor_service import MonitorService
@@ -32,6 +32,35 @@ def _W(N=10, seed=0):
 
 
 # ── N_eff ───────────────────────────────────────────────────────────────────
+
+# ── d_ckm — la distancia por conteo (TASK_d_ckm_al_engine_v1) ───────────────
+# La hermana de d_masa_cuencas. Se testea la operacion, haciendola: no se
+# verifica contra la formula escrita en ningun lado.
+
+def test_d_ckm_hace_la_operacion():
+    assert d_ckm(4, 10) == 0.6          # 10 - 4 = 6; 6 / 10 = 0.6
+    assert d_ckm(10, 10) == 0.0         # sin cambio
+    assert d_ckm(1, 4) == 0.75
+
+
+def test_d_ckm_negativo_cuando_el_paisaje_gano_atractores():
+    """Negativo no es deficit: A_actual > A0 es mas atractores que el
+    baseline. El nombre "distancia" es incorrecto en ese sentido y se
+    conserva por regresion."""
+    assert d_ckm(15, 10) == -0.5
+    assert d_ckm(32, 2) == -15.0        # el caso que da la base de COCO
+
+
+def test_d_ckm_borde_A0_cero_devuelve_cero():
+    """Conservado tal cual de los dos servicios, aunque 0.0 diga "sin
+    cambio" donde no hubo medicion y d_masa_cuencas devuelva None en su
+    borde. Cambiarlo es decision aparte, no entra en una extraccion."""
+    assert d_ckm(3, 0) == 0.0
+
+
+def test_d_ckm_devuelve_float_de_python():
+    assert type(d_ckm(4, 10)) is float
+
 
 @pytest.mark.parametrize("k", [1, 2, 5, 17])
 def test_n_eff_masas_uniformes_da_k(k):

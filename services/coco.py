@@ -3,6 +3,12 @@ coco.py — Collective COCO-thermostat (prototipo mínimo)
 
 No almacena capacidades declaradas (eso es COCO-registry, se vuelve stale).
 Observa D_ckm(t) del corpus colectivo emergido de interacción real A2A.
+La distancia por conteo es landscape_engine.d_ckm — ahí está la definición,
+el signo, y por qué NO es la cantidad canónica (el conteo no converge; la
+canónica es n_eff sobre masas). Lo que es de COCO y no del engine: su A0 se
+cuenta sobre self.W SOLA — baseline sin Delta — y no se re-fija cuando W
+cambia. Monitor cuenta el suyo sobre W + Delta_r y lo resetea: una sola
+cantidad, dos baselines (TASK_d_ckm_al_engine_v1).
 Cuando el campo cruza el umbral, aplica OPERADOR_STOP_COCO
 (Δ_r_compresiones ← alpha · Δ_r_compresiones) sobre su PROPIA representación.
 Desde D3 (TASK_delta_compresiones_coco_v1) COCO lee el Δ_r de Monitor —
@@ -32,7 +38,11 @@ la zona Ω* del corpus.
 GAP cerrado Jun 2026: β_c_corpus derivado analíticamente desde W real.
 β_c = 1/(ρ* · N · μ_W). ρ*=0.5 garantizado algebraicamente.
 TEMP_SIGNAL emitida cuando β_collective se aleja de β_c en cualquier dirección:
+  UNKNOWN  → β_collective no estimable (ningún device con fi sobre epsilon).
+             No es NOMINAL: la ausencia de medición no dice que el campo esté
+             en Ω*. Firma_CKM firmaba NOMINAL ahí hasta el 4 oct 2026.
   TOO_COLD → paranoia/inanición (campo rechaza todo, se extingue)
+  NOMINAL  → zona Ω*, el portero discrimina bien
   TOO_HOT  → intoxicación/permisividad (campo acepta todo, pierde discriminación)
 
 Precondición: W debe ser el suelo del corpus en modo evaluación.

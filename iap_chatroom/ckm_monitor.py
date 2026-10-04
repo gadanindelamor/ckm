@@ -128,7 +128,10 @@ class CKMMonitor:
         if self._last_panel and "D_ckm" in self._last_panel:
             d_ckm = self._last_panel["D_ckm"]
             thermostat = self._last_panel.get("thermostat")
-            temp_signal = thermostat["temp_signal"] if thermostat else "NOMINAL"
+            # panel["thermostat"]["temp_signal"] es el dict de COCO; acá va la
+            # señal. Sin thermostat: UNKNOWN, no NOMINAL — no se midió.
+            ts = thermostat.get("temp_signal") if thermostat else None
+            temp_signal = ts["signal"] if isinstance(ts, dict) else (ts or "UNKNOWN")
 
         corpus_status = "operational" if status["mode"] == "evaluation" else "accumulating"
 

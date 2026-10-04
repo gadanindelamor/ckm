@@ -146,14 +146,43 @@ def test_firma_delta_sha_cambia_tras_evaluate():
         cleanup(paths)
 
 
-def test_firma_temp_signal_nominal_sin_thermostat():
-    """temp_signal es NOMINAL cuando no hay thermostat inyectado."""
+def test_firma_temp_signal_unknown_sin_thermostat():
+    """Sin thermostat, temp_signal es UNKNOWN — no NOMINAL.
+
+    NOMINAL afirma que el campo está en la zona Omega*. La ausencia de
+    regulador no mide nada, y firmar NOMINAL ahí certifica lo que no se
+    midió. Este test afirmaba lo contrario hasta el 4 oct 2026.
+    """
     corpus, monitor, paths = make_corpus_monitor(with_thermostat=False)
     try:
         svc = FirmaService()
         f = svc.firmar(corpus, monitor)
         assert f is not None
-        assert f.temp_signal == "NOMINAL"
+        assert f.temp_signal == "UNKNOWN"
+    finally:
+        cleanup(paths)
+
+
+def test_firma_temp_signal_con_thermostat_es_senal_str():
+    """Con thermostat, el campo firmado es la SEÑAL, no el dict.
+
+    COCO.temp_signal() devuelve un dict; el campo de Firma está anotado str.
+    Antes del 4 oct 2026 se asignaba el dict completo, y este camino no
+    estaba cubierto por ningún test.
+
+    El fi se registra a mano por encima de epsilon: con fi = 0 el beta_i no
+    es estimable y temp_signal() devuelve UNKNOWN, con lo cual el test
+    pasaría SIN ejercitar la extracción. La aserción excluye UNKNOWN por eso.
+    """
+    corpus, monitor, paths = make_corpus_monitor(with_thermostat=True)
+    try:
+        monitor.evaluate("gun control reduces violence", device_id="d1")
+        monitor._thermostat.register_device_eval("d1", 0.5)
+        svc = FirmaService()
+        f = svc.firmar(corpus, monitor)
+        assert f is not None
+        assert isinstance(f.temp_signal, str)
+        assert f.temp_signal in ("TOO_COLD", "NOMINAL", "TOO_HOT")
     finally:
         cleanup(paths)
 
@@ -234,7 +263,8 @@ def run_all():
         test_firma_w_sha_correcto,
         test_firma_delta_sha_ceros_sin_evaluate,
         test_firma_delta_sha_cambia_tras_evaluate,
-        test_firma_temp_signal_nominal_sin_thermostat,
+        test_firma_temp_signal_unknown_sin_thermostat,
+        test_firma_temp_signal_con_thermostat_es_senal_str,
         test_firma_n_agentes,
         test_verificar_firma_valida,
         test_verificar_firma_invalida,

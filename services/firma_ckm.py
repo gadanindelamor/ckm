@@ -7,7 +7,7 @@ No produce la huella — hace legible la huella que ya existe.
 Campos (REG_firma_corpus_v1):
     sha256(W_momento)         — estado del suelo en ese instante
     D_ckm(t)                  — posición en el paisaje
-    temp_signal               — TOO_COLD / NOMINAL / TOO_HOT
+    temp_signal               — UNKNOWN / TOO_COLD / NOMINAL / TOO_HOT
     n_agentes                 — presencia, sin identidad si no se declara
     timestamp
     sha256(Delta_r_acumulado) — huella del contacto
@@ -51,7 +51,7 @@ class Firma:
     """
     w_sha    : str    # sha256(W_momento)
     d_ckm    : float  # D_ckm(t) al momento de la firma
-    temp_signal: str  # TOO_COLD | NOMINAL | TOO_HOT
+    temp_signal: str  # UNKNOWN | TOO_COLD | NOMINAL | TOO_HOT
     n_agentes: int    # número de agentes presentes
     timestamp: float  # time.time()
     delta_sha: str    # sha256(Delta_r_acumulado)
@@ -107,10 +107,16 @@ class FirmaService:
             if W is not None:
                 d_ckm = monitor._D_ckm(W)
 
-        # temp_signal — desde thermostat si está inyectado
-        temp_signal = "NOMINAL"
+        # temp_signal — desde thermostat si está inyectado.
+        # Sin thermostat: UNKNOWN, no NOMINAL. NOMINAL afirma que el campo
+        # está en la zona Omega*; la ausencia de regulador no mide nada, y
+        # firmar NOMINAL ahí es certificar lo que no se midió. COCO nunca se
+        # conectó al canal IAP, así que toda esa serie cae en este camino.
+        # temp_signal() devuelve un dict: acá va la señal, que es lo que el
+        # campo declara como str.
+        temp_signal = "UNKNOWN"
         if monitor._thermostat is not None:
-            temp_signal = monitor._thermostat.temp_signal()
+            temp_signal = monitor._thermostat.temp_signal()["signal"]
 
         # delta_sha — sha del Δ acumulado o ceros si es la primera firma
         if monitor._Delta_r is not None:

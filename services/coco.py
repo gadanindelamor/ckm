@@ -1,14 +1,21 @@
 """
-coco.py — Collective COCO-thermostat (prototipo mínimo)
+coco.py — Collective COCO-Regulator
+ex thermostat (prototipo mínimo)
+ex registry (BE Framework)
 
 No almacena capacidades declaradas (eso es COCO-registry, se vuelve stale).
 Observa D_ckm(t) del corpus colectivo emergido de interacción real A2A.
-La distancia por conteo es landscape_engine.d_ckm — ahí está la definición,
-el signo, y por qué NO es la cantidad canónica (el conteo no converge; la
-canónica es n_eff sobre masas). Lo que es de COCO y no del engine: su A0 se
-cuenta sobre self.W SOLA — baseline sin Delta — y no se re-fija cuando W
-cambia. Monitor cuenta el suyo sobre W + Delta_r y lo resetea: una sola
-cantidad, dos baselines (TASK_d_ckm_al_engine_v1).
+D_ckm es la fórmula canónica, landscape_engine.d_ckm:
+    D_ckm = 1 − ln N_eff / ln N_eff0,   N_eff = 1 / Σ m²  (masas de cuenca)
+A_current y A0 SON N_eff y N_eff0 — sólo se llaman distinto: salen de
+landscape_engine.count_attractors, que desde el 5 de octubre de 2026 devuelve
+n_eff(basin_masses) y no el conteo (ése quedó en deprecated_count_attractors).
+Lo que es de COCO y no del engine: su A0 se mide sobre self.W SOLA —
+baseline sin Delta — y no se re-fija cuando W cambia. Monitor mide el suyo
+sobre W + Delta_r y lo resetea: una sola cantidad, dos baselines
+(TASK_d_ckm_al_engine_v1).
+Los umbrales D_CKM_THRESHOLD y FRAC_REC_MIN se calibraron sobre la forma
+lineal por conteo (REG_destruccion_recuperacion_v1) y NO se recalibraron.
 Cuando el campo cruza el umbral, aplica OPERADOR_STOP_COCO
 (Δ_r_compresiones ← alpha · Δ_r_compresiones) sobre su PROPIA representación.
 Desde D3 (TASK_delta_compresiones_coco_v1) COCO lee el Δ_r de Monitor —
@@ -107,9 +114,9 @@ class ThermostatState:
     """Snapshot devuelto por observe() — un campo por cantidad evaluada
     ese ciclo. Ver observe() para el significado de cada uno."""
     t            : int   = 0
-    D_ckm        : float = 0.0
-    A_current    : int   = 0
-    A0           : int   = 0
+    D_ckm        : Optional[float] = 0.0   # None: baseline ≤ 1, sin medición
+    A_current    : float   = 0.0
+    A0           : float   = 0.0
     frac_rec     : float = 1.0
     stop_applied : bool  = False
     alpha_used   : float = 1.0
@@ -200,7 +207,7 @@ class COCO:
         self._sampling_mode  = sampling_mode
         self._n_warmup       = n_warmup if n_warmup is not None else self.N
 
-        self._A0             : Optional[int]        = None
+        self._A0             : Optional[float]        = None
         # Δ_r_compresiones — representación propia de COCO del campo que
         # regula (D3). Nace en ceros con la W de este ciclo, incorpora el
         # INCREMENTO del Δ_r de Monitor (lectura, nunca escritura) y
@@ -327,7 +334,7 @@ class COCO:
 
         state = ThermostatState(
             t            = self._t,
-            D_ckm        = round(D_ckm, 4),
+            D_ckm        = round(D_ckm, 4) if D_ckm is not None else None,
             A_current    = A_current,
             A0           = self._A0,
             frac_rec     = round(frac_rec, 4),
@@ -490,8 +497,8 @@ class COCO:
 
         Vacía si track_landscape=False o si nunca disparó STOP. Cada
         entry es un dict:
-            A_antes, A_despues    (int)   — atractores antes/después de comprimir
-            delta_A               (int)   — A_despues - A_antes
+            A_antes, A_despues    (float) — atractores antes/después de comprimir
+            delta_A               (float) — A_despues - A_antes
             cS_antes, cS_despues  (float) — c(S) medio antes/después
             delta_cS              (float) — cS_despues - cS_antes
             alpha_used            (float) — factor de compresión aplicado
@@ -560,9 +567,13 @@ class COCO:
 
     # ── Clasificación de zona ─────────────────────────────────────────────────
 
-    def _classify_zone(self, D_ckm: float, frac_rec: float) -> str:
+    def _classify_zone(self, D_ckm: Optional[float], frac_rec: float) -> str:
         """D_ckm negativo o por debajo de threshold → "stable". Si no,
-        frac_rec por debajo de frac_rec_min → "deep", si no → "degrading"."""
+        frac_rec por debajo de frac_rec_min → "deep", si no → "degrading".
+        D_ckm None (baseline ≤ 1, sin distancia que medir) → "stable": sin
+        medición no se aplica STOP."""
+        if D_ckm is None:
+            return "stable"          # sin medición
         if D_ckm < 0:
             return "stable"          # campo expandido — acumulación suma atractores
         if D_ckm < self.threshold:
@@ -608,10 +619,10 @@ class COCO:
         weighted : bool = False,
         boltzmann: bool = False,
         n_warmup : Optional[int] = None,
-    ) -> int:
-        """Atractores sobre W_eff con n_runs y seed de esta instancia —
-        landscape_engine.count_attractors, donde están los sesgos y los
-        tres modos documentados."""
+    ) -> float:
+        """N_eff sobre W_eff con n_runs y seed de esta instancia —
+        landscape_engine.count_attractors, que devuelve n_eff(basin_masses)
+        y conserva el nombre por regresión."""
         return count_attractors(
             W_eff, n_runs=self._n_runs, seed=self._seed,
             weighted=weighted, boltzmann=boltzmann,

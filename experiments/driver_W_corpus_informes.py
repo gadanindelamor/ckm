@@ -61,7 +61,7 @@ import numpy as np
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "services"))
 from corpus_service import CorpusService          # noqa: E402
-from landscape_engine import basin_masses, count_attractors, n_eff  # noqa: E402
+from landscape_engine import basin_masses, deprecated_count_attractors, n_eff  # noqa: E402
 
 CORPUS = REPO / "process/corpus_informes"
 UNIDADES = {"párrafo": CORPUS / "corpus_informes.txt",
@@ -90,7 +90,9 @@ def medir(path: Path, etiqueta: str, top_k: int, n_runs=(1000, 5000)) -> dict:
     }
     for nr in n_runs:
         masas = basin_masses(W, n_runs=nr, seed=0)
-        fila[f"A_{nr}"] = count_attractors(W, n_runs=nr, seed=0)
+        # A_ es el conteo de estados terminales; count_attractors devuelve
+        # N_eff desde el 5 oct 2026 (TASK_d_ckm_formula_canonica_v1).
+        fila[f"A_{nr}"] = int(deprecated_count_attractors(W, n_runs=nr, seed=0))
         fila[f"N_eff_{nr}"] = round(n_eff(masas), 2)
         fila[f"saturacion_{nr}"] = round(n_eff(masas) / nr, 4)
     return fila

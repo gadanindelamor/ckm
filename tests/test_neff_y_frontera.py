@@ -17,7 +17,10 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
-from landscape_engine import basin_masses, count_attractors, d_ckm, n_eff
+from landscape_engine import (
+    basin_masses, count_attractors, d_ckm, deprecated_count_attractors,
+    deprecated_d_ckm, n_eff,
+)
 from cluster_frontier_density import OPOSICION, cluster_frontier_density
 from corpus_service import CorpusService
 from monitor_service import MonitorService
@@ -33,33 +36,54 @@ def _W(N=10, seed=0):
 
 # ── N_eff ───────────────────────────────────────────────────────────────────
 
-# ── d_ckm — la distancia por conteo (TASK_d_ckm_al_engine_v1) ───────────────
-# La hermana de d_masa_cuencas. Se testea la operacion, haciendola: no se
-# verifica contra la formula escrita en ningun lado.
+# ── deprecated_d_ckm — la distancia por conteo (TASK_d_ckm_al_engine_v1) ────
+# Desde el 5 de octubre de 2026 `d_ckm` mide masa de cuenca y delega en
+# d_masa_cuencas; la forma lineal por conteo quedo en `deprecated_d_ckm`.
+# Estos cuatro tests hacen la operacion lineal y por eso la llaman a ella.
+# Se testea la operacion, haciendola: no se verifica contra la formula
+# escrita en ningun lado.
 
 def test_d_ckm_hace_la_operacion():
-    assert d_ckm(4, 10) == 0.6          # 10 - 4 = 6; 6 / 10 = 0.6
-    assert d_ckm(10, 10) == 0.0         # sin cambio
-    assert d_ckm(1, 4) == 0.75
+    """Usa deprecated_d_ckm: la operacion lineal (A0 - A) / A0 ya no es la
+    de d_ckm."""
+    assert deprecated_d_ckm(4, 10) == 0.6          # 10 - 4 = 6; 6 / 10 = 0.6
+    assert deprecated_d_ckm(10, 10) == 0.0         # sin cambio
+    assert deprecated_d_ckm(1, 4) == 0.75
 
 
 def test_d_ckm_negativo_cuando_el_paisaje_gano_atractores():
-    """Negativo no es deficit: A_actual > A0 es mas atractores que el
-    baseline. El nombre "distancia" es incorrecto en ese sentido y se
-    conserva por regresion."""
-    assert d_ckm(15, 10) == -0.5
-    assert d_ckm(32, 2) == -15.0        # el caso que da la base de COCO
+    """Usa deprecated_d_ckm. Negativo no es deficit: A_actual > A0 es mas
+    atractores que el baseline. El nombre "distancia" es incorrecto en ese
+    sentido y se conserva por regresion."""
+    assert deprecated_d_ckm(15, 10) == -0.5
+    assert deprecated_d_ckm(32, 2) == -15.0        # el caso que da la base de COCO
 
 
 def test_d_ckm_borde_A0_cero_devuelve_cero():
-    """Conservado tal cual de los dos servicios, aunque 0.0 diga "sin
-    cambio" donde no hubo medicion y d_masa_cuencas devuelva None en su
-    borde. Cambiarlo es decision aparte, no entra en una extraccion."""
-    assert d_ckm(3, 0) == 0.0
+    """Usa deprecated_d_ckm, que conserva el borde tal cual de los dos
+    servicios: 0.0 aunque diga "sin cambio" donde no hubo medicion. d_ckm
+    devuelve None en ese borde, como d_masa_cuencas — ver
+    test_d_ckm_es_d_masa_cuencas."""
+    assert deprecated_d_ckm(3, 0) == 0.0
 
 
 def test_d_ckm_devuelve_float_de_python():
-    assert type(d_ckm(4, 10)) is float
+    """Usa deprecated_d_ckm. d_ckm devuelve np.float64 (el de np.log en
+    d_masa_cuencas), que es subclase de float pero no `float`."""
+    assert type(deprecated_d_ckm(4, 10)) is float
+
+
+# ── d_ckm — masa de cuenca, escala log (delega en d_masa_cuencas) ───────────
+
+def test_d_ckm_es_d_masa_cuencas():
+    """d_ckm hace 1 - ln A / ln A0. Mismos valores y mismo borde que
+    d_masa_cuencas: baseline <= 1 no tiene distancia que medir -> None."""
+    assert d_ckm(4.0, 4.0) == pytest.approx(0.0)       # sin cambio
+    assert d_ckm(2.0, 4.0) == pytest.approx(0.5)       # ln 2 / ln 4 = 1/2
+    assert d_ckm(1.0, 4.0) == pytest.approx(1.0)       # colapso
+    assert d_ckm(8.0, 4.0) == pytest.approx(-0.5)      # gana diversidad
+    assert d_ckm(3.0, 1.0) is None
+    assert d_ckm(3.0, 0.0) is None
 
 
 @pytest.mark.parametrize("k", [1, 2, 5, 17])
@@ -85,11 +109,44 @@ def test_basin_masses_suma_uno_y_es_reproducible():
 
 def test_basin_masses_agrupa_orbitas_no_terminales():
     """Una órbita de período 2 alcanzada por sus dos fases es UNA entrada;
-    count_attractors cuenta estados terminales y puede dar más."""
+    el conteo de estados terminales puede dar más. Usa
+    deprecated_count_attractors: count_attractors ya no cuenta terminales,
+    devuelve N_eff."""
     W = _W(N=12, seed=5)
     masas = basin_masses(W, n_runs=100, seed=0)
-    terminales = count_attractors(W, n_runs=100, seed=0)
+    terminales = deprecated_count_attractors(W, n_runs=100, seed=0)
     assert len(masas) <= terminales
+
+
+# ── La formula canonica, de punta a punta ───────────────────────────────────
+# D_ckm = 1 - ln N_eff / ln N_eff0, con N_eff = 1 / sum(m^2) sobre las masas
+# de cuenca. Cada test hace la cuenta a mano desde las masas y la compara con
+# lo que devuelve el codigo; no llama a n_eff ni a d_masa_cuencas para
+# obtener el valor esperado.
+
+def test_count_attractors_es_n_eff_sobre_masas():
+    """count_attractors conserva el nombre y devuelve 1 / sum(m^2)."""
+    W = _W(N=12, seed=5)
+    masas = basin_masses(W, n_runs=100, seed=0)
+    a_mano = 1.0 / float(np.sum(masas ** 2))
+    assert count_attractors(W, n_runs=100, seed=0) == pytest.approx(a_mano)
+    assert a_mano != len(masas)                 # no es el conteo de orbitas
+
+
+def test_d_ckm_es_la_formula_canonica_sobre_masas():
+    """d_ckm(count_attractors(W_t), count_attractors(W_0)) es
+    1 - ln N_eff / ln N_eff0, hecho a mano desde las masas."""
+    W0 = _W(N=12, seed=5)
+    Wt = _W(N=12, seed=6)
+    m0 = basin_masses(W0, n_runs=100, seed=0)
+    mt = basin_masses(Wt, n_runs=100, seed=0)
+    n0 = 1.0 / float(np.sum(m0 ** 2))
+    nt = 1.0 / float(np.sum(mt ** 2))
+    a_mano = 1.0 - np.log(nt) / np.log(n0)
+    D = d_ckm(count_attractors(Wt, n_runs=100, seed=0),
+              count_attractors(W0, n_runs=100, seed=0))
+    assert D == pytest.approx(a_mano)
+    assert a_mano != 0.0                        # las dos W difieren
 
 
 # ── cluster_frontier_density ────────────────────────────────────────────────
@@ -188,6 +245,23 @@ def test_panel_lleva_n_eff_y_baseline_que_se_resetea(tmp_path):
     assert all("N_eff" in r["panel"] and "N_eff0" in r["panel"] for r in lineas)
 
 
+def test_panel_D_ckm_es_la_formula_canonica(tmp_path):
+    """En el panel de Monitor, D_ckm es 1 - ln N_eff / ln N_eff0 con los
+    N_eff y N_eff0 del mismo panel, y coincide con D_masa_cuencas."""
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c.ingest(TEXTS)
+    m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=20)
+
+    paneles = [m.evaluate(t) for t in ("rights weapons", "rights bans",
+                                       "gun violence", "background checks")]
+    assert any(p["N_eff"] != p["N_eff0"] for p in paneles)   # hay algo que medir
+    for p in paneles:
+        assert p["N_eff0"] > 1.0
+        a_mano = 1.0 - np.log(p["N_eff"]) / np.log(p["N_eff0"])
+        assert p["D_ckm"] == pytest.approx(a_mano, abs=1e-3)  # panel redondea a 4
+        assert p["D_ckm"] == p["D_masa_cuencas"]
+
+
 # ── D_masa_cuencas (log) ────────────────────────────────────────────────────
 
 from landscape_engine import d_masa_cuencas  # noqa: E402
@@ -212,6 +286,8 @@ def test_panel_declara_condicion_W(tmp_path):
     cw = m.evaluate("rights weapons")["condicion_W"]
     assert cw["w_sha"] == c.w_sha() and cw["N"] == len(c.get_nodes())
     assert cw["n_runs"] == 20 and cw["count_seed"] == 0
+    # la clave "D_ckm" cambio de cantidad el 5 oct 2026: el panel declara cual
+    assert cw["D_ckm_forma"] == "masa_log"
     W = c.get_W()
     assert cw["aislados_W"] == [c.get_nodes()[i] for i in range(len(W)) if not W[i].any()]
     assert set(cw["aislados_W_eff"]) <= set(cw["aislados_W"])

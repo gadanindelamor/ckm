@@ -202,7 +202,38 @@ def count_attractors(
     weighted : bool = False,
     boltzmann: bool = False,
     n_warmup : Optional[int] = None,
-) -> int:
+) -> float:
+    """
+    Número efectivo de órbitas sobre W_eff — n_eff(basin_masses(...)).
+
+    Desde el 5 de octubre de 2026 devuelve masa de cuenca, no conteo: es la
+    cantidad que entra a `d_ckm` como A_actual y A0. Sólo se llama distinto:
+    el nombre se conserva por regresión, como el de `d_ckm`. El conteo de
+    estados terminales distintos queda en `deprecated_count_attractors`.
+
+    Dos diferencias con el conteo: agrupa por ÓRBITA (relax_orbit) y no por
+    estado terminal — una órbita de período 2 es una entrada y no dos —, y
+    pesa cada órbita por su masa. k órbitas de igual masa → k. El muestreo
+    es el mismo: misma seed → mismas sigma_0.
+
+    Los tres modos de muestreo de sigma_0 (uniforme, weighted, boltzmann)
+    están documentados en `deprecated_count_attractors`.
+    """
+    return n_eff(basin_masses(
+        W_eff, n_runs=n_runs, seed=seed,
+        weighted=weighted, boltzmann=boltzmann, n_warmup=n_warmup,
+    ))
+
+
+def deprecated_count_attractors(
+    W_eff    : np.ndarray,
+    *,
+    n_runs   : int,
+    seed     : int,
+    weighted : bool = False,
+    boltzmann: bool = False,
+    n_warmup : Optional[int] = None,
+) -> float:
     """
     Atractores distintos alcanzados en n_runs reinicios sobre W_eff.
 
@@ -225,7 +256,7 @@ def count_attractors(
     for _ in range(n_runs):
         s0 = _muestra(rng, W_eff, probs, beta, n_w)
         attractors.add(tuple(relax(s0, W_eff).tolist()))
-    return len(attractors)
+    return float(len(attractors))
 
 
 def mean_cS(
@@ -352,7 +383,7 @@ def basin_distance(
     return {"d": None, "exacto": todo_exhaustivo, "evaluadas": evaluadas}
 
 
-def d_ckm(A_actual: int, A0: int) -> float:
+def deprecated_d_ckm(A_actual: float, A0: float) -> float:
     """
     Distancia contextual por CONTEO de atractores:
 
@@ -385,6 +416,62 @@ def d_ckm(A_actual: int, A0: int) -> float:
     ("baseline sin Delta") y no lo resetea.
     """
     return float((A0 - A_actual) / A0) if A0 > 0 else 0.0
+
+
+# Qué forma de D_ckm calcula este engine. Va en condicion_W de cada panel: la
+# clave "D_ckm" de los paneles anteriores al 5 de octubre de 2026 lleva la
+# forma lineal por conteo (deprecated_d_ckm) y esos paneles NO tienen esta
+# marca. Un panel sin "D_ckm_forma" es de la forma por conteo.
+D_CKM_FORMA = "masa_log"   # 1 − ln N_eff / ln N_eff0
+
+
+def d_ckm(A_actual: float, A0: float) -> Optional[float]:
+    """
+    Distancia contextual por masa de cuenca, escala logarítmica (delamor):
+
+        D_masa = 1 − ln N_eff / ln N_eff0  =  [H₂(t0) − H₂(t)] / H₂(t0)
+
+    0 sin cambio, 1 en colapso (N_eff → 1), negativo si el paisaje gana
+    diversidad. Es la hipótesis de mayo normalizada (REG_hipotesis_distancia_
+    contextual_v2 §2).
+
+    Borde: N_eff0 ≤ 1 → None. Con una sola cuenca efectiva de partida
+    ln N_eff0 = 0 y no hay distancia que medir. El log es sensible a los
+    bordes (REG v4 §5): cerca de N_eff0 = 1 amplifica cualquier diferencia.
+    
+    _______DEPRECATED October 05 2026__________________________________
+    
+    Distancia contextual por CONTEO de atractores:
+
+        D_ckm = (A0 − A_actual) / A0
+
+    0 sin cambio, positivo si el paisaje perdió atractores, **negativo si
+    ganó** — el signo es dirección, no déficit, y el nombre "distancia" es
+    incorrecto en ese sentido. Como `count_attractors`, es un nombre que se
+    conserva por regresión: los paneles históricos y los tests lo leen así.
+
+    **PASO 1 — duplicación exacta.** El cuerpo es, caracter por caracter, la
+    línea que hoy viven `monitor_service._D_ckm` (L397) y `coco.observe`
+    (L249). No se corrige nada acá: el borde `A0 <= 0 -> 0.0` se conserva
+    aunque diga "sin cambio" donde no hubo medición. Cambiarlo es una
+    decisión aparte, declarada, y no entra en una extracción.
+
+    A0 se anota `int`, no `Optional[int]`: el cuerpo de hoy rompe con None
+    (`None > 0`). Ningún llamador pasa None — Monitor difiere antes de
+    llegar acá y COCO fija A0 en la misma llamada. Aceptar None sería
+    agregar comportamiento, no duplicar.
+
+    **No es la cantidad canónica.** El conteo no converge: crece monótono
+    con n_runs (coupon-collector) y su signo se invierte cambiando sólo seed
+    o n_runs sobre la misma W y los mismos textos
+    (REG_seleccion_nodos_desempate_v1 §8). La canónica es `n_eff` sobre
+    masas de cuenca, y su forma de distancia es `d_masa_cuencas`.
+
+    Quién fija A0 NO se extrae: es política de cada servicio. Monitor lo
+    cuenta sobre W + Delta_r y lo resetea cuando W cambia; COCO sobre W sola
+    ("baseline sin Delta") y no lo resetea.
+    """
+    return d_masa_cuencas(A_actual, A0)
 
 
 def d_masa_cuencas(n_eff_actual: float, n_eff_0: Optional[float]) -> Optional[float]:

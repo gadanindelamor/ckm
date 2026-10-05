@@ -44,6 +44,7 @@ from coco import COCO, ThermostatState, BETA_RHO_STAR
 from ckm_landscape_config import CKMlandscapeConfig
 from landscape_engine import (
     d_ckm,
+    D_CKM_FORMA,
     beta_c_landscape,
     boltzmann_warmup,
     basin_masses,
@@ -122,7 +123,7 @@ class MonitorService:
         self._landscape_config = landscape_config
 
         self._Delta_r : Optional[np.ndarray] = None
-        self._A0    : Optional[int]        = None
+        self._A0    : Optional[float]        = None
         self._N_eff0: Optional[float]      = None   # baseline de N_eff, vive con A0
         # versión de W bajo la que se acumuló Δ_r — ver _invalidar_si_W_cambio
         self._w_sha   : Optional[str]       = None
@@ -176,7 +177,7 @@ class MonitorService:
         panel = {
             "c_S"              : round(c_s,  6),
             "fabrication_index": round(fi,   4),
-            "D_ckm"            : round(D_ckm, 4),
+            "D_ckm"            : round(D_ckm, 4) if D_ckm is not None else None,
             # N_eff = 1/Σm² sobre masas de cuenca por órbita, misma W_eff y
             # mismas muestras que D_ckm. N_eff0 es su baseline (se fija y se
             # resetea como A0). D_masa_cuencas en escala log (delamor):
@@ -301,13 +302,16 @@ class MonitorService:
         fi_vals  = [r["panel"]["fabrication_index"] for r in recent]
         D_vals   = [r["panel"]["D_ckm"]             for r in recent]
         fi_trend = fi_vals[-1] - fi_vals[0]
-        D_trend  = D_vals[-1]  - D_vals[0]
-        signal   = fi_trend > 0.05 and D_trend > 0.02
+        # D_ckm None (baseline ≤ 1) en un extremo de la ventana: no hay
+        # tendencia que medir y no hay señal.
+        D_trend  = (D_vals[-1] - D_vals[0]
+                    if D_vals[-1] is not None and D_vals[0] is not None else None)
+        signal   = fi_trend > 0.05 and D_trend is not None and D_trend > 0.02
 
         return {
             "signal"   : signal,
             "fi_trend" : round(fi_trend, 4),
-            "D_trend"  : round(D_trend,  4),
+            "D_trend"  : round(D_trend,  4) if D_trend is not None else None,
             "direction": "CONVERGING" if fi_trend < -0.05 else "DIVERGING" if signal else "STABLE",
         }
 
@@ -382,10 +386,13 @@ class MonitorService:
         rejected = ((sigma_p > 0) & (sigma_r < 0)).sum()
         return float(rejected / declared)
 
-    def _D_ckm(self, W: np.ndarray) -> float:
-        """La distancia por conteo es landscape_engine.d_ckm — ahi esta la
-        definicion, el signo y por que no es la cantidad canonica. Aca vive
-        lo que NO se unifica: de donde sale A0.
+    def _D_ckm(self, W: np.ndarray) -> Optional[float]:
+        """D_ckm es la formula canonica, landscape_engine.d_ckm:
+        1 - ln N_eff / ln N_eff0. A_actual y A0 SON N_eff y N_eff0 — solo se
+        llaman distinto: _count_attractors devuelve n_eff(basin_masses). Por
+        eso el panel lleva el mismo numero en "D_ckm" y en "D_masa_cuencas".
+        None si el baseline es <= 1. Aca vive lo que NO se unifica: de donde
+        sale A0.
 
         A0 se fija en la primera llamada con corpus establecido (mode !=
         accumulation), se cuenta sobre _combine_W_Delta(W, Delta_r) — escala
@@ -409,6 +416,9 @@ class MonitorService:
             "N"             : len(nodes),
             "n_runs"        : self._n_runs,
             "count_seed"    : self._count_seed,
+            # qué cantidad hay bajo "D_ckm" — ausente en paneles históricos,
+            # que llevan la forma por conteo. Ver landscape_engine.D_CKM_FORMA.
+            "D_ckm_forma"   : D_CKM_FORMA,
             "aislados_W"    : [nodes[i] for i in np.where(~W.any(axis=1))[0]],
             "aislados_W_eff": [nodes[i] for i in np.where(~W_eff.any(axis=1))[0]],
         }
@@ -466,11 +476,12 @@ class MonitorService:
         weighted : Optional[bool] = None,
         boltzmann: Optional[bool] = None,
         n_warmup : Optional[int]  = None,
-    ) -> int:
+    ) -> float:
         """
-        Atractores distintos en n_runs reinicios sobre W —
-        landscape_engine.count_attractors, donde están los sesgos (n_runs sin
-        saturar, distribución de sigma_0) y los tres modos documentados.
+        N_eff en n_runs reinicios sobre W — landscape_engine.count_attractors,
+        que devuelve n_eff(basin_masses) y conserva el nombre por regresión.
+        Los tres modos de muestreo de sigma_0 están documentados en
+        landscape_engine.deprecated_count_attractors.
 
         weighted/boltzmann en None toman self._sampling_mode. Pasarlos
         explicitos permite un conteo puntual en otro modo sin cambiar la

@@ -50,7 +50,7 @@ class Firma:
     Inmutable por diseño: dataclass sin post_init mutante.
     """
     w_sha    : str    # sha256(W_momento)
-    d_ckm    : float  # D_ckm(t) al momento de la firma
+    d_ckm    : Optional[float]  # D_ckm(t) al momento de la firma; None sin medición
     temp_signal: str  # UNKNOWN | TOO_COLD | NOMINAL | TOO_HOT
     n_agentes: int    # número de agentes presentes
     timestamp: float  # time.time()
@@ -127,7 +127,7 @@ class FirmaService:
 
         return Firma(
             w_sha     = w_sha,
-            d_ckm     = round(d_ckm, 6),
+            d_ckm     = round(d_ckm, 6) if d_ckm is not None else None,
             temp_signal = temp_signal,
             n_agentes = n_agentes,
             timestamp = time.time(),

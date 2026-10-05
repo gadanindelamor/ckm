@@ -18,9 +18,19 @@ Dos bloques:
             observe: D_ckm, A0, A_current, frac_rec, zone, alpha_used,
             stop_applied, y el TIPO de D_ckm (coco no tiene float()).
 
+Dos bases guardadas (TASK_d_ckm_formula_canonica_v1):
+  baseline_d_ckm.json          — forma lineal por conteo, la de la extracción.
+                                 Se conserva; el código de hoy ya no la reproduce.
+  baseline_d_ckm_canonica.json — forma canónica, 1 − ln N_eff / ln N_eff0,
+                                 tomada el 5 oct 2026. D_ckm puede ser None
+                                 (baseline ≤ 1, sin distancia que medir).
+
+MonitorService escribe monitor_trajectory.jsonl en el directorio desde donde
+se corre: correrlo desde la raíz del repo agrega líneas a ese archivo.
+
 Uso:
-    python experiments/baseline_d_ckm.py --salida experiments/baseline_d_ckm.json
-    python experiments/baseline_d_ckm.py --comparar experiments/baseline_d_ckm.json
+    python experiments/baseline_d_ckm.py --salida experiments/baseline_d_ckm_canonica.json
+    python experiments/baseline_d_ckm.py --comparar experiments/baseline_d_ckm_canonica.json
 """
 
 import argparse
@@ -99,7 +109,7 @@ def _coco() -> list:
             s = th.observe(D)
             filas.append({
                 "modo": modo, "seed": seed,
-                "D_ckm": float(s.D_ckm), "A0": s.A0, "A_current": s.A_current,
+                "D_ckm": None if s.D_ckm is None else float(s.D_ckm), "A0": s.A0, "A_current": s.A_current,
                 "frac_rec": float(s.frac_rec), "zone": s.zone,
                 "alpha_used": float(s.alpha_used), "stop_applied": s.stop_applied,
                 "D_ckm_tipo": type(s.D_ckm).__name__,

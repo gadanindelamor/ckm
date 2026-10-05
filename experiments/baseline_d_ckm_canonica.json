@@ -1,0 +1,218 @@
+{
+ "monitor": [
+  {
+   "i": 3,
+   "D_ckm": null,
+   "c_S": NaN,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "weapons"
+   ],
+   "N_eff": 1.0,
+   "D_masa_cuencas": null,
+   "D_ckm_tipo": "NoneType"
+  },
+  {
+   "i": 4,
+   "D_ckm": 0.0,
+   "c_S": 0.333333,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "rights",
+    "gun"
+   ],
+   "N_eff": 3.6657,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 5,
+   "D_ckm": 0.0,
+   "c_S": 0.307692,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "gun",
+    "rights",
+    "violence"
+   ],
+   "N_eff": 6.9061,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 6,
+   "D_ckm": 0.0,
+   "c_S": 0.215686,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [],
+   "N_eff": 5.8962,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 7,
+   "D_ckm": 0.0,
+   "c_S": 0.15614,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [
+    "gun",
+    "violence",
+    "weapons",
+    "rights",
+    "assault",
+    "assault weapons",
+    "bans",
+    "bans reduce",
+    "reduce",
+    "gun violence",
+    "reduce assault",
+    "mass",
+    "mass shootings",
+    "reduce mass"
+   ],
+   "N_eff": 3.5112,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 8,
+   "D_ckm": 0.0,
+   "c_S": 0.149123,
+   "fabrication_index": 0.0,
+   "n_rejected_pairs": 0,
+   "Delta_r_sum": 0.0,
+   "activos_relajado": [],
+   "N_eff": 14.7059,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 9,
+   "D_ckm": 0.0,
+   "c_S": 0.147368,
+   "fabrication_index": 1.0,
+   "n_rejected_pairs": 3,
+   "Delta_r_sum": 6.0,
+   "activos_relajado": [],
+   "N_eff": 8.8028,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 10,
+   "D_ckm": 0.0,
+   "c_S": 0.112698,
+   "fabrication_index": 0.25,
+   "n_rejected_pairs": 3,
+   "Delta_r_sum": 6.0,
+   "activos_relajado": [
+    "checks",
+    "criminals",
+    "home",
+    "matters",
+    "matters weapons"
+   ],
+   "N_eff": 18.3824,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "i": 11,
+   "D_ckm": 0.0,
+   "c_S": 0.122807,
+   "fabrication_index": 0.5,
+   "n_rejected_pairs": 1,
+   "Delta_r_sum": 2.0,
+   "activos_relajado": [
+    "deaths"
+   ],
+   "N_eff": 13.4409,
+   "D_masa_cuencas": 0.0,
+   "D_ckm_tipo": "float64"
+  }
+ ],
+ "coco": [
+  {
+   "modo": "uniform",
+   "seed": 0,
+   "D_ckm": -3.0209,
+   "A0": 1.9872813990461045,
+   "A_current": 15.822784810126585,
+   "frac_rec": 7.962,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "modo": "uniform",
+   "seed": 42,
+   "D_ckm": -2.9428,
+   "A0": 1.9716088328075707,
+   "A_current": 14.534883720930232,
+   "frac_rec": 7.3721,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "modo": "weighted",
+   "seed": 0,
+   "D_ckm": -55.0291,
+   "A0": 1.0407993338884265,
+   "A_current": 9.398496240601505,
+   "frac_rec": 9.0301,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "modo": "weighted",
+   "seed": 42,
+   "D_ckm": null,
+   "A0": 1.0,
+   "A_current": 14.705882352941176,
+   "frac_rec": 14.7059,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "NoneType"
+  },
+  {
+   "modo": "boltzmann",
+   "seed": 0,
+   "D_ckm": -2.6963,
+   "A0": 1.996805111821086,
+   "A_current": 12.88659793814433,
+   "frac_rec": 6.4536,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float64"
+  },
+  {
+   "modo": "boltzmann",
+   "seed": 42,
+   "D_ckm": -2.3647,
+   "A0": 1.996805111821086,
+   "A_current": 10.245901639344261,
+   "frac_rec": 5.1311,
+   "zone": "stable",
+   "alpha_used": 1.0,
+   "stop_applied": false,
+   "D_ckm_tipo": "float64"
+  }
+ ]
+}

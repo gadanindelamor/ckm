@@ -1,0 +1,199 @@
+{
+ "repo_commit": "2097ca45f4dd86fdd997185006e91054173c9210",
+ "seed": 0,
+ "n_nulos": 200,
+ "n_ordenes": 60,
+ "bonferroni_alpha": 0.003125,
+ "python": "3.13.16",
+ "numpy": "2.5.3",
+ "networkx": "3.6.1",
+ "platform": "Linux-6.18.44-fc-v64-x86_64-with-glibc2.39",
+ "donde": "contenedor Cowork",
+ "variables_no_consideradas": "todas las que no están en este log (delamor)",
+ "W": {
+  "W_viejo": {
+   "N": 32,
+   "media": 0.004518558575503934,
+   "max": 0.05286686103012633,
+   "densidad": 0.7560483870967742,
+   "P1": {
+    "A_real": 0.31560921717171725,
+    "no_conv": 0,
+    "N_perm": {
+     "media": 0.2591123737373737,
+     "p5": 0.25207938762626264,
+     "p95": 0.26568576388888887,
+     "max": 0.2699337121212121,
+     "p": 0.004975124378109453
+    },
+    "N_grado": {
+     "media": 0.31101909722222226,
+     "p5": 0.30084911616161614,
+     "p95": 0.3202083333333334,
+     "max": 0.3277935606060607,
+     "p": 0.22388059701492538
+    }
+   },
+   "P2": {
+    "q0.3": {
+     "theta": 0.00019436345966958212,
+     "core": 32,
+     "n": 6,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    },
+    "q0.5": {
+     "theta": 0.001749271137026239,
+     "core": 26,
+     "n": 4,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    },
+    "q0.7": {
+     "theta": 0.004859086491739553,
+     "core": 16,
+     "n": 0,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    }
+   },
+   "P3": {
+    "q0.3": {
+     "theta": 0.00019436345966958212,
+     "core": 32,
+     "rem_medio": 0.1875,
+     "add_medio": 0.1875,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    },
+    "q0.5": {
+     "theta": 0.001749271137026239,
+     "core": 26,
+     "rem_medio": 0.15384615384615385,
+     "add_medio": 0.15384615384615385,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    },
+    "q0.7": {
+     "theta": 0.004859086491739553,
+     "core": 16,
+     "rem_medio": 0.0,
+     "add_medio": 0.0,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    }
+   }
+  },
+  "W_nuevo": {
+   "N": 32,
+   "media": 0.1262272089761571,
+   "max": 1.0,
+   "densidad": 0.7782258064516129,
+   "P1": {
+    "A_real": 0.3066287878787879,
+    "no_conv": 0,
+    "N_perm": {
+     "media": 0.28907954545454545,
+     "p5": 0.28418244949494953,
+     "p95": 0.29352035984848485,
+     "max": 0.2963699494949495,
+     "p": 0.004975124378109453
+    },
+    "N_grado": {
+     "media": 0.30435337752525254,
+     "p5": 0.2968087121212122,
+     "p95": 0.3113265467171718,
+     "max": 0.31474116161616167,
+     "p": 0.2835820895522388
+    }
+   },
+   "P2": {
+    "q0.3": {
+     "theta": 0.08695652173913043,
+     "core": 31,
+     "n": 2,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    },
+    "q0.5": {
+     "theta": 0.13043478260869565,
+     "core": 29,
+     "n": 5,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    },
+    "q0.7": {
+     "theta": 0.17391304347826086,
+     "core": 24,
+     "n": 7,
+     "tau": null,
+     "R": null,
+     "p": null,
+     "decadas": null
+    }
+   },
+   "P3": {
+    "q0.3": {
+     "theta": 0.08695652173913043,
+     "core": 31,
+     "rem_medio": 0.06451612903225806,
+     "add_medio": 0.06451612903225806,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    },
+    "q0.5": {
+     "theta": 0.13043478260869565,
+     "core": 29,
+     "rem_medio": 0.1724137931034483,
+     "add_medio": 0.1724137931034483,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    },
+    "q0.7": {
+     "theta": 0.17391304347826086,
+     "core": 24,
+     "rem_medio": 0.2916666666666667,
+     "add_medio": 0.2916666666666667,
+     "dif_real": 0.0,
+     "recup_real": 1.0,
+     "nulo_dif_media": 0.0,
+     "p_dif": 1.0,
+     "nulo_recup_media": 1.0,
+     "p_recup_menor": 1.0
+    }
+   }
+  }
+ },
+ "P4": "NO MEDIBLE — sin W_mixta de un corpus con tensión estructural por diseño en este entorno",
+ "segundos": 174.3
+}

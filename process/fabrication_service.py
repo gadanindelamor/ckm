@@ -32,7 +32,7 @@ class FabricationService:
         self._storage  = Path(storage_dir)
         self._storage.mkdir(parents=True, exist_ok=True)
         self._traj_path = self._storage / "trajectory.jsonl"
-        self._A0: int | None = None   # fijado en t=0, semilla constante
+        self._A0: foat | None = None   # fijado en t=0, semilla constante
 
     def _relax(self, sigma, W=None, max_iter=100):  # [FIX v1: W+Delta como CONDITIONS]
         if W is None:

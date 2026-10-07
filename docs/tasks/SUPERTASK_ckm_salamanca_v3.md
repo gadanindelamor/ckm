@@ -132,4 +132,5 @@ Ninguno se aplica sin D1. Base: `PAPER_Landscape_Driven_Device_v26.md` (ckm___me
 
 ## 8. Notas entre frentes
 
-*(vacío)*
+- **(3 oct, Opus, tras `c06db07`)** El fallback de `temp_signal` era NOMINAL y ahora es UNKNOWN. Como COCO nunca se conectó al canal, **las firmas históricas de la serie IAP que dicen `temp_signal=NOMINAL` lo dicen por ausencia, no por medición**. Lo citan, entre otros, REG_iap_caso_10 (l.236), REG_firma_ckm_v1 y los casos 04–06. Para F6: el paper §4.8 tiene que listar UNKNOWN entre las señales posibles y no leer NOMINAL en IAP como dato.
+- **(3 oct, Opus)** Corrección mía: en la SUPERTASK dije que el peso por masa "no se puede aplicar desde afuera". Se puede (`copresencia_pesada`, verificada a 1e-16). Lo que no se puede es aplicarlo y seguir siendo impacto cero (`e43c616`). La elección (a)/(b) vuelve a D1.

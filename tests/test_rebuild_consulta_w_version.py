@@ -13,7 +13,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
 from corpus_service import CorpusService
-from ckm_landscape_config import CKMlandscapeConfig
+from ckm_landscape_config import CKMlandscapeConfigV1
 
 TEXTS = [
     "gun control reduces violence and saves lives",
@@ -74,7 +74,7 @@ def test_id_nuevo_coincide_con_config(corpus):
     # (conserva precedente): el anterior ("police response…") ahora sube N.
     corpus.ingest(["bans reduce assault weapons and gun violence"])
     r = corpus.w_change_since(sha, nodes)
-    cfg = CKMlandscapeConfig.from_W(corpus.get_W(), theta_W=0.01,
+    cfg = CKMlandscapeConfigV1.from_W(corpus.get_W(), theta_W=0.01,
                                     sampling_mode="uniform", scale="log")
     assert r["w_version_id_new"] == cfg.w_version_id
 

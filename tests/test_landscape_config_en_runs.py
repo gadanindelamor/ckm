@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
 from corpus_service import CorpusService
 from monitor_service import MonitorService
-from ckm_landscape_config import CKMlandscapeConfig
+from ckm_landscape_config import CKMlandscapeConfigV1
 
 TEXTS = [
     "gun control reduces violence and saves lives",
@@ -50,7 +50,7 @@ def test_sin_config_panel_none(corpus, tmp_path):
 
 
 def test_sampling_mode_distinto_falla_en_construccion(corpus, tmp_path):
-    cfg = CKMlandscapeConfig.from_W(
+    cfg = CKMlandscapeConfigV1.from_W(
         corpus.get_W(), theta_W=0.01, sampling_mode="boltzmann", scale="log",
     )
     with pytest.raises(ValueError):
@@ -59,7 +59,7 @@ def test_sampling_mode_distinto_falla_en_construccion(corpus, tmp_path):
 
 
 def test_con_config_cada_linea_recarga_igual(corpus, tmp_path):
-    cfg = CKMlandscapeConfig.from_W(
+    cfg = CKMlandscapeConfigV1.from_W(
         corpus.get_W(), theta_W=0.01, sampling_mode="uniform", scale="log",
     )
     jsonl = tmp_path / "m.jsonl"
@@ -71,12 +71,12 @@ def test_con_config_cada_linea_recarga_igual(corpus, tmp_path):
     lineas = _lineas(jsonl)
     assert len(lineas) == len(PROMPTS)
     for r in lineas:
-        assert CKMlandscapeConfig.from_dict(r["panel"]["landscape_config"]) == cfg
+        assert CKMlandscapeConfigV1.from_dict(r["panel"]["landscape_config"]) == cfg
 
 
 def test_gatekeeper_c1_presente_y_none(corpus, tmp_path):
     """D4 — traza de admisión: nadie evalúa C1 todavía."""
-    cfg = CKMlandscapeConfig.from_W(
+    cfg = CKMlandscapeConfigV1.from_W(
         corpus.get_W(), theta_W=0.01, sampling_mode="uniform", scale="log",
     )
     for config in (None, cfg):

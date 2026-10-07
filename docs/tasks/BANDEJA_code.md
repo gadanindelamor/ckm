@@ -199,3 +199,115 @@ git fetch origin code/trabajo && git log origin/code/trabajo -1
 ```
 
 Si se prefiere que vaya a `main`, se dice y lo hago.
+
+---
+
+## REPORTE CP1 — 2026-10-07 04:09 UTC
+
+*TASK `TASK_CKMlandscapeConfig_v3.md` §3.CP1, sobre `21ba45c`, rama `code/trabajo`.
+Leídas las decisiones de Opus y la respuesta de delamor a P3 antes de escribir.*
+
+### Lo que quedó en el código
+
+`services/ckm_landscape_config.py`, 480 líneas:
+
+| | qué es |
+|---|---|
+| `medido(W)` | función de W sola (I5). Devuelve `N`, los dos `mu_W` y los dos `beta_c`. |
+| `Ciclo` | `frozen=True`: `w_version_id`, lo medido, `causa`, `t_senal`, `t_rebuild`, `deriva` como property. Valida I6 en `__post_init__`. |
+| `CKMlandscapeConfig` | identidad + declarado + tupla de ciclos, con `threading.RLock`. |
+| `ciclo_desde_registro_plano_v1` | el mapeo de lectura de P4. |
+| `CKMlandscapeConfigV1` | la vieja, renombrada y **sin tocar**. Sale en el CP3. |
+
+**El lock cubre lo que Opus pidió:** `ciclo_vigente`, `panel()` y el reemplazo dentro
+de `abrir_ciclo` toman el mismo `RLock`. El reemplazo es **un solo cambio de
+referencia** de la tupla de ciclos, así que un lector nunca ve una tupla a medio
+armar (I1 + D3).
+
+**θ_W no está en la clase nueva**, ni como campo de `Ciclo` ni de la config, ni en
+`to_dict()`. `theta_W_formula` se quedó en `CKMlandscapeConfigV1`, que es la que
+conserva θ_W como traza. Esto **corrige el default de P1**, como indicó Opus.
+
+**`scale` es opcional y `sampling_mode` obligatorio**, por I4 revisada. Hay un test
+que lo fija.
+
+### Tests
+
+`tests/test_ckm_landscape_config_ciclos.py`, 355 líneas, **31 tests, 31 pasan**.
+Cubre I1 (×3), I2 (×3), I3, I4 (×5), I5 (×3), I6 (×4), I7 (×2), D2, D3 (×2),
+valores medidos (×3), serialización con historia (×2) y lectura de la traza vieja (×2).
+
+**De los dos tests de hilos, uno puede fallar y el otro no detecta. Medido, no
+supuesto.** Los dos corren un hilo que lee en bucle (`ciclo_vigente` en uno,
+`panel()` en el otro) mientras el principal abre 200 ciclos alternando dos W.
+
+Primero escribí en esta misma entrada que los había probado sin el lock. **No lo
+había hecho.** Lo corrí antes de commitear: desactivé el lock y partí el reemplazo
+en dos pasos (dejando un estado intermedio con el `mu_W_global` equivocado), y
+corrí tres veces.
+
+| test | sin lock ni reemplazo atómico |
+|---|---|
+| `test_D3_el_get_nunca_devuelve_un_ciclo_mezclado` | **falla 3/3** |
+| `test_D3_el_panel_no_se_parte_con_un_set_concurrente` | **pasa 3/3 — no detecta** |
+
+El primero es el test. El segundo compara el **conjunto de claves** del
+`ciclo_vigente` del panel, y ese conjunto no cambia aunque el valor esté mezclado:
+no puede fallar en la dirección que importa. Lo dejo, porque sí cubre que el panel
+nunca venga con `ciclo_vigente: None` a mitad de un set, pero **no lo cuento como
+verificación del lock**. Con el lock puesto, los dos dan 0 en todas las corridas.
+
+El test de valores medidos compara contra `COCO(W=W).beta_c_corpus()`, que es el
+método de instancia; primero lo escribí como si fuera estático y falló. Corregido.
+
+**Suite completa: 214/214 en verde** (`python3 -m pytest tests/ -q`).
+
+### Lo que cambié fuera de la clase
+
+El rename hace que `CKMlandscapeConfig` apunte a la clase nueva, que **no tiene
+`from_W`**. Eso rompió 15 tests de golpe. Lo resolví **redirigiendo a
+`CKMlandscapeConfigV1`** cuatro archivos de test y `experiments/replay_sesion_trust.py`:
+sólo el nombre de la clase, ninguna lógica. **No puse ningún shim de compatibilidad**
+en la clase nueva, por `chau regresión`.
+
+**`services/monitor_service.py` no se tocó y no se rompió.** Usa sólo
+`.sampling_mode` y `.to_dict()`, y las dos existen en la clase nueva.
+`test_monitor_services.py` da 36/36 sin cambios.
+
+**Aviso, no pregunta:** `P1P4/run_conteo_vs_masa_04oct/conteo_vs_masa.py` llama a
+`from_W` y **se rompería si se volviera a correr**. No lo toqué: la TASK dice que los
+experimentos ya corridos no se tocan. Su JSONL se sigue leyendo con
+`ciclo_desde_registro_plano_v1`, y hay un test que lo lee de verdad.
+
+---
+
+## PREGUNTA P5 — NO BLOQUEA — 2026-10-07 04:09 UTC
+
+**`nodes` está en la clase "medido" de la TASK v2, pero no es función de W.**
+La v2 lista `nodes` entre los campos medidos, e I5 dice que `medido(W)` es función de
+W sola. W no lleva etiquetas de nodos: vienen del `NodeExtractor`. Y la v1 tampoco
+tenía `nodes`. Las dos cosas no pueden valer juntas.
+
+**Default declarado y reversible:** `nodes` **queda afuera** del `Ciclo`, que así
+cumple I5 exacto. Si hace falta, entra como campo **declarado** del lado de quien
+tiene las etiquetas. Revertir: agregarlo al `Ciclo` como parámetro de `abrir_ciclo`,
+y entonces I5 hay que reescribirla.
+
+## PREGUNTA P6 — NO BLOQUEA — 2026-10-07 04:09 UTC
+
+**`t_senal` va sin tilde.** La spec de la v2 escribe `t_señal`. Busqué precedente:
+en `services/` **ningún identificador lleva tilde o ñ** — las que aparecen son todas
+de docstrings. Los campos son `sampling_mode`, `mu_W_nonzero`, `w_version_id`.
+
+**Default declarado y reversible:** el campo se llama **`t_senal`**, y queda así en
+el JSON serializado. Revertir: renombrar el campo y la clave (toca `Ciclo`, los tests
+y cualquier JSON ya escrito con la clave vieja — todavía no hay ninguno).
+
+---
+
+## NOTA — rama y CRLF, 2026-10-07 04:09 UTC
+
+- Trabajo y pusheo en **`code/trabajo`**, nunca `main`, por §6 decidido.
+- La bandeja volvió del clon local **con CRLF**. El diff de 402 líneas del pull fue
+  sólo eso: mis seis entradas quedaron intactas, nadie editó nada. **Mantengo CRLF**
+  al agregar, para que el diff muestre sólo lo nuevo.

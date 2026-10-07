@@ -22,7 +22,7 @@ import pytest
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "services"))
 from gatekeeper_c1 import c1, c1_max_conn
-from ckm_landscape_config import CKMlandscapeConfig
+from ckm_landscape_config import CKMlandscapeConfigV1
 
 N_A = 16
 MIN_CONN_A = 0.01399   # medida en el análisis previo a la TASK
@@ -92,7 +92,7 @@ def test_semantica_igual_a_core(corpus, sigma_nombre):
 def test_tabla_medicion(corpus, sigma_nombre):
     """Valores declarados, no fórmula. Imprime la tabla (-s)."""
     W, A, B, _ = corpus
-    cfg = CKMlandscapeConfig.from_W(W, theta_W=0.0, sampling_mode="uniform", scale="log")
+    cfg = CKMlandscapeConfigV1.from_W(W, theta_W=0.0, sampling_mode="uniform", scale="log")
     s = _sigma_de(sigma_nombre, W, A)
     filas = [
         ("mu_W_global",    cfg.mu_W_global),

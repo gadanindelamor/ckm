@@ -15,7 +15,7 @@ import pytest
 
 SERVICES = Path(__file__).parent.parent / "services"
 sys.path.insert(0, str(SERVICES))
-from ckm_landscape_config import CKMlandscapeConfig
+from ckm_landscape_config import CKMlandscapeConfigV1
 from coco import COCO
 
 
@@ -26,7 +26,7 @@ def W():
 
 
 def _cfg(W):
-    return CKMlandscapeConfig.from_W(W, theta_W=0.01, sampling_mode="uniform", scale="log")
+    return CKMlandscapeConfigV1.from_W(W, theta_W=0.01, sampling_mode="uniform", scale="log")
 
 
 def test_mu_W_ambas_formas(W):
@@ -46,17 +46,17 @@ def test_parametros_obligatorios(W, falta):
     kw = dict(theta_W=0.01, sampling_mode="uniform", scale="log")
     del kw[falta]
     with pytest.raises(TypeError):
-        CKMlandscapeConfig.from_W(W, **kw)
+        CKMlandscapeConfigV1.from_W(W, **kw)
 
 
 def test_theta_W_formula_no_implementada():
     with pytest.raises(NotImplementedError):
-        CKMlandscapeConfig.theta_W_formula(0.005, 32)
+        CKMlandscapeConfigV1.theta_W_formula(0.005, 32)
 
 
 def test_json_roundtrip(W):
     c = _cfg(W)
-    assert CKMlandscapeConfig.from_json(c.to_json()) == c
+    assert CKMlandscapeConfigV1.from_json(c.to_json()) == c
 
 
 def test_identidades(W):

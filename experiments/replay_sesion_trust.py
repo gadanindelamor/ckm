@@ -123,7 +123,7 @@ SCALE_NO_USADO   = "log"    # declarativo: nadie lo lee (verificado en el repo)
 
 def construir_W(originales: list, top_k: int, tramo_id: str):
     from corpus_service import CorpusService
-    from ckm_landscape_config import CKMlandscapeConfig
+    from ckm_landscape_config import CKMlandscapeConfigV1
 
     textos = [t["texto"] if isinstance(t, dict) else t.texto for t in originales]
     estado = PRIV / f"corpus_state_{tramo_id}_k{top_k}.json"
@@ -136,7 +136,7 @@ def construir_W(originales: list, top_k: int, tramo_id: str):
     W, nodos = c.get_W(), c.get_nodes()
     cfg = None
     if W is not None:
-        cfg = CKMlandscapeConfig.from_W(W, theta_W=THETA_W_NO_USADO,
+        cfg = CKMlandscapeConfigV1.from_W(W, theta_W=THETA_W_NO_USADO,
                                         sampling_mode="uniform",
                                         scale=SCALE_NO_USADO)
     return W, nodos, cfg, c

@@ -59,7 +59,9 @@ Opus lee la bandeja y **escala a delamor** si se cumple alguno de estos (NOTA §
 
 Si no se cumple ninguno, decide Opus y lo registra en `DECISIONES_opus.md` (fecha, qué, por qué, cómo revertir).
 
-## 6. El canal: la bandeja **[delamor] — BLOQUEA**
+## 6. El canal: la bandeja
+
+> **Decidido por delamor (7 oct): opción (b), rama `code/trabajo`.** Code trabaja y hace push **solo** a `code/trabajo`, nunca a `main`. Opus lee la rama con `fetch` desde el clon local. Pasar algo a `main` lo decide delamor (E2).
 
 - `docs/tasks/BANDEJA_code.md`: Code agrega entradas al final, con fecha y hora, nunca edita las anteriores. Tipos: `ARRANQUE`, `REPORTE CPn`, `PREGUNTA (BLOQUEA|NO BLOQUEA)`, `CORTE` (cuando detecta que algo quedó a medias).
 - **El problema:** Code escribe en el clon del Codespace. Opus lee el clon local de delamor (`ckm___source/ckm`). Para que la bandeja llegue, **tiene que haber un push desde el Codespace y un pull en el clon local.** El repo es público.
@@ -84,5 +86,5 @@ docs/tasks/PROTOCOLO_code_continuidad_v1.md — leelo entero primero.
    reporte en la bandeja. Alto.
 4. No decidas nada de lo listado en §5: preguntá en la bandeja,
    marcando BLOQUEA / NO BLOQUEA.
-5. Push: [según lo que decida delamor en §6].
+5. Rama: code/trabajo. Push solo a code/trabajo, nunca a main.
 ```

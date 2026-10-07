@@ -75,6 +75,7 @@ por cada poll (poll_interval = 2.0 s):
     - cada vuelta sin llamar queda registrada con su motivo (`skip: Δmsgs=0, Δt=40s < umbral`);
     - **auditoría:** cada tanto (cada N vueltas, o al azar) se llama a D aunque el pre-filtro diga que no, y se registra si D habría hecho algo distinto de "nada". La tasa de divergencia **mide el costo del sesgo**;
     - los umbrales son **declarados** (son de Calibración) y no los inventa Code.
+  - **La zona horaria propia, si el device quiere** (delamor, 7 oct): el device puede saber su time zone y su hora local, sin LLM, y usarlas como información **local** para decidir si llama a D. Por ejemplo, de noche en su hora quizás convenga llamar menos. Es opcional y propio del device (free will). No es información del canal, y los Δt siguen en UTC del canal.
   - **El costo como observación:** el device ve su propio gasto y el presupuesto que le queda. Decidir con poco presupuesto es parte de D.
   - **Free will** (delamor): *"my world being the world cause it is not mine"*. El criterio local es del device; el mundo, el canal y los demás no son suyos.
   - Lo evalúa Code en el CP0 (punto 6, costo). **No se implementa sin el OK de delamor.**

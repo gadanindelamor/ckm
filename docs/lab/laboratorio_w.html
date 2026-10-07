@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="es">
+<!-- Laboratorio de W. 5-6 oct 2026, pedido de delamor; escrito por Claude Opus 5.5 (Cowork).
+     Juguete autocontenido: corpus de 12 oraciones, 8 nodos, relajacion sincronica sobre W fija (la foto).
+     No usa codigo del repo. Abrir en el navegador. Sin red, cae a fuentes del sistema. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de W</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una columna de lectura; cada prueba es una mesa de trabajo con la matriz a la izquierda y el paisaje a la derecha; apila en teléfono. */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --fg:#1d2733; --muted:#5b6876; --line:#d6dde4;
+  --pos:#2f6db5; --neg:#d0652a; --zero:#eef1f4; --accent:#2f6db5; --on:#1d2733; --off:#c9d2db;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171d; --panel:#1a2129; --fg:#e4e9ee; --muted:#9aa6b2; --line:#2c3640;
+  --pos:#6aa5ea; --neg:#f08a4f; --zero:#222b34; --accent:#6aa5ea; --on:#e4e9ee; --off:#3a4652; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171d; --panel:#1a2129; --fg:#e4e9ee; --muted:#9aa6b2; --line:#2c3640;
+  --pos:#6aa5ea; --neg:#f08a4f; --zero:#222b34; --accent:#6aa5ea; --on:#e4e9ee; --off:#3a4652; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.55;padding-inline:16px;padding-block:28px 64px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:2rem;line-height:1.15;margin:0;text-wrap:balance}
+h2{font-size:1.35rem;margin:0;text-wrap:balance}
+h3{font-size:.8rem;margin:0;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+p{margin:0;max-width:68ch}
+.lede{color:var(--muted)}
+section.test{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;display:flex;flex-direction:column;gap:18px}
+.tag{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:24px}
+.col{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start}
+.seg button{font:inherit;font-size:.95rem;background:transparent;color:var(--fg);border:0;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mat{overflow-x:auto}
+svg text{font-family:var(--mono);fill:var(--fg)}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px}
+.stat b{display:block;font-family:var(--mono);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.basins{display:flex;flex-direction:column;gap:8px}
+.basin{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.chips{display:flex;gap:3px;flex-wrap:wrap}
+.chip{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;font-family:var(--mono);font-size:.7rem;font-weight:600}
+.chip.on{background:var(--on);color:var(--panel)}
+.chip.off{background:var(--off);color:var(--fg)}
+.orbit{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.orbit .sep{font-family:var(--mono);color:var(--neg);font-weight:600}
+.bar{height:10px;background:var(--zero);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.mono{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.note{border-left:3px solid var(--line);padding-left:12px;color:var(--muted);font-size:.95rem}
+textarea{width:100%;min-height:150px;font-family:var(--mono);font-size:.82rem;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.nodes{display:flex;flex-wrap:wrap;gap:8px}
+.nodebtn{font:inherit;font-size:.95rem;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:20px;padding:6px 12px;cursor:pointer}
+.nodebtn[aria-pressed="true"]{background:var(--on);color:var(--panel);border-color:var(--on)}
+.traj{display:flex;flex-direction:column;gap:4px}
+.traj .step{display:grid;grid-template-columns:3.2em 1fr;gap:8px;align-items:center}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+canvas{max-width:100%}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <span class="tag">TRUST · CKM · pruebas de concepto · 6 oct 2026</span>
+  <h1>Laboratorio de W</h1>
+  <p class="lede">Tres pruebas chicas para ver lo que venimos hablando. Todo es de juguete: un corpus de doce oraciones, ocho nodos y relajación síncrona sobre una W fija (la foto). Se calcula acá mismo y no usa código del repo. El corpus se puede editar.</p>
+</header>
+
+<section class="test" id="t1">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span class="tag">Prueba 1</span>
+    <h2>Presencia y ausencia</h2>
+    <p>La misma colección de textos da dos W. <b>Presencia</b> cuenta cuántas veces dos términos aparecen en la misma oración: nunca es negativa. <b>Ausencia</b> compara contra lo esperado por azar, con el coeficiente φ o con PMI (log de P(i,j) / P(i)·P(j), suavizado en 0.5): es negativa cuando dos términos aparecen juntos <i>menos</i> de lo esperable.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Qué W mirar">
+    <button id="bPres" aria-pressed="true">W de presencia</button>
+    <button id="bAus" aria-pressed="false">W con ausencia (φ)</button>
+    <button id="bPmi" aria-pressed="false">W con ausencia (PMI)</button>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h3>La matriz</h3>
+      <div class="mat" id="heat"></div>
+      <div class="legend"><span><i class="sw" style="background:var(--pos)"></i>positivo</span><span><i class="sw" style="background:var(--neg)"></i>negativo</span><span><i class="sw" style="background:var(--zero);border:1px solid var(--line)"></i>cero</span></div>
+    </div>
+    <div class="col">
+      <h3>El paisaje de esa foto</h3>
+      <div class="stats" id="stats"></div>
+      <div class="basins" id="basins"></div>
+    </div>
+  </div>
+  <p class="note" id="read1"></p>
+  <details>
+    <summary style="cursor:pointer">Editar el corpus (una oración por línea)</summary>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+      <textarea id="corpus" spellcheck="false"></textarea>
+      <span class="tag">Nodos: armas, control, violencia, derechos, seguridad, libertad, estado, víctimas</span>
+    </div>
+  </details>
+</section>
+
+<section class="test" id="t2">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span class="tag">Prueba 2</span>
+    <h2>Torsión: el período 2</h2>
+    <p>Tres nodos en un triángulo frustrado: armas–control +0.6, armas–violencia +0.4, control–violencia −0.3. El producto de los tres signos es negativo. Con dinámica síncrona, la mitad de los estados termina oscilando: en cada paso todos se dan vuelta. Una vuelta invierte y dos restituyen, como la normal en la cinta de Möbius.</p>
+  </div>
+  <div class="row">
+    <div class="col">
+      <canvas id="tri" width="420" height="300" aria-label="Triángulo de tres nodos que alternan de estado"></canvas>
+    </div>
+    <div class="col">
+      <h3>Lo que pasa</h3>
+      <div class="mono" id="triState" style="font-size:1.05rem"></div>
+      <div class="seg" role="group" aria-label="Control de la animación">
+        <button id="triPlay" aria-pressed="true">Pausar</button>
+      </div>
+      <p class="note">No gira: cada nodo se invierte entero, sin estado intermedio. Promediar las dos fases daría cero y borraría la marca. Por eso se registra como torsión y no se promedia.</p>
+    </div>
+  </div>
+</section>
+
+<section class="test" id="t3">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span class="tag">Prueba 3</span>
+    <h2>Activar un nodo (sobre la foto)</h2>
+    <p>Se simula sobre la foto: <i>"¿qué pasaría si se activa este nodo?"</i>. Todos arrancan apagados, se prende el nodo que elijas, y el campo relaja paso a paso. W no cambia: lo que se mueve es σ.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Qué W usar">
+    <button id="cPres" aria-pressed="true">Sobre W de presencia</button>
+    <button id="cAus" aria-pressed="false">Sobre W con ausencia</button>
+  </div>
+  <div class="nodes" id="nodeBtns"></div>
+  <div class="traj" id="traj"></div>
+  <p class="note" id="read3"></p>
+</section>
+
+<footer class="tag">Nada de esto se mide sobre el corpus real del proyecto. Muestra los mecanismos; no es un resultado.</footer>
+</div>
+
+<script>
+const NODES=["armas","control","violencia","derechos","seguridad","libertad","estado","víctimas"];
+const SHORT=["ar","co","vi","de","se","li","es","ví"];
+const CORPUS_DEF=[
+"el control de armas reduce la violencia",
+"las víctimas de la violencia piden control",
+"más control de armas da más seguridad",
+"el estado debe dar seguridad a las víctimas",
+"la seguridad es tarea del estado",
+"las armas son un derecho de los ciudadanos",
+"la libertad incluye el derecho a las armas",
+"el estado no debe limitar la libertad",
+"los derechos protegen la libertad frente al estado",
+"defender la libertad es defender los derechos",
+"la violencia deja víctimas",
+"sin control de armas la violencia crece"
+].join("\n");
+const STEMS={armas:["arma"],control:["control"],violencia:["violencia"],derechos:["derecho"],seguridad:["seguridad"],libertad:["libertad"],estado:["estado"],"víctimas":["víctima"]};
+const N=NODES.length;
+const $=id=>document.getElementById(id);
+
+function parse(text){
+  const lines=text.split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
+  return lines.map(l=>NODES.map(n=>STEMS[n].some(s=>l.includes(s))?1:0));
+}
+function buildW(X,mode){
+  const n=X.length, W=[...Array(N)].map(()=>Array(N).fill(0));
+  const c=NODES.map((_,i)=>X.reduce((a,r)=>a+r[i],0));
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){ if(i===j)continue;
+    const co=X.reduce((a,r)=>a+r[i]*r[j],0);
+    if(mode==="pres"){W[i][j]=co;}
+    else if(mode==="aus"){const d=Math.sqrt(c[i]*(n-c[i])*c[j]*(n-c[j])); W[i][j]=d>0?(co*n-c[i]*c[j])/d:0;}
+    else{W[i][j]=Math.log(((co+0.5)*n)/((c[i]+0.5)*(c[j]+0.5)));}
+  }
+  let m=0; W.forEach(r=>r.forEach(v=>m=Math.max(m,Math.abs(v)))); if(m>0) W.forEach(r=>r.forEach((v,j)=>r[j]=v/m));
+  return W;
+}
+function step(s,W){return s.map((si,i)=>{let h=0;for(let j=0;j<N;j++)h+=W[i][j]*s[j];return h>1e-12?1:(h<-1e-12?-1:si);});}
+function orbit(s,W){const seen=new Map(),seq=[];let t=0;
+  while(true){const k=s.join(",");if(seen.has(k)){const p=seen.get(k);return {orb:seq.slice(p),tail:p};}
+    seen.set(k,t);seq.push(s);s=step(s,W);t++;}}
+function landscape(W){
+  const basins=new Map();
+  for(let b=0;b<(1<<N);b++){const s=NODES.map((_,i)=>(b>>i)&1?1:-1);const o=orbit(s,W).orb;
+    const key=o.map(x=>x.join(",")).sort().join("|");
+    if(!basins.has(key))basins.set(key,{orb:o,mass:0});basins.get(key).mass++;}
+  const arr=[...basins.values()].sort((a,b)=>b.mass-a.mass);
+  const tot=1<<N; const neff=1/arr.reduce((a,x)=>a+(x.mass/tot)**2,0);
+  return {arr,neff,tot};
+}
+function triangles(W){let all=0,fr=0;const e=1e-9;
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)for(let k=j+1;k<N;k++){
+    const a=W[i][j],b=W[j][k],c=W[i][k]; if(Math.abs(a)>e&&Math.abs(b)>e&&Math.abs(c)>e){all++; if(a*b*c<0)fr++;}}
+  return {all,fr};}
+function negs(W){let n=0;for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)if(W[i][j]<-1e-9)n++;return n;}
+
+function color(v){const css=getComputedStyle(document.documentElement);
+  if(Math.abs(v)<1e-9)return css.getPropertyValue("--zero");
+  const base=v>0?css.getPropertyValue("--pos"):css.getPropertyValue("--neg");
+  return `color-mix(in srgb, ${base.trim()} ${Math.round(25+75*Math.abs(v))}%, ${css.getPropertyValue("--zero").trim()})`;}
+function heat(W){
+  const cs=30, pad=86, w=pad+N*cs+4, h=pad+N*cs+4;
+  let s=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Matriz W de ${N} por ${N}">`;
+  NODES.forEach((n,i)=>{s+=`<text x="${pad-6}" y="${pad+i*cs+cs/2+4}" text-anchor="end" font-size="11">${n}</text>`;
+    s+=`<text transform="translate(${pad+i*cs+cs/2+4},${pad-6}) rotate(-55)" font-size="11">${n}</text>`;});
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){const v=W[i][j];
+    s+=`<rect x="${pad+j*cs}" y="${pad+i*cs}" width="${cs-2}" height="${cs-2}" rx="3" fill="${i===j?'transparent':color(v)}" stroke="${i===j?'var(--line)':'none'}"><title>${NODES[i]}–${NODES[j]}: ${v.toFixed(2)}</title></rect>`;}
+  return s+"</svg>";}
+function chips(st){return `<span class="chips">${st.map((x,i)=>`<span class="chip ${x>0?'on':'off'}" title="${NODES[i]}: ${x>0?'activo':'apagado'}">${SHORT[i]}</span>`).join("")}</span>`;}
+
+let mode1="pres", mode3="pres", corpusText=CORPUS_DEF, W={};
+function compute(){const X=parse(corpusText); W.pres=buildW(X,"pres"); W.aus=buildW(X,"aus"); W.pmi=buildW(X,"pmi");}
+function render1(){
+  const M=W[mode1]; $("heat").innerHTML=heat(M);
+  const L=landscape(M), T=triangles(M), ng=negs(M);
+  $("stats").innerHTML=[["N_eff",L.neff.toFixed(2),"cuencas efectivas"],["cuencas",L.arr.length,"órbitas distintas"],["negativos",ng,"pares con W < 0"],["frustrados",`${T.fr}/${T.all}`,"triángulos con producto < 0"]]
+    .map(([a,b,c])=>`<div class="stat"><span>${a}</span><b>${b}</b><span>${c}</span></div>`).join("");
+  $("basins").innerHTML=L.arr.slice(0,6).map(x=>`<div class="basin"><span class="orbit">${x.orb.map(chips).join('<span class="sep">↔</span>')}</span><span class="bar"><i style="width:${(100*x.mass/L.tot).toFixed(1)}%"></i></span><span class="mono">${x.mass}/${L.tot}${x.orb.length>1?' · período 2':''}</span></div>`).join("")+(L.arr.length>6?`<span class="tag">y ${L.arr.length-6} cuencas más chicas</span>`:"");
+  const allOn=L.arr.filter(x=>x.orb.length===1&&x.orb[0].every(v=>v>0)).reduce((a,x)=>a+x.mass,0);
+  const allOff=L.arr.filter(x=>x.orb.length===1&&x.orb[0].every(v=>v<0)).reduce((a,x)=>a+x.mass,0);
+  const p2=L.arr.filter(x=>x.orb.length>1).reduce((a,x)=>a+x.mass,0);
+  const pct=v=>Math.round(100*v/L.tot)+"%";
+  $("read1").textContent = (mode1==="pres"
+    ? `Solo presencia: ningún peso es negativo y no hay triángulos frustrados. Los pares que nunca co-ocurren quedan en cero, como si no tuvieran relación. `
+    : `Con ausencia aparecen ${ng} pares negativos y ${T.fr} triángulos frustrados, sin marcadores de oposición: los pone el propio corpus. `)
+    + `Todo prendido: ${pct(allOn)} de los estados. Todo apagado: ${pct(allOff)}. En período 2: ${pct(p2)}. N_eff = ${L.neff.toFixed(2)}.`;
+  $("bPres").setAttribute("aria-pressed",mode1==="pres"); $("bAus").setAttribute("aria-pressed",mode1==="aus"); $("bPmi").setAttribute("aria-pressed",mode1==="pmi");
+}
+let active=0;
+function render3(){
+  const M=W[mode3];
+  $("nodeBtns").innerHTML=NODES.map((n,i)=>`<button class="nodebtn" data-i="${i}" aria-pressed="${i===active}">${n}</button>`).join("");
+  $("nodeBtns").querySelectorAll("button").forEach(b=>b.onclick=()=>{active=+b.dataset.i;render3();});
+  let s=NODES.map((_,i)=>i===active?1:-1); const rows=[s]; const seen=new Set([s.join()]);
+  for(let t=0;t<12;t++){s=step(s,M);const k=s.join();rows.push(s);if(seen.has(k))break;seen.add(k);}
+  $("traj").innerHTML=rows.map((r,t)=>`<div class="step"><span class="mono">${t===0?'inicio':'paso '+t}</span>${chips(r)}</div>`).join("");
+  const last=rows[rows.length-1], on=last.filter(x=>x>0).length, per=rows.length>2&&rows[rows.length-1].join()===rows[rows.length-3]?.join()&&rows[rows.length-1].join()!==rows[rows.length-2].join();
+  $("read3").textContent = on===N ? `Prender "${NODES[active]}" arrastra a todos: termina todo prendido. Propagación en cadena sin freno.`
+    : on===0 ? `El campo apaga "${NODES[active]}": la activación no se sostiene.`
+    : per ? `La activación de "${NODES[active]}" no se asienta: el campo oscila (período 2).`
+    : `Prender "${NODES[active]}" arrastra a ${on-1} nodo(s) y el resto queda apagado: la propagación tiene un borde.`;
+  $("cPres").setAttribute("aria-pressed",mode3==="pres"); $("cAus").setAttribute("aria-pressed",mode3==="aus");
+}
+$("bPres").onclick=()=>{mode1="pres";render1();}; $("bAus").onclick=()=>{mode1="aus";render1();}; $("bPmi").onclick=()=>{mode1="pmi";render1();};
+$("cPres").onclick=()=>{mode3="pres";render3();}; $("cAus").onclick=()=>{mode3="aus";render3();};
+$("corpus").value=CORPUS_DEF;
+$("corpus").addEventListener("input",e=>{corpusText=e.target.value;compute();render1();render3();});
+
+/* Prueba 2: triángulo */
+const TW=[[0,.6,.4],[.6,0,-.3],[.4,-.3,0]], TN=["armas","control","violencia"];
+let ts=[-1,1,1], tstep=0, playing=!matchMedia("(prefers-reduced-motion: reduce)").matches, timer=null;
+function tStep(s){return s.map((si,i)=>{let h=0;for(let j=0;j<3;j++)h+=TW[i][j]*s[j];return h>0?1:(h<0?-1:si);});}
+function drawTri(){
+  const cv=$("tri"), cx=cv.getContext("2d"), css=getComputedStyle(document.documentElement);
+  const fg=css.getPropertyValue("--fg").trim(), pos=css.getPropertyValue("--pos").trim(), neg=css.getPropertyValue("--neg").trim(),
+        on=css.getPropertyValue("--on").trim(), off=css.getPropertyValue("--off").trim(), bg=css.getPropertyValue("--panel").trim();
+  cx.clearRect(0,0,cv.width,cv.height);
+  const P=[[210,50],[80,250],[340,250]];
+  [[0,1],[0,2],[1,2]].forEach(([a,b])=>{const v=TW[a][b];cx.strokeStyle=v>0?pos:neg;cx.lineWidth=3+6*Math.abs(v);
+    cx.setLineDash(v>0?[]:[10,7]);cx.beginPath();cx.moveTo(...P[a]);cx.lineTo(...P[b]);cx.stroke();
+    cx.setLineDash([]);cx.fillStyle=fg;cx.font="13px JetBrains Mono, monospace";cx.textAlign="center";
+    const mx=(P[a][0]+P[b][0])/2, my=(P[a][1]+P[b][1])/2;cx.fillStyle=bg;cx.fillRect(mx-22,my-11,44,20);cx.fillStyle=fg;cx.fillText((v>0?"+":"")+v.toFixed(1),mx,my+4);});
+  P.forEach((p,i)=>{cx.beginPath();cx.arc(p[0],p[1],30,0,7);cx.fillStyle=ts[i]>0?on:off;cx.fill();
+    cx.fillStyle=ts[i]>0?bg:fg;cx.font="bold 15px Atkinson Hyperlegible, sans-serif";cx.textAlign="center";cx.fillText(ts[i]>0?"+":"−",p[0],p[1]+5);
+    cx.fillStyle=fg;cx.font="14px Atkinson Hyperlegible, sans-serif";cx.fillText(TN[i],p[0],i===0?p[1]-40:p[1]+50);});
+  $("triState").innerHTML=`paso ${tstep} · ${ts.map((x,i)=>TN[i]+" "+(x>0?"+":"−")).join(" · ")}<br><span class="tag">${tstep%2===0?"misma cara que al inicio":"cara invertida"}</span>`;
+}
+function tick(){ts=tStep(ts);tstep++;drawTri();}
+function setPlay(p){playing=p;$("triPlay").textContent=p?"Pausar":"Seguir";clearInterval(timer);if(p)timer=setInterval(tick,1200);}
+$("triPlay").onclick=()=>setPlay(!playing);
+
+compute(); render1(); render3(); drawTri(); setPlay(playing);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{render1();drawTri();});
+new MutationObserver(()=>{render1();drawTri();}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+</script>
+
+</html>

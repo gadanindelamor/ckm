@@ -59,6 +59,8 @@ por cada poll (poll_interval = 2.0 s):
   - Requisito para el canal: **todo mensaje y todo evento lleva timestamp.** Ya pasa hoy: `channel.py` usa ISO8601 y `get_messages` usa epoch. El CP0 tiene que confirmar que eso alcanza.
   - **UTC, la hora de Greenwich (delamor, 7 oct).** Todos los timestamps van en UTC. Leído en el código: `channel.py` L52 ya usa `datetime.now(timezone.utc).isoformat()` (+00:00), y `mcp_server.py` L29 lo pasa a epoch, que es UTC por definición. ✓
   - **El reloj contra el que se mide.** `autonomous_device.py` L203/L215 usa `time.time()` **del propio device** para `last_ts`. Si el device corre en otra máquina, su reloj puede estar corrido respecto del canal. Los Δt que entran a D (y al criterio local) se calculan **con los timestamps del canal**, nunca mezclando el reloj del device con el del canal. El CP0 tiene que confirmar si hoy se mezclan.
+  - **Device Japón (UTC+9):** puede ser "mañana" en su hora local. Los timestamps que recibe D van en UTC **y dicen que son UTC**, para que el LLM no los traduzca a su hora.
+  - **El timestamp es de recepción, no de envío:** el canal sella el mensaje cuando le llega, así que el viaje de red queda incluido. "Hace 7 minutos" quiere decir 7 minutos desde que llegó al canal. Es el tiempo del canal, una sola fuente, y se declara así.
 - **D elige una acción, o ninguna. A la ejecuta con una primitiva del canal** (delamor: *"LEAVE es una acción… su interacción puede ser leave, y eso se conecta a la primitiva"*):
   - **publicar** → primitiva `send_message`;
   - **irse** → primitiva `leave_channel`, por decisión propia y no porque venció `duration`;

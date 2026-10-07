@@ -24,6 +24,7 @@ Code corre esto y lo **escribe en la bandeja** como entrada `ARRANQUE`:
 1. `.git/index.lock` u otros locks: si los hay, los informa y no los borra sin decir por qué.
 2. `git status` y `git log -1`: cambios sin commitear que **no** se esperaban.
 3. Los `ESTADO_*.md`: qué TASK está abierta, último CP cerrado, qué espera.
+   - También `DECISIONES_opus.md`: lista de preguntas abiertas (§8).
 4. Los archivos de salida de la última corrida: ¿la última línea está completa? ¿el log dice "terminó"?
 5. Los tests de la TASK abierta.
 
@@ -88,3 +89,35 @@ docs/tasks/PROTOCOLO_code_continuidad_v1.md — leelo entero primero.
    marcando BLOQUEA / NO BLOQUEA.
 5. Rama: code/trabajo. Push solo a code/trabajo, nunca a main.
 ```
+
+## 8. La tríada: protocolo, bandeja, decisiones
+
+*7 oct 2026. Pedido de delamor: "en DECISIONES y en la bandeja hay algo que puede ocurrir sin ser visto; tal vez juntarlas con el protocolo, formando una tríada".*
+
+```
+          PROTOCOLO  (la regla: qué bloquea, qué escala)
+           /       \
+   BANDEJA ———————— DECISIONES
+   (Code pregunta)   (Opus o delamor responde)
+```
+
+Cada lado tiene una relación propia:
+
+- **bandeja → decisiones:** cada pregunta `Pn` tiene **una** respuesta que la nombra (`Pn: …`).
+- **decisiones → protocolo:** cada respuesta dice bajo qué regla se tomó: por debajo del umbral (decide Opus) o `E1`–`E6` (se escala a delamor).
+- **protocolo → bandeja:** la regla define si la pregunta BLOQUEA o NO BLOQUEA.
+
+**Lo que puede ocurrir sin ser visto:**
+
+1. **El default tácito.** Una pregunta NO BLOQUEA deja seguir a Code con su default. Si nadie la responde, el default **queda como decisión sin que nadie lo haya decidido**. Es el silencio absorbente del canal IAP, pero ahora en el protocolo: nada vuelve a disparar la pregunta. Es una tríada frustrada: hay pregunta, no hay respuesta, y la regla sigue pidiendo una decisión.
+2. **La respuesta que no llega a quien pregunta.** La bandeja vive en `code/trabajo` y las decisiones en `main`. Si no hay merge, Code no ve la respuesta.
+3. **La escala que no vuelve.** Una decisión escalada a delamor se responde en el chat. Si Opus no la registra, la tríada queda abierta.
+
+**Lo que cierra la tríada (sin agregar burocracia):**
+
+- **Al arrancar (§2), Code también lee `DECISIONES_opus.md`** (después de `git pull origin main`) y en "encontré" lista **las preguntas abiertas**: cada `Pn` de la bandeja que todavía no tiene un `Pn` en decisiones. Si no hay ninguna, lo dice así: "preguntas abiertas: ninguna (P1–Pn respondidas)". No vale escribir "OK".
+- **Un default sin respuesta no es una decisión.** En la siguiente entrada se arrastra como `Pn — DEFAULT VIGENTE, SIN DECISIÓN` hasta que alguien responda. Así sigue visible.
+- **Las respuestas de delamor en el chat las registra Opus en el mismo turno**, citando a delamor, con el `Pn` y la regla `En` que lo escaló.
+- **Al leer la bandeja, Opus responde todos los `Pn` nuevos**, aunque sea "aceptado". El silencio de Opus no cuenta como aceptación.
+
+*Estado al escribir esto: P1–P7 están en la bandeja y las siete tienen respuesta en DECISIONES. La tríada está cerrada, y queda escrito para que siga así.*

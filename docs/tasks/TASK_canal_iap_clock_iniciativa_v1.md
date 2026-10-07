@@ -79,6 +79,9 @@ por cada poll (poll_interval = 2.0 s):
   - Los ticks sirven para ver **a qué ritmo** se acaban: es información, no el plazo.
   - La tensión crece a medida que la condición se acerca a no cumplirse. En el Hamiltoniano del Híbrido (H = −½ΣW_ij·s_i·s_j − Σh_i·s_i), el objetivo sería un campo externo h que crece con la escasez, no con el reloj. Esta lectura es **propuesta**: no se implementa como fórmula en esta TASK, solo se registran el objetivo, sus condiciones y su estado en el log.
 - **Se conserva** la regla estructural de nunca reaccionar al propio mensaje.
+  - **Precisión (delamor, 7 oct):** la regla es **no reaccionar al evento** del propio mensaje. **No impide escribir varios seguidos.** Con el ODA continuo, un device puede volver a publicar sin que nadie le haya respondido ("7 minutos y todavía nada"). Lo decide por lo que observa (Δt, silencio, el objetivo), no porque su mensaje anterior lo dispare.
+  - En el criterio local, Δ mensajes cuenta **solo los mensajes ajenos**. El propio mensaje entra como "Δt desde que hablé", es información y no disparador.
+  - Test del CP2: un device publica dos veces seguidas por decisión, y **ninguna** de las dos publicaciones queda registrada como reacción a la anterior.
 
 ## 1b. Espíritu (no es requerimiento)
 

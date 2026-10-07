@@ -63,7 +63,7 @@ El nombre no es decorativo: **la confianza es el objeto de estudio y también la
 - Método: estadístico pareado, Bonferroni por k, 1000 barajados, 10 inicializaciones de k-means.
 - Resultado: caso09 tiene frontera robusta en k = 3. Es **modularidad, no tensión**. caso14 e informes versión: no medibles (saturados). `categorias`: nada o no medible por tamaño.
 - caso13: la frontera gruesa **depende de cómo se clasifique** el vocabulario de coordinación.
-- REG: `docs/REG_borrador_salamanca_s1_v1.md` (borrador; pasa a `registers/` con el OK de delamor).
+- REG: `registers/REG_salamanca_s1_v1.md` (Clase R; pasó a `registers/` con el OK de delamor, 5 oct 2026).
 - Falta: el **control positivo** (RfA, SNAP *wiki-RfA*) y **Néel** (paso 2).
 
 **Replay de la sesión TRUST** — pausado. El tramo no tiene tensión estructural: el vacío medido es una referencia de "nada". REG_divergent_sesion_trust_v1 (Clase R, en ckm___memories).
@@ -78,7 +78,7 @@ El nombre no es decorativo: **la confianza es el objeto de estudio y también la
 |---|---|
 | Tablero de estado | `docs/tasks/SUPERTASK_ckm_salamanca_v3.md` |
 | TASK SALAMANCA vigente | `docs/tasks/TASK_salamanca_neel_coercividad_v5.md` (repo) |
-| REG borrador SALAMANCA | `docs/REG_borrador_salamanca_s1_v1.md` |
+| REG SALAMANCA | `registers/REG_salamanca_s1_v1.md` |
 | Mapa de los REG | `registers/MAPA_REG_corpus_v4.md` |
 | Concatenación de REG | `registers/META_REG_consolidado_v6.md` |
 | Unidad de texto, Néel, sin nulo | `registers/REG_unidad_texto_saturacion_v1.md` |

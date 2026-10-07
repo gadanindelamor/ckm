@@ -18,3 +18,10 @@
 - **2026-10-07** · **§2.5 del protocolo (tests en el arranque): de ahora en más se corren.** Correr tests no cambia código, así que entra en el chequeo aunque el CP sea de lectura. Esta vez no se corrieron y quedó declarado en "no pude revisar", que era lo correcto · revertir: volver a solo leerlos.
 - **2026-10-07** · **CP1: puede arrancar.** P3 bloquea el CP2, no el CP1 · revertir: frenar el CP1 hasta que se responda P3.
 - **P3: escalada a delamor** (E3/E4: qué instrumenta el canal vivo y con qué θ_W). Pendiente.
+
+### P3 — respuesta de delamor (2026-10-07)
+
+- delamor: *"θ_W no se usa"* · *"es para Gatekeeper"*. Verificado: en `services/` e `iap_chatroom/` θ_W solo aparece en `gatekeeper_c1.py`. Monitor, COCO y el canal no lo leen. `scale` tampoco lo usa nadie fuera de la UI de Gradio.
+- **Lectura que registra Opus:** θ_W es **del Gatekeeper** (W estática), no del landscape. La Config no lo exige. El que lo necesita lo recibe como parámetro, que es lo que `c1()` ya hace hoy.
+- **P3 desbloqueada, opción (iv):** `CKMMonitor` construye la Config con **lo medido, los ciclos y el `sampling_mode`** que Monitor ya usa. θ_W y `scale` **no aplican** en este dominio y no se exigen. Monitor abre los ciclos en el canal (D4).
+- **Efecto sobre la v2:** I4 pasa a decir *"lo declarado se exige según quién lo usa, no siempre"*. **Pendiente de confirmar por delamor:** si θ_W **sale** de la Config (y pasa a ser un parámetro solo del Gatekeeper) o queda como campo opcional. Mientras tanto, en el CP1 queda **opcional**, que es reversible.

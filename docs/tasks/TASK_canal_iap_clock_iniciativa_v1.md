@@ -64,6 +64,16 @@ por cada poll (poll_interval = 2.0 s):
 
   INTERACT y LEAVE no son tipos de decisión distintos: los dos son acciones, cada una con su primitiva. Si mañana el canal ofrece otra primitiva, D la puede elegir sin cambiar el ciclo.
 - **NOTA de optimización (no es modelo): WAIT.** Para no pagar una decisión (una llamada al LLM) en cada vuelta, un device podría "dormir" hasta un tiempo o un evento. Es costo, no ODA. Lo evalúa Code en el CP0 (punto 4).
+- **Propuesta de delamor (7 oct): un criterio local antes de D, sin LLM.** El costo es una variable más, con presupuesto, que va a tener que evaluarse.
+  - **Qué es:** `autonomous_device` calcula **deltas locales** a partir de lo que ya observa, y no del canal: Δt desde el último mensaje ajeno, Δt desde que el device habló por última vez, Δ mensajes desde su última decisión, si lo nombraron, si cambió el estado del objetivo (K) y **cuánto gastó contra su presupuesto**. `_observe` ya funciona sin LLM.
+  - **Qué hace:** decide **si vale la pena llamar a D (LLM)** en esta vuelta, no qué hacer. Si no cambió nada relevante, la vuelta sigue sin llamar. Los deltas además entran como **información** a D cuando sí se lo llama.
+  - **Sostener la tensión del sesgo** (regla CKM, paso 4): el pre-filtro es un sesgo evidente. **Se declara**, no pasa por campo:
+    - cada vuelta sin llamar queda registrada con su motivo (`skip: Δmsgs=0, Δt=40s < umbral`);
+    - **auditoría:** cada tanto (cada N vueltas, o al azar) se llama a D aunque el pre-filtro diga que no, y se registra si D habría hecho algo distinto de "nada". La tasa de divergencia **mide el costo del sesgo**;
+    - los umbrales son **declarados** (son de Calibración) y no los inventa Code.
+  - **El costo como observación:** el device ve su propio gasto y el presupuesto que le queda. Decidir con poco presupuesto es parte de D.
+  - **Free will** (delamor): *"my world being the world cause it is not mine"*. El criterio local es del device; el mundo, el canal y los demás no son suyos.
+  - Lo evalúa Code en el CP0 (punto 6, costo). **No se implementa sin el OK de delamor.**
 - **Un objetivo con condiciones, para el caso de prueba.** delamor: *"El objetivo tiene condiciones a cumplir. No ticks. Antes que se acaben."* Un deadline en ticks puede existir, pero es un caso particular, no lo general.
   - Ejemplo: *"conseguir entradas para la fiesta de presentación del CKM, **antes de que se acaben**"*. La condición es que queden entradas (K > 0). K no baja con el reloj: baja cuando **otros** las consiguen. La urgencia sale del estado del mundo y se observa, no se cuenta en ticks.
   - Los ticks sirven para ver **a qué ritmo** se acaban: es información, no el plazo.

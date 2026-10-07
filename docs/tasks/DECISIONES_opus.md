@@ -37,3 +37,18 @@
 - **2026-10-07** · **P6 (`t_senal`): se acepta.** Todos los identificadores de `services/` son ASCII. El concepto se sigue llamando t_señal en los documentos · revertir: renombrar campo y clave (todavía no hay JSON escrito con esa clave).
 - **2026-10-07** · **CRLF en la bandeja:** se mantiene como lo hizo Code. Lo genera el git de Windows del clon local · revertir: n/a.
 - **2026-10-07** · **CP2 habilitado.** P3 ya está resuelta (opción iv). El CP2 incluye que `CKMMonitor` construya la Config sin θ_W ni scale y que Monitor llame a `abrir_ciclo` en `_invalidar_si_W_cambio` · revertir: frenar el CP2.
+
+### Sobre el REPORTE CP2 de Code (BANDEJA, 2026-10-07 04:34 UTC, `17b6421` en `code/trabajo`)
+
+- **2026-10-07** · **CP2 de Config v3: aceptado.** Pasan 227 de 227. Sin el CP2, fallan 12 de los 13 tests nuevos; el que pasa es el control sin config. Code encontró dos tests que pasaban por la razón equivocada y los corrigió después de medirlos · revertir: n/a.
+- **2026-10-07** · **P7 (`"W_distinta"`): se acepta el default.** **Error de Opus:** al aceptar P5 no vi que, sin `nodes` en el ciclo, la causa no siempre se puede derivar. `"W_distinta"` dice "no sé más que esto" y no inventa una causa. El camino normal no se ve afectado, porque Monitor usa su `_w_nodes` · revertir: guardar `nodes` en el Ciclo (revierte P5) o persistir los nodos por versión en CorpusService (otra TASK).
+- **2026-10-07** · **Migración de `test_landscape_config_en_runs.py`: aceptada.** Sigue verificando lo mismo: cada línea lleva la config que produjo ese panel. Lo único que cambió es que la historia ya no viaja (I7) · revertir: n/a.
+- **2026-10-07** · **El canal vivo tiene un solo ciclo (`rebuild_suspendido=True`): no se toca.** Es decisión de delamor y no se escala: es el estado conocido de W, que hoy o se reconstruye en cada ingest o no se reconstruye nunca, sin mesetas · revertir: n/a.
+- **2026-10-07** · **Criterio para el CP3 sobre lo que todavía apunta a `CKMlandscapeConfigV1`:**
+  - **Los tests que prueban V1 en sí** (`test_ckm_landscape_config.py`) **se van con V1**, siempre que lo que cubren ya esté en `test_ckm_landscape_config_ciclos.py`: valores medidos, serialización, β_c contra COCO. Si algo no está cubierto, se migra antes de borrar.
+  - **Los que usan V1 solo como herramienta** (`test_gatekeeper_c1.py`, `test_rebuild_consulta_w_version.py`) **migran** a `medido(W)` o a `CKMlandscapeConfig.create`.
+  - **`experiments/replay_sesion_trust.py`** migra a la clase nueva y deja de imprimir θ_W.
+  - **`conteo_vs_masa.py`** no se toca (P1P4, ya corrido).
+  - `theta_W_formula` sale con V1. Si `gatekeeper_c1.py` la nombra en el docstring, se actualiza la referencia.
+  - · revertir: dejar V1 hasta otra TASK.
+- **2026-10-07** · **CP3 habilitado.**

@@ -33,6 +33,7 @@ sin señal de estar desactualizada.
 
 from __future__ import annotations
 import json
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -41,7 +42,7 @@ import numpy as np
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
 from coco import COCO, ThermostatState, BETA_RHO_STAR
-from ckm_landscape_config import CKMlandscapeConfig
+from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig
 from landscape_engine import (
     d_ckm,
     D_CKM_FORMA,
@@ -92,12 +93,23 @@ class MonitorService:
         satura con ningún n_runs. El panel lleva "saturacion" para cuando
         N_eff tampoco converge. TASK_n_runs_panel_saturacion_v1.
 
-        landscape_config: config que produjo este run, ya construida por
-        quien arma el run — Monitor no decide calibración. Viaja serializada
-        en cada panel como "landscape_config" (None si no se pasa). Es la
-        config del contador de Monitor, no la de COCO. Se fija una vez por
-        run: tras un rebuild su w_version_id puede no coincidir con la W
-        vigente (D7). Ver docs/tasks/TASK_landscape_config_en_runs_v1.md.
+        landscape_config: config del instrumento, ya construida por quien
+        arma el run — Monitor no decide calibración. Es la config del
+        contador de Monitor, no la de COCO.
+
+        **Monitor abre los ciclos (D4).** Cuando W cambia,
+        _invalidar_si_W_cambio llama a config.abrir_ciclo con la misma causa
+        que devuelve, en el mismo bloque donde descarta Δ_r y A0. Ningún otro
+        servicio lo llama, y Monitor ya no detecta el cambio de ciclo por su
+        cuenta: lo detecta una vez y lo escribe en la config (I2).
+
+        Esto cierra el gap D7: la config ya no se queda atrás tras un
+        rebuild, porque gana un ciclo en vez de quedar vieja. El panel lleva
+        config.panel() —identidad, declarado y ciclo vigente, sin la
+        historia (I7)—, no la config completa.
+
+        Ver docs/tasks/TASK_CKMlandscapeConfig_v3.md y
+        docs/tasks/TASK_landscape_config_en_runs_v1.md.
         """
         self.corpus    = corpus
         self._storage  = Path(storage_path)
@@ -212,8 +224,10 @@ class MonitorService:
             # conecte, esta clave lleva al menos el θ_W usado.
             # Ver docs/tasks/TASK_traza_gatekeeper_c1_v1.md.
             "gatekeeper_c1"    : None,
+            # I7: identidad + declarado + ciclo vigente. La historia de
+            # ciclos vive en la config, no viaja en cada panel.
             "landscape_config" : (
-                self._landscape_config.to_dict()
+                self._landscape_config.panel()
                 if self._landscape_config is not None else None
             ),
         }
@@ -257,35 +271,108 @@ class MonitorService:
 
     def _invalidar_si_W_cambio(self, nodes: list) -> Optional[str]:
         """
-        Δ_r y A0 se descartan en cualquier reconstrucción de W (D2).
+        Δ_r y A0 se descartan en cualquier reconstrucción de W (D2), y la
+        config abre un ciclo nuevo (D4).
 
         Aunque los índices sean los mismos, los pesos que produjeron esa Δ_r
         ya no son los vigentes; y A0 sería el baseline de otro campo. La
         señal es w_version_id. Devuelve la causa —"N" | "nodos" | "pesos"—
         o None si W no cambió. COCO queda fuera de alcance: sigue operando
         con la W de su construcción.
-        Ver docs/tasks/TASK_invalidacion_delta_r_v1.md.
+
+        **Monitor es el único que abre ciclos (D4).** Lo hace acá, en el
+        mismo bloque donde descarta Δ_r: la detección del cambio de W ocurre
+        una sola vez y queda escrita en la config, así que ningún consumidor
+        tiene que detectarla por su cuenta (I2). La causa que viaja al ciclo
+        es la misma que devuelve este método — el vocabulario de causas de
+        Monitor ("N" | "nodos" | "pesos") es más fino que el de la TASK v2
+        ("rebuild" | "estructural" | "volumen"), y `Ciclo.causa` es str
+        libre, así que entra sin traducirse.
+
+        En la **primera** evaluación Δ_r no se descarta —no hay nada que
+        descartar— pero la config igual puede estar atrás: se construyó con
+        una W y W pudo cambiar antes de la primera llamada. Ahí también se
+        abre ciclo. Si la W es la misma, `abrir_ciclo` devuelve False y no
+        pasa nada (I5).
+
+        Ver docs/tasks/TASK_invalidacion_delta_r_v1.md y
+        docs/tasks/TASK_CKMlandscapeConfig_v3.md.
         """
         sha_actual = self.corpus.w_sha()
+
         if self._w_sha is None:                       # primera evaluación
             self._w_sha, self._w_nodes = sha_actual, list(nodes)
+            self._abrir_ciclo_si_cambio(sha_actual)
             return None
+
         if sha_actual == self._w_sha:
             return None
 
-        cambio = self.corpus.w_change_since(self._w_sha, self._w_nodes)
-        if cambio["N_old"] != cambio["N_new"]:
-            causa = "N"
-        elif cambio["nodes_changed"]:
-            causa = "nodos"
-        else:
-            causa = "pesos"
+        causa = self._causa_cambio(self._w_sha, self._w_nodes)
 
         self._Delta_r = np.zeros((len(nodes), len(nodes)))
         self._A0      = None
         self._N_eff0  = None
         self._w_sha, self._w_nodes = sha_actual, list(nodes)
+        self._abrir_ciclo_si_cambio(sha_actual, causa)
         return causa
+
+    def _causa_cambio(self, sha_viejo: str, nodes_viejos: Optional[list]) -> str:
+        """Por qué cambió W: "N" si cambió el tamaño, "nodos" si las
+        etiquetas, "pesos" si sólo los valores."""
+        cambio = self.corpus.w_change_since(sha_viejo, nodes_viejos)
+        if cambio["N_old"] != cambio["N_new"]:
+            return "N"
+        if cambio["nodes_changed"]:
+            return "nodos"
+        return "pesos"
+
+    def _abrir_ciclo_si_cambio(
+        self, sha_actual: str, causa: Optional[str] = None
+    ) -> bool:
+        """
+        Le pide a la config un ciclo nuevo para la W vigente (D4).
+
+        Sin config no hay nada que abrir. Si la config ya está en este
+        w_version_id, `abrir_ciclo` devuelve False por I5 y no se agrega
+        nada. Cuando `causa` es None —primera evaluación— se calcula contra
+        el ciclo vigente de la config, no contra el sha de Monitor, porque
+        lo que quedó atrás es la config.
+
+        No pasa `t_senal`: la señal de rebuild existe (`should_rebuild` en
+        ckm_monitor.py) pero no llega hasta acá, así que la deriva queda
+        nula —no cero— que es lo que I6 pide cuando nadie señaló.
+
+        **La causa contra la config no siempre es derivable.** Cuando hay
+        que calcularla contra el ciclo vigente —primera evaluación— sólo se
+        puede distinguir "N", porque el ciclo guarda N pero no las
+        etiquetas: `nodes` quedó fuera de lo medido (P5, porque no es
+        función de W) y `CorpusService.w_change_since` las necesita del que
+        consulta, ya que no se persisten por versión. Con N igual no se
+        puede decir si cambiaron las etiquetas o sólo los pesos, y la causa
+        es **"W_distinta"**: el sha es otro, y con lo que el ciclo guarda no
+        se puede decir más. No se inventa una causa más precisa.
+        """
+        cfg = self._landscape_config
+        if cfg is None:
+            return False
+
+        if not cfg.ciclos:
+            # Config construida antes de que W existiera — es el caso del
+            # canal: el corpus arranca en acumulación y W aparece recién al
+            # cruzar min_texts. El primer ciclo lo abre Monitor acá, con
+            # causa "bootstrap": el primer rebuild no es degradación, es el
+            # origen (PROPUESTA v5).
+            return cfg.abrir_ciclo(
+                self.corpus.get_W(), CAUSA_BOOTSTRAP, time.time()
+            )
+
+        vigente = cfg.ciclo_vigente
+        if vigente.w_version_id == sha_actual:
+            return False
+        if causa is None:
+            causa = "N" if vigente.N != len(self.corpus.get_nodes()) else "W_distinta"
+        return cfg.abrir_ciclo(self.corpus.get_W(), causa, time.time())
 
     def trajectory(self) -> list:
         if not self._storage.exists():

@@ -24,6 +24,7 @@ if str(_SERVICES_DIR) not in sys.path:
     sys.path.insert(0, str(_SERVICES_DIR))
 
 from behavior_graph import BehaviorGraph  # noqa: E402
+from ckm_landscape_config import CKMlandscapeConfig  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
@@ -74,10 +75,20 @@ class CKMMonitor:
             storage_path=str(_STATE_DIR / "corpus_G_state.json"),
             min_texts=min_texts,
         )
+        # Config del instrumento. Se construye **sin W**: el corpus arranca
+        # en acumulación y W aparece recién al cruzar min_texts, así que no
+        # hay nada que medir todavía. Monitor abre el primer ciclo —causa
+        # "bootstrap"— en su primera evaluación, y los siguientes en cada
+        # rebuild (D4). Sin theta_W ni scale: theta_W es del Gatekeeper y
+        # scale sólo lo usa la UI, y por I4 lo declarado se exige según
+        # quién lo usa. sampling_mode es el default de MonitorService.
+        # Ver docs/tasks/TASK_CKMlandscapeConfig_v3.md y DECISIONES_opus.md.
+        self._landscape_config = CKMlandscapeConfig(sampling_mode="uniform")
         self._monitor = MonitorService(
             self._corpus,
             storage_path=_monitor_jsonl_path,
             behavior_graph=self._behavior_graph,
+            landscape_config=self._landscape_config,
         )
         self._firma = FirmaService()
 

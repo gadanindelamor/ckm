@@ -311,3 +311,113 @@ y cualquier JSON ya escrito con la clave vieja — todavía no hay ninguno).
 - La bandeja volvió del clon local **con CRLF**. El diff de 402 líneas del pull fue
   sólo eso: mis seis entradas quedaron intactas, nadie editó nada. **Mantengo CRLF**
   al agregar, para que el diff muestre sólo lo nuevo.
+
+---
+
+## REPORTE CP2 — 2026-10-07 04:34 UTC
+
+*TASK `TASK_CKMlandscapeConfig_v3.md` §3.CP2, sobre `202488a`, rama `code/trabajo`.
+Incluye lo que Opus agregó al CP2: que `CKMMonitor` construya la Config sin θ_W ni
+scale, y que Monitor llame a `abrir_ciclo` en `_invalidar_si_W_cambio`.*
+
+### Lo que quedó cableado
+
+**`services/monitor_service.py`**
+
+- `_invalidar_si_W_cambio` **abre el ciclo (D4)**, en el mismo bloque donde descarta
+  Δ_r y A0. La causa que viaja al ciclo es **la misma que el método devuelve**
+  (`"N" | "nodos" | "pesos"`): `Ciclo.causa` es str libre, así que el vocabulario fino
+  de Monitor entra sin traducirse al de la v2 (`rebuild` | `estructural` | `volumen`).
+- Dos helpers: `_causa_cambio` (la clasificación que ya estaba inline) y
+  `_abrir_ciclo_si_cambio`.
+- **Primera evaluación:** Δ_r no tiene nada que descartar, pero la config sí puede
+  estar atrás —se construyó con una W y W cambió antes de la primera llamada—, así que
+  ahí también se abre ciclo.
+- **Config sin ciclos:** Monitor abre el primero con causa `"bootstrap"`.
+- **El panel lleva `config.panel()`**, no `to_dict()` (I7).
+
+**`iap_chatroom/ckm_monitor.py`**
+
+`CKMMonitor` construye `CKMlandscapeConfig(sampling_mode="uniform")` **sin W**: el
+corpus arranca en acumulación y W aparece recién al cruzar `min_texts`, así que no hay
+nada que medir en `__init__`. Sin θ_W ni `scale`. El primer ciclo lo abre Monitor.
+
+### Tests, y qué pasa sin el CP2
+
+`tests/test_monitor_abre_ciclos.py`, 13 tests. **Medido**: restauré
+`services/monitor_service.py` y `iap_chatroom/ckm_monitor.py` a `202488a` y volví a
+correr.
+
+| | con CP2 | sin CP2 |
+|---|---|---|
+| `test_monitor_abre_ciclos.py` | **13 pasan** | **12 fallan, 1 pasa** |
+| suite completa | **227/227** | — |
+
+El único que pasa sin el CP2 es `test_sin_config_el_rebuild_no_rompe_nada`, que es el
+control: sin config no debe cambiar nada.
+
+**Dos de mis tests pasaban sin el CP2 por la razón equivocada, y los corregí** después
+de medirlo, no antes:
+
+- `test_la_deriva_del_ciclo_que_abre_monitor_es_nula` pasaba porque el ciclo bootstrap
+  también tiene `t_senal = None`. Le agregué `len(ciclos) == 2` y
+  `causa != "bootstrap"` antes de mirar la deriva.
+- `test_sin_cambio_de_W_no_se_abre_ciclo` pasaba trivialmente: sin el CP2 nunca se abre
+  ningún ciclo, así que "no se abrió ninguno" era cierto por el motivo opuesto. Le
+  agregué la segunda mitad, que fuerza un rebuild y exige que ahí sí abra.
+
+Es el mismo mecanismo del `test_D3_el_panel_no_se_parte` del CP1. Esta vez lo busqué.
+
+### Un test mío tenía mal la expectativa, no el código
+
+Escribí `test_el_canal_abre_el_bootstrap_y_despues_los_rebuilds` esperando que el canal
+abriera varios ciclos. **Falló: el canal abre uno solo.** No es un fallo del CP2:
+`CKMMonitor` construye su `CorpusService` con **`rebuild_suspendido=True`** (decisión de
+delamor: *W se construye cuando el dato distingue y no se reconstruye por mensaje*), así
+que W no vuelve a cambiar y D4 no tiene nada más que abrir.
+
+Reescribí el test para que afirme lo que **se mide**: un solo ciclo con
+`rebuild_suspendido=True`, y —levantando la suspensión a mano, declarado en el test— un
+ciclo nuevo al siguiente mensaje. Sin esa segunda mitad el test no podría fallar.
+
+**Consecuencia para el canal vivo, medida y sin interpretar:** la Config del canal va a
+tener **un solo ciclo**, el bootstrap. D4 queda cableado y sin nada que abrir hasta que
+alguien levante `rebuild_suspendido`. No lo levanto: es decisión de delamor.
+
+### El único test que cambió
+
+`tests/test_landscape_config_en_runs.py`, porque Monitor ya no recibe la clase
+congelada. Qué cambió exactamente:
+
+- `CKMlandscapeConfigV1.from_W(W, theta_W=..., sampling_mode=..., scale=...)` →
+  `CKMlandscapeConfig.create(W, sampling_mode=..., scale=...)`. θ_W ya no existe.
+- `test_con_config_cada_linea_recarga_igual`: antes recargaba la config entera de cada
+  línea y la comparaba con `==`. Ahora el panel lleva `panel()` (I7), así que compara
+  `config_id`, `sampling_mode`, que **no** venga `ciclos`, y que el `ciclo_vigente`
+  recargue igual. **Lo que verificaba —que cada línea lleva la config que produjo ese
+  panel— se sigue verificando**; lo que cambió es que ya no viaja la historia.
+- Los otros tres tests sólo cambian la construcción.
+
+Los demás tests de Monitor (`test_monitor_services.py`, 36) **no se tocaron y pasan**.
+
+---
+
+## PREGUNTA P7 — NO BLOQUEA — 2026-10-07 04:34 UTC
+
+**La causa del cambio de W no siempre es derivable contra la config**, y es una
+consecuencia de P5 que no estaba vista cuando se aceptó.
+
+`CorpusService.w_change_since(sha, nodes)` **necesita las etiquetas del que consulta**,
+porque los nodos por versión no se persisten. El `Ciclo` guarda `N` pero **no** `nodes`
+(P5, porque no es función de W). Entonces, cuando hay que calcular la causa contra el
+ciclo vigente —el caso de la primera evaluación con la config atrás— sólo se puede
+distinguir `"N"`. Con N igual, no se puede saber si cambiaron las etiquetas o sólo los
+pesos.
+
+Esto **no afecta** el camino normal: cuando Monitor detecta el cambio, usa su propio
+`_w_nodes` y la causa sale fina (`"N" | "nodos" | "pesos"`).
+
+**Default declarado y reversible:** en ese caso la causa es **`"W_distinta"`** — el sha
+es otro, y con lo que el ciclo guarda no se puede decir más. **No inventé una causa más
+precisa.** Revertir: meter `nodes` en el `Ciclo` (que es revertir P5 y reescribir I5),
+o persistir los nodos por versión en `CorpusService`, que es otra TASK.

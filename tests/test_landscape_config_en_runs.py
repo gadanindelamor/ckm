@@ -1,6 +1,11 @@
 """
 test_landscape_config_en_runs.py — verificación de TASK_landscape_config_en_runs_v1
 
+Migrado a la config con ciclos en el CP2 de TASK_CKMlandscapeConfig_v3: Monitor
+ya no recibe la clase congelada. Lo que el test verificaba sigue verificándose,
+con un cambio declarado: el panel lleva `panel()` y no la config completa (I7),
+así que lo que recarga de cada línea es el ciclo vigente, no la config entera.
+
 Ejecutar:
     pytest tests/test_landscape_config_en_runs.py -v
 """
@@ -15,7 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "services"))
 from corpus_service import CorpusService
 from monitor_service import MonitorService
-from ckm_landscape_config import CKMlandscapeConfigV1
+from ckm_landscape_config import CKMlandscapeConfig, Ciclo
 
 TEXTS = [
     "gun control reduces violence and saves lives",
@@ -50,8 +55,8 @@ def test_sin_config_panel_none(corpus, tmp_path):
 
 
 def test_sampling_mode_distinto_falla_en_construccion(corpus, tmp_path):
-    cfg = CKMlandscapeConfigV1.from_W(
-        corpus.get_W(), theta_W=0.01, sampling_mode="boltzmann", scale="log",
+    cfg = CKMlandscapeConfig.create(
+        corpus.get_W(), sampling_mode="boltzmann", scale="log",
     )
     with pytest.raises(ValueError):
         MonitorService(corpus, storage_path=str(tmp_path / "m.jsonl"),
@@ -59,8 +64,9 @@ def test_sampling_mode_distinto_falla_en_construccion(corpus, tmp_path):
 
 
 def test_con_config_cada_linea_recarga_igual(corpus, tmp_path):
-    cfg = CKMlandscapeConfigV1.from_W(
-        corpus.get_W(), theta_W=0.01, sampling_mode="uniform", scale="log",
+    """Cada línea lleva el panel de la config, y el ciclo recarga igual (I7)."""
+    cfg = CKMlandscapeConfig.create(
+        corpus.get_W(), sampling_mode="uniform", scale="log",
     )
     jsonl = tmp_path / "m.jsonl"
     m = MonitorService(corpus, storage_path=str(jsonl), n_runs_attractors=10,
@@ -71,13 +77,17 @@ def test_con_config_cada_linea_recarga_igual(corpus, tmp_path):
     lineas = _lineas(jsonl)
     assert len(lineas) == len(PROMPTS)
     for r in lineas:
-        assert CKMlandscapeConfigV1.from_dict(r["panel"]["landscape_config"]) == cfg
+        lc = r["panel"]["landscape_config"]
+        assert lc["config_id"] == cfg.config_id
+        assert lc["sampling_mode"] == "uniform"
+        assert "ciclos" not in lc                      # la historia no viaja
+        assert Ciclo.from_dict(lc["ciclo_vigente"]) == cfg.ciclo_vigente
 
 
 def test_gatekeeper_c1_presente_y_none(corpus, tmp_path):
     """D4 — traza de admisión: nadie evalúa C1 todavía."""
-    cfg = CKMlandscapeConfigV1.from_W(
-        corpus.get_W(), theta_W=0.01, sampling_mode="uniform", scale="log",
+    cfg = CKMlandscapeConfig.create(
+        corpus.get_W(), sampling_mode="uniform", scale="log",
     )
     for config in (None, cfg):
         jsonl = tmp_path / f"m_{config is None}.jsonl"

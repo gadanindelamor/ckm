@@ -128,10 +128,22 @@ class TestZoneClassification:
         W  = make_W_small()
         self.th = COCO(W=W, n_runs=5, seed=0)
 
-    def test_D_ckm_None_is_stable(self):
-        """Baseline ≤ 1: d_ckm devuelve None, no hay medición y no hay STOP."""
-        z = self.th._classify_zone(None, 1.0)
-        assert z == "stable"
+    def test_D_ckm_None_is_UNKNOWN_not_stable(self):
+        """
+        Baseline ≤ 1: d_ckm devuelve None, no hay medición y no hay STOP —
+        pero la zona es UNKNOWN, no "stable".
+
+        Cambiado en el CP2c de TASK_monitor_coco_ciclo_orbita_v2. Antes este
+        test fijaba `== "stable"`. El efecto buscado era el correcto —no
+        disparar STOP— pero el nombre afirmaba una medición que no se hizo.
+        Mismo criterio que c06db07 ("el fallback de temp_signal es UNKNOWN, no
+        NOMINAL") y que SALAMANCA: "no medible" no es "nada".
+        """
+        assert self.th._classify_zone(None, 1.0) == "UNKNOWN"
+
+    def test_frac_rec_None_is_UNKNOWN(self):
+        """Sin baseline no hay fracción que comparar contra el umbral."""
+        assert self.th._classify_zone(0.5, None) == "UNKNOWN"
 
     def test_negative_D_ckm_is_stable(self):
         z = self.th._classify_zone(-0.1, 0.9)

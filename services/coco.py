@@ -105,6 +105,11 @@ ALPHA_MAX        = 0.30   # D_ckm → threshold (justo en umbral) → STOP suave
 # μ_W = global (incluye ceros) — conservador, menos sensible — afinamos después
 # Umbrales: una octava arriba/abajo de β_c — provisionales
 # BETA_RHO_STAR vive en landscape_engine (importado arriba) — una sola ρ*
+# Zona sin medición. No es "stable": sin baseline no hay distancia que medir, y
+# un nombre que afirma estabilidad es una medición que no se hizo. Mismo
+# criterio que temp_signal="UNKNOWN" (c06db07).
+ZONA_UNKNOWN = "UNKNOWN"
+
 BETA_TOO_COLD    = 2.0    # β_collective / β_c > 2.0 → paranoia / inanición
 BETA_TOO_HOT     = 0.5    # β_collective / β_c < 0.5 → intoxicación / permisividad
 
@@ -114,13 +119,13 @@ class ThermostatState:
     """Snapshot devuelto por observe() — un campo por cantidad evaluada
     ese ciclo. Ver observe() para el significado de cada uno."""
     t            : int   = 0
-    D_ckm        : Optional[float] = 0.0   # None: baseline ≤ 1, sin medición
-    A_current    : float   = 0.0
-    A0           : float   = 0.0
-    frac_rec     : float = 1.0
+    D_ckm        : Optional[float] = None   # None: sin medición
+    A_current    : Optional[float] = None
+    A0           : Optional[float] = None
+    frac_rec     : Optional[float] = None   # None: sin baseline, no 1.0
     stop_applied : bool  = False
     alpha_used   : float = 1.0
-    zone         : str   = "stable"   # stable | degrading | deep
+    zone         : str   = ZONA_UNKNOWN     # UNKNOWN | stable | degrading | deep
 
 
 class COCO:
@@ -261,11 +266,19 @@ class COCO:
         smp      = self._sampling_kwargs()
         A_current = self._count_attractors(W_eff, **smp)
 
-        if self._A0 is None:
+        # Primera observación del ciclo: el baseline se fija contra la W del
+        # ciclo vigente, sin Delta. Queda declarado en el estado como
+        # baseline_recien_fijado: la primera división de un ciclo se hace
+        # contra un vacío, y eso no se disfraza de medición.
+        baseline_recien_fijado = self._A0 is None
+        if baseline_recien_fijado:
             self._A0 = self._count_attractors(self.W, **smp)  # baseline sin Delta
 
         D_ckm    = d_ckm(A_current, self._A0)
-        frac_rec = A_current / self._A0 if self._A0 > 0 else 1.0
+        # Sin baseline útil no hay fracción de recuperación. Antes esto daba
+        # 1.0, o sea que la ausencia de baseline se leía como recuperación
+        # total — el valor más tranquilizador posible.
+        frac_rec = (A_current / self._A0) if (self._A0 or 0) > 0 else None
 
         zone = self._classify_zone(D_ckm, frac_rec)
 
@@ -337,7 +350,7 @@ class COCO:
             D_ckm        = round(D_ckm, 4) if D_ckm is not None else None,
             A_current    = A_current,
             A0           = self._A0,
-            frac_rec     = round(frac_rec, 4),
+            frac_rec     = round(frac_rec, 4) if frac_rec is not None else None,
             stop_applied = stop_applied,
             alpha_used   = alpha_used,
             zone         = zone,
@@ -567,13 +580,25 @@ class COCO:
 
     # ── Clasificación de zona ─────────────────────────────────────────────────
 
-    def _classify_zone(self, D_ckm: Optional[float], frac_rec: float) -> str:
-        """D_ckm negativo o por debajo de threshold → "stable". Si no,
-        frac_rec por debajo de frac_rec_min → "deep", si no → "degrading".
-        D_ckm None (baseline ≤ 1, sin distancia que medir) → "stable": sin
-        medición no se aplica STOP."""
-        if D_ckm is None:
-            return "stable"          # sin medición
+    def _classify_zone(self, D_ckm: Optional[float],
+                       frac_rec: Optional[float]) -> str:
+        """
+        D_ckm negativo o por debajo de threshold → "stable". Si no, frac_rec
+        por debajo de frac_rec_min → "deep", si no → "degrading".
+
+        **Sin medición es UNKNOWN, no "stable".** Antes, `D_ckm is None`
+        —baseline ≤ 1, sin distancia que medir— devolvía `"stable"`. El efecto
+        buscado era correcto (no disparar STOP) pero el nombre era una
+        medición: decía que el campo está estable cuando lo que pasa es que no
+        se sabe. Es el mismo patrón que `c06db07` ("el fallback de temp_signal
+        es UNKNOWN, no NOMINAL") y el mismo criterio que SALAMANCA: "no
+        medible" no es "nada". UNKNOWN tampoco dispara STOP.
+
+        `frac_rec` None —sin baseline— también es UNKNOWN: sin A0 no hay
+        fracción que comparar contra el umbral.
+        """
+        if D_ckm is None or frac_rec is None:
+            return ZONA_UNKNOWN      # sin medición — no es estabilidad
         if D_ckm < 0:
             return "stable"          # campo expandido — acumulación suma atractores
         if D_ckm < self.threshold:

@@ -44,6 +44,8 @@ from corpus_service  import CorpusService
 from coco import COCO, ThermostatState, BETA_RHO_STAR
 from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig
 from landscape_engine import (
+    fases_de_orbita,
+    pares_por_orbita,
     d_ckm,
     D_CKM_FORMA,
     beta_c_landscape,
@@ -203,7 +205,16 @@ class MonitorService:
         sigma_prompt = self._extractor.evaluate(text, nodes)
 
         # σ que el campo acepta
-        sigma_relaxed = self._relax(sigma_prompt.copy(), self._combine_W_Delta(W, self._Delta_r))
+        W_eff_prompt = self._combine_W_Delta(W, self._Delta_r)
+        # La órbita es el objeto (§1). Se mide sobre las dos fases; qué entra a
+        # Δ_r NO cambia todavía — eso es el CP3 y es de delamor. sigma_relaxed
+        # sigue siendo la fase que cae en max_iter, igual que hoy.
+        orbita, periodo, cola, sigma_relaxed = self._relax_orbit(
+            sigma_prompt.copy(), W_eff_prompt
+        )
+        aceptados, expulsados, torsion = pares_por_orbita(
+            sigma_prompt, fases_de_orbita(orbita, N)
+        )
 
         # pares rechazados → acumular en Δ
         rejected = self._rejected_pairs(sigma_prompt, sigma_relaxed)
@@ -255,6 +266,17 @@ class MonitorService:
             "G_state"          : g_state_panel,
             # None si Δ_r siguió acumulando; "N" | "nodos" | "pesos" si esta
             # evaluación empezó con Δ_r y A0 en cero por reconstrucción de W.
+            # La órbita completa, no la fase que cayó en max_iter (§1).
+            # `rechazados` y `n_rejected_pairs` siguen saliendo de la fase, que
+            # es lo que hoy entra a Δ_r; estas tres clases se registran al lado
+            # y no se promedian: la torsión es la marca del período 2, y el
+            # coseno la llevaría a 0. Qué entra a Δ_r es el CP3.
+            "periodo_orbita"   : periodo,
+            "cola_orbita"      : cola,
+            "n_aceptados"      : len(aceptados),
+            "n_expulsados"     : len(expulsados),
+            "n_torsion"        : len(torsion),
+            "pares_torsion"    : [(nodes[i], nodes[j]) for i, j in sorted(torsion)],
             "Delta_r_reset"    : reset_cause,
             # COCO renace con el ciclo, en el mismo bloque y con la misma
             # causa que Delta_r_reset (§1). True sólo en la evaluación del

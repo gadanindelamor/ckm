@@ -1232,3 +1232,94 @@ declarada; `thermostat` + `coco_config` falla; sin COCO el panel queda igual que
 - **Los tests Armstrong** (`iap_chatroom/tests/test_armstrong_*`): usan `thermostat=`, que es el
   camino que preservé, pero no los corrí. Son traza registrada.
 - **El clon local de delamor.**
+
+---
+
+## REPORTE CP2c — 2026-10-08 16:05 UTC
+
+*Último tercio del CP2. **Con esto el CP2 queda cerrado.***
+
+### 1. El vacío se declara
+
+Los tres bordes vivos que el CP0 encontró, y el latente:
+
+| | antes | ahora |
+|---|---|---|
+| `_classify_zone(D_ckm=None, …)` | **`"stable"`** | **`ZONA_UNKNOWN`** |
+| `frac_rec` sin baseline útil | **`1.0`** | **`None`** |
+| `_classify_zone(…, frac_rec=None)` | no existía el caso | `ZONA_UNKNOWN` |
+| defaults de `ThermostatState()` | `D_ckm=0.0`, `frac_rec=1.0`, `zone="stable"` | todos `None`, `zone=UNKNOWN` |
+
+**UNKNOWN tampoco dispara STOP**, que era el efecto correcto del comportamiento anterior. Lo que
+cambia es el nombre: antes decía que el campo está estable cuando lo que pasa es que no se sabe.
+Mismo criterio que `c06db07` y que SALAMANCA.
+
+También quedó declarado el momento en que se fija el baseline: `observe` marca
+`baseline_recien_fijado` cuando `A0` era None, así que la primera división de un ciclo dice que
+se hizo contra un vacío.
+
+### 2. La órbita entra al panel, y Δ_r no se toca
+
+`MonitorService.evaluate` ahora usa **`_relax_orbit`** —que estaba definido y nunca llamado— y
+llama a `pares_por_orbita`. El panel lleva `periodo_orbita`, `cola_orbita`, `n_aceptados`,
+`n_expulsados`, `n_torsion` y `pares_torsion` (por nombre de nodo, no agregados a un número: la
+torsión **no se promedia**).
+
+**`sigma_relaxed` sigue siendo la fase que cae en `max_iter`**, y `rechazados` y
+`n_rejected_pairs` siguen saliendo de ahí. **Qué entra a `Δ_r_pares` no cambió**: eso es el CP3 y
+es de delamor. Hay un test que lo fija: `n_expulsados ≤ n_rejected_pairs ≤ n_expulsados + n_torsion`.
+
+### Un test existente cambió, y es el único
+
+**`tests/test_coco.py::TestZoneClassification::test_D_ckm_None_is_stable`** →
+**`test_D_ckm_None_is_UNKNOWN_not_stable`**. Fijaba `== "stable"` para `D_ckm is None`: era el
+test que sostenía el borde que el CP0 señaló. Su docstring ahora dice por qué cambió y cuándo.
+Agregué al lado `test_frac_rec_None_is_UNKNOWN`.
+
+**Ningún otro test existente se tocó.**
+
+### Tests
+
+`tests/test_vacio_y_orbita_en_el_panel.py` — **10 nuevos**: zona UNKNOWN y no "stable";
+`frac_rec` None y no 1.0; los defaults de `ThermostatState` ya no afirman un campo estable;
+UNKNOWN no dispara STOP; **ninguna evaluación de un recorrido real dice "stable" sin D_ckm**;
+el panel lleva las tres clases y el período; las tres clases suman los pares declarados;
+la invariante de compatibilidad **sobre una evaluación** —que es la condición bajo la que vale,
+medida en el CP1—; la torsión viaja con sus pares; y Δ_r no cambió.
+
+**Suite: 267/267.**
+
+**Verificado al revés:** devolviendo `"stable"` al vacío, **fallan 4** tests (2 nuevos y los 2 de
+`test_coco.py`). No son tests que no puedan fallar.
+
+### El CP2 completo
+
+| | qué | tests | suite |
+|---|---|---|---|
+| **CP2a** | `pares_por_orbita`, `n_runs` y `seed` al declarado | 19 | 243 |
+| **CP2b** | COCO renace con el ciclo; el `ValueError` deja de romper | 13 | 256 |
+| **CP2c** | el vacío a UNKNOWN; la órbita al panel | 10 | 267 |
+
+**47 tests nuevos**, un test existente cambiado y declarado, **267/267**.
+
+### Lo que el CP2 NO hizo
+
+- **No decidió qué entra a `Δ_r_pares` ni a W_eff.** Es el CP3 §1, y es de delamor: las tres
+  opciones (a/b/c) siguen abiertas, y ahora hay números para decidir.
+- No tocó `CorpusService`: sigue creando su COCO y exponiendo `corpus.coco`. Es el CP4.
+- No tocó el canal: `ckm_monitor.py` sigue sin `coco_config`, así que en el canal COCO sigue
+  siendo el de Corpus. Conectarlo es parte del CP4.
+- No cambió `relax` ni `relax_orbit`, ni el criterio ni el momento del rebuild.
+- No promedia con coseno ni pasa a ángulos.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**.
+- **Los 21 `test_caso_*` del canal**: punto ciego declarado. El CP2 **cambió la firma de
+  `MonitorService`** (agregó `coco_config`) y **agregó seis claves al panel**. Son cambios
+  aditivos, pero nada automático verifica que esos 21 scripts sigan corriendo.
+- **Los tests Armstrong**: usan `thermostat=`, el camino que preservé, pero no los corrí.
+- **Si `n_torsion` se mueve sobre un corpus real a lo largo de un recorrido.** El CP1 lo midió
+  con un driver propio; acá los tests son sobre pocas evaluaciones. El panel ya lo registra, así
+  que la próxima corrida larga lo deja en la traza.
+- **El clon local de delamor.**

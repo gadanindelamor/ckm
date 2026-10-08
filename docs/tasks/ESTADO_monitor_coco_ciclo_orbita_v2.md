@@ -40,6 +40,12 @@ recorrido.
 **Y el corte de las dos existencias tiene dos caras, no una.** Con N fija da los 56 incrementos
 negativos registrados; **con N variable levanta una excepción**. La segunda no estaba medida.
 
+## En curso
+
+**CP2 — una existencia, medida sobre la órbita.** P9 contestada (`n_runs = 1000`), CP2
+habilitado. Si esta línea sigue acá en la próxima sesión, el CP2 se cortó: `git status` dice
+qué quedó tocado, y la suite dice si quedó consistente.
+
 ## Qué espera, y de quién
 
 - **P9 — BLOQUEA — [delamor]:** con qué configuración nace COCO y dónde se declara.

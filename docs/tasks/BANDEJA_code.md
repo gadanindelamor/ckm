@@ -1662,3 +1662,309 @@ resolvió con `monkeypatch.setattr(..., raising=False)`, y queda anotado en el t
   corrida. En caso09_run2 el CP1 midió 16 de 24 textos con período 2, pero eso es otro corpus y
   no lo corrí acá.
 - **El clon local de delamor.**
+
+---
+
+## ARRANQUE — 2026-10-08 22:58 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8. Sesión nueva tras el cierre de
+`TASK_monitor_coco_ciclo_orbita_v2`.*
+
+### Revisé
+
+1. **Locks.** Ninguno.
+2. **`git pull --rebase origin main`** → limpio, sin conflictos. HEAD en `7eff81c`
+   (*tasks(decisiones): se retoma el plan; DEFS v15 en DRAFT…*).
+3. **`git status`** → nada modificado ni en staging. Sólo los no trackeados conocidos.
+4. **`ESTADO_*.md`** → tres, los tres **cerrados**: `CKMlandscapeConfig_v3`,
+   `monitor_coco_ciclo_orbita_v2` y `ESTADO_REPO_delamor`. Ninguno dice "en curso": la sesión
+   anterior cerró entera. No creo un ESTADO nuevo todavía — el CP0 es lectura y el enunciado
+   pide ALTO al terminarlo.
+5. **`DECISIONES_opus.md`** → leído, incluidas las cuatro entradas del cierre del CP4.
+6. **Tests.** Suite: **284/284**, igual que al cerrar el CP4.
+7. **La TASK** `TASK_canal_iap_clock_iniciativa_v2.md` (20 256 bytes) y
+   `docs/defs/DEFS_CKM_estado_actual_v15.md` (129 949 bytes, DRAFT) existen. Leí la v2 completa
+   hasta el CP0 y la **tabla §N** de la DEFS.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P10 están respondidas.** Ningún default vigente sin decisión. La próxima es **P11**.
+
+### Encontró
+
+- **§0 de la v2 se verifica contra HEAD, sin tensión.** La v2 dice que se reverificó contra
+  `94baf68` y HEAD ya es `7eff81c`. Medido: `git diff --stat 94baf68 HEAD` sobre
+  `autonomous_device.py`, `channel.py`, `mcp_server.py`, `agent_device_skin.py`,
+  `ckm_landscape_config.py` y `monitor_service.py` → **vacío**. Lo único que cambió entre los dos
+  commits son tres archivos de `docs/`. **Ninguna afirmación de §0 quedó desactualizada.**
+- **Las líneas que §0.6 cita se corrieron**, y es por mis propios cambios del CP2/CP3i. Dice
+  `monitor_service.py` L548/L556 y hoy son **L548 y L556** — coinciden. `ckm_landscape_config.py`
+  L247 también coincide. No hay desfasaje.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: **no hay claves de provider** en este entorno
+  (`ANTHROPIC_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY` ausentes, no hay `.env`), así que no
+  corren. Punto ciego declarado, y esta TASK **toca el canal entero**.
+- **El chat** y **el estado del Codespace fuera de git** (procesos, variables, `/tmp`).
+- **`test_armstrong_via_corpus_v3.py:34`**, que quedó roto por el CP4 a sabiendas y espera la
+  revisión de delamor.
+- **El clon local de delamor.**
+
+---
+
+## REPORTE CP0 — canal IAP, CLOCK e iniciativa — 2026-10-08 22:58 UTC
+
+*TASK `TASK_canal_iap_clock_iniciativa_v2.md` §2.CP0, sobre `7eff81c`. **Sin código.**
+Nomenclatura según la tabla §N de la DEFS v15: donde el código dice `expulsados` acá se dice
+**rechazado en las dos fases**. **No renombré nada.***
+
+### Punto 1 — Dónde vive hoy el tiempo del canal
+
+| qué | archivo:línea | qué es |
+|---|---|---|
+| el campo | `iap_chatroom/channel.py:24` | `timestamp: str  # ISO8601` — del `@dataclass Message` |
+| el sello | `iap_chatroom/channel.py:52` | `datetime.now(timezone.utc).isoformat()` → **UTC con `+00:00` explícito** |
+| a epoch | `iap_chatroom/mcp_server.py:28-29` | `_epoch(iso)` → `datetime.fromisoformat(iso).timestamp()` |
+| el filtro | `iap_chatroom/mcp_server.py:69-81` | `get_messages(since: float)` devuelve los que cumplen `_epoch(m.timestamp) > since` |
+| el id | `iap_chatroom/mcp_server.py:32-35` | `_message_dict` agrega `message_id = f"msg-{index}"`, con `index` del `enumerate(history)` |
+
+**El sello es de recepción**, como pide §1: lo pone `channel.publish` cuando el mensaje llega
+(`channel.py:48-53`), antes de notificar a los subscribers y a los callbacks. ✓ Y va en UTC
+declarado. ✓
+
+**¿Hay algo que pueda ser el CLOCK? Hay un candidato, y no sirve.**
+
+`message_id = "msg-{index}"` es un contador monótono que nunca retrocede. Pero **avanza sólo
+cuando hay un mensaje**, y el propósito del CLOCK es exactamente el contrario: *"el silencio
+entre mensajes es dato medible"*. Un índice de mensajes no mide silencio — con el canal callado
+se queda quieto. **No puede ser el CLOCK.**
+
+Los otros dos relojes que ya existen tampoco:
+
+- `ui_gradio.py:85-86` `gr.Timer(value=3)` sí avanza con el canal callado, pero es el refresco
+  de la UI, corre en un hilo worker de anyio y **no se publica a ningún device**;
+- `autonomous_device.py` `poll_interval = 2.0` es el ritmo de polling **de cada device**, no una
+  coordenada común.
+
+**Veredicto: el CLOCK va de cero.** Lo que **no** va de cero es el timestamp: ya está, es de
+recepción y es UTC. Lo que falta es un tick numerado, común y observable, que avance con el
+canal callado.
+
+### Punto 1b — Los relojes **se mezclan hoy**, y es medible
+
+§1 pedía confirmar si se mezclan. **Sí.**
+
+`autonomous_device.py:203` y `:215` hacen `last_ts = time.time()` — **el reloj del proceso del
+device** — y ese valor se le pasa a `get_messages(since=last_ts)` (`:213`), que lo compara contra
+**los timestamps del canal** (`mcp_server.py:78`).
+
+**La consecuencia es concreta:** si el reloj del device va adelantado respecto del canal, el
+cutoff queda en el futuro y **los mensajes se descartan en silencio** — sin error, sin registro.
+El comentario de `:196-201` ya muestra conciencia de una carrera parecida con el evento de join,
+pero esa es de **orden**, no de **desfasaje de reloj**.
+
+Hay un tercer reloj, y éste no se mezcla: `:210` usa `time.monotonic()` para la `duration`. Es
+monótono y no se compara con nada externo. ✓
+
+### Punto 2 — Quién porta el CLOCK
+
+**(a) ¿Cabe en la Config sin romper I1? Sí, y la razón es que I1 no dice lo que parece.**
+
+I1, literal (`TASK_CKMlandscapeConfig_v2.md:55`): *"Un ciclo cerrado (c_i, i < k) **no se
+modifica**. La config **sí cambia: gana ciclos**. La inmutabilidad pasa del objeto a la traza."*
+
+O sea que **la Config ya es mutable**, y de forma declarada: `abrir_ciclo` reemplaza la tupla
+de ciclos bajo `threading.RLock` (`ckm_landscape_config.py:340`). Un contador de ticks es
+**la misma clase de mutabilidad** que ya tiene. I1 protege los `Ciclo`, no a la Config.
+
+Y la distinción que el enunciado nombra se sostiene en el código: `abrir_ciclo` **no abre nada**
+si el sha de W es el mismo (I5, `:336-338`), mientras un tick tendría que avanzar siempre. Son
+dos ejes distintos en el mismo objeto, y no se pisan.
+
+Lo que **sí** habría que resolver, y lo reporto sin decidir:
+- `panel()` (I7) hoy lleva identidad + declarado + ciclo vigente. Si el tick entra, **cada panel
+  pasa a llevar el tick del momento**, lo cual es información nueva en los 80 paneles por venir;
+- `to_dict()`/`from_dict()` tendrían que portarlo para que la serialización siga cerrando;
+- **el lock tendría que cubrirlo**, o el lector en hilo de Gradio podría ver un tick de un
+  momento y un ciclo de otro — es el mismo problema que D3 resolvió para `ciclo_vigente`.
+
+**(b) Con qué reloj quedan los tiempos — y acá hay algo más fuerte que dos fuentes.**
+
+Medido:
+
+| qué | dónde se sella | con qué reloj |
+|---|---|---|
+| `Ciclo.t_rebuild` | `monitor_service.py:548`, `:556` | `time.time()` del **proceso de Monitor** |
+| `Ciclo.t_senal` | lo pasa quien llama; **hoy nadie lo pasa** → `None` | — |
+| `CKMlandscapeConfig.timestamp` (identidad) | `ckm_landscape_config.py:222` | `time.time()` del proceso |
+| `create(...)` → primer ciclo | `ckm_landscape_config.py:247` | `time.time()` del proceso |
+| `Message.timestamp` | `channel.py:52` | **reloj del canal**, UTC ISO, de recepción |
+| `last_ts` del device | `autonomous_device.py:203`, `:215` | **reloj del device** |
+
+**Son tres fuentes, no dos.** La TASK §0.6 nombra dos (proceso de Monitor y canal); la tercera
+es el reloj del device, y es la única que **ya se mezcla** con otra (punto 1b).
+
+Dos cosas que acotan el problema, y que conviene no confundir:
+- **Hoy, en el canal, Monitor y el canal corren en el mismo proceso.** `server.py:58` levanta
+  `uvicorn.run(app)` **sin `workers=`**, y `CKMMonitor` es singleton real. Así que
+  `time.time()` del proceso de Monitor **es** el reloj del canal, bit a bit. La diferencia es
+  **declarativa, no numérica**: nada en el objeto dice de qué reloj viene cada tiempo;
+- **el reloj del device sí puede ser otra máquina**, y ahí la diferencia es real.
+
+**No decido.** Si el CLOCK vive en la Config, lo que cambia es **de qué reloj queda sellado cada
+tiempo del instrumento**, y eso cambia lo que el instrumento mide → **[delamor], E3**.
+Lo que sí puedo ofrecer, sin implementar, son las tres opciones que leo y lo que cada una cuesta:
+
+1. **Unificar en el reloj del canal.** `Ciclo.t_rebuild` pasaría a sellarse con el timestamp del
+   canal. Costo: Monitor queda dependiendo del canal para algo que hoy hace solo, y los runs que
+   **no** tienen canal (`experiments/`, los tests) necesitarían un reloj inyectado.
+2. **Declarar las dos fuentes.** Cada tiempo lleva de qué reloj viene (un campo, o el nombre).
+   Costo: nada se unifica, y comparar un `t_rebuild` con un `timestamp` de mensaje sigue siendo
+   responsabilidad de quien compara. Es la opción que **no borra la diferencia**.
+3. **Una sola fuente inyectada.** Un objeto reloj que el canal y Monitor comparten, y que en los
+   tests es determinista. Costo: toca la firma de quien lo necesite; a cambio, el desfasaje del
+   device queda medible contra una referencia única.
+
+**Y una cuarta cosa que no es opción sino hallazgo:** los Δt del device **tienen que** calcularse
+con los timestamps del canal (§1 lo pide), y hoy no se hace — se usa `time.time()` del device.
+Eso es independiente de dónde viva el CLOCK.
+
+**(c) Choques**
+
+- **`TASK_landscape_config_en_runs_v1`, decisión 2:** *"La config se construye una vez por run.
+  Si W cambia dentro del run, `w_version_id` queda desactualizado — gap conocido de D7."*
+  **Ese choque ya no existe:** el CP2 de Monitor+COCO v2 cerró D7 — la Config ya no se queda
+  atrás, gana un ciclo. La decisión 2 de esa TASK describe un estado anterior. **Es una tensión
+  de documento, no de código**, y la señalo sin tocarla: esa TASK está cerrada y es traza.
+- **`TASK_monitor_coco_ciclo_orbita_v2` (cerrada):** **no choca, y además da el enganche.** El
+  ciclo de vida es uno y lo abre Monitor; COCO renace cuando cambia el `w_version_id` del ciclo
+  vigente (`monitor_service.py:508-528`). Un CLOCK en la Config sería **otro eje** del mismo
+  objeto: el tick avanza sin abrir ciclo, así que **no dispararía ningún renacimiento de COCO**.
+  Verificado en el código: `_sincronizar_coco_con_el_ciclo` compara `w_version_id`, no tiempos.
+- **Un choque que sí veo y no estaba listado:** si el CLOCK vive en la Config, **el canal pasa a
+  depender de la Config para algo que hoy no le pide nada**. Hoy `CKMMonitor` construye la Config
+  (`ckm_monitor.py:77`) y el canal nunca la lee. Con el CLOCK ahí, `ChatChannel` —o quien publique
+  el tick— necesitaría acceso a un objeto que hoy vive dentro de Monitor. **No es imposible; es
+  una dirección de dependencia nueva**, y conviene que sea una decisión y no un efecto.
+
+### Punto 3 — `build_goal_directed_agent`
+
+`iap_chatroom/agent_device_skin.py:95-130`. **Sirve como base, con dos límites.**
+
+Lo que ya hace, y es exactamente lo que el device con objetivo necesita:
+- **el objetivo es del agente, no del canal:** arma su historial con `goal_system_prompt` en vez
+  del WELCOME MSG (`:104-106` del docstring, `:126-130` el código);
+- **puede elegir no publicar:** si el texto generado contiene el `silence_sentinel`, devuelve
+  `None` (`:111-121`). Es la primitiva "ninguna acción" de §1 ya existente;
+- reusa `_coalesce`/`_strip_own_prefix` en vez de reimplementar la alternancia de roles.
+
+Los dos límites, los dos declarados en su propio docstring:
+1. **El sentinel se busca por contención, no por igualdad** — fix de `REG_iap_caso_13_v1`, que
+   corrigió el 52% de fugas. **Riesgo conocido y no resuelto:** si un device menciona
+   `OP_SILENCE` discutiendo el propio mecanismo, también se suprime. El docstring dice *"no es la
+   solución definitiva"*;
+2. **no tiene objetivo con condiciones.** `goal_system_prompt` es texto para el LLM. Lo que §1
+   pide —condiciones observables, un estado K que baja cuando otros actúan, y la urgencia saliendo
+   del estado del mundo y no del reloj— **no está**: no hay estado del objetivo, ni K, ni registro
+   de su evolución.
+
+**O sea: es la base del *device* con objetivo, no del *objetivo*.** Lo que falta no es el agente:
+es el objeto "objetivo con condiciones" y su estado en el log.
+
+### Punto 4 — Costo del ODA continuo
+
+**Medido, llamada por llamada**, sobre `autonomous_device.py`:
+
+| fase | método | LLM | tool calls MCP |
+|---|---|---|---|
+| **O** | `_observe` (`:102-124`) | **no** ✓ | **2**: `get_monitor_state`, `get_messages(since=None)` |
+| **D** | `_decide` (`:126-161`) | **1** (`provider.complete`, `:155`) | 0 |
+| **A** | `_interact` (`:163-…`) → `_generate` (`:97-100`) | **1 más, sólo si INTERACT** | 1: `send_message` |
+
+**Por ciclo ODA: 1 llamada al LLM si la decisión es no actuar, 2 si actúa.**
+
+**Y hoy el ODA no es por vuelta: es por mensaje.** El loop (`:212-236`) recorre
+`for message in new_messages` y hace O→D→A **por cada mensaje ajeno**. Es el punto 2 de §0: si en
+un poll entran cinco mensajes, son cinco ciclos — **5 a 10 llamadas al LLM en un solo poll**.
+
+**Costo con N devices y duración T.** Con el ODA continuo de §1 —una decisión por vuelta— y
+`r` = vueltas por segundo:
+
+```
+llamadas al LLM ≈ N · T · r · (1 + p)
+```
+
+donde `p` es la fracción de vueltas que terminan en acción. Con el ritmo de hoy
+(`poll_interval = 2.0` → `r = 0.5/s`), N = 2 y T = 60 s, que son los parámetros de la serie
+0.8/0.9: **60 a 120 llamadas al LLM**, contra las ~2 a 20 de hoy, donde las vueltas sin mensajes
+no cuestan nada.
+
+**El orden del cambio: el ODA continuo convierte el costo de "proporcional a los mensajes" en
+"proporcional al tiempo × devices".** Eso es lo que hace que WAIT y el criterio local de §1 no
+sean optimizaciones cosméticas.
+
+**Qué fija el ritmo de la vuelta.** Hoy lo fija **el device**, y de la forma más rígida posible:
+`poll_interval = 2.0` es un parámetro de `AutonomousDevice` y el `sleep` está **al final del
+loop** (`:236`), así que el ritmo real es `poll_interval` + lo que tardó el ciclo. No hay mínimo
+declarado ni WAIT. Las tres opciones que leo:
+
+1. **el device**, como hoy: cada uno su ritmo, free will, y el costo lo paga quien lo elige;
+2. **un mínimo declarado** (de Calibración): un piso común que ningún device baja. Acota el
+   costo máximo, y es una restricción sobre el free will — se declara;
+3. **WAIT:** el device duerme hasta un tiempo o un evento. Es la que **más** ahorra y la que más
+   riesgo tiene de convertirse en modelo sin querer: *"dormir hasta que pase algo"* es muy
+   parecido a *"el mensaje dispara el ciclo"*, que es justo lo que esta TASK va a sacar. Si entra,
+   tendría que quedar registrado qué lo despertó.
+
+**El criterio local sin LLM (§1), como propuesta y sin implementar.** Lo que leo del repo:
+
+- **Es viable con lo que ya hay.** `_observe` **ya es sin LLM** (su docstring lo dice: *"No LLM —
+  solo recolección de datos"*). Todo lo que §1 pide para los deltas está en la observación: los
+  timestamps de los mensajes, `own_recent` (`:121-123`) y el campo. Lo único que no está es el
+  presupuesto y el estado del objetivo.
+- **Lo que ahorra, en el peor caso.** Si el pre-filtro corta una fracción `f` de las vueltas:
+  `llamadas ≈ N · T · r · (1 − f) · (1 + p)`. Con `f = 0.9`, los 60–120 de arriba bajan a 6–12.
+  **El ahorro es de orden, no marginal.**
+- **Lo que cuesta, y no es dinero.** El pre-filtro decide **sin** el LLM qué merece decisión, y
+  eso es un sesgo sobre lo que el device puede llegar a notar. §1 ya lo resuelve del modo que el
+  proyecto usa: **registrar cada vuelta no llamada con su motivo**, y **auditar** llamando a D
+  cada N vueltas aunque el filtro diga que no, midiendo la divergencia. Agrego una sola cosa, y
+  es de medición: **la tasa de divergencia es el instrumento, y para que pueda dar "el sesgo
+  cuesta" tiene que poder dar también "no cuesta"**. Si la auditoría se corre sólo cuando el
+  filtro dijo "no", mide una cara; si se corre al azar sobre las dos, mide las dos.
+- **Los umbrales son de Calibración y no los invento.** Lo digo porque es la tentación obvia del
+  CP siguiente: poner "40 s" en algún lado porque hay que poner algo.
+- **La zona horaria propia** (decisión del 8 oct) **no cuesta ninguna llamada**: `datetime` local
+  es gratis, y es información del device, no del canal. Los Δt siguen en UTC del canal.
+
+### Una tensión que encontré y no estaba en los cuatro puntos
+
+**`services/monitor_service.py` se contradice consigo mismo, y la mitad la escribí yo.**
+
+- **L10**: *"W_eff — **no se expulsan**. Δ_r[i,j] += 1 por cada evaluación."*
+- **L223**: *"A Δ_r —y por lo tanto a W_eff— entran **sólo los expulsados**"* ← la escribí yo en
+  el CP3i.
+
+La tabla §N de la DEFS v15 ya lo señala: `expulsados` es **Babel, error de Opus**, porque
+"expulsar" supone un afuera del campo y no lo hay (delamor, 8 oct: *"¿a dónde? ¿fuera de él?"*).
+El nombre correcto del objeto es **par rechazado en las dos fases**.
+
+**No renombré nada**, por el enunciado y porque la tabla dice que renombrar es **[delamor]**. Lo
+reporto porque las dos líneas están en el mismo archivo y una de las dos es mía: cuando se
+decida, hay que tocar `monitor_service.py` (L223, L230, el panel `n_expulsados`),
+`landscape_engine.py` (`pares_por_orbita` y su docstring), los tests y el CHANGELOG.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider no corren, y esta TASK **toca el canal
+  entero**. Es el punto ciego más grande de este CP0.
+- **El desfasaje real entre el reloj del device y el del canal.** Lo leí en el código; no lo medí
+  corriendo dos procesos con relojes distintos. En el Codespace es la misma máquina.
+- **Si `gr.Timer` podría servir de base para el tick.** Lo descarté por lo que es (refresco de
+  UI, hilo worker, no se publica), no por haberlo probado como fuente de ticks.
+- **El costo en dinero.** Conté llamadas al LLM, no tokens ni precio: eso depende del provider y
+  del tamaño de los prompts, y no lo medí.
+- **`autonomous_research_agent` y los otros skins** (casos 0.12+): miré
+  `agent_device_skin.py` porque lo pide el punto 3, no el resto de los devices.
+- **El chat**, **el estado del Codespace fuera de git** y **el clon local de delamor**.

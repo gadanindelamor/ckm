@@ -24,6 +24,12 @@ Antes: **CP0 — evaluar contra el repo, sin código.** Cerrado el 2026-10-08, c
 aceptado en `2ad873e`.
 
 
+## En curso
+
+**CP2a — el ODA continuo, sin criterio local.** Tensiones T1–T6 evaluadas y contestadas
+(`982b641`). Si esta línea sigue acá en la próxima sesión, el CP2a se cortó: `git status` dice
+qué quedó tocado y la suite si quedó consistente. **No toca Monitor, Config ni COCO.**
+
 ## Qué espera, y de quién
 
 - **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.

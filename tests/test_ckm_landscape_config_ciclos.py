@@ -5,8 +5,9 @@ test_ckm_landscape_config_ciclos.py — verificación de TASK_CKMlandscapeConfig
 Lo que cada test cierra está en su docstring. Los que pueden fallar por diseño
 —el de hilos y el de la señal posterior al rebuild— están marcados.
 
-No testea la clase congelada CKMlandscapeConfigV1: eso es
-tests/test_ckm_landscape_config.py, que sigue en pie hasta el CP3.
+Desde el CP3 es el único archivo de tests de este módulo: la clase v1 y su
+test salieron, y los dos casos que ese test cubría y éste no —las dos
+identidades, y que el sha cambia con W— están migrados acá.
 """
 
 from __future__ import annotations
@@ -77,6 +78,30 @@ def test_beta_c_global_coincide_con_coco(W: np.ndarray) -> None:
 def test_medido_rechaza_W_no_cuadrada() -> None:
     with pytest.raises(ValueError, match="cuadrada"):
         medido(np.zeros((3, 4)))
+
+
+# ── identidad ────────────────────────────────────────────────────────────────
+# Migrados de tests/test_ckm_landscape_config.py en el CP3, antes de borrarlo:
+# eran los dos únicos de ese archivo que no estaban cubiertos acá.
+
+def test_identidades_dos_configs_sobre_la_misma_W(W: np.ndarray) -> None:
+    """
+    w_version_id identifica a W; config_id identifica a la instancia.
+
+    Dos configs sobre la misma W comparten el ciclo pero no la identidad: son
+    dos instancias, y la del instrumento no es la del campo.
+    """
+    a = CKMlandscapeConfig.create(W, sampling_mode="uniform")
+    b = CKMlandscapeConfig.create(W, sampling_mode="uniform")
+    assert a.ciclo_vigente.w_version_id == b.ciclo_vigente.w_version_id
+    assert a.config_id != b.config_id
+
+
+def test_el_w_version_id_cambia_con_W(W: np.ndarray, W_otra: np.ndarray) -> None:
+    """Un solo par distinto alcanza para que sea otra W."""
+    a = CKMlandscapeConfig.create(W, sampling_mode="uniform")
+    b = CKMlandscapeConfig.create(W_otra, sampling_mode="uniform")
+    assert a.ciclo_vigente.w_version_id != b.ciclo_vigente.w_version_id
 
 
 # ── I1: inmutabilidad en el registro ─────────────────────────────────────────

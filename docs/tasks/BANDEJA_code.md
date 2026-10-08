@@ -2251,3 +2251,194 @@ punta a punta le pasa el tick a la Config.
   deriva del reloj de pared, así que **podría retroceder**; el test de monotonía corre en
   milisegundos y no lo ejerce. Lo digo porque es el precio de derivar en vez de contar.
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+
+---
+
+## ARRANQUE — 2026-10-08 23:49 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8.*
+
+### Revisé
+
+1. **Locks:** ninguno. **`git pull --rebase`:** limpio, HEAD en `e737e78`. **`git status`:** sin
+   nada modificado.
+2. **`ESTADO_canal_iap_clock_iniciativa_v2.md`** → último CP cerrado: **CP1**. No decía
+   "en curso".
+3. **`DECISIONES_opus.md`** → leídas `8adde3b` (CP1 aceptado, con los tres requisitos del CP2) y
+   `e737e78` (el OK de delamor al criterio local, y el CP2 partido en CP2a/CP2b).
+4. **Tests:** **304/304**.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P10 respondidas.** La próxima es **P11**.
+
+### Encontró
+
+- Nada nuevo en el arranque. Las tensiones del CP2 van en el reporte de abajo, que es lo que
+  delamor pidió **antes** de tocar código.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider. Y el CP2a **cambia el loop del device**, que
+  es lo que esos 21 ejercitan. Es el punto ciego más grande de este CP.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`test_armstrong_via_corpus_v3.py:34`**, roto por el CP4 a sabiendas.
+- **`process/iap_series_freeze_20261008/README.md:41`**, que sigue diciendo "67 archivos".
+  Queda para cuando toque `process/`, con una línea declarada (decisión del 8 oct). **No toqué
+  `process/` en esta sesión.**
+
+---
+
+## REPORTE CP2 — evaluación contra el repo, antes de tocar código — 2026-10-08 23:49 UTC
+
+*TASK §2.CP2, partido en CP2a/CP2b por `e737e78`. **Sin código.** Seis tensiones, con
+archivo:línea.*
+
+### T1 — `trigger_mode` no existe en el código
+
+La TASK §2.CP2 dice: *"`AutonomousDevice` con `trigger_mode="continuo"`"* y
+*"`trigger_mode="on_message"` no se mantiene como modo vivo: quedó congelado en el CP0b"*.
+
+**Medido:** `grep -rn trigger_mode` sobre `*.py` → **cero ocurrencias en código**. Sólo aparece
+en documentos: la TASK v1 y v2, el README del freeze (que escribí yo) y esta bandeja.
+
+El constructor de `AutonomousDevice` (`autonomous_device.py:73-86`) tiene `device_id`,
+`provider`, `system_prompt`, `mcp_url`, `poll_interval`. **No hay `trigger_mode`.** El
+comportamiento on_message está **cableado** en `run()` (`:212-236`): el `for message in
+new_messages` es el disparador.
+
+**Qué significa, y por qué importa:** "sacar `trigger_mode` del canal vivo" **no es quitar un
+flag** — es reemplazar el loop. Y la frase del README del freeze que escribí yo
+(*"`trigger_mode="on_message"` deja de ser el modo del canal"*) **se lee como si hubiera una
+bandera que se apaga, y no la hay**. El modo congelado es el loop de `run()` tal como está en la
+copia.
+
+**No decido** si el parámetro se crea igual (dos modos coexistiendo) o si el loop se reemplaza
+y el modo viejo queda sólo en el freeze. La TASK dice que on_message *"no se mantiene como modo
+vivo"*, que leo como lo segundo, pero el nombre `trigger_mode="continuo"` sugiere un parámetro.
+**Default declarado y reversible si nadie contesta:** creo el parámetro con
+`trigger_mode="continuo"` como **único valor aceptado**, y cualquier otro valor levanta
+`ValueError` nombrando el freeze. Así el nombre que la TASK usa existe, y el modo viejo no
+vuelve por un default. → **P11**.
+
+### T2 — Requisito 1 (`since` del canal): hay de dónde, y es lo que agregó el CP1
+
+**Medido:** `autonomous_device.py:203` y `:215` hacen `last_ts = time.time()` — reloj del device
+— y eso va a `get_messages(since=last_ts)` (`:213`), que lo compara contra timestamps del canal
+(`mcp_server.py:78`).
+
+**El CP1 ya dejó la fuente**: `get_clock()` devuelve **`t`**, que es `_ahora()` del canal
+(`channel.py`, `get_clock`). Y `get_messages` devuelve cada mensaje con su `timestamp` ISO y su
+`tick`.
+
+**Dos fuentes posibles, y una es mejor:**
+- **`get_clock()["t"]`** — el reloj del canal, disponible **aunque no haya ningún mensaje**;
+- el `timestamp` del último mensaje recibido — también del canal, pero **no existe si el canal
+  está callado**, que es justamente el caso que el ODA continuo tiene que cubrir.
+
+**Default declarado:** el `since` sale de **`get_clock()["t"]`**. Sin tensión con nada: es
+exactamente lo que el CP1 construyó.
+
+### T3 — Requisito 2 (el log crece en silencio): se cumple, con un detalle de grano
+
+`get_clock()` registra **una entrada por tick observado**, no por consulta (hay test del CP1).
+Con el ODA continuo el device lo consulta cada vuelta, así que **el log crece con el canal
+callado** ✓.
+
+**El detalle:** si la vuelta del device es más rápida que `TICK_PERIODO_S = 1.0`, varias vueltas
+caen en el mismo tick y **el log crece más lento que las vueltas**. No es un problema —el log es
+de ticks, y así se diseñó— pero el test del requisito tiene que esperar **más de un período de
+tick**, o pasa por no haber nada que medir. Lo digo porque es la forma de test que ya mordió tres
+veces.
+
+### T4 — LEAVE no existe como decisión, y es un cambio de fondo
+
+**Medido:** `_decide` (`:126-161`) devuelve **`"INTERACT"` o `"OP_SILENCE"`**, y cualquier otra
+cosa cae a `OP_SILENCE` (`:160`). `_interact` (`:163-186`) maneja esos dos. **`leave_channel` se
+llama una sola vez, al final de `run()` (`:238`), cuando vence `duration`** — no es una decisión.
+
+La TASK §1 pide que *"irse"* sea una acción con su primitiva, **por decisión propia y no porque
+venció `duration`**. Eso toca tres lugares: el vocabulario de `_decide`, `_interact`, y el loop
+(que tiene que poder terminar porque el device decidió irse).
+
+**No es sólo agregar un `elif`:** hoy el prompt del gate (`GATE_PROMPT_04`) pide
+INTERACT/OP_SILENCE. Si LEAVE entra al vocabulario, **el prompt cambia**, y eso cambia lo que el
+device puede decidir. Con stubs no importa; en la corrida viva sí. **Lo señalo y no lo decido.**
+
+### T5 — `_observe` exige un mensaje, y el ODA continuo puede no tener ninguno
+
+**Medido:** `_observe(self, client, message)` (`:102`) recibe el mensaje disparador y lo devuelve
+como `observation["trigger"]` (`:119`). `_decide` lo usa en el prompt (`:137`, `:152-153`:
+`sender=trigger.get("device_id")`, `text=trigger.get("text")`).
+
+En el ODA continuo **puede no haber trigger**: la vuelta corre igual. Así que `_observe` y el
+prompt tienen que admitir *"ninguno"* — y *"ninguno"* es el silencio, que es el dato. Hoy
+`trigger` nunca es None.
+
+**Esto cambia la firma de un método que la serie congelada usó.** El freeze es una copia, así que
+la serie no se toca ✓, pero **los 21 `test_caso_*` del repo vivo llaman a este device**, y no
+puedo correrlos. Es el riesgo concreto del CP2a, y lo nombro antes de empezar.
+
+### T6 — Lo que NO entra: verificado que no hace falta
+
+delamor: *"Monitor, la Config y COCO: si hace falta tocarlos, pará y reportá."*
+
+**Medido, y no hace falta:**
+- `_observe` lee el campo con la **tool MCP** `get_monitor_state` (`:111`), no importando
+  Monitor. Leer por la tool no toca su código ✓.
+- El requisito 2 se cumple porque **el device** llama a `get_clock()`; **no** hace falta que
+  Monitor registre nada nuevo ✓. (El límite que Opus encontró —el log es de ticks *observados* y
+  hoy sólo Monitor los observa, desde `on_message`— **lo resuelve el device observando**, no un
+  cambio en Monitor.)
+- COCO: el device no lo toca ni por tool ✓.
+
+**Así que el CP2a se puede hacer tocando sólo `iap_chatroom/`.** Si durante la implementación
+aparece que hace falta Monitor, la Config o COCO, **paro y reporto** antes de tocarlos.
+
+### El stub del provider
+
+`providers/base.py` define `Provider` (ABC) con `complete(messages) -> str`. Un stub es una
+subclase con una lista de respuestas y un contador — **sin red, sin claves**. Va en
+`tests/`, no en `iap_chatroom/providers/`: es instrumento de test, no un provider del canal.
+
+**Lo que el stub permite testear y lo que no:** permite el loop, el vocabulario de decisiones, el
+`since`, el clock, LEAVE y las dos publicaciones seguidas. **No permite** saber qué decidiría un
+modelo real — y la pregunta de la TASK (*"con el canal en silencio, un device con objetivo
+**puede** hablar primero"*) es de **diseño**, no de modelo: el test verifica que el diseño **se
+lo permite**, que es lo que la TASK pide textualmente.
+
+### Costo estimado de la corrida viva, antes de que delamor decida
+
+Con el ODA continuo y **sin** criterio local (CP2a), por device y por vuelta: **1 llamada al LLM**
+(el gate) **+ 1 más si actúa**. Con el ritmo de hoy (`poll_interval = 2.0` → 0.5 vueltas/s):
+
+| N devices | T | llamadas al LLM |
+|---|---|---|
+| 2 | 60 s | **60 – 120** |
+| 2 | 300 s | **300 – 600** |
+| 4 | 300 s | **600 – 1200** |
+
+Hoy, con el ODA por mensaje, la serie 0.8/0.9 (N=2, T=60 s) gastaba **~2 a 20**. Con el criterio
+local (CP2b) y un corte del 90%, los 60–120 bajan a **6–12**.
+
+**No conté tokens ni dinero**: depende del provider y del tamaño de los prompts. Lo que cuento es
+llamadas.
+
+### Qué pido antes de tocar código
+
+**Sólo T1 necesita respuesta** (P11, NO BLOQUEA, con default declarado). Las otras cinco las
+reporto para que queden trazadas; T4 y T5 son cambios de fondo y las nombro ahora, no después.
+
+**Arranco el CP2a con el default de T1** salvo que llegue otra cosa.
+
+---
+
+## PREGUNTA P11 — NO BLOQUEA — 2026-10-08 23:49 UTC
+
+**`trigger_mode` no existe en el código** (T1). La TASK lo nombra como si fuera un parámetro, y
+el on_message está cableado en `run()`.
+
+**Default declarado y reversible:** creo `trigger_mode` con **`"continuo"` como único valor
+aceptado**; cualquier otro levanta `ValueError` nombrando el freeze. Así el nombre que la TASK
+usa existe y el modo viejo no vuelve por un default.
+**Revertir:** aceptar también `"on_message"` y conservar el loop viejo detrás del parámetro.

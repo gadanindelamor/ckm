@@ -1,0 +1,14 @@
+REG_iap_caso_04_oda_v1.md: Anthropic, Groq, Haiku, Llama, Sonnet, claude-haiku-4-5-20251001
+REG_iap_caso_04a_v1.md: Anthropic, Groq, Haiku, Llama, Sonnet, claude-haiku-4-5-20251001
+REG_iap_caso_04b_v1.md: Anthropic, Haiku, Sonnet, claude-haiku-4-5-20251001, claude-sonnet-5
+REG_iap_caso_05_v1.md: Anthropic, Haiku, Sonnet, claude-haiku-4-5-20251001
+REG_iap_caso_06_v1.md: Haiku, Sonnet, claude-haiku-4-5-20251001, claude-sonnet-5
+REG_iap_caso_07_v1.md: Haiku, Sonnet
+REG_iap_caso_08_v1.md: Haiku, Sonnet
+REG_iap_caso_09_v1.md: Anthropic, Groq, Haiku, Llama, Sonnet, anthropic, claude-sonnet-5, groq, llama-3.3-70b-versatile
+REG_iap_caso_10_v1.md: Anthropic, Groq, Sonnet, anthropic, claude-sonnet-5
+REG_iap_caso_11_v1.md: Anthropic, Groq, Sonnet, anthropic, claude-sonnet-5, groq
+REG_iap_caso_12_v1.md: Anthropic, Groq, Llama, Sonnet, claude-sonnet-5, groq, llama-3.3-70b-versatile
+REG_iap_caso_13_v1.md: Anthropic, Groq, Haiku, Llama, Sonnet, claude-haiku-4-5-20251001, claude-sonnet-5, groq, llama-3.3-70b-versatile
+REG_iap_caso_14_v1.md: Groq, Haiku, Opus, Sonnet, claude-opus-4-8, groq
+REG_iap_caso_15_v1.md: Groq, Sonnet

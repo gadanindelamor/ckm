@@ -1,0 +1,3 @@
+f1e7847e24dc87b12d83f1b1f09663ae58953e49
+2026-10-08 23:04:51 +0000
+estado: ESTADO_canal_iap_clock_iniciativa_v2 — CP0b en curso (§3, antes del paso)

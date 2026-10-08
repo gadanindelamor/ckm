@@ -7,23 +7,29 @@
 
 ## Última escritura
 
-**2026-10-08 23:0x UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 23:06 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP0 — evaluar contra el repo, sin código.** Cerrado el 2026-10-08, commit `8151298`.
-Aceptado en `2ad873e`.
+**CP0b — freeze de la serie IAP.** Cerrado el 2026-10-08.
+Copia en `process/iap_series_freeze_20261008/` (67 archivos, 620 KB), verificada por `diff`.
+**Los originales no se tocaron**: `git status` sobre `iap_chatroom/` y `registers/` da vacío.
 
-## En curso
+Antes: **CP0 — evaluar contra el repo, sin código.** Cerrado el 2026-10-08, commit `8151298`,
+aceptado en `2ad873e`.
 
-**CP0b — congelar la serie IAP (freeze).** delamor confirmó: **copiar, no mover**.
-Si esta línea sigue acá en la próxima sesión, el CP0b se cortó. **Los originales no se tocan**,
-así que un corte no puede dañar la serie: lo único a medias podría ser la copia, y se rehace.
 
 ## Qué espera, y de quién
 
-- **El CLOCK — E3, [delamor]:** dónde vive y de qué reloj se sella cada tiempo. **El CP1 espera
-  esa respuesta.**
+- **El CLOCK — E3, [delamor]:** dónde vive y de qué reloj se sella cada tiempo. **El CP1 no
+  arranca sin esa respuesta.**
+
+## Próximo paso
+
+**CP1 — el CLOCK del canal, sin cambiar a los devices.** Bloqueado por el E3.
+
+`trigger_mode="on_message"` sigue siendo el modo del canal vivo: el freeze lo congeló, pero
+sacarlo es el CP1/CP2 y no se tocó.
 
 ## Base
 

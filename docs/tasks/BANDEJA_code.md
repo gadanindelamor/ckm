@@ -1968,3 +1968,85 @@ decida, hay que tocar `monitor_service.py` (L223, L230, el panel `n_expulsados`)
 - **`autonomous_research_agent` y los otros skins** (casos 0.12+): miré
   `agent_device_skin.py` porque lo pide el punto 3, no el resto de los devices.
 - **El chat**, **el estado del Codespace fuera de git** y **el clon local de delamor**.
+
+---
+
+## REPORTE CP0b — freeze de la serie IAP — 2026-10-08 23:06 UTC
+
+*TASK §2.CP0b. delamor: **"Confirmo"** — copiar, no mover. **Los originales no se tocaron.***
+
+### Dónde quedó
+
+**`process/iap_series_freeze_20261008/`** — 67 archivos, 620 KB.
+
+| carpeta | qué |
+|---|---|
+| `tests/` | los **21** `test_caso_*.py` |
+| `registers/` | los **14** `REG_iap_caso_*.md` |
+| `configs/` | `groq_agent_config.json` |
+| `_state/` | `corpus_state.json`, `corpus_G_state.json`, `monitor_trajectory.jsonl` |
+| raíz | los módulos del canal y `providers/` |
+| `entorno/` | `commit.txt`, `pip_freeze.txt`, `python.txt`, `modelos_por_caso.txt` |
+
+El README arranca con la línea que pidió delamor, literal:
+**"NO ES REPRODUCIBLE. Intento de congelar las condiciones de una experiencia en vivo."**
+
+### La copia se verificó, y los originales siguen intactos
+
+- `diff -rq` sobre los 21 `test_caso_*` → **sin diferencias**;
+- `cmp` sobre los seis módulos del canal → **sin diferencias**;
+- `diff -rq` sobre los 14 REG → **sin diferencias**;
+- `git status --porcelain iap_chatroom/ registers/` (sin `??`) → **vacío**: no se tocó ni un
+  original. **Copiar, no mover.** ✓
+
+### Los modelos por caso
+
+Extraídos de los 14 REG. Los identificadores exactos que aparecen:
+`claude-haiku-4-5-20251001`, `claude-sonnet-5`, `claude-opus-4-8`,
+`llama-3.3-70b-versatile`, y los providers `anthropic` y `groq`.
+
+**Dos casos no nombran ningún identificador exacto**, sólo el nombre corto del modelo:
+`REG_iap_caso_07_v1` y `REG_iap_caso_08_v1` dicen "Haiku" y "Sonnet" y nada más.
+`REG_iap_caso_15_v1` dice "Groq" y "Sonnet". **Quedó así**: es lo que los REG dicen, y los REG
+no se revisan.
+
+### Lo que no se pudo congelar, y está declarado en el README
+
+1. **El modelo**, que es el límite principal y el que la TASK ya nombra: vive afuera, se llama
+   por API y el proveedor lo cambia o lo retira. Quedan los identificadores y lo que los logs y
+   los REG guardaron.
+2. **No hay `.devcontainer/` en el repo.** La TASK propone *"una imagen de contenedor
+   (devcontainer del Codespace con dependencias fijadas) más el sha"* como lo más cercano al
+   alcance. **No existe**, así que lo más cercano quedó siendo `pip_freeze.txt` + el sha.
+   **Es menos de lo que la TASK propone**, y lo digo en vez de dejarlo pasar.
+3. **No pude correr ni un `test_caso_*` para verificar la copia por ejecución**: sin claves de
+   provider no corren. **La copia se verificó por `diff`, no corriéndola.** Es exactamente la
+   razón por la que copiar y no mover era lo correcto: si se hubiera movido, lo único que
+   quedaría de la serie sería una copia que nadie puede ejecutar para comprobar que es fiel.
+4. **`process/iap_series/` no existía.** La TASK dice que el freeze va *"junto a lo que ya existe
+   en `process/iap/` y `process/iap_series/`"*. La primera existe (81 entradas) y **no se tocó**;
+   la segunda **no existe en el repo**. Dejé la copia en
+   `process/iap_series_freeze_20261008/`, al lado. **No creé `process/iap_series/`**: el nombre
+   es de la TASK y no sé si refiere a algo que estuvo y ya no está.
+5. **El estado de `_state/` es de agosto** (1 y 13 de ago). **No es el estado al final de la
+   serie**: es el que quedó en el disco. Lo copié igual y lo declaro.
+6. **No copié `process/iap/`** (81 entradas, incluidas las seis salidas `armstrong_*` que quedan
+   UNKNOWN). Ya está en `process/` y no se toca.
+
+### Qué cambia después del freeze
+
+`trigger_mode="on_message"` **deja de ser el modo del canal** y queda sólo como parte de lo
+congelado: ahí está `autonomous_device.py` con su loop por mensaje, tal como corrió la serie.
+
+**No lo toqué todavía.** Sacarlo del canal vivo es el CP1/CP2, y el CP1 **espera la respuesta de
+delamor sobre el CLOCK** (E3).
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider. Es la razón del punto 3 de arriba.
+- **Si el `pip_freeze` del Codespace es el mismo que cuando corrió la serie.** Es el de **hoy**:
+  la serie corrió entre agosto y octubre, y nada garantiza que las versiones no se hayan movido.
+  **Es una foto de hoy, no de entonces**, y por eso el freeze es un intento.
+- **Si falta algo que la serie usó y no supe nombrar.** Copié lo que la TASK lista y lo que
+  encontré; lo que no esté nombrado, no está.
+- **El chat**, **el estado del Codespace fuera de git** y **el clon local de delamor**.

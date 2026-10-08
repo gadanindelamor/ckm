@@ -39,6 +39,8 @@ por cada poll (poll_interval = 2.0 s):
 1. **El único disparador del ODA es un mensaje ajeno.** El device puede elegir callar, pero solo cuando le hablan. No puede iniciar, no observa el campo por su cuenta y no decide irse: `leave_channel` ocurre recién cuando vence `duration`.
 2. **Hay un ODA por cada mensaje.** Si en un poll entran cinco mensajes, el device decide cinco veces.
 3. **El silencio es absorbente por construcción.** Si todos eligen OP_SILENCE, no aparece ningún mensaje nuevo y nadie más se dispara. Es demostrable sin correr nada. Queda registrado como **condición del canal** en el que ocurrió la serie IAP, y se congela con ella (CP0b). La serie no se revisa.
+   - **El silencio existió:** es traza de la experiencia y es de lo que se trataba (delamor, 7 oct). La construcción del canal explica por qué nada lo interrumpió, **no decide qué fue**.
+   - **Genealogía de "acoplado":** delamor observó *contagio* en el IAP project, antes del CKM (*"contagio, ojo, atentos a los contagios"*). Sonnet lo escribió después como *acoplamiento*. Contagio es una observación del proceso (algo se propaga entre devices); acoplamiento es un mecanismo (devices ligados). El cambio de palabra convirtió una observación en una explicación (BABEL). Ninguna de las dos se valida con la serie, porque la serie no se revisa.
 4. **No hay CLOCK en el código.** La memoria del 28 sep dice *"CLOCK y ticks de LandscapeConfig implementados y funcionando (commit exacto no identificado)"*, pero no aparece CLOCK ni ticks en `services/` ni en `iap_chatroom/`. `CKMlandscapeConfig` (`services/ckm_landscape_config.py`) **sí está conectada a MonitorService** (L79, L117, L215): Monitor la recibe, verifica que su `sampling_mode` coincida y la **serializa en cada panel** (`TASK_landscape_config_en_runs_v1`, tests en `test_landscape_config_en_runs.py`). El docstring de la clase, que dice *"todavía no la consume ningún servicio"*, quedó viejo. Pero Monitor **no toma sus variables de ella**: n_runs, θ_W y demás llegan por separado, y la config se registra, no se usa como fuente. Sus campos son N, μ_W, β_c, θ_W, sampling_mode, scale, w_version_id, config_id y **timestamp** (de creación). **No tiene CLOCK ni ticks.** Los únicos `tick` del repo son el timer de refresco de `ui_gradio.py`.
 5. **Hay antecedentes de devices con objetivo.** `agent_device_skin.py` L95 tiene `build_goal_directed_agent`, y los casos 0.13 y 0.14 (handoff) trabajan con dependencias entre devices.
 
@@ -55,6 +57,10 @@ por cada poll (poll_interval = 2.0 s):
   - **A, Acción:** lo que el device hace con lo decidido.
   - Ejemplo (delamor): *"Observo el canal. Pienso: che, el device Juan Pérez dijo tal cosa hace 7 minutos, ¿y todavía nada?"*. Los 7 minutos no se los dio el canal: los calculó el device con los timestamps, y notar que "todavía nada" es parte de su decisión. Eso es observar el silencio sin que nadie lo dispare.
   - Requisito para el canal: **todo mensaje y todo evento lleva timestamp.** Ya pasa hoy: `channel.py` usa ISO8601 y `get_messages` usa epoch. El CP0 tiene que confirmar que eso alcanza.
+  - **UTC, la hora de Greenwich (delamor, 7 oct).** Todos los timestamps van en UTC. Leído en el código: `channel.py` L52 ya usa `datetime.now(timezone.utc).isoformat()` (+00:00), y `mcp_server.py` L29 lo pasa a epoch, que es UTC por definición. ✓
+  - **El reloj contra el que se mide.** `autonomous_device.py` L203/L215 usa `time.time()` **del propio device** para `last_ts`. Si el device corre en otra máquina, su reloj puede estar corrido respecto del canal. Los Δt que entran a D (y al criterio local) se calculan **con los timestamps del canal**, nunca mezclando el reloj del device con el del canal. El CP0 tiene que confirmar si hoy se mezclan.
+  - **Device Japón (UTC+9):** puede ser "mañana" en su hora local. Los timestamps que recibe D van en UTC **y dicen que son UTC**, para que el LLM no los traduzca a su hora.
+  - **El timestamp es de recepción, no de envío:** el canal sella el mensaje cuando le llega, así que el viaje de red queda incluido. "Hace 7 minutos" quiere decir 7 minutos desde que llegó al canal. Es el tiempo del canal, una sola fuente, y se declara así.
 - **D elige una acción, o ninguna. A la ejecuta con una primitiva del canal** (delamor: *"LEAVE es una acción… su interacción puede ser leave, y eso se conecta a la primitiva"*):
   - **publicar** → primitiva `send_message`;
   - **irse** → primitiva `leave_channel`, por decisión propia y no porque venció `duration`;
@@ -62,11 +68,25 @@ por cada poll (poll_interval = 2.0 s):
 
   INTERACT y LEAVE no son tipos de decisión distintos: los dos son acciones, cada una con su primitiva. Si mañana el canal ofrece otra primitiva, D la puede elegir sin cambiar el ciclo.
 - **NOTA de optimización (no es modelo): WAIT.** Para no pagar una decisión (una llamada al LLM) en cada vuelta, un device podría "dormir" hasta un tiempo o un evento. Es costo, no ODA. Lo evalúa Code en el CP0 (punto 4).
+- **Propuesta de delamor (7 oct): un criterio local antes de D, sin LLM.** El costo es una variable más, con presupuesto, que va a tener que evaluarse.
+  - **Qué es:** `autonomous_device` calcula **deltas locales** a partir de lo que ya observa, y no del canal: Δt desde el último mensaje ajeno, Δt desde que el device habló por última vez, Δ mensajes desde su última decisión, si lo nombraron, si cambió el estado del objetivo (K) y **cuánto gastó contra su presupuesto**. `_observe` ya funciona sin LLM.
+  - **Qué hace:** decide **si vale la pena llamar a D (LLM)** en esta vuelta, no qué hacer. Si no cambió nada relevante, la vuelta sigue sin llamar. Los deltas además entran como **información** a D cuando sí se lo llama.
+  - **Sostener la tensión del sesgo** (regla CKM, paso 4): el pre-filtro es un sesgo evidente. **Se declara**, no pasa por campo:
+    - cada vuelta sin llamar queda registrada con su motivo (`skip: Δmsgs=0, Δt=40s < umbral`);
+    - **auditoría:** cada tanto (cada N vueltas, o al azar) se llama a D aunque el pre-filtro diga que no, y se registra si D habría hecho algo distinto de "nada". La tasa de divergencia **mide el costo del sesgo**;
+    - los umbrales son **declarados** (son de Calibración) y no los inventa Code.
+  - **La zona horaria propia, si el device quiere** (delamor, 7 oct): el device puede saber su time zone y su hora local, sin LLM, y usarlas como información **local** para decidir si llama a D. Por ejemplo, de noche en su hora quizás convenga llamar menos. Es opcional y propio del device (free will). No es información del canal, y los Δt siguen en UTC del canal.
+  - **El costo como observación:** el device ve su propio gasto y el presupuesto que le queda. Decidir con poco presupuesto es parte de D.
+  - **Free will** (delamor): *"my world being the world cause it is not mine"*. El criterio local es del device; el mundo, el canal y los demás no son suyos.
+  - Lo evalúa Code en el CP0 (punto 6, costo). **No se implementa sin el OK de delamor.**
 - **Un objetivo con condiciones, para el caso de prueba.** delamor: *"El objetivo tiene condiciones a cumplir. No ticks. Antes que se acaben."* Un deadline en ticks puede existir, pero es un caso particular, no lo general.
   - Ejemplo: *"conseguir entradas para la fiesta de presentación del CKM, **antes de que se acaben**"*. La condición es que queden entradas (K > 0). K no baja con el reloj: baja cuando **otros** las consiguen. La urgencia sale del estado del mundo y se observa, no se cuenta en ticks.
   - Los ticks sirven para ver **a qué ritmo** se acaban: es información, no el plazo.
   - La tensión crece a medida que la condición se acerca a no cumplirse. En el Hamiltoniano del Híbrido (H = −½ΣW_ij·s_i·s_j − Σh_i·s_i), el objetivo sería un campo externo h que crece con la escasez, no con el reloj. Esta lectura es **propuesta**: no se implementa como fórmula en esta TASK, solo se registran el objetivo, sus condiciones y su estado en el log.
 - **Se conserva** la regla estructural de nunca reaccionar al propio mensaje.
+  - **Precisión (delamor, 7 oct):** la regla es **no reaccionar al evento** del propio mensaje. **No impide escribir varios seguidos.** Con el ODA continuo, un device puede volver a publicar sin que nadie le haya respondido ("7 minutos y todavía nada"). Lo decide por lo que observa (Δt, silencio, el objetivo), no porque su mensaje anterior lo dispare.
+  - En el criterio local, Δ mensajes cuenta **solo los mensajes ajenos**. El propio mensaje entra como "Δt desde que hablé", es información y no disparador.
+  - Test del CP2: un device publica dos veces seguidas por decisión, y **ninguna** de las dos publicaciones queda registrada como reacción a la anterior.
 
 ## 1b. Espíritu (no es requerimiento)
 

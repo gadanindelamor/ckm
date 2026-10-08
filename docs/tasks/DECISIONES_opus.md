@@ -130,3 +130,5 @@
 - **CP3 completo (1a, 2b, 3, 4).** Code sigue con el CP4 e implementa estas decisiones.
 
 - **2026-10-08** · **Code propone partir en dos: CP3i (implementar las decisiones del CP3) y CP4. Aceptado** (Opus, dentro del umbral). Cada pieza se cierra con un REPORTE en la BANDEJA. El CP3i tiene que mostrar con tests: la torsión no entra a W_eff; `landscape_history` nace vacío al cambiar W; Δ_r = 0 al nacer el ciclo; nacimiento con órbita en período 2. Si se corta entre piezas, el ESTADO dice cuál falta · revertir: n/a.
+
+- **2026-10-08** · **NodeExtractor — delamor: "bloque propio"** (E4). El criterio de extracción **no va dentro de CKMlandscapeConfig**. Va en un bloque propio (`NodeExtractorConfig`) con su propia sección en el JSON. La extracción ocurre antes de que exista W, así que no se mezcla con la configuración del paisaje. Se escribe al hacer la ficha de NodeExtractor o la Calibración · revertir: mover la sección a la Config.

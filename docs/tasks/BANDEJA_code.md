@@ -1148,3 +1148,87 @@ los inválidos fallan, que sobreviven la serialización y que viajan en el panel
   contra `_rejected_pairs` con fases sintéticas, no recorriendo caso09. Esa comparación llega
   cuando Monitor la consuma, en el CP2b.
 - **El clon local de delamor.**
+
+---
+
+## REPORTE CP2b — 2026-10-08 16:00 UTC
+
+*Segundo tercio del CP2. **Es donde el `ValueError` del CP1 deja de romper.***
+
+### Qué quedó
+
+**`MonitorService` recibe `coco_config`, no una instancia.** Monitor construye su COCO y lo
+**recrea cuando cambia el ciclo**, en el mismo bloque donde descarta Δ_r. El panel lleva
+`coco_renace`, `coco_generacion` y `coco_externo`, al lado de `Delta_r_reset`.
+
+**`n_runs`, `seed` y `sampling_mode` salen de la Config** (declarado, P9). `coco_config` puede
+pisarlos, y entonces es explícito y no un default heredado. Lo demás —`track_landscape`,
+`n_warmup`, `gamma`, umbrales— va en `coco_config`.
+
+**`thermostat=COCO(...)` sigue aceptado sólo en transición**, con `coco_externo: True` en el
+panel y sin renacer: es el camino de los tests Armstrong, que son traza y no se tocan.
+`thermostat` y `coco_config` juntos levantan `ValueError`.
+
+### El ValueError, medido
+
+El primer test reproduce la condición exacta del CP1 —caso09_run2 natural, se lee COCO una vez,
+se ingesta de a un texto— y además chequea en cada evaluación que
+`COCO.W.shape[0] == Monitor._Delta_r.shape[0]`. **Pasa, y COCO renace al menos una vez.**
+
+**Verificado al revés:** dejando que COCO naciera una vez y no renaciera, **4 de los 13 tests
+fallan**, incluido éste. No es un test que no pueda fallar.
+
+### Dos cosas que encontraron mis propios tests, y cambiaron el diseño
+
+**1. Sin Config no hay reloj, y pedir un COCO gestionado sin reloj es pedir una falla
+garantizada.** Escribí un test esperando que, sin Config, COCO naciera una vez y no renaciera.
+**Falló con `ValueError: shapes (22,22) (3,3)`**: sin ciclos, nunca renace, y el primer rebuild
+que cambia N rompe igual que antes.
+
+No lo documenté como límite: **lo rechacé en la construcción.** `coco_config` sin
+`landscape_config` levanta `ValueError` con el motivo. El criterio: una sola existencia necesita
+un solo reloj, y si no hay reloj no se acepta una configuración cuya falla ya está medida. Para
+un COCO que no renace existe el camino declarado, `thermostat=`.
+
+**2. El renacimiento no puede atarse al evento, porque el ciclo puede estar abierto antes.**
+Tres tests fallaron con `_thermostat is None`: una Config construida con `create()` **ya trae su
+ciclo bootstrap abierto** antes de que Monitor exista, así que `abrir_ciclo` nunca devuelve True
+y **COCO no tenía nacimiento**.
+
+Lo até al **`w_version_id` del ciclo vigente** en vez de al evento: si el sha del ciclo no es el
+del COCO que hay, COCO renace. Son equivalentes mientras Monitor sea el único que abre ciclos
+(I2), y la comparación cubre el caso que el evento no cubría. **El invariante de §1 queda más
+fuerte, no más débil:** el COCO vigente es siempre el del ciclo vigente, sin importar quién
+abrió el ciclo ni cuándo. Hay un test parametrizado en los dos casos.
+
+### Tests
+
+`tests/test_coco_renace_con_el_ciclo.py` — **13**: el ValueError del CP1 sobre caso09;
+nace con el bootstrap (los dos casos, ciclo ya abierto o no); sin cambio de W no renace;
+renace en el mismo paso que el reset de Δ_r; **nace vacío** (Δ en ceros, A0 en None);
+toma `n_runs`/`seed`/`sampling_mode` de la Config; `coco_config` puede pisarlos;
+la configuración es la misma antes y después de renacer; la instancia externa no renace y queda
+declarada; `thermostat` + `coco_config` falla; sin COCO el panel queda igual que hoy; y
+`coco_config` sin Config se rechaza.
+
+**Suite: 256/256.** Ningún test existente cambió.
+
+### Lo que el CP2b NO hizo
+
+- **No cambió qué entra a `Δ_r_pares`**, que es del CP3 y es de delamor. `pares_por_orbita`
+  sigue sin que nadie la llame.
+- **No agregó `n_torsion` ni `pares_torsion` al panel**, ni tocó los bordes del vacío: eso es
+  el CP2c.
+- **No tocó `CorpusService`:** sigue creando su COCO y exponiendo `corpus.coco`. Soltarlo es el
+  CP4.
+- No tocó el canal (`ckm_monitor.py`): sigue pasando sin `coco_config`.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**.
+- **Los 21 `test_caso_*` del canal**: punto ciego declarado. Este CP2b **cambió la firma de
+  `MonitorService`** —agregó `coco_config`— y aunque es un parámetro opcional, nada automático
+  verifica que esos 21 scripts sigan corriendo.
+- **Los tests Armstrong** (`iap_chatroom/tests/test_armstrong_*`): usan `thermostat=`, que es el
+  camino que preservé, pero no los corrí. Son traza registrada.
+- **El clon local de delamor.**

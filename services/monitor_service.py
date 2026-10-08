@@ -73,6 +73,7 @@ class MonitorService:
         storage_path    : str = "monitor_trajectory.jsonl",
         n_runs_attractors: int = 1000,
         thermostat      : Optional[COCO] = None,
+        coco_config     : Optional[dict] = None,
         behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
         count_seed      : int = 0,
         sampling_mode   : str = "uniform",
@@ -115,6 +116,37 @@ class MonitorService:
         self._storage  = Path(storage_path)
         self._extractor = NodeExtractorService()
         self._n_runs   = n_runs_attractors
+        # ── COCO: configuración, no instancia (D4 + §1 de
+        # TASK_monitor_coco_ciclo_orbita_v2) ─────────────────────────────────
+        # Monitor y COCO son aspectos de lo mismo: nacen, viven y mueren
+        # juntos. El reloj es el ciclo vigente de la Config, que Monitor abre.
+        # Por eso Monitor recibe CÓMO construir a COCO y lo construye él, en
+        # el mismo bloque donde abre el ciclo.
+        #
+        # `thermostat=COCO(...)` sigue aceptado **sólo en transición**: una
+        # instancia externa NO renace, y eso se declara en el panel como
+        # coco_externo=True. Es el camino de los tests Armstrong, que son
+        # traza y no se modifican.
+        self._coco_config = dict(coco_config) if coco_config else None
+        if thermostat is not None and coco_config is not None:
+            raise ValueError(
+                "thermostat y coco_config son excluyentes: o se pasa una "
+                "instancia externa (que no renace) o se pasa cómo construirla"
+            )
+        if coco_config is not None and landscape_config is None:
+            # Una sola existencia necesita un solo reloj, y el reloj es el
+            # ciclo vigente de la Config. Sin Config no se abre ningún ciclo,
+            # así que COCO nacería una vez y no volvería a renacer: en el
+            # primer rebuild que cambie N, observe() rompería con
+            # ValueError de shapes — es lo que el CP1 midió. No se acepta una
+            # configuración cuya falla está garantizada.
+            raise ValueError(
+                "coco_config requiere landscape_config: COCO renace con el "
+                "ciclo, y sin Config no hay ciclo que abrir. Para un COCO que "
+                "no renace, pasarlo como thermostat= y queda declarado como "
+                "instancia externa."
+            )
+        self._coco_externo = thermostat is not None
         self._thermostat = thermostat
         self._g         = behavior_graph
 
@@ -140,6 +172,12 @@ class MonitorService:
         # versión de W bajo la que se acumuló Δ_r — ver _invalidar_si_W_cambio
         self._w_sha   : Optional[str]       = None
         self._w_nodes : Optional[list]      = None
+        # traza del renacimiento de COCO — se expone en el panel
+        self._coco_renacio     : bool          = False
+        self._coco_generacion  : int           = 0
+        self._coco_id_anterior : Optional[int] = None
+        # w_version_id del ciclo al que pertenece el COCO vigente
+        self._coco_sha         : Optional[str] = None
 
     # ------------------------------------------------------------------
     # API pública
@@ -218,6 +256,13 @@ class MonitorService:
             # None si Δ_r siguió acumulando; "N" | "nodos" | "pesos" si esta
             # evaluación empezó con Δ_r y A0 en cero por reconstrucción de W.
             "Delta_r_reset"    : reset_cause,
+            # COCO renace con el ciclo, en el mismo bloque y con la misma
+            # causa que Delta_r_reset (§1). True sólo en la evaluación del
+            # renacimiento. coco_externo=True: instancia pasada desde afuera,
+            # que NO renace — aceptada sólo en transición.
+            "coco_renace"      : self._coco_renacio,
+            "coco_generacion"  : self._coco_generacion,
+            "coco_externo"     : self._coco_externo,
             # Admisión (node-level, C1) y metabolización (pair-level, Δ_r)
             # son objetos distintos. Nadie evalúa C1 todavía: None dice que
             # esta Δ_r se acumuló sin admisión previa. Cuando alguien lo
@@ -231,6 +276,8 @@ class MonitorService:
                 if self._landscape_config is not None else None
             ),
         }
+
+        self._coco_renacio = False      # se consumió en este panel
 
         # COCO lee Δ_r y regula su propia representación (D3). La
         # regulación no llega a Δ_r: Monitor es su único escritor.
@@ -353,6 +400,78 @@ class MonitorService:
         es **"W_distinta"**: el sha es otro, y con lo que el ciclo guarda no
         se puede decir más. No se inventa una causa más precisa.
         """
+        abrio = self._abrir_ciclo(sha_actual, causa)
+        self._sincronizar_coco_con_el_ciclo()
+        return abrio
+
+    def _sincronizar_coco_con_el_ciclo(self) -> None:
+        """
+        Una existencia de COCO por ciclo. Renace cuando el ciclo cambia.
+
+        La §1 dice "COCO renace si y solo si se abrió un ciclo nuevo". Se
+        implementa comparando el `w_version_id` del ciclo vigente contra el del
+        COCO que hay, en vez de mirar si `abrir_ciclo` devolvió True. Son
+        equivalentes mientras Monitor sea el único que abre ciclos (I2), y la
+        comparación cubre además el caso que el evento no cubre: una Config
+        construida con `create()` **ya trae su ciclo bootstrap abierto** antes
+        de que Monitor exista, así que no se abre ninguno y COCO no tendría
+        nacimiento. Lo encontró un test del CP2b.
+
+        El invariante queda más fuerte: el COCO vigente es siempre el del ciclo
+        vigente, sin importar quién abrió el ciclo ni cuándo.
+        """
+        if self._coco_config is None:
+            return
+        cfg = self._landscape_config
+        if cfg is None or not cfg.ciclos:
+            return
+        sha = cfg.ciclo_vigente.w_version_id
+        if sha != self._coco_sha:
+            self._renacer_coco()
+            self._coco_sha = sha
+
+    def _renacer_coco(self) -> None:
+        """
+        COCO nace de nuevo con el ciclo. Una sola existencia (§1).
+
+        Renace **si y solo si** se abrió un ciclo, en el mismo bloque y con la
+        misma causa. Nace vacío: Δ propio en ceros, A0 y N_eff0 en None, igual
+        que Δ_r y A0 de Monitor. La primera división del ciclo nuevo se hace
+        contra ese vacío, y el vacío se declara — no se lee como estabilidad
+        (CP2c).
+
+        Sin `coco_config` no hay nada que renacer: o no hay COCO, o es una
+        instancia externa que se declaró como tal y **no renace**. Ésa es la
+        divergencia que el CP1 midió rompiendo con
+        `ValueError: shapes (31,31) (28,28)`: COCO se quedaba con la N de su W
+        y Monitor crecía. Con el renacimiento, la N de COCO es siempre la de la
+        W del ciclo vigente.
+
+        `n_runs`, `seed` y `sampling_mode` **salen de la Config** (declarado,
+        P9): no son defaults de COCO. Lo demás —`track_landscape`, `n_warmup`,
+        `gamma`, umbrales— viene de `coco_config`.
+        """
+        if self._coco_config is None:
+            return
+        cfg = self._landscape_config
+        kw = dict(self._coco_config)
+        if cfg is not None:
+            kw.setdefault("n_runs", cfg.n_runs)
+            kw.setdefault("seed", cfg.seed)
+            kw.setdefault("sampling_mode", cfg.sampling_mode)
+        else:
+            kw.setdefault("n_runs", self._n_runs)
+            kw.setdefault("seed", self._count_seed)
+            kw.setdefault("sampling_mode", self._sampling_mode)
+        anterior = self._thermostat
+        self._thermostat = COCO(W=self.corpus.get_W(), **kw)
+        self._coco_renacio = True
+        self._coco_generacion += 1
+        self._coco_id_anterior = id(anterior) if anterior is not None else None
+
+    def _abrir_ciclo(
+        self, sha_actual: str, causa: Optional[str] = None
+    ) -> bool:
         cfg = self._landscape_config
         if cfg is None:
             return False

@@ -421,3 +421,77 @@ Esto **no afecta** el camino normal: cuando Monitor detecta el cambio, usa su pr
 es otro, y con lo que el ciclo guarda no se puede decir más. **No inventé una causa más
 precisa.** Revertir: meter `nodes` en el `Ciclo` (que es revertir P5 y reescribir I5),
 o persistir los nodos por versión en `CorpusService`, que es otra TASK.
+
+---
+
+## ARRANQUE — 2026-10-08 00:13 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`), rama `code/trabajo`. Chequeo §2 + §8.*
+
+### Revisé
+
+1. **Locks.** `find .git -name "*.lock"` → ninguno.
+2. **`git pull origin main`** → al día, nada nuevo. HEAD en `c96f752`
+   (*Merge origin/main — TASKs y protocolo del canal IAP*). Las dos ramas sincronizadas:
+   `git log HEAD..origin/main` vacío.
+3. **`git status`** → nada modificado ni en staging. Los no trackeados son los 27 conocidos.
+4. **`ESTADO_CKMlandscapeConfig_v3.md`** → último CP cerrado: **CP2**, el 2026-10-07, sobre
+   `202488a`. Próximo paso: CP3, habilitado.
+5. **`DECISIONES_opus.md` (§8)** → leído. Las decisiones del CP0, CP1 y CP2 están, más el
+   criterio del CP3 (L47) y su habilitación (L54).
+6. **Archivos de salida.** `monitor_trajectory.jsonl` (raíz, 76 líneas) y
+   `iap_chatroom/_state/monitor_trajectory.jsonl` (4 líneas): **la última línea de cada uno
+   parsea como JSON completo**, ninguna truncada. Ninguno lleva marca de "terminó": el formato
+   no la tiene.
+7. **Tests.** Suite completa: **227/227**, en verde, sin cambios desde el cierre del CP2.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P7 están respondidas**, cada una con un `Pn` que la nombra en `DECISIONES_opus.md`:
+
+| | respuesta |
+|---|---|
+| **P1** `theta_W_formula` | aceptada, y **corregida después**: sale con V1 cuando θ_W salió de la Config |
+| **P2** `gatekeeper_c1.py` | aceptada: no se toca en el CP3, salvo el docstring |
+| **P3** quién construye la Config en el canal | escalada a delamor (E3/E4) y **resuelta**: opción (iv) |
+| **P4** lectura de los registros planos de v1 | aceptada: función de lectura, no reescribe nada |
+| **P5** `nodes` fuera del `Ciclo` | aceptada |
+| **P6** `t_senal` sin tilde | aceptada |
+| **P7** causa `"W_distinta"` | aceptada, con un **error de Opus declarado**: al aceptar P5 no vio que sin `nodes` la causa no siempre se deriva |
+
+**Ningún default quedó vigente sin decisión.** No hay nada que arrastrar como
+`Pn — DEFAULT VIGENTE, SIN DECISIÓN`.
+
+### Encontré
+
+- **Las dos ramas ya estaban sincronizadas al arrancar**, así que el punto 2 de §8 —*la
+  respuesta que no llega a quien pregunta*— no se dio: las decisiones del CP2 estaban visibles
+  antes de empezar.
+
+### No pude revisar
+
+- Nada quedó sin revisar en este arranque.
+
+---
+
+## CORTE — 2026-10-08 00:13 UTC
+
+*Lo que la sesión anterior dejó a medias, detectado al arrancar (§6, tipo `CORTE`).*
+
+**1. La sesión anterior no escribió su `ARRANQUE` en la bandeja.** Hizo el chequeo —corrió la
+suite, leyó el ESTADO y las decisiones— pero **lo reportó en el chat**, que no es el canal. Las
+entradas `REPORTE CP1` y `REPORTE CP2` sí quedaron escritas; el arranque, no. Es exactamente lo
+que §2 previene: el chequeo existió y no quedó traza de él en el repo, así que desde la bandeja
+no se puede saber qué se revisó antes del CP1.
+
+**2. El Codespace se paró.** Por eso esta sesión arranca de nuevo. **No hubo daño:** el CP2 se
+cerró entero en `17b6421` y se pusheó, el ESTADO estaba escrito, y el árbol quedó limpio. Es el
+diseño de §0 funcionando — cortar en cualquier punto no dejó nada a medias.
+
+**3. Lo que no se perdió por poco.** El merge de `main` en `code/trabajo` (`c96f752`) se hizo
+en el último minuto de la sesión anterior, a pedido de delamor. Sin ese push, los 7 commits de
+documentación de `main` seguirían fuera de la rama de trabajo y este arranque habría leído un
+protocolo sin §8 — es decir, no habría listado las preguntas abiertas.
+
+**Lo que esta sesión hace distinto:** el `ARRANQUE` va a la bandeja **antes** de tocar el CP3,
+y con su propio commit.

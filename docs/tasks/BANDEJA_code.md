@@ -577,3 +577,65 @@ no me corresponde.
 **Default declarado y reversible:** la entrada va bajo **`## Unreleased`**, arriba de v30, y
 escrita en **inglés** para no romper el idioma del archivo. Revertir: cambiar el encabezado
 por el número que corresponda, que es mover una línea.
+
+---
+
+## ARRANQUE — 2026-10-08 00:52 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8. **Primera sesión en `main`** —
+§6 reemplazado el 8 oct: una sola rama. `git pull --rebase origin main` hecho antes de esto.*
+
+### Revisé
+
+1. **Locks.** `find .git -name "*.lock"` → ninguno.
+2. **`git pull --rebase origin main`** → limpio, sin conflictos. HEAD en `0d6eb74`
+   (*tasks(protocolo): §9 los pasos de Opus y delamor que faltaban*). Historia lineal, sin
+   commit de merge: es el primer pull con el flujo nuevo.
+3. **`git status`** → nada modificado ni en staging. Los no trackeados son los 28 conocidos.
+4. **`ESTADO_CKMlandscapeConfig_v3.md`** → la TASK anterior quedó **cerrada** en el CP3. No
+   hay ningún CP abierto de ella. No existía `ESTADO_monitor_coco_ciclo_orbita_v2.md`: lo creo
+   en esta sesión.
+5. **`DECISIONES_opus.md` (§8)** → leído, incluidas las entradas sobre el CP3 y la práctica
+   nueva (nunca `add -A` ni `commit -a`).
+6. **`PROTOCOLO`** → leídos los cambios: **§6 reemplazado** (una sola rama) y **§9 nueva**
+   (los pasos de Opus y de delamor, que estaban implícitos).
+7. **Archivos de salida.** `monitor_trajectory.jsonl` (raíz, 76 líneas) e
+   `iap_chatroom/_state/monitor_trajectory.jsonl` (4 líneas): la última línea de cada uno
+   parsea como JSON completo. Ninguna truncada. El formato no lleva marca de "terminó".
+8. **Tests.** Suite completa: **220/220**, sin cambios desde el cierre del CP3.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P8 están respondidas**, cada una con un `Pn` que la nombra en
+`DECISIONES_opus.md`. **Ningún default quedó vigente sin decisión**, así que no hay nada que
+arrastrar como `Pn — DEFAULT VIGENTE, SIN DECISIÓN`. La próxima pregunta es **P9**.
+
+### Encontré
+
+- **`origin/code/trabajo` todavía existe en GitHub.** §6 dice que se elimina. No la borro: es
+  irreversible y no es mío (E2). Mi rama local ya no está.
+- **Un desfasaje de un commit en el registro de §6.** Dice *"Su último commit fue `2195025`"*,
+  y el último fue **`897f67f`** — el merge que pusheé después de esa verificación.
+  **No se perdió nada, y lo medí:** `44af68a` (el CP3) es ancestro de `main`;
+  `git diff --name-only --diff-filter=D main 897f67f` sale vacío, o sea que `main` no le falta
+  ningún archivo mío. `897f67f` era un merge de `main` en la rama, sin contenido propio. Lo
+  anoto sólo para que el registro quede exacto.
+- **Mi rama local `code/trabajo` desapareció** entre el `checkout main` y el
+  `pull --rebase`. No sé cuál de los dos, y ninguno de los dos debería borrar una rama.
+  No tiene consecuencia —el contenido está en `main` y `897f67f` sigue existiendo como commit
+  suelto— pero **no tengo la causa**, y lo digo en vez de atribuirle una.
+
+### No pude revisar
+
+- **El chat.** Lo que se decidió o se dijo ahí no deja traza que yo pueda chequear desde el
+  repo. Es la mitad del CORTE de ayer, y sigue fuera del alcance de este chequeo por
+  construcción.
+- **El estado del Codespace fuera de git.** Procesos corriendo, variables de entorno, archivos
+  en `/tmp`, y si alguna sesión anterior dejó algo a medias que no toca el árbol de trabajo.
+  Lo único que puedo afirmar es que el árbol está limpio y los `.jsonl` no están truncados.
+- **El clon local de delamor.** §9.1 y §9.2 dicen que lo de Opus no existe para mí hasta que
+  llega el push. No puedo saber si hay commits de Opus sin subir; sólo veo lo que está en
+  GitHub.
+- **`experiments/replay_sesion_trust.py`**, que migré en el CP3: sus datos están en
+  `process/replay/_private/`, que no se commitea. Sigue verificado sólo por sintaxis.
+- **La causa de la desaparición de la rama local**, como dije arriba.

@@ -639,3 +639,19 @@ arrastrar como `Pn — DEFAULT VIGENTE, SIN DECISIÓN`. La próxima pregunta es 
 - **`experiments/replay_sesion_trust.py`**, que migré en el CP3: sus datos están en
   `process/replay/_private/`, que no se commitea. Sigue verificado sólo por sintaxis.
 - **La causa de la desaparición de la rama local**, como dije arriba.
+
+---
+
+## CORRECCIÓN — 2026-10-08 01:45 UTC
+
+**La entrada `ARRANQUE` de arriba dice `00:52 UTC` y la hora real era `01:43 UTC`.**
+
+Puse la hora de memoria en vez de leerla: la había mirado al principio de la sesión y escribí
+esa, sin volver a correr `date -u`. El chequeo que describe sí se hizo, y se hizo en esa
+sesión; lo que está mal es la hora del encabezado, 51 minutos antes.
+
+No edito la entrada: §6 dice que las anteriores no se editan. Queda esta corrección, y el
+orden real de la bandeja es el de los commits, no el de los encabezados.
+
+Para los próximos: la hora se lee con `date -u` **en el momento de escribir la entrada**, no
+al arrancar la sesión.

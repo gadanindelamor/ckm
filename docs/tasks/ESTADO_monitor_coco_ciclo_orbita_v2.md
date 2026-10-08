@@ -36,6 +36,12 @@ Los nueve puntos, reportados en `BANDEJA_code.md`, entrada `REPORTE CP0` de 01:4
 9. **77 de los 220 tests** tocan esto. Y los **21 `test_caso_*` del canal no son pytest**:
    recogen 0 items, así que esa cobertura no existe automáticamente.
 
+## En curso
+
+**CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Driver en `experiments/`.
+Si esta línea sigue acá en la próxima sesión, el CP1 se cortó: el driver escribe su log con
+escritura atómica, así que un `.json` sin `.tmp` está completo y lo que midió sirve.
+
 ## Qué espera, y de quién
 
 - **P9 — BLOQUEA — [delamor]:** con qué configuración nace COCO y dónde se declara.

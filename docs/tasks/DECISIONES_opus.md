@@ -116,3 +116,11 @@
 - **2026-10-08** · **El test cambiado `test_D_ckm_None_is_stable` → `…_is_UNKNOWN_not_stable`: aceptado.** Era el test que sostenía el NOMINAL por ausencia · revertir: n/a.
 - **2026-10-08** · **Punto ciego ampliado:** el CP2 cambió la firma de `MonitorService` (agregó `coco_config`) y le sumó claves al panel. Los 21 `test_caso_*` no se verifican. Se acepta, con la misma declaración que antes.
 - **CP3: es de delamor (4 decisiones).** Opus las escala con una recomendación.
+
+### CP3 — respuestas de delamor (2026-10-08)
+
+- **delamor: "confirmo las opciones recomendadas"** para los puntos 1, 3 y 4 (E4):
+  - **1, opción (a):** a `Δ_r_pares` y W_eff entran **solo los expulsados** (pares expulsados en las dos fases). La torsión va a un objeto propio (`Δ_r_torsion`), que escribe solo Monitor y que **no entra a W_eff**;
+  - **3:** el baseline de COCO se fija **al nacer el ciclo** (Δ_r en cero, así que W_eff = W), con `n_runs = 1000`;
+  - **4:** si el salto cae en período 2, el ciclo nuevo **nace con la órbita**, no con una fase.
+- **Punto 2 (`landscape_history` a través del salto): pendiente.** delamor no lo entendió como estaba escrito. Opus lo reformula en el chat.

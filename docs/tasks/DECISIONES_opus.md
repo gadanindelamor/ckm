@@ -128,3 +128,5 @@
 - **Punto 2 — delamor: "b"** (2026-10-08, E4). Cuando cambia W, el COCO nuevo **empieza con `landscape_history` vacío**: no hereda la historia del ciclo anterior, porque se midió sobre otra W y no es comparable. El pasado queda **solo en la traza** (JSONL), así que no se pierde nada.
   - **Traza del cambio de recomendación:** Opus primero recomendó (a), conservar la historia como registro de solo lectura. Al reformularlo, cambió a (b) porque (a) invita a mezclar mediciones de W distintas. delamor eligió (b) con esa explicación delante.
 - **CP3 completo (1a, 2b, 3, 4).** Code sigue con el CP4 e implementa estas decisiones.
+
+- **2026-10-08** · **Code propone partir en dos: CP3i (implementar las decisiones del CP3) y CP4. Aceptado** (Opus, dentro del umbral). Cada pieza se cierra con un REPORTE en la BANDEJA. El CP3i tiene que mostrar con tests: la torsión no entra a W_eff; `landscape_history` nace vacío al cambiar W; Δ_r = 0 al nacer el ciclo; nacimiento con órbita en período 2. Si se corta entre piezas, el ESTADO dice cuál falta · revertir: n/a.

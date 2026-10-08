@@ -73,3 +73,17 @@
 
 - **delamor:** *"Sí, es sí, toda la razón. El tema son los merges."* Respuesta a la propuesta de Opus de usar una sola rama. **Decisión de delamor (E1: reemplaza a la §6 (b)).** Todos trabajan en `main` con `git pull --rebase origin main`. `code/trabajo` queda congelada como traza en `2195025`. Detalle en PROTOCOLO §6 · revertir: volver a la §6 (b).
 - **delamor (2026-10-08): "Hay que eliminar la branch trabajo… y fin del cortocircuito."** Antes de borrarla, Opus verificó con `git diff origin/main origin/code/trabajo` que no tenía contenido propio: solo le faltaban cosas que ya estaban en `main`. La rama se elimina en el remoto y en los clones · revertir: recrearla desde `2195025` si sigue en algún reflog.
+
+### Sobre el REPORTE CP0 de Monitor + COCO v2 (BANDEJA, 2026-10-08 01:46 UTC, `27c6559`)
+
+- **2026-10-08** · **CP0: aceptado.** Corrige a la TASK en tres cosas, y se aceptan las tres:
+  - los usos vivos de una sola fase son `monitor_service.py:168` (de donde salen `rejected`, `Δ_r_pares`, `c_S` y `fabrication_index`) y `mean_cS`, que COCO usa para comprimir. **N_eff y D_ckm ya van por órbita**, así que la paridad no afecta a D_ckm;
+  - el borde de `landscape_engine:418` no está vivo (es `deprecated_d_ckm`);
+  - la identidad `relax(−σ) = −relax(σ)` queda demostrada, y la bisagra es la regla GOLES (h=0 conserva σ).
+
+  · revertir: n/a.
+- **2026-10-08** · **Los 21 `test_caso_*` del canal no son tests de pytest** (recogen 0 items): no están en los 220, y un cambio los puede romper sin que la suite lo diga. **Se acepta como punto ciego declarado y no se convierten.** Son la serie IAP congelada (TASK canal IAP, CP0b): no se reproducen ni se usan para validar. Cada reporte que toque el canal tiene que nombrarlo en "no pude revisar" · revertir: convertirlos (otra TASK).
+- **2026-10-08** · **Práctica de la hora:** cada encabezado de la bandeja se escribe con `date -u` en el momento, nunca de memoria. Code ya la corrigió con una entrada propia (`7c16b6c`) · revertir: n/a.
+- **2026-10-08** · **CP1 habilitado.** P9 bloquea el CP2, no el CP1.
+- **P9 — escalada a delamor (E3: cambia lo que el instrumento mide).** Pendiente. Recomendación de Opus abajo, a confirmar.
+- **Nota técnica de Opus:** la VM vio el ESTADO como "modificado" y era solo CRLF. Desde ahora, en la VM se usa `git -c core.autocrlf=true`, igual que el git de Windows.

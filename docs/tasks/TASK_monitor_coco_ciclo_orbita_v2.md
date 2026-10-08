@@ -23,6 +23,9 @@
 
 ## 0b. Lo que cambió desde la v1
 
+- **Números de línea:** se tomaron sobre `eddb4b0`. Con la Config v3, algunos archivos cambiaron (`monitor_service.py`, `ckm_monitor.py`). Ubicar por nombre de función, y reportar si alguna referencia ya no coincide. Verificado el 8 oct: `coco.py` L268 (`frac_rec`) y L570 (`_classify_zone`) siguen ahí; `ckm_monitor.py` pasó de L93 a L104.
+- **Los reportes van a la bandeja,** no a delamor directamente (en la v1 decía "Reportar a delamor").
+
 - **Ya hay un reloj de ciclo.** `MonitorService._invalidar_si_W_cambio` llama a `config.abrir_ciclo(...)` en el mismo bloque donde resetea Δ_r (Config v3 CP2, D4). El ciclo vigente se lee de `config.ciclo_vigente`, que se lee entero y bajo lock. Con el mismo sha no se abre ningún ciclo (I5).
 - **El canal vivo construye la Config** sin θ_W ni scale (opción iv). Como `CKMMonitor` usa `rebuild_suspendido=True`, **en el canal hay un solo ciclo** (bootstrap). COCO va a nacer una sola vez ahí, hasta que alguien levante la suspensión.
 - **Causa del ciclo:** `"N" | "nodos" | "pesos" | "bootstrap" | "W_distinta"` (P7).
@@ -37,7 +40,7 @@ Monitor y COCO son dos aspectos de una misma cosa: Monitor nota y COCO regula. H
 - quedan dos COCO vivos, `corpus.coco` (nuevo) y `monitor._thermostat` (con la W congelada);
 - se miden 56 incrementos negativos en `Δ_r_compresiones` (`TASK_delta_compresiones_coco_v1` §Abierto);
 - el docstring de COCO lo resume como *"una sola cantidad, dos baselines"*;
-- el canal vivo (`iap_chatroom/ckm_monitor.py` L93) lee el COCO de Corpus, no el de Monitor;
+- el canal vivo (`iap_chatroom/ckm_monitor.py` L104 (era L93)) lee el COCO de Corpus, no el de Monitor;
 - Corpus lo crea con la configuración por defecto (seed 0, n_runs 80), mientras que los tests usan seed 123;
 - todo esto ya está registrado en `REG_coco_w_congelada_v1` y se reproduce con `experiments/coco_lifetime_analytics.py`.
 
@@ -86,7 +89,7 @@ Reportar al menos lo siguiente.
    - `coco.py` L593/597 tiene las dos variantes.
 2. **Identidad `relax(−σ) = −relax(σ)`** (ρ* = 0.5, en `coco.py` L104/412 y `landscape_engine` L32). Confirmar que vale fase a fase, demostrándolo por simetría, sin correr.
 3. **Usuarios de `corpus.coco`:**
-   - `ckm_monitor.py` L93;
+   - `ckm_monitor.py` L104 (era L93 en `eddb4b0`);
    - `test_armstrong_n_runs_sweep.py` L73;
    - `test_armstrong_via_corpus_v3.py`;
    - `coco_lifetime_analytics.py`.
@@ -104,7 +107,7 @@ Reportar al menos lo siguiente.
    - Revisar todos los bordes `if A0 > 0 else …`, `None → valor` y `max(0, …)` en Monitor, COCO y `landscape_engine` (por ejemplo, L418 `… if A0 > 0 else 0.0` en la forma deprecada).
 9. **Tests afectados:** `tests/test_monitor_services.py`, `test_invalidacion_delta_r.py`, `test_delta_compresiones_coco.py` y los `iap_chatroom/tests/test_caso_*.py`.
 
-**Alto. Reportar a delamor.**
+**Alto. REPORTE en la bandeja (PROTOCOLO §6). Opus decide o escala (§5).**
 
 ### CP1. Medir lo que hoy se rompe (sin tocar `services/`)
 
@@ -116,7 +119,7 @@ Driver en `experiments/` con pre-registro en el docstring, escrito antes de corr
 
 Commit, versiones y seed van en el log.
 
-**Alto. Reportar a delamor.**
+**Alto. REPORTE en la bandeja (PROTOCOLO §6). Opus decide o escala (§5).**
 
 ### CP2. Una existencia, medida sobre la órbita
 
@@ -136,7 +139,7 @@ Commit, versiones y seed van en el log.
   - **COCO renace si y solo si se abre un ciclo:** con el mismo sha, ni ciclo nuevo ni COCO nuevo;
   - **en el canal** (`rebuild_suspendido=True`), COCO nace una vez con el bootstrap y no vuelve a renacer. Con la suspensión levantada a mano en el test, renace con el ciclo siguiente.
 
-**Alto. Reportar a delamor.**
+**Alto. REPORTE en la bandeja (PROTOCOLO §6). Opus decide o escala (§5).**
 
 ### CP3. Lo que es de delamor (después de ver CP1 y CP2)
 

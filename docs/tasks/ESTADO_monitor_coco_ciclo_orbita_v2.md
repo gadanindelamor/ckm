@@ -7,11 +7,14 @@
 
 ## Última escritura
 
-**2026-10-08 16:49 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 17:01 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP3i — implementación de las cuatro decisiones del CP3.** Cerrado el 2026-10-08.
+**CP4 — CorpusService suelta a COCO. La TASK queda cerrada.** Cerrado el 2026-10-08.
+Reporte: `BANDEJA_code.md`, `REPORTE CP4`. Suite **284/284**.
+
+Antes: **CP3i — implementación de las cuatro decisiones del CP3.** Cerrado el 2026-10-08.
 Reporte: `BANDEJA_code.md`, `REPORTE CP3i`. Suite **276/276**.
 
 Antes: **CP2c**, y con él el CP2 completo. Ver §"El CP2, partido".
@@ -67,12 +70,6 @@ Por §4, después del corte por límite de uso de hoy:
   delamor (`n_runs = 1000`) y Opus resolvió el resto por debajo del umbral. La próxima pregunta
   es **P10**.
 
-## En curso
-
-**CP4 — CorpusService suelta a COCO.** Incluye correr al menos un `test_caso_*` de punta a
-punta en el canal (decisión del 8 oct). Si esta línea sigue acá en la próxima sesión, el CP4 se
-cortó: `git status` dice qué quedó tocado y la suite si quedó consistente.
-
 ## El CP3
 
 **Las cuatro decisiones son de delamor y están tomadas** (1a, 2b, 3, 4; `DECISIONES_opus.md`).
@@ -89,15 +86,20 @@ real sí — el CP1 midió **16 de 24 textos con período 2** en caso09_run2.
 
 ## Próximo paso
 
-**CP4 — CorpusService suelta a COCO.** Sacar `self._coco` de `_rebuild`, deprecar la property
-`coco` y declararlo en el CHANGELOG; `ckm_monitor.py` pasa a leer desde Monitor; correr los tests
-que no son Armstrong.
+**La TASK está cerrada.** No quedan CPs.
 
-Es también donde **lo del CP3i empieza a ejercerse en el canal**: hoy `ckm_monitor.py` no pasa
-`coco_config`, así que en el canal COCO sigue siendo el de Corpus y nada de esto corre ahí.
+Lo que queda abierto y es de delamor:
+- **P10:** `_last_landscape_signal`, muerto desde antes del CP4. No se tocó.
+- **El punto ciego de los 21 `test_caso_*`** sigue abierto: sin claves de provider no corren acá.
+  Y `test_armstrong_via_corpus_v3.py:34` tiene un `assert corpus.coco is not None` que **se
+  rompe** con el CP4. Es traza y no se tocó.
+- **La corrida larga de caso09** (16 de 24 textos con período 2) va a Calibración, y deja
+  `n_torsion` en la traza.
+- **`NodeExtractorConfig`** en bloque propio (decisión del 8 oct): es otra ficha, no esta TASK.
 
 ## Nada quedó a medias
 
-El CP3i se cerró entero: las cuatro decisiones, 6 tests nuevos, un existente cambiado y
-declarado, las cinco inversiones corridas y restauradas, y la suite en **276/276**.
-`grep -c INVERSION services/monitor_service.py` → 0: no quedó ningún experimento adentro.
+El CP4 se cerró entero, y con él la TASK. Los ocho sub-pasos (CP0, CP1, CP2a/b/c, CP3i, CP4)
+tienen su commit, su entrada en la bandeja y su cierre acá. **Ocho inversiones** corridas y
+restauradas en total, y `grep -c INVERSION` sobre los tres módulos tocados da 0, 0, 0.
+Suite **284/284**.

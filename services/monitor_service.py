@@ -357,6 +357,17 @@ class MonitorService:
         self._persist(text, panel, device_id)
         return panel
 
+    @property
+    def thermostat(self):
+        """
+        El COCO del ciclo vigente, o None si este Monitor no tiene.
+
+        Lectura, no escritura: lo construye y lo recrea Monitor
+        (`_renacer_coco`). Es de dónde lo pide quien antes leía
+        `corpus.coco`, que quedó deprecada en el CP4.
+        """
+        return self._thermostat
+
     def _invalidar_si_W_cambio(self, nodes: list) -> Optional[str]:
         """
         Δ_r y A0 se descartan en cualquier reconstrucción de W (D2), y la

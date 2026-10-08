@@ -114,7 +114,19 @@ class CorpusService:
 
     @property
     def coco(self):
-        """Active COCO instance. None if corpus in accumulation mode."""
+        """
+        **DEPRECADA (CP4, 8 oct 2026).** Devuelve None: CorpusService ya no
+        crea COCO.
+
+        COCO es de Monitor, que lo hace nacer y renacer con el ciclo vigente
+        de la Config. Quien lo necesite, lo pide a `MonitorService.thermostat`.
+
+        No se borra todavía porque la traza Armstrong
+        (`iap_chatroom/tests/test_armstrong_via_corpus_v3.py`,
+        `test_armstrong_n_runs_sweep.py`) la usa, y esos tests son traza
+        registrada y no se modifican. Siguen pudiendo asignar `_coco` a mano,
+        que es lo que ya hacen; lo que ya no pasa es que el rebuild lo cree.
+        """
         return getattr(self, '_coco', None)
 
     def w_sha(self) -> Optional[str]:
@@ -184,29 +196,6 @@ class CorpusService:
     # ------------------------------------------------------------------
     # Construcción de W  (v2 — mixta)
     # ------------------------------------------------------------------
-
-    def _load_landscape_history(self, jsonl_path: Optional[str]) -> list:
-        """
-        Lee el JSONL de MonitorService y extrae los landscape_delta
-        de todas las evaluaciones donde stop_applied=True.
-        Devuelve lista vacía si el archivo no existe o no hay STOPs.
-        """
-        if not jsonl_path or not Path(jsonl_path).exists():
-            return []
-        history = []
-        with open(jsonl_path) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    record = json.loads(line)
-                    ld = record.get("panel", {}).get("thermostat", {}).get("landscape_delta")
-                    if ld is not None:
-                        history.append(ld)
-                except (json.JSONDecodeError, AttributeError):
-                    continue
-        return history
 
     @staticmethod
     def _has_opposition(text: str) -> bool:
@@ -290,9 +279,15 @@ class CorpusService:
             causal_event="rebuild_debug_force_w_pos" if self._force_w_pos else "rebuild",
         )
 
-        from coco import COCO
-        history = self._load_landscape_history(self._monitor_jsonl_path)
-        self._coco = COCO(W=self._W, track_landscape=True, landscape_history=history)
+        # CorpusService ya no crea COCO (CP4 de TASK_monitor_coco_ciclo_orbita_v2;
+        # delamor: "Que deje en paz a COCO. COCO es con Monitor").
+        # Construye W y la versiona; eso es todo. COCO vive dentro de Monitor,
+        # que lo hace nacer y renacer con el ciclo vigente de la Config.
+        #
+        # Lo que esto arregla: antes quedaban dos COCO vivos —el de acá, con la
+        # W nueva y que nunca observaba, y el que Monitor había recibido, con la
+        # W congelada—. El CP1 lo midió rompiendo:
+        # ValueError: shapes (31,31) (28,28) en coco.py:254.
 
     def _sparsity(self) -> float:
         if self._W is None:

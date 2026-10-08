@@ -1486,3 +1486,179 @@ historia vacía, y el de la torsión aparte). Un existente cambiado.
   — y el panel ya registra `n_torsion`, así que la próxima corrida larga lo deja en la traza.
   **No la corrí.**
 - **El clon local de delamor.**
+
+---
+
+## REPORTE CP4 — 2026-10-08 17:01 UTC
+
+*Último CP de la TASK. **Con esto `TASK_monitor_coco_ciclo_orbita_v2` queda cerrada.***
+
+### Qué quedó
+
+- **`CorpusService` suelta a COCO.** `_rebuild` ya no lo crea. `corpus.coco` queda
+  **deprecada**: devuelve `None` y su docstring dice por qué y qué la reemplaza.
+- **`_load_landscape_history` se fue** (28 líneas). Ver la búsqueda abajo.
+- **`MonitorService.thermostat`** nueva, de lectura: es de dónde lo pide quien antes leía
+  `corpus.coco`.
+- **El canal le pasa `coco_config={"track_landscape": True}`** a Monitor, y lee el historial
+  del paisaje desde `self._monitor.thermostat`, no desde Corpus. `n_runs`, `seed` y
+  `sampling_mode` siguen saliendo de la Config.
+- **CHANGELOG**, bajo `Unreleased`, con la TASK entera.
+
+### La búsqueda antes de borrar, como pidió delamor
+
+`grep` sobre **todo el repo** —`*.py`, `*.md`, `*.json`, `*.jsonl`, `*.sh`, `*.html`, incluido
+`process/`— más una pasada específica por accesos indirectos (`getattr(...)`, `"landscape_history"`,
+`'_coco'`).
+
+**`_load_landscape_history` → se fue con el CP4.**
+
+| dónde aparece | qué es |
+|---|---|
+| `services/corpus_service.py:200` | la definición. **Cero llamadores.** |
+| `registers/REG_coco_w_congelada_v1.md:35` | traza: cita la línea que creaba el COCO |
+| `registers/META_REG_consolidado_v6.md:2593` | la misma cita |
+| `docs/tasks/TASK_coco_load_landscape_history_v1.md` (L1, 51, 80, 153) | su propia spec |
+
+Ningún acceso por `getattr` ni por string. Su único uso era armar el `landscape_history` del
+COCO que creaba `_rebuild`, y ese COCO se fue; además, por la decisión **2(b)** el COCO nuevo
+nace con la historia vacía, así que precargarla ya no corresponde. **Quedó muerto por el CP4, y
+se va con el CP4.**
+
+Nota: el parámetro `monitor_jsonl_path` de `CorpusService` **se conserva** —lo sigue pasando el
+canal— aunque su único consumidor era este método. No lo toqué: sacarlo es otra decisión.
+
+### PREGUNTA P10 — NO BLOQUEA — **[delamor]**
+
+**`_last_landscape_signal` estaba muerto desde antes del CP4, y no lo borré.**
+
+| dónde aparece | qué es |
+|---|---|
+| `services/corpus_service.py:101` | `self._last_landscape_signal = landscape_signal` — **se escribe** |
+| `docs/tasks/TASK_landscape_delta_corpus_feedback_v2.md:77` | la línea que lo introdujo |
+
+**Nadie lo lee.** Ni en `services/`, ni en el canal, ni en los `test_caso_*`, ni en los
+experimentos, ni por `getattr` o por string. Lo recibe `ingest(landscape_signal=...)`, que el
+canal sigue llamando en cada mensaje, y ahí termina.
+
+**No lo toqué, por pedido explícito de delamor:** estaba muerto antes del CP4, así que no es un
+cabo que este paso dejó. **La decisión es suya.** Default declarado: queda como está.
+
+### El `test_caso_*` de punta a punta
+
+**Un `test_caso_*` completo no corre acá, y el motivo es concreto.** Lo intenté y reporto lo que
+pasó, sin interpretar:
+
+```
+$ python3 iap_chatroom/tests/test_caso_01.py
+ModuleNotFoundError: No module named 'iap_chatroom'
+
+$ PYTHONPATH=/workspaces/ckm python3 iap_chatroom/tests/test_caso_01.py
+RuntimeError: Client failed to connect: All connection attempts failed
+  (fastmcp/client/client.py:622, desde autonomous_device.py:197 — async with Client(self.mcp_url))
+```
+
+Dos cosas distintas: **(1)** hace falta `PYTHONPATH` en la raíz, y **(2)** necesita el server
+levantado en `:7860`. Y aun con el server, **no hay claves de provider en este entorno**:
+
+```
+ANTHROPIC_API_KEY = AUSENTE
+GROQ_API_KEY      = AUSENTE
+OPENAI_API_KEY    = AUSENTE
+(no hay .env)
+```
+
+Los devices de los `test_caso_*` llaman a Anthropic y a Groq, así que **no se puede correr un
+caso completo acá**. No lo fuerzo ni lo simulo.
+
+**Lo que sí corrí: el canal de punta a punta por su camino real**, publicando en el
+`ChatChannel` y dejando que el callback de `CKMMonitor` haga todo el recorrido. Lo único que
+falta respecto de un caso es que los textos no los genera un LLM. Salida literal:
+
+```
+mensajes publicados: 7
+COCO de Corpus (deprecada): None
+COCO de Monitor: COCO
+ciclos de la Config: 1 | causas: ['bootstrap']
+  panel[periodo_orbita]      = 1
+  panel[cola_orbita]         = 0
+  panel[n_aceptados]         = 0
+  panel[n_expulsados]        = 0
+  panel[n_torsion]           = 0
+  panel[pares_torsion]       = []
+  panel[Delta_r_torsion_sum] = 0.0
+  panel[Delta_r_sum]         = 0.0
+  panel[n_rejected_pairs]    = 0
+  panel[coco_renace]         = False
+  panel[coco_generacion]     = 1
+  panel[coco_externo]        = False
+  panel[Delta_r_reset]       = None
+  panel[thermostat].zone     = stable
+  panel[thermostat].frac_rec = 1.0
+  panel[thermostat].n_runs   = 1000
+lineas en el JSONL: 3
+  JSONL ultima linea tiene n_torsion: True | Delta_r_torsion_sum: True
+```
+
+**Lo que se observa, sin interpretar los números:** corre sin errores; `corpus.coco` da `None` y
+Monitor tiene su COCO; hay **1 ciclo** y su causa es `bootstrap`; `coco_generacion = 1` y
+`coco_renace = False` en el último panel; `n_runs = 1000` llega desde la Config; **las seis
+claves nuevas están en el panel y en el JSONL**; `n_torsion = 0` y `periodo_orbita = 1`;
+`n_expulsados`, `n_rejected_pairs` y `Delta_r_sum` son 0; la zona es `stable` con
+`frac_rec = 1.0`. 7 mensajes publicados y 3 líneas en el JSONL.
+
+### Las tres inversiones del CP4
+
+```
+=== INVERSION 6 — CorpusService vuelve a crear COCO
+    invertido  -> FAILED test_el_rebuild_ya_no_crea_coco
+                  FAILED test_la_property_coco_quedo_deprecada_y_devuelve_none
+                  FAILED test_el_canal_le_pasa_coco_config_a_monitor
+                  3 failed, 281 passed in 10.44s
+    restaurado -> 284 passed in 10.50s
+
+=== INVERSION 7 — el canal no le pasa coco_config a Monitor
+    invertido  -> FAILED test_el_canal_le_pasa_coco_config_a_monitor
+                  FAILED test_el_coco_del_canal_toma_n_runs_de_la_config
+                  2 failed, 282 passed in 10.08s
+    restaurado -> 284 passed in 11.01s
+
+=== INVERSION 8 — el canal vuelve a leer corpus.coco
+    invertido  -> FAILED test_el_canal_no_toca_corpus_coco
+                  1 failed, 283 passed in 10.87s
+    restaurado -> 284 passed in 11.44s
+```
+
+`grep -c INVERSION` sobre `corpus_service.py`, `ckm_monitor.py` y `monitor_service.py` → **0, 0,
+0**. No quedó ningún experimento adentro.
+
+**Las tres rompen.** La 6 rompe tres tests y la 7 dos; no lo arreglé: la 8 muestra que no son
+redundantes, porque rompe uno solo y distinto.
+
+### Tests
+
+`tests/test_corpus_suelta_a_coco.py` — **8 nuevos**: el rebuild ya no crea COCO; la property
+está deprecada y lo dice; `_load_landscape_history` ya no existe; el canal le pasa `coco_config`;
+el COCO del canal toma `n_runs` de la Config; **el canal no toca `corpus.coco`** (con un
+centinela que estalla si alguien le pide la historia); y las seis claves en el panel y en el
+JSONL del canal.
+
+**Suite: 284/284.**
+
+Un detalle del camino: el test del centinela falló primero con
+`AttributeError: ... has no attribute '_coco'` — justamente porque Corpus dejó de crearlo. Se
+resolvió con `monkeypatch.setattr(..., raising=False)`, y queda anotado en el test.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**.
+- **Un `test_caso_*` completo**, por lo de arriba: sin claves de provider no corre. El punto
+  ciego de los 21 scripts **sigue abierto**, y este CP4 tocó `ckm_monitor.py`.
+- **Los tests Armstrong.** Y acá hay algo concreto, no genérico:
+  `test_armstrong_via_corpus_v3.py:34` hace `assert corpus.coco is not None` **justo después del
+  ingest**, y con el CP4 eso ahora da `None`. **Ese assert se rompe.** No lo toqué: son traza
+  registrada. Los que asignan `corpus._coco` a mano (L37) siguen funcionando.
+- **El efecto de la decisión 1(a) en el canal**: `n_torsion = 0` y `periodo_orbita = 1` en esta
+  corrida. En caso09_run2 el CP1 midió 16 de 24 textos con período 2, pero eso es otro corpus y
+  no lo corrí acá.
+- **El clon local de delamor.**

@@ -31,6 +31,46 @@
   single bootstrap cycle. **No historical file is rewritten.**
 - `CKMlandscapeConfigV1` **removed**. Its trace is in git.
 
+### Monitor and COCO are one existence (TASK_monitor_coco_ciclo_orbita_v2)
+- **The orbit is the object, not the phase that lands on `max_iter`.** `pares_por_orbita`
+  classifies each declared pair as *accepted* (in no phase), *expelled* (in all) or *torsion*
+  (in some and not others). Generalized to any number of phases: with one phase the torsion is
+  empty by construction, which is the compatibility invariant.
+- **Only the expelled enter `Δ_r` and `W_eff`** (delamor, 8 Oct). The torsion goes to its own
+  `Δ_r_torsion`, written only by Monitor, and **does not enter `W_eff`**: averaging the two
+  phases would take it to zero and flatten it. Measured before deciding: in caso09_run2
+  natural, **16 of 24 texts relax to period 2**, and `‖Δ_r^A − Δ_r^B‖₁ = 24.0` between the two
+  parities.
+- **COCO is born, lives and dies with the cycle.** `MonitorService` takes `coco_config`, not an
+  instance, and rebuilds COCO whenever the current cycle's `w_version_id` changes. An externally
+  passed `thermostat=` is accepted only in transition and is declared as `coco_externo` in the
+  panel; it does not get reborn. `coco_config` without a `landscape_config` is refused: without
+  a clock there is no rebirth, and that configuration's failure was already measured.
+- **This closes a crash, not only an inconsistency.** Before, a rebuild that changed N left
+  COCO holding the N of its frozen W: `ValueError: operands could not be broadcast together
+  with shapes (31,31) (28,28)`. It never surfaced in the live channel because
+  `rebuild_suspendido=True` and because every historical panel carries `thermostat: None`.
+- **The new COCO starts empty**: `landscape_history` is not inherited across a cycle (it was
+  measured on another W), and its baseline is fixed **at birth**, against W alone, with the
+  declared `n_runs`. The past stays in the trace.
+- **The void is declared, not disguised as a measurement.** Without a baseline the zone is
+  `UNKNOWN` and `frac_rec` is `None`, instead of `"stable"` and `1.0` — same criterion as
+  `c06db07` (temp_signal UNKNOWN, not NOMINAL) and as SALAMANCA: "not measurable" is not
+  "nothing". `UNKNOWN` does not trigger STOP either, which was the correct effect all along.
+- **`CorpusService` releases COCO.** It builds W and versions it; that is all. `corpus.coco` is
+  **deprecated** and returns `None`; `_load_landscape_history` is **removed** — its only use was
+  the COCO that `_rebuild` created. The Armstrong tests still assign `_coco` by hand, which is
+  what they already did; they are a registered trace and were not modified.
+- Panel gains `periodo_orbita`, `cola_orbita`, `n_aceptados`, `n_expulsados`, `n_torsion`,
+  `pares_torsion`, `Delta_r_torsion_sum`, `coco_renace`, `coco_generacion` and `coco_externo`.
+- `n_runs` and `seed` are **one single value for Monitor and COCO**, declared in the Config
+  (`n_runs = 1000`, delamor). Before, Monitor counted with 1000 and the COCO that Corpus created
+  with 80, over the same field.
+- Tests: 8 new files' worth, **284 passing**. Every decision was verified by **inversion**:
+  reverting each one breaks the test that protects it, and the literal output of all runs is in
+  `docs/tasks/BANDEJA_code.md`. Two of Code's own tests could not fail and were found that way,
+  not by reading.
+
 ### services/monitor_service.py — Monitor opens the cycles (D4)
 - `_invalidar_si_W_cambio` calls `abrir_ciclo` in the same block where it discards Δ_r and A0,
   with the same cause it returns ("N" | "nodos" | "pesos"), untranslated.

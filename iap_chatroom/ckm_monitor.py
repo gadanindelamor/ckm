@@ -84,11 +84,17 @@ class CKMMonitor:
         # quién lo usa. sampling_mode es el default de MonitorService.
         # Ver docs/tasks/TASK_CKMlandscapeConfig_v3.md y DECISIONES_opus.md.
         self._landscape_config = CKMlandscapeConfig(sampling_mode="uniform")
+        # COCO es de Monitor (CP4). El canal ya no lo lee de CorpusService,
+        # que dejó de crearlo: le pasa CÓMO construirlo y Monitor lo hace
+        # nacer con el ciclo bootstrap y renacer en cada rebuild (D4).
+        # track_landscape=True es lo que CorpusService declaraba antes.
+        # n_runs, seed y sampling_mode salen de la Config (P9), no de acá.
         self._monitor = MonitorService(
             self._corpus,
             storage_path=_monitor_jsonl_path,
             behavior_graph=self._behavior_graph,
             landscape_config=self._landscape_config,
+            coco_config={"track_landscape": True},
         )
         self._firma = FirmaService()
 
@@ -101,7 +107,10 @@ class CKMMonitor:
 
     def on_message(self, message) -> None:
         """Callback registrado en ChatChannel.add_callback."""
-        signal = self._corpus.coco.landscape_history() if self._corpus.coco is not None else None
+        # El historial del paisaje sale del COCO de Monitor, no de Corpus
+        # (CP4). Por la decisión 2(b), un COCO recién nacido lo tiene vacío.
+        th = self._monitor.thermostat
+        signal = th.landscape_history() if th is not None else None
         sha_before = self._corpus.w_sha()
         self._corpus.ingest([message.text], landscape_signal=signal)
         sha_after = self._corpus.w_sha()

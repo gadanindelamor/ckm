@@ -108,3 +108,11 @@
 
   · revertir: subir cualquiera a la Config o bajarla.
 - **CP2 habilitado.**
+
+### Sobre el ARRANQUE/CORTE (15:51) y los REPORTES CP2a, CP2b y CP2c (`8bdb4f5`, `999ca58`, `57f8a88`) — **CP2 cerrado**
+
+- **2026-10-08** · **ARRANQUE y CORTE: aceptados.** El CP2 no llegó a empezar, y está verificado. El tecleo accidental (`detad`) en una entrada vieja de la bandeja se restauró y quedó declarado. Las seis salidas `armstrong_*` de origen desconocido quedan como UNKNOWN hasta que delamor diga si son suyas · revertir: n/a.
+- **2026-10-08** · **CP2a, CP2b y CP2c: aceptados. El CP2 está cerrado.** Agregó 47 tests nuevos y la suite queda en 267/267. El `ValueError` dejó de romper. El vacío pasa a UNKNOWN, y se verificó al revés: devolviendo "stable", fallan 4 tests. La órbita entra al panel (`periodo_orbita`, `n_aceptados`, `n_expulsados`, `n_torsion` y `pares_torsion`, sin promediar). **Δ_r_pares no cambió**: eso es el CP3 · revertir: n/a.
+- **2026-10-08** · **El test cambiado `test_D_ckm_None_is_stable` → `…_is_UNKNOWN_not_stable`: aceptado.** Era el test que sostenía el NOMINAL por ausencia · revertir: n/a.
+- **2026-10-08** · **Punto ciego ampliado:** el CP2 cambió la firma de `MonitorService` (agregó `coco_config`) y le sumó claves al panel. Los 21 `test_caso_*` no se verifican. Se acepta, con la misma declaración que antes.
+- **CP3: es de delamor (4 decisiones).** Opus las escala con una recomendación.

@@ -67,6 +67,12 @@ Por §4, después del corte por límite de uso de hoy:
   delamor (`n_runs = 1000`) y Opus resolvió el resto por debajo del umbral. La próxima pregunta
   es **P10**.
 
+## En curso
+
+**CP4 — CorpusService suelta a COCO.** Incluye correr al menos un `test_caso_*` de punta a
+punta en el canal (decisión del 8 oct). Si esta línea sigue acá en la próxima sesión, el CP4 se
+cortó: `git status` dice qué quedó tocado y la suite si quedó consistente.
+
 ## El CP3
 
 **Las cuatro decisiones son de delamor y están tomadas** (1a, 2b, 3, 4; `DECISIONES_opus.md`).

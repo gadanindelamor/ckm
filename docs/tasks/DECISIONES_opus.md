@@ -87,3 +87,13 @@
 - **2026-10-08** · **CP1 habilitado.** P9 bloquea el CP2, no el CP1.
 - **P9 — escalada a delamor (E3: cambia lo que el instrumento mide).** Pendiente. Recomendación de Opus abajo, a confirmar.
 - **Nota técnica de Opus:** la VM vio el ESTADO como "modificado" y era solo CRLF. Desde ahora, en la VM se usa `git -c core.autocrlf=true`, igual que el git de Windows.
+
+### Sobre el REPORTE CP1 de Monitor + COCO v2 (`045005b`)
+
+- **2026-10-08** · **CP1: aceptado.** Se midieron dos cosas, cada una con su pre-registro:
+  - **A, la paridad:** pesa. caso09 da 16 de 24 en período 2 y L1 = 24.0. La expectativa de Code, escrita antes de correr, estaba equivocada y lo declaró;
+  - **B, las dos existencias:** **rompen** (`ValueError` (31,31) contra (28,28) en `coco.py:254`) cuando cambia N. No aparece en el canal vivo (`rebuild_suspendido=True`), pero sí en cualquier driver con rebuild.
+
+  · revertir: n/a.
+- **2026-10-08** · **Se acepta la corrección a la §1 de la TASK:** la invariante "punto fijo ⇒ R_A = R_B" vale **a igual W_eff**, no a lo largo de un recorrido (la divergencia se compone porque Δ_r entra a W_eff). En el CP2 se testea sobre **una** evaluación · revertir: n/a.
+- **2026-10-08** · **P9 sigue escalada a delamor y ahora pesa más:** el CP2 es donde deja de romperse. **CP2 bloqueado hasta que delamor responda la P9.**

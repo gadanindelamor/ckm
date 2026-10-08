@@ -1004,3 +1004,73 @@ corrió esta combinación.
 - **Si el `ValueError` aparece con otros corpus o con otro `top_k`**: lo medí con caso09_run2 y
   `top_k=32`. No barrí condiciones.
 - **El clon local de delamor.**
+
+---
+
+## ARRANQUE — 2026-10-08 15:51 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8, tras un corte por límite de uso.*
+
+### Revisé
+
+1. **Locks.** Ninguno.
+2. **`git pull --rebase origin main`** → **falló la primera vez**: *"cannot pull with rebase:
+   You have unstaged changes"*. Era la bandeja modificada sin commitear (ver CORTE). Resuelto, y
+   después limpio. HEAD en `15398e7` (*estado: lo recolectado en el corte*, de delamor).
+3. **Mi último commit del corte, `0176ada`, sigue en la historia** (`merge-base --is-ancestor`
+   → sí). Nada mío quedó fuera.
+4. **`ESTADO_monitor_coco_ciclo_orbita_v2.md`** dice **"CP2 en curso"**, que es la señal de §3.
+   Revisado: no quedó nada del CP2 a medias. Ver CORTE punto 1.
+5. **`DECISIONES_opus.md` (§8)** → leído, incluida la respuesta a P9.
+6. **Tests.** Suite: **220/220**. Igual que al cerrar el CP1.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P9 están respondidas.** P9 la contestó delamor (`n_runs = 1000`) y Opus resolvió
+el resto por debajo del umbral. Ningún default quedó vigente sin decisión. La próxima es **P10**.
+
+### Encontré
+
+- **`ESTADO_REPO_delamor.md`** es nuevo (`15398e7`): delamor guardó ahí el último comando que
+  corrí y su salida. Es lo que permitió cerrar el CORTE sin ambigüedad.
+- **Seis archivos no trackeados nuevos en `process/experiments/`**:
+  `armstrong_replica_seed123{,_corpus_state,_summary}` y `armstrong_via_corpus_v3{,_state,_summary}`.
+  Son salidas de corridas Armstrong hechas durante el corte, no mías. **No los commiteo**: son
+  dumps de datos, y `??` no es pendiente.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git** (procesos, variables, `/tmp`).
+- **Los 21 `test_caso_*` del canal**, que son punto ciego declarado (decisión del 8 oct): no son
+  tests de pytest y la suite no los cubre.
+- **Quién corrió los Armstrong durante el corte y con qué resultado.** Veo los archivos, no la
+  corrida. No los abrí: son traza ajena.
+- **El clon local de delamor.**
+
+---
+
+## CORTE — 2026-10-08 15:51 UTC
+
+**1. El CP2 no llegó a empezar, y eso quedó verificado, no supuesto.**
+El `ESTADO` decía "CP2 en curso" porque lo escribí **antes** del paso, como pide §3. Revisado:
+`git status` sin un solo archivo de `services/`, `tests/` ni `experiments/` modificado, ningún
+archivo nuevo del CP2, y la suite en 220/220 — idéntica al cierre del CP1. Y `ESTADO_REPO_delamor.md`
+guarda mi último comando: fue exactamente el commit del `ESTADO`. **El corte cayó entre escribir
+el estado y escribir la primera línea de código.** Sin daño, que es lo que §0 busca.
+
+**2. La bandeja tenía una edición accidental sin commitear, en una entrada vieja.**
+En el `ARRANQUE` del 7 oct, línea 17: `conocidos y de antes` había quedado como
+**`conocidos y detad antes`**. Es un tecleo accidental —el archivo estaba abierto en el editor—,
+no un cambio con intención: `detad` no es nada.
+
+**Lo restauré** con `git checkout -- docs/tasks/BANDEJA_code.md`, y lo declaro acá en vez de
+corregirlo en silencio. El criterio: §6 dice que las entradas anteriores **no se editan**, así
+que dejar el tecleo adentro habría sido una edición de una entrada vieja, aunque involuntaria.
+Si la intención era cambiar algo ahí, se deshace con `git show 894bfe3` y se vuelve a aplicar.
+
+**Y bloqueó el pull:** el `--rebase` se negó a correr con cambios sin commitear. O sea que un
+tecleo accidental en un archivo abierto frena el canal entero hasta que alguien lo mire.
+
+**3. Lo que esta sesión hace distinto.** El CP2 se parte en **CP2a / CP2b / CP2c**, cada uno con
+su commit, su ESTADO y su entrada en la bandeja (§4: *"Si un CP no entra en una sesión corta, se
+parte en sub-pasos con su propio cierre"*). El corte de hoy es la razón.

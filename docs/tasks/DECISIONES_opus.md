@@ -72,3 +72,4 @@
 ### Una sola rama (delamor, 2026-10-08)
 
 - **delamor:** *"Sí, es sí, toda la razón. El tema son los merges."* Respuesta a la propuesta de Opus de usar una sola rama. **Decisión de delamor (E1: reemplaza a la §6 (b)).** Todos trabajan en `main` con `git pull --rebase origin main`. `code/trabajo` queda congelada como traza en `2195025`. Detalle en PROTOCOLO §6 · revertir: volver a la §6 (b).
+- **delamor (2026-10-08): "Hay que eliminar la branch trabajo… y fin del cortocircuito."** Antes de borrarla, Opus verificó con `git diff origin/main origin/code/trabajo` que no tenía contenido propio: solo le faltaban cosas que ya estaban en `main`. La rama se elimina en el remoto y en los clones · revertir: recrearla desde `2195025` si sigue en algún reflog.

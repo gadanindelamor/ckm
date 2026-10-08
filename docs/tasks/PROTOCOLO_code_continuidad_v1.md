@@ -68,7 +68,7 @@ Si no se cumple ninguno, decide Opus y lo registra en `DECISIONES_opus.md` (fech
 > - **Todos trabajan en `main`.** Code commitea y hace push a `main`. Opus commitea en el clon local, y delamor lo sube.
 > - **Antes de trabajar y antes de cada push:** `git pull --rebase origin main`. La historia queda lineal y sin commits de merge.
 > - **Los conflictos son improbables** porque cada uno toca archivos distintos: Code, código + BANDEJA + ESTADO; Opus, DECISIONES + TASKs + PROTOCOLO. Si igual hay un conflicto en el rebase: `git rebase --abort` y escalarlo, no resolverlo a ciegas.
-> - **`code/trabajo` queda congelada como traza** (último commit `2195025`, sin contenido que no esté en `main`). No se borra (E2).
+> - **`code/trabajo` se elimina** (delamor, 8 oct: *"y fin del cortocircuito"*). Antes se verificó que no tenía contenido que no estuviera en `origin/main`. Su último commit fue `2195025`.
 > - Commits: siempre nombrando los archivos, nunca `add -A` ni `commit -a`.
 
 - `docs/tasks/BANDEJA_code.md`: Code agrega entradas al final, con fecha y hora, nunca edita las anteriores. Tipos: `ARRANQUE`, `REPORTE CPn`, `PREGUNTA (BLOQUEA|NO BLOQUEA)`, `CORTE` (cuando detecta que algo quedó a medias).

@@ -27,6 +27,8 @@ if str(_SERVICES) not in sys.path:
 
 from ckm_landscape_config import (          # noqa: E402
     CAUSA_BOOTSTRAP,
+    N_RUNS_DEFAULT,
+    SEED_DEFAULT,
     CKMlandscapeConfig,
     Ciclo,
     ciclo_desde_registro_plano_v1,
@@ -185,6 +187,56 @@ def test_I4_theta_W_no_es_campo_de_la_config(cfg: CKMlandscapeConfig) -> None:
 def test_I4_lo_medido_no_es_parametro(W: np.ndarray) -> None:
     with pytest.raises(TypeError):
         CKMlandscapeConfig(sampling_mode="uniform", N=32)   # type: ignore[call-arg]
+
+
+# ── n_runs y seed: declarados, uno solo para Monitor y COCO (P9) ────────────
+
+def test_n_runs_y_seed_son_declarado(cfg: CKMlandscapeConfig) -> None:
+    """Entran al declarado, no al Ciclo: no son función de W."""
+    assert cfg.declarado["n_runs"] == N_RUNS_DEFAULT
+    assert cfg.declarado["seed"] == SEED_DEFAULT
+    assert "n_runs" not in cfg.ciclo_vigente.to_dict()
+    assert "seed" not in cfg.ciclo_vigente.to_dict()
+
+
+def test_n_runs_por_defecto_es_1000(cfg: CKMlandscapeConfig) -> None:
+    """delamor, 8 oct: "n 1000". Un solo valor para Monitor y COCO (P9)."""
+    assert N_RUNS_DEFAULT == 1000
+    assert cfg.n_runs == 1000
+
+
+def test_seed_por_defecto_es_0_y_queda_declarada(cfg: CKMlandscapeConfig) -> None:
+    """La seed la elige Code y la declara. 0 es la que Monitor ya usaba en
+    count_seed, así que no mueve nada de lo ya medido."""
+    assert SEED_DEFAULT == 0
+    assert cfg.seed == 0
+
+
+def test_n_runs_y_seed_se_pueden_declarar_distintos(W: np.ndarray) -> None:
+    c = CKMlandscapeConfig.create(W, sampling_mode="uniform", n_runs=50, seed=123)
+    assert (c.n_runs, c.seed) == (50, 123)
+
+
+@pytest.mark.parametrize("malo", [0, -1, 1.5, "mil", None])
+def test_n_runs_invalido_falla(malo) -> None:
+    with pytest.raises(ValueError, match="n_runs"):
+        CKMlandscapeConfig(sampling_mode="uniform", n_runs=malo)
+
+
+def test_seed_no_entera_falla() -> None:
+    with pytest.raises(ValueError, match="seed"):
+        CKMlandscapeConfig(sampling_mode="uniform", seed="cero")
+
+
+def test_n_runs_y_seed_sobreviven_la_serializacion(cfg: CKMlandscapeConfig) -> None:
+    otra = CKMlandscapeConfig.from_json(cfg.to_json())
+    assert (otra.n_runs, otra.seed) == (cfg.n_runs, cfg.seed)
+
+
+def test_el_panel_lleva_n_runs_y_seed(cfg: CKMlandscapeConfig) -> None:
+    """Un panel tiene que decir con qué muestreo se contó."""
+    p = cfg.panel()
+    assert p["n_runs"] == cfg.n_runs and p["seed"] == cfg.seed
 
 
 # ── I5: dependencia ──────────────────────────────────────────────────────────

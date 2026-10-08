@@ -7,11 +7,13 @@
 
 ## Última escritura
 
-**2026-10-08 01:59 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 15:54 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Cerrado el 2026-10-08.
+**CP2a — la órbita.** Cerrado el 2026-10-08. Ver §"El CP2, partido".
+
+Antes: **CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Cerrado el 2026-10-08.
 Driver: `experiments/cp1_paridad_y_dos_existencias.py` (pre-registro commiteado antes de
 correr, `d3230c1`). Log: `experiments/cp1_paridad_log.json`.
 Reporte: `BANDEJA_code.md`, `REPORTE CP1`.
@@ -40,23 +42,31 @@ recorrido.
 **Y el corte de las dos existencias tiene dos caras, no una.** Con N fija da los 56 incrementos
 negativos registrados; **con N variable levanta una excepción**. La segunda no estaba medida.
 
-## En curso
+## El CP2, partido
 
-**CP2 — una existencia, medida sobre la órbita.** P9 contestada (`n_runs = 1000`), CP2
-habilitado. Si esta línea sigue acá en la próxima sesión, el CP2 se cortó: `git status` dice
-qué quedó tocado, y la suite dice si quedó consistente.
+Por §4, después del corte por límite de uso de hoy:
+
+- **CP2a — la órbita. CERRADO.** `pares_por_orbita` y `fases_de_orbita` en el engine, `n_runs`
+  y `seed` al `declarado` de la Config. 19 tests nuevos, suite 243/243. No toca Monitor ni COCO.
+- **CP2b — una existencia.** Monitor recibe configuración de COCO en vez de instancia; COCO
+  renace cuando `abrir_ciclo` da True. Es donde el `ValueError` deja de romper. **Siguiente.**
+- **CP2c — el vacío y el panel.** Zona `UNKNOWN` y `frac_rec` None sin baseline; `n_torsion` y
+  `pares_torsion` en el panel.
 
 ## Qué espera, y de quién
 
-- **P9 — BLOQUEA — [delamor]:** con qué configuración nace COCO y dónde se declara.
-  Sigue pendiente, y **ahora bloquea más que antes**: el CP2 no sólo alinea baselines, también
-  es donde deja de romperse.
+- **Nada. P1–P9 están respondidas** y ningún default quedó vigente sin decisión. P9 la contestó
+  delamor (`n_runs = 1000`) y Opus resolvió el resto por debajo del umbral. La próxima pregunta
+  es **P10**.
 
 ## Próximo paso
 
-**CP2 — una existencia, medida sobre la órbita.** Necesita P9.
+**CP2b — una existencia.** Monitor recibe configuración de COCO en vez de instancia, y COCO
+renace cuando `abrir_ciclo` devuelve True, en el mismo bloque y con la misma causa. Es donde el
+`ValueError: shapes (31,31) (28,28)` del CP1 deja de romper.
 
 ## Nada quedó a medias
 
-El driver escribe con `.tmp` + rename, y su log está completo. La suite sigue en 220/220:
-el CP1 no tocó `services/`.
+El CP2a se cerró entero: las dos funciones del engine, `n_runs` y `seed` en la Config, 19 tests
+nuevos y la suite en **243/243**, en un solo commit. `pares_por_orbita` queda escrita y testeada
+**sin que nadie la llame**: conectarla es el CP2b, y eso es deliberado, no un cabo suelto.

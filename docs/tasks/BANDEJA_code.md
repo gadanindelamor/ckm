@@ -1074,3 +1074,77 @@ tecleo accidental en un archivo abierto frena el canal entero hasta que alguien 
 **3. Lo que esta sesión hace distinto.** El CP2 se parte en **CP2a / CP2b / CP2c**, cada uno con
 su commit, su ESTADO y su entrada en la bandeja (§4: *"Si un CP no entra en una sesión corta, se
 parte en sub-pasos con su propio cierre"*). El corte de hoy es la razón.
+
+---
+
+## REPORTE CP2a — 2026-10-08 15:54 UTC
+
+*TASK `TASK_monitor_coco_ciclo_orbita_v2.md` §2.CP2, **primer tercio**. El CP2 se partió en
+CP2a / CP2b / CP2c por §4, después del corte de hoy. Este sub-paso **no toca Monitor ni COCO**.*
+
+### Qué quedó
+
+**`services/landscape_engine.py` — dos funciones nuevas, puras.**
+
+- **`pares_por_orbita(sigma_prompt, fases) -> (aceptados, expulsados, torsion)`**, con la
+  clasificación de §1: un par de nodos declarados está *expulsado* si cae en **todas** las
+  fases, *aceptado* si en **ninguna**, y en *torsión* si en algunas y no en otras.
+  Un par está expulsado en una fase si alguno de sus dos nodos quedó en −1 ahí: la misma regla
+  que `_rejected_pairs`, aplicada por fase.
+- **`fases_de_orbita(orbita, N)`** decodifica el `frozenset` de bytes que devuelve
+  `relax_orbit`. **No se tocó `relax_orbit` ni `relax`**, como pide la TASK §3: las fases se
+  recuperan del frozenset, que es lo que ya se guarda.
+
+**Generalizada a cualquier número de fases, no a dos.** Las tres clases salen de intersección y
+unión sobre las fases, así que con una sola fase la torsión es vacía por construcción, y con dos
+da la tabla de la TASK. Si alguna vez apareciera un período mayor, no hay que reescribirla.
+Goles-Chacc et al. (1985) dice 1 o 2 con W simétrica; hay un test que verifica ese supuesto en
+30 W aleatorias, sin reclamar la prueba.
+
+**`services/ckm_landscape_config.py` — `n_runs` y `seed` entran al `declarado`.**
+
+- `N_RUNS_DEFAULT = 1000`, por la decisión de delamor del 8 oct (*"n 1000"*, P9). **Uno solo
+  para Monitor y COCO.**
+- `SEED_DEFAULT = 0`. **La seed la elegí yo y la declaro**, como habilitó la respuesta a P9.
+  Elegí **0** porque es la que Monitor ya usaba en `count_seed`, así que **no mueve nada de lo ya
+  medido**: si hubiera elegido otra, todos los N_eff del proyecto cambiarían de valor sin que
+  ningún cambio de modelo lo justifique. Es reversible: se declara distinta al construir la
+  Config.
+- Los dos se validan (`n_runs` entero ≥ 1, `seed` entera), viajan en `panel()` y sobreviven la
+  serialización. **No entran al `Ciclo`**: no son función de W (I5).
+- **Los umbrales de COCO no entraron**, por la decisión de Opus: son de Calibración (D6).
+  `track_landscape`, `n_warmup` y `gamma` quedan en la configuración de COCO.
+
+### Tests
+
+`tests/test_pares_por_orbita.py` — **11 nuevos**: las tres clases particionan los pares;
+la torsión es el par que cae en una sola fase; intercambiar las fases no cambia nada; repetir
+una fase no pesa doble; **la invariante de compatibilidad sobre 50 casos aleatorios** —con una
+sola fase, `expulsados` es *exactamente* lo que devuelve `_rejected_pairs` hoy y la torsión es
+vacía—; el enganche con `relax_orbit`; el supuesto de Goles; y una órbita de período 2
+construida a mano (dos nodos con acoplamiento negativo) donde la torsión aparece de verdad.
+
+`tests/test_ckm_landscape_config_ciclos.py` — **8 agregados** para `n_runs` y `seed`:
+que son declarado y no Ciclo, que el default es 1000 y 0, que se pueden declarar distintos, que
+los inválidos fallan, que sobreviven la serialización y que viajan en el panel.
+
+**Suite: 243/243** (220 + 11 + 8, más los 4 que ya había sumado el archivo de ciclos).
+
+### Lo que el CP2a NO hizo
+
+- **No tocó `MonitorService` ni `COCO`.** El `ValueError` de shapes del CP1 sigue ahí: eso es el
+  CP2b.
+- **No cambió qué entra a `Δ_r_pares`.** Nada consume `pares_por_orbita` todavía; la función
+  existe y está testeada, y nadie la llama. Es deliberado: conectarla es el CP2b, y decidir qué
+  entra a Δ_r es el CP3, que es de delamor.
+- No agregó `n_torsion` ni `pares_torsion` al panel: también CP2b.
+- No cambió `relax` ni `relax_orbit`.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**.
+- **Los 21 `test_caso_*` del canal**: punto ciego declarado, y este CP2a no los ejercita.
+- **Si `pares_por_orbita` da lo mismo que el camino de hoy sobre un corpus real.** Lo testeé
+  contra `_rejected_pairs` con fases sintéticas, no recorriendo caso09. Esa comparación llega
+  cuando Monitor la consuma, en el CP2b.
+- **El clon local de delamor.**

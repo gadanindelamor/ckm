@@ -77,6 +77,74 @@ def relax_orbit(sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> tuple:
     return frozenset([s.tobytes()]), 0, -1, s
 
 
+def fases_de_orbita(orbita: frozenset, N: int) -> list:
+    """
+    Los estados de una órbita, decodificados del frozenset que devuelve
+    relax_orbit.
+
+    relax_orbit guarda cada fase como `tobytes()` para poder usarlas de clave,
+    y el frozenset **no tiene orden**: eso es deliberado, porque una órbita no
+    tiene una fase primera. Esta función sólo las vuelve a arrays; el orden en
+    que salgan no significa nada y nada debería depender de él.
+    """
+    return [np.frombuffer(b, dtype=np.float64).reshape(N) for b in orbita]
+
+
+def pares_por_orbita(sigma_prompt: np.ndarray, fases: list) -> tuple:
+    """
+    Clasifica los pares de nodos declarados activos según TODA la órbita.
+
+    La órbita es el objeto, no la fase que cae en max_iter. Para cada par
+    (i, j) de nodos que sigma_prompt declaró activos, con R_f los pares
+    expulsados en la fase f:
+
+        aceptado   — en ninguna R_f
+        expulsado  — en todas las R_f
+        torsion    — en algunas y no en otras
+
+    Returns: (aceptados, expulsados, torsion), tres sets de tuplas (i, j)
+    con i < j.
+
+    **Un par está expulsado en una fase si alguno de sus dos nodos quedó en
+    −1 en esa fase.** Es la misma regla que MonitorService._rejected_pairs;
+    acá se aplica por fase en vez de una sola vez.
+
+    **No depende del orden de `fases`**: las tres clases salen de
+    intersección y unión, que son conmutativas. Intercambiar A y B da lo
+    mismo.
+
+    **En un punto fijo la torsión es vacía**, porque hay una sola R_f y
+    "en todas" y "en algunas" coinciden. Esa es la invariante de
+    compatibilidad: con torsión vacía, `expulsados` es exactamente lo que
+    devuelve _rejected_pairs hoy.
+
+    La invariante vale **a igual W_eff**. No vale a lo largo de un recorrido:
+    medido en el CP1, una vez que dos trayectorias acumulan Δ_r distintos el
+    W_eff deja de ser el mismo y hasta los puntos fijos difieren
+    (BANDEJA_code, REPORTE CP1, texto i=22 de caso09).
+
+    La torsión **no se promedia**: es la marca del período 2, y promediar las
+    dos fases la lleva a cero y la aplana.
+    """
+    declarados = np.where(sigma_prompt > 0)[0]
+    pares = [(int(declarados[a]), int(declarados[b]))
+             for a in range(len(declarados))
+             for b in range(a + 1, len(declarados))]
+    if not fases:
+        raise ValueError("pares_por_orbita necesita al menos una fase")
+
+    expulsados_por_fase = []
+    for s in fases:
+        caidos = set(np.where(s < 0)[0])
+        expulsados_por_fase.append(
+            {(i, j) for i, j in pares if i in caidos or j in caidos}
+        )
+
+    en_todas   = set.intersection(*expulsados_por_fase)
+    en_alguna  = set.union(*expulsados_por_fase)
+    return (set(pares) - en_alguna, en_todas, en_alguna - en_todas)
+
+
 def relax(sigma: np.ndarray, W: np.ndarray, max_iter: int = 200) -> np.ndarray:
     """Estado tras max_iter pasos de relajación síncrona — ver relax_orbit."""
     return relax_orbit(sigma, W, max_iter)[3]

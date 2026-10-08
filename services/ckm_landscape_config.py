@@ -51,6 +51,15 @@ RHO_STAR = 0.5   # misma ρ* que coco.BETA_RHO_STAR
 
 CAUSA_BOOTSTRAP = "bootstrap"
 
+# n_runs = 1000: decisión de delamor (8 oct, P9) — "n 1000". Es donde N_eff
+# converge en los casos IAP, ±2% respecto de 5000; con 50 quedaba 5-20% por
+# debajo. Uno solo para Monitor y COCO.
+N_RUNS_DEFAULT = 1000
+# seed: la elige Code y la declara (P9, resuelto por Opus bajo el umbral). 0 es
+# la que Monitor ya usaba por default en count_seed, así que no mueve nada de lo
+# que ya está medido.
+SEED_DEFAULT = 0
+
 
 # ── medido ───────────────────────────────────────────────────────────────────
 
@@ -162,17 +171,32 @@ class CKMlandscapeConfig:
     **Declarado (I4, revisada el 7 oct).** Lo declarado se exige según quién
     lo usa, no siempre:
       sampling_mode — obligatorio: Monitor valida el suyo contra éste.
+      n_runs        — obligatorio: muestras de sigma_0 para contar órbitas.
+      seed          — obligatorio: la seed de ese muestreo.
       scale         — opcional: hoy sólo lo usa la UI.
     theta_W no está: es del Gatekeeper.
+
+    **n_runs y seed son UNO SOLO para Monitor y COCO** (delamor, 8 oct: "n
+    1000"; P9). Antes Monitor contaba con 1000 y el COCO que creaba Corpus con
+    80, sobre el mismo campo, y el docstring de Monitor dice que con 50 el
+    N_eff quedaba 5-20% por debajo. Dos aspectos de la misma cosa no pueden
+    medir con muestreos distintos, así que el valor se declara acá, una vez, y
+    COCO ya no tiene un default propio.
+
+    Los umbrales de COCO (d_ckm_threshold, alpha_star, frac_rec_min) **no**
+    entran: son de Calibración, que es un proceso aparte (D6). track_landscape,
+    n_warmup y gamma quedan en la configuración de COCO.
     """
 
-    __slots__ = ("_sampling_mode", "_scale", "_config_id", "_timestamp",
-                 "_ciclos", "_lock")
+    __slots__ = ("_sampling_mode", "_n_runs", "_seed", "_scale", "_config_id",
+                 "_timestamp", "_ciclos", "_lock")
 
     def __init__(
         self,
         *,
         sampling_mode: str,
+        n_runs       : int = N_RUNS_DEFAULT,
+        seed         : int = SEED_DEFAULT,
         scale        : Optional[str] = None,
         config_id    : Optional[str] = None,
         timestamp    : Optional[float] = None,
@@ -185,8 +209,14 @@ class CKMlandscapeConfig:
             )
         if scale is not None and scale not in SCALES:
             raise ValueError(f"scale inválida: {scale!r} — esperado {SCALES}")
+        if not isinstance(n_runs, int) or n_runs < 1:
+            raise ValueError(f"n_runs inválido: {n_runs!r} — entero >= 1")
+        if not isinstance(seed, int):
+            raise ValueError(f"seed inválida: {seed!r} — entero")
 
         self._sampling_mode = sampling_mode
+        self._n_runs        = n_runs
+        self._seed          = seed
         self._scale         = scale
         self._config_id     = config_id if config_id is not None else uuid.uuid4().hex
         self._timestamp     = timestamp if timestamp is not None else time.time()
@@ -201,6 +231,8 @@ class CKMlandscapeConfig:
         W            : np.ndarray,
         *,
         sampling_mode: str,
+        n_runs       : int = N_RUNS_DEFAULT,
+        seed         : int = SEED_DEFAULT,
         scale        : Optional[str] = None,
         causa        : str = CAUSA_BOOTSTRAP,
         t_senal      : Optional[float] = None,
@@ -211,7 +243,7 @@ class CKMlandscapeConfig:
         El primer rebuild no es degradación: es el origen (PROPUESTA v5). Por
         eso `len(ciclos) >= 1` desde la construcción (I2).
         """
-        cfg = cls(sampling_mode=sampling_mode, scale=scale)
+        cfg = cls(sampling_mode=sampling_mode, n_runs=n_runs, seed=seed, scale=scale)
         cfg.abrir_ciclo(W, causa, time.time(), t_senal=t_senal)
         return cfg
 
@@ -220,6 +252,14 @@ class CKMlandscapeConfig:
     @property
     def sampling_mode(self) -> str:
         return self._sampling_mode
+
+    @property
+    def n_runs(self) -> int:
+        return self._n_runs
+
+    @property
+    def seed(self) -> int:
+        return self._seed
 
     @property
     def scale(self) -> Optional[str]:
@@ -235,7 +275,8 @@ class CKMlandscapeConfig:
 
     @property
     def declarado(self) -> dict:
-        return {"sampling_mode": self._sampling_mode, "scale": self._scale}
+        return {"sampling_mode": self._sampling_mode, "n_runs": self._n_runs,
+                "seed": self._seed, "scale": self._scale}
 
     @property
     def identidad(self) -> dict:
@@ -344,6 +385,8 @@ class CKMlandscapeConfig:
         """Recarga: mismos valores, mismo config_id, misma historia de ciclos."""
         return cls(
             sampling_mode = d["sampling_mode"],
+            n_runs        = d.get("n_runs", N_RUNS_DEFAULT),
+            seed          = d.get("seed", SEED_DEFAULT),
             scale         = d.get("scale"),
             config_id     = d["config_id"],
             timestamp     = d["timestamp"],
@@ -359,6 +402,7 @@ class CKMlandscapeConfig:
             n = len(self._ciclos)
             sha = self._ciclos[-1].w_version_id[:8] if n else "—"
         return (f"CKMlandscapeConfig(sampling_mode={self._sampling_mode!r}, "
+                f"n_runs={self._n_runs}, seed={self._seed}, "
                 f"ciclos={n}, vigente={sha}…)")
 
 

@@ -259,9 +259,25 @@ def medir_dos_existencias(textos: list[str]) -> dict:
                            n_runs_attractors=N_RUNS, thermostat=th)
 
         filas = []
+        rotura = None
         for k, texto in enumerate(textos[corte:]):
             c.ingest([texto])
-            panel = m.evaluate(texto)
+            try:
+                panel = m.evaluate(texto)
+            except Exception as e:
+                # No es un error del driver: es la divergencia de las dos
+                # existencias llegando a su forma más dura. COCO quedó con la N
+                # de su W congelada y Monitor creció. Se registra y se corta.
+                rotura = {
+                    "en_evaluacion": k,
+                    "excepcion": type(e).__name__,
+                    "mensaje": str(e),
+                    "N_de_monitor": int(m._Delta_r.shape[0]) if m._Delta_r is not None else None,
+                    "N_de_coco": int(th.W.shape[0]),
+                    "w_sha_corpus": c.w_sha()[:12] if c.w_sha() else None,
+                    "son_el_mismo_objeto": c.coco is m._thermostat,
+                }
+                break
             if panel is None or panel.get("mode") == "accumulation":
                 continue
             comp = list(th._Delta_r_compresiones) if hasattr(th, "_Delta_r_compresiones") else []
@@ -288,8 +304,9 @@ def medir_dos_existencias(textos: list[str]) -> dict:
         inc_acum = [acum[i] - acum[i - 1] for i in range(1, len(acum))]
         neg_acum = [x for x in inc_acum if x < 0]
 
-        mismo_siempre = all(f["son_el_mismo_objeto"] for f in filas)
+        mismo_siempre = all(f["son_el_mismo_objeto"] for f in filas) if filas else None
         return {
+            "rotura": rotura,
             "n_evaluaciones": len(filas),
             "ids_distintos_de_corpus_coco": len({f["id_corpus_coco"] for f in filas}),
             "son_el_mismo_objeto_siempre": mismo_siempre,
@@ -300,7 +317,7 @@ def medir_dos_existencias(textos: list[str]) -> dict:
             "serie_suma_compresiones": acum,
             "incrementos_negativos_en_suma": len(neg_acum),
             "valores_negativos": neg_acum[:10],
-            "LAS_DOS_EXISTENCIAS_DIVERGEN": bool(not mismo_siempre or neg_acum),
+            "LAS_DOS_EXISTENCIAS_DIVERGEN": bool(rotura or mismo_siempre is False or neg_acum),
             "por_evaluacion": filas,
         }
     finally:

@@ -916,3 +916,91 @@ rompe sin cambiar `services/`. Si se contesta antes del CP2, no frena nada.
 
 **No propongo un default**, porque elegir el `n_runs` cambia lo que el instrumento mide, y eso
 es E3.
+
+---
+
+## REPORTE CP1 — 2026-10-08 01:58 UTC
+
+*TASK `TASK_monitor_coco_ciclo_orbita_v2.md` §2.CP1. Driver:
+`experiments/cp1_paridad_y_dos_existencias.py`, **commiteado con su pre-registro antes de la
+primera corrida** (`d3230c1`). Log: `experiments/cp1_paridad_log.json`. No se tocó `services/`.*
+
+### A. Paridad — **pesa, en los dos corpus**
+
+| | caso09_run2 natural | WARMUP_TEXTS |
+|---|---|---|
+| N · textos | 32 · 24 | 30 · 20 |
+| **textos con órbita de período 2** | **16 de 24** | **3 de 20** |
+| textos donde el estado final difiere | **18 de 24** | 4 de 20 |
+| textos con `|R_A △ R_B| > 0` | 4 | 2 |
+| **U1** alguna diferencia simétrica | **sí** | **sí** |
+| **U2** `‖Δ_r^A − Δ_r^B‖₁` | **24.0** | **12.0** |
+| **U3** `max|c(S)_A − c(S)_B|` | **2.35e−02** | **2.88e−02** |
+| **LA PARIDAD PESA** | **sí** | **sí** |
+
+**Mi expectativa declarada era equivocada, y por bastante.** Escribí antes de correr que
+esperaba *"pocos textos con período 2, y es posible que ninguno"*, razonando que los 136/200
+registrados son del muestreo de σ₀ y no de la relajación de σ_prompt. Lo segundo es cierto, pero
+la conclusión no: **16 de 24 textos de caso09 relajan a período 2 desde su propio σ_prompt**.
+El dato es ese, no mi expectativa.
+
+**Hallazgo que corrige la invariante de compatibilidad de la TASK §1.** La TASK dice: *"En un
+punto fijo, R_A = R_B y no hay torsión. En ese caso todo es idéntico a hoy."* **Medido: no se
+sostiene a lo largo de un recorrido.** El texto `i=22` de caso09 tiene **período 1** y aun así
+`|R_A △ R_B| = 1`, con `nRA=90` y `nRB=91`.
+
+La razón es que **la divergencia se compone**: Δ_r entra a W_eff, así que una vez que las dos
+paridades acumularon Δ_r distintos, el W_eff ya no es el mismo y los puntos fijos a los que se
+llega tampoco. Por eso hay **18 textos con estado final distinto** y sólo 16 con período 2.
+
+La invariante vale **a igual W_eff**, no a lo largo del recorrido. Como invariante del CP2 sigue
+sirviendo —hay que testearla sobre una evaluación, no sobre una serie— pero conviene que quede
+dicho así.
+
+**Lo más marcado, texto a texto** (caso09): en `i=8`, período 2, una fase expulsa **9 pares** y
+la otra **0**. No es un pequeño corrimiento: es una fase que rechaza y otra que acepta todo.
+
+### B. Dos existencias — **divergen, y hoy rompen**
+
+**No llegué a contar incrementos negativos, porque el recorrido no llega hasta ahí: se cae en la
+primera evaluación posterior al rebuild**, con
+
+```
+ValueError: operands could not be broadcast together with shapes (31,31) (28,28)
+```
+
+en `coco.py:254`, `self._Delta + (Delta_new - self._Delta_leido)`.
+`N_de_monitor = 31`, `N_de_coco = 28`, `son_el_mismo_objeto = False`.
+
+**Esto no es un error del driver.** Es la divergencia de las dos existencias en su forma más
+dura: COCO quedó con la N de la W con la que nació y Monitor creció con el corpus. Lo capturé
+como dato en el log (campo `rotura`) en vez de esquivarlo, y corté ahí.
+
+**Diferencia con lo registrado, declarada.** `TASK_delta_compresiones_coco_v1` §Abierto registra
+**56 incrementos negativos** con W de **8 nodos** y α=0.1. Ahí N era fija, así que las formas
+coincidían y la divergencia se manifestaba como una serie que decrece. **Con N creciendo —que es
+lo que pasa en un corpus real— la misma divergencia no da números raros: levanta una excepción.**
+Son dos caras del mismo corte, y la segunda no estaba medida.
+
+**Consecuencia para el CP2:** el renacimiento de COCO con el ciclo no es sólo una cuestión de
+coherencia de baselines. **Hoy, con N variable, Monitor + COCO no completa una sola evaluación
+después de un rebuild.** Que esto no aparezca en producción es porque el canal usa
+`rebuild_suspendido=True` y porque los 80 paneles históricos tienen `thermostat: None`: nunca
+corrió esta combinación.
+
+### Lo que este CP1 NO hizo
+
+- No tocó `services/`. El `ValueError` sigue ahí.
+- No midió la torsión por clases aceptado/expulsado/torsión: es del CP2.
+- No contó los incrementos negativos: el recorrido se corta antes. Para contarlos hace falta N
+  fija, y eso es reproducir la condición de `TASK_delta_compresiones_coco_v1`, no la de un
+  corpus real.
+- **Los 21 `test_caso_*` del canal siguen siendo punto ciego** (decisión del 8 oct): nada de
+  este CP1 los ejercita.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**, como siempre.
+- **Si el `ValueError` aparece con otros corpus o con otro `top_k`**: lo medí con caso09_run2 y
+  `top_k=32`. No barrí condiciones.
+- **El clon local de delamor.**

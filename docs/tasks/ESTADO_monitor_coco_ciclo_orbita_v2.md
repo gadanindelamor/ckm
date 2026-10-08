@@ -7,53 +7,50 @@
 
 ## Última escritura
 
-**2026-10-08 01:49 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 01:59 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP0 — evaluar contra el repo, sin código.** Cerrado el 2026-10-08. Base: `6152c71`.
-Los nueve puntos, reportados en `BANDEJA_code.md`, entrada `REPORTE CP0` de 01:46 UTC.
+**CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Cerrado el 2026-10-08.
+Driver: `experiments/cp1_paridad_y_dos_existencias.py` (pre-registro commiteado antes de
+correr, `d3230c1`). Log: `experiments/cp1_paridad_log.json`.
+Reporte: `BANDEJA_code.md`, `REPORTE CP1`.
+(CP0 cerrado en `27c6559`.)
 
-## Lo que el CP0 encontró, en una línea cada uno
+## Los dos resultados
 
-1. **Dos usos vivos de una sola fase**, no los de la lista: `monitor_service.py:168` —el
-   principal, de donde salen Δ_r, c_S y fabrication_index— y `mean_cS`, que COCO usa. El
-   `relax` de `deprecated_count_attractors` está muerto. **N_eff y D_ckm ya van por órbita.**
-2. **`relax(−σ) = −relax(σ)` demostrada fase a fase**, con el empate GOLES como la condición
-   que la hace valer, y con las condiciones de punto flotante declaradas.
-3. **Un solo usuario vivo de `corpus.coco`**: el canal, y le pide **sólo
-   `landscape_history()`**. Es `ckm_monitor.py:104`, no L93.
-4. **La configuración no es la misma hoy: Monitor cuenta con n_runs=1000 y COCO con 80.**
-5. **β muere con la instancia** y vuelve a None, que es el borde ya bien resuelto. Nada lo
-   conserva hoy.
-6. El `declarado` de la Config es `sampling_mode` + `scale`. El resto de COCO → **P9**.
-7. **Los 80 paneles históricos tienen `thermostat: None`**: la divergencia de los dos COCO no
-   está ahí. Lo que sí está, escrito desde una fase, son `n_rejected_pairs`, `rechazados`,
-   `c_S` y `fabrication_index`.
-8. **Tres bordes vivos del vacío** (`_classify_zone` → "stable", `frac_rec` → 1.0, A0 fijado en
-   silencio), **uno latente** (los defaults de `ThermostatState`) y **el borde de
-   `landscape_engine:418` no está vivo**: es de la forma deprecada.
-9. **77 de los 220 tests** tocan esto. Y los **21 `test_caso_*` del canal no son pytest**:
-   recogen 0 items, así que esa cobertura no existe automáticamente.
+**A. La paridad pesa, en los dos corpus.** caso09_run2: **16 de 24 textos** relajan a período
+2, `‖Δ_r^A − Δ_r^B‖₁ = 24.0`, `max|Δc(S)| = 2.35e−02`. WARMUP: 3 de 20, L1 = 12.0.
+Las tres condiciones U1, U2 y U3 se cumplen. **Mi expectativa declarada antes de correr era que
+habría pocos o ningún texto con período 2: estaba equivocada.**
 
-## En curso
+**B. Las dos existencias divergen hasta romper.** No hay incrementos negativos que contar: en la
+primera evaluación posterior al rebuild salta
+`ValueError: operands could not be broadcast together with shapes (31,31) (28,28)`
+en `coco.py:254`. COCO quedó con N=28 y Monitor creció a 31. Capturado como dato, no esquivado.
 
-**CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Driver en `experiments/`.
-Si esta línea sigue acá en la próxima sesión, el CP1 se cortó: el driver escribe su log con
-escritura atómica, así que un `.json` sin `.tmp` está completo y lo que midió sirve.
+## Lo que corrige de la TASK
+
+**La invariante de compatibilidad de §1 no vale a lo largo de un recorrido.** Dice que en un
+punto fijo R_A = R_B. Medido: el texto `i=22` tiene **período 1** y aun así
+`|R_A △ R_B| = 1`. La divergencia se compone porque Δ_r entra a W_eff. **Vale a igual W_eff**,
+no a lo largo de una serie — así que en el CP2 se testea sobre una evaluación, no sobre un
+recorrido.
+
+**Y el corte de las dos existencias tiene dos caras, no una.** Con N fija da los 56 incrementos
+negativos registrados; **con N variable levanta una excepción**. La segunda no estaba medida.
 
 ## Qué espera, y de quién
 
 - **P9 — BLOQUEA — [delamor]:** con qué configuración nace COCO y dónde se declara.
-  **Bloquea el CP2, no el CP1.** No propuse default: elegir el `n_runs` cambia lo que el
-  instrumento mide (E3).
+  Sigue pendiente, y **ahora bloquea más que antes**: el CP2 no sólo alinea baselines, también
+  es donde deja de romperse.
 
 ## Próximo paso
 
-**CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Driver en `experiments/` con
-pre-registro en el docstring. No necesita P9.
+**CP2 — una existencia, medida sobre la órbita.** Necesita P9.
 
 ## Nada quedó a medias
 
-El CP0 era lectura y se cerró entero. No se escribió ni se corrió código. La suite sigue en
-220/220.
+El driver escribe con `.tmp` + rename, y su log está completo. La suite sigue en 220/220:
+el CP1 no tocó `services/`.

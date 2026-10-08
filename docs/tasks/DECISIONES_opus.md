@@ -124,3 +124,7 @@
   - **3:** el baseline de COCO se fija **al nacer el ciclo** (Δ_r en cero, así que W_eff = W), con `n_runs = 1000`;
   - **4:** si el salto cae en período 2, el ciclo nuevo **nace con la órbita**, no con una fase.
 - **Punto 2 (`landscape_history` a través del salto): pendiente.** delamor no lo entendió como estaba escrito. Opus lo reformula en el chat.
+
+- **Punto 2 — delamor: "b"** (2026-10-08, E4). Cuando cambia W, el COCO nuevo **empieza con `landscape_history` vacío**: no hereda la historia del ciclo anterior, porque se midió sobre otra W y no es comparable. El pasado queda **solo en la traza** (JSONL), así que no se pierde nada.
+  - **Traza del cambio de recomendación:** Opus primero recomendó (a), conservar la historia como registro de solo lectura. Al reformularlo, cambió a (b) porque (a) invita a mezclar mediciones de W distintas. delamor eligió (b) con esa explicación delante.
+- **CP3 completo (1a, 2b, 3, 4).** Code sigue con el CP4 e implementa estas decisiones.

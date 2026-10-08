@@ -62,7 +62,14 @@ Si no se cumple ninguno, decide Opus y lo registra en `DECISIONES_opus.md` (fech
 
 ## 6. El canal: la bandeja
 
-> **Decidido por delamor (7 oct): opción (b), rama `code/trabajo`.** Code trabaja y hace push **solo** a `code/trabajo`, nunca a `main`. Opus lee la rama con `fetch` desde el clon local. Pasar algo a `main` lo decide delamor (E2).
+> ~~Decidido por delamor (7 oct): opción (b), rama `code/trabajo`.~~ **Reemplazado el 8 oct.**
+>
+> **Decidido por delamor (8 oct): una sola rama, `main`.** *"El tema son los merges… traban."* Los merges en las dos direcciones no aportaban nada y trababan el flujo.
+> - **Todos trabajan en `main`.** Code commitea y hace push a `main`. Opus commitea en el clon local, y delamor lo sube.
+> - **Antes de trabajar y antes de cada push:** `git pull --rebase origin main`. La historia queda lineal y sin commits de merge.
+> - **Los conflictos son improbables** porque cada uno toca archivos distintos: Code, código + BANDEJA + ESTADO; Opus, DECISIONES + TASKs + PROTOCOLO. Si igual hay un conflicto en el rebase: `git rebase --abort` y escalarlo, no resolverlo a ciegas.
+> - **`code/trabajo` queda congelada como traza** (último commit `2195025`, sin contenido que no esté en `main`). No se borra (E2).
+> - Commits: siempre nombrando los archivos, nunca `add -A` ni `commit -a`.
 
 - `docs/tasks/BANDEJA_code.md`: Code agrega entradas al final, con fecha y hora, nunca edita las anteriores. Tipos: `ARRANQUE`, `REPORTE CPn`, `PREGUNTA (BLOQUEA|NO BLOQUEA)`, `CORTE` (cuando detecta que algo quedó a medias).
 - **El problema:** Code escribe en el clon del Codespace. Opus lee el clon local de delamor (`ckm___source/ckm`). Para que la bandeja llegue, **tiene que haber un push desde el Codespace y un pull en el clon local.** El repo es público.
@@ -87,7 +94,7 @@ docs/tasks/PROTOCOLO_code_continuidad_v1.md — leelo entero primero.
    reporte en la bandeja. Alto.
 4. No decidas nada de lo listado en §5: preguntá en la bandeja,
    marcando BLOQUEA / NO BLOQUEA.
-5. Rama: code/trabajo. Push solo a code/trabajo, nunca a main.
+5. Rama: main. Antes de trabajar y antes de cada push: git pull --rebase origin main.
 ```
 
 ## 8. La tríada: protocolo, bandeja, decisiones

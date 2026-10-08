@@ -68,3 +68,7 @@
 - **2026-10-08** · **P8 (CHANGELOG bajo `## Unreleased`, en inglés): aceptada.** El número de versión lo pone delamor cuando publique · revertir: cambiar el encabezado.
 - **2026-10-08** · **Práctica para Code y para Opus: nunca `git add -A` ni `git commit -a`. Se nombran los archivos.** Code lo declaró como reflejo repetido (`run_tests.sh` dos veces), y Opus tuvo el mismo con `commit -a` (CRLF, 3961fc0). Es el mismo mecanismo en las dos instancias · revertir: n/a.
 - **2026-10-08** · **Lo próximo del plan: `TASK_monitor_coco_ciclo_orbita_v1`.** Se escribió antes de la Config v3. Antes de ejecutarla, Opus la ajusta para que COCO renazca **con el ciclo que abre Monitor** (`abrir_ciclo`), en lugar del bloque de `_invalidar_si_W_cambio` sin Config. Pendiente: v2 de esa TASK.
+
+### Una sola rama (delamor, 2026-10-08)
+
+- **delamor:** *"Sí, es sí, toda la razón. El tema son los merges."* Respuesta a la propuesta de Opus de usar una sola rama. **Decisión de delamor (E1: reemplaza a la §6 (b)).** Todos trabajan en `main` con `git pull --rebase origin main`. `code/trabajo` queda congelada como traza en `2195025`. Detalle en PROTOCOLO §6 · revertir: volver a la §6 (b).

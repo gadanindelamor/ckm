@@ -233,6 +233,23 @@ class COCO:
 
     # ── API pública ──────────────────────────────────────────────────────────
 
+    def fijar_baseline(self) -> float:
+        """
+        Fija A0 ahora, contra W sola, y lo devuelve.
+
+        Decisión de delamor (8 oct, CP3 punto 3): **el baseline se fija al
+        nacer el ciclo**, con Δ_r en cero —y por lo tanto W_eff = W— y con el
+        `n_runs` declarado. Antes se fijaba de forma perezosa, en la primera
+        `observe`, y nada decía en qué momento del ciclo había quedado.
+
+        Idempotente: si ya está fijado, lo devuelve sin recalcular. Cuesta un
+        conteo con el `n_runs` declarado, y eso es deliberado: el baseline es
+        la referencia contra la que se divide todo el ciclo.
+        """
+        if self._A0 is None:
+            self._A0 = self._count_attractors(self.W, **self._sampling_kwargs())
+        return self._A0
+
     def observe(self, Delta_new: np.ndarray) -> ThermostatState:
         """
         Evalúa el campo con su representación propia y aplica

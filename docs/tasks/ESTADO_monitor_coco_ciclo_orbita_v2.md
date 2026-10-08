@@ -7,11 +7,14 @@
 
 ## Última escritura
 
-**2026-10-08 16:05 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 16:49 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2c — el vacío y el panel.** Cerrado el 2026-10-08. **Con esto el CP2 queda cerrado.** Ver §"El CP2, partido".
+**CP3i — implementación de las cuatro decisiones del CP3.** Cerrado el 2026-10-08.
+Reporte: `BANDEJA_code.md`, `REPORTE CP3i`. Suite **276/276**.
+
+Antes: **CP2c**, y con él el CP2 completo. Ver §"El CP2, partido".
 
 Antes: **CP1 — medir lo que hoy se rompe, sin tocar `services/`.** Cerrado el 2026-10-08.
 Driver: `experiments/cp1_paridad_y_dos_existencias.py` (pre-registro commiteado antes de
@@ -64,17 +67,31 @@ Por §4, después del corte por límite de uso de hoy:
   delamor (`n_runs = 1000`) y Opus resolvió el resto por debajo del umbral. La próxima pregunta
   es **P10**.
 
+## El CP3
+
+**Las cuatro decisiones son de delamor y están tomadas** (1a, 2b, 3, 4; `DECISIONES_opus.md`).
+**Implementadas en el CP3i**, con las cinco inversiones corridas: cada una rompe el test que le
+corresponde, y la salida literal de las diez corridas está en el reporte.
+
+Dos tests míos **no podían fallar** y aparecieron invirtiendo, no leyendo: el de la torsión en
+W_eff (dos veces: la segunda miraba sólo la última llamada a `_combine_W_Delta`, y `evaluate` la
+llama varias veces) y el de Δ_r desde la órbita (pasaba porque en el corpus chico la órbita es de
+período 1 y `expulsados == rejected`).
+
+**Trazado, no tapado:** en el corpus de los tests la decisión 1(a) no se ejerce. En el corpus
+real sí — el CP1 midió **16 de 24 textos con período 2** en caso09_run2.
+
 ## Próximo paso
 
-**CP3 — lo que es de delamor.** Cuatro decisiones, y ahora hay números para las cuatro:
-qué entra a `Δ_r_pares` y a W_eff (las opciones a/b/c de la TASK), si `landscape_history` cruza
-el salto, si el baseline de COCO va sobre W sola o sobre W + Δ_r, y con qué nace el ciclo nuevo
-si el salto cae en un período 2.
+**CP4 — CorpusService suelta a COCO.** Sacar `self._coco` de `_rebuild`, deprecar la property
+`coco` y declararlo en el CHANGELOG; `ckm_monitor.py` pasa a leer desde Monitor; correr los tests
+que no son Armstrong.
 
-Después, **CP4**: CorpusService suelta a COCO y el canal pasa a leer desde Monitor.
+Es también donde **lo del CP3i empieza a ejercerse en el canal**: hoy `ckm_monitor.py` no pasa
+`coco_config`, así que en el canal COCO sigue siendo el de Corpus y nada de esto corre ahí.
 
 ## Nada quedó a medias
 
-El CP2c se cerró entero, y con él el CP2. Los tres sub-pasos tienen su commit, su entrada en la
-bandeja y su cierre en este ESTADO. `pares_por_orbita` ya está conectada al panel; lo único que
-sigue sin conectar es **qué entra a Δ_r**, y eso es deliberado: es la decisión del CP3.
+El CP3i se cerró entero: las cuatro decisiones, 6 tests nuevos, un existente cambiado y
+declarado, las cinco inversiones corridas y restauradas, y la suite en **276/276**.
+`grep -c INVERSION services/monitor_service.py` → 0: no quedó ningún experimento adentro.

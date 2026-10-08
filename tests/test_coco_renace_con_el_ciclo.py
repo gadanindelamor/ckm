@@ -146,8 +146,16 @@ def test_renace_en_el_mismo_paso_que_el_reset_de_delta_r(corpus, tmp_path) -> No
     assert float(np.sum(m._Delta_r)) >= 0
 
 
-def test_el_coco_nuevo_nace_vacio(corpus, tmp_path) -> None:
-    """Δ propio en ceros y A0 en None: la primera división es contra el vacío."""
+def test_el_coco_nuevo_nace_vacio_y_con_su_baseline_fijado(corpus, tmp_path) -> None:
+    """
+    Δ propio en ceros, y **A0 fijado al nacer** contra W sola.
+
+    Cambiado respecto del CP2b, donde este test pedía `A0 is None`: la
+    decisión de delamor del 8 oct (CP3 punto 3) es que el baseline se fija
+    **al nacer el ciclo**, con Δ_r en cero y por lo tanto W_eff = W. Antes se
+    fijaba de forma perezosa en la primera `observe`, y nada decía en qué
+    momento del ciclo había quedado.
+    """
     cfg = CKMlandscapeConfig.create(corpus.get_W(), sampling_mode="uniform", n_runs=10)
     m = _monitor(corpus, tmp_path, cfg, coco_config=COCO_CONFIG)
     m.evaluate(PROMPT)
@@ -156,8 +164,29 @@ def test_el_coco_nuevo_nace_vacio(corpus, tmp_path) -> None:
     m._invalidar_si_W_cambio(corpus.get_nodes())
     th = m._thermostat
     assert id(th) != antes
-    assert not th._Delta.any()
-    assert th._A0 is None
+    assert not th._Delta.any()                 # Δ propio en ceros
+    assert th._A0 is not None                  # pero el baseline ya está
+    assert th._A0 == th._count_attractors(th.W, **th._sampling_kwargs()), \
+        "el baseline tiene que ser el de W sola, no el de W + Δ_r"
+
+
+def test_el_coco_nuevo_no_hereda_la_landscape_history(corpus, tmp_path) -> None:
+    """
+    CP3 punto 2(b), delamor: el COCO nuevo empieza con la historia **vacía**.
+
+    No hereda la del ciclo anterior porque se midió sobre otra W y no es
+    comparable. El pasado queda en la traza (el JSONL).
+    """
+    cfg = CKMlandscapeConfig.create(corpus.get_W(), sampling_mode="uniform", n_runs=10)
+    m = _monitor(corpus, tmp_path, cfg,
+                 coco_config={"track_landscape": True,
+                              "landscape_history": [{"viejo": 1}, {"viejo": 2}]})
+    m.evaluate(PROMPT)
+    assert m._thermostat.landscape_history() == [], \
+        "la historia del ciclo anterior no cruza el salto"
+    corpus.ingest(NUEVOS)
+    m.evaluate(PROMPT)
+    assert m._thermostat.landscape_history() == []
 
 
 # ── n_runs, seed y sampling_mode salen de la Config (P9) ───────────────────

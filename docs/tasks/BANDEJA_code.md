@@ -1323,3 +1323,166 @@ medida en el CP1—; la torsión viaja con sus pares; y Δ_r no cambió.
   con un driver propio; acá los tests son sobre pocas evaluaciones. El panel ya lo registra, así
   que la próxima corrida larga lo deja en la traza.
 - **El clon local de delamor.**
+
+---
+
+## REPORTE CP3i — 2026-10-08 16:46 UTC
+
+*Implementación de las cuatro decisiones del CP3 (todas de delamor, 8 oct). El CP3 era de
+decisión, no de código; esto es la ejecución. **El CP4 queda aparte.***
+
+### Las cuatro decisiones, implementadas
+
+| | decisión | qué cambió |
+|---|---|---|
+| **1(a)** | a `Δ_r_pares` y W_eff entran **sólo los expulsados**; la torsión a un objeto propio que no entra a W_eff | `Δ_r` se escribe con `expulsados` (los que caen en todas las fases). Nuevo `self._Delta_r_torsion`, que **sólo escribe Monitor** y **no entra a W_eff**. Panel: `Delta_r_torsion_sum`. Se resetea con el ciclo, igual que Δ_r |
+| **2(b)** | el COCO nuevo empieza con `landscape_history` **vacío** | `_renacer_coco` descarta `landscape_history` de `coco_config`. El pasado queda en el JSONL |
+| **3** | el baseline se fija **al nacer el ciclo**, con Δ_r en cero (W_eff = W) y `n_runs` declarado | `COCO.fijar_baseline()` nuevo, idempotente, y `_renacer_coco` lo llama. Antes se fijaba perezoso en la primera `observe` y nada decía en qué momento del ciclo quedó |
+| **4** | si el salto cae en período 2, el ciclo nuevo **nace con la órbita**, no con una fase | La primera escritura de Δ_r del ciclo nuevo sale de `expulsados`, igual que las demás. No hay un camino especial para la evaluación del salto, y eso es lo que el test verifica |
+
+`rejected` —los pares de la fase que cae en `max_iter`— **se sigue calculando**, porque el panel
+lo reporta como `rechazados` y es la traza comparable con los 80 paneles históricos. Ya no es lo
+que entra a Δ_r.
+
+### La W sintética, declarada
+
+**No sale de ningún corpus.** La construí a mano para esta prueba, barriendo W simétricas de 4
+nodos con pesos en `{−1, −0.5, 0, 0.5, 1}` hasta encontrar una que, desde
+`sigma_prompt = [1, 1, 1, −1]`, relaja a una **órbita de período 2 en la que la fase que cae en
+max_iter expulsa más pares que los expulsados de toda la órbita**. Es la condición que hace que
+la decisión 1(a) se pueda distinguir de la implementación anterior.
+
+```
+W_SINTETICA = [[ 0.0,  0.5,  0.0,  1.0],
+               [ 0.5,  0.0, -0.5,  0.0],
+               [ 0.0, -0.5,  0.0, -0.5],
+               [ 1.0,  0.0, -0.5,  0.0]]
+sigma_prompt = [1, 1, 1, −1]
+```
+
+Medido sobre ella: **período 2, cola 1**, fase en `max_iter` = `[1, −1, −1, −1]`.
+
+| | pares |
+|---|---|
+| expulsados (en las dos fases) | `(0,1)`, `(0,2)` → **2** |
+| torsión (en una sola) | `(1,2)` → **1** |
+| la fase que cae en `max_iter` | `(0,1)`, `(0,2)`, `(1,2)` → **3** |
+
+O sea que `(1,2)` entraba a Δ_r con la implementación vieja y ahora va a la torsión.
+
+**La órbita sale de la dinámica real.** El fixture parchea de dónde viene W y qué declara el
+prompt; **no parchea la órbita**: la produce `relax_orbit` sobre esos dos datos. Hay un test que
+verifica ese supuesto antes que los demás (`test_la_W_sintetica_relaja_a_periodo_2_de_verdad`).
+
+### El hallazgo que pidió trazar
+
+**En el corpus de estos tests la órbita es de período 1, así que `expulsados == rejected` y la
+decisión 1(a) no se ejerce.** Por eso toda la primera versión de los tests pasaba igual con Δ_r
+escribiéndose desde la fase: no había nada que distinguir.
+
+Y el CP1 lo había medido en el corpus real: **caso09_run2 da 16 de 24 textos con período 2**.
+Así que la decisión 1(a) **sí se ejerce en el corpus real**, y bastante; lo que no la ejerce es
+el corpus chico de 5 textos de estos tests. Queda trazado, no tapado.
+
+### Las cinco inversiones
+
+Cada una revierte una pieza, corre la **suite completa**, se restaura y se vuelve a correr la
+suite completa. Salida literal de las diez corridas:
+
+```
+=== INVERSION 1 — Δ_r vuelve a la fase
+    cambio: for i, j in expulsados:  ->  for i, j in rejected:
+    invertido  -> FAILED test_con_periodo_2_real_delta_r_NO_es_la_fase
+                  FAILED test_el_ciclo_nuevo_nace_con_la_orbita_no_con_una_fase
+                  2 failed, 274 passed in 8.53s
+    restaurado -> 276 passed in 8.42s
+
+=== INVERSION 2 — la torsión entra a W_eff
+    cambio: combine(W, Δ_r)  ->  combine(W, Δ_r + Δ_r_torsion)
+    invertido  -> FAILED test_la_torsion_NO_entra_a_W_eff
+                  1 failed, 275 passed in 8.61s
+    restaurado -> 276 passed in 8.58s
+
+=== INVERSION 3 — el baseline vuelve a fijarse perezoso
+    cambio: fijar_baseline()  ->  nada (lo fija la primera observe)
+    invertido  -> FAILED test_el_coco_nuevo_nace_vacio_y_con_su_baseline_fijado
+                  1 failed, 275 passed in 8.32s
+    restaurado -> 276 passed in 8.46s
+
+=== INVERSION 4 — la historia se hereda
+    cambio: kw.pop("landscape_history")  ->  nada
+    invertido  -> FAILED test_el_coco_nuevo_no_hereda_la_landscape_history
+                  1 failed, 275 passed in 7.99s
+    restaurado -> 276 passed in 7.72s
+
+=== INVERSION 5 — el ciclo nuevo nace con una fase
+    cambio: expulsados  ->  rejected SOLO en la evaluación del salto
+             (for i, j in (rejected if reset_cause is not None else expulsados))
+    invertido  -> FAILED test_el_ciclo_nuevo_nace_con_la_orbita_no_con_una_fase
+                  1 failed, 275 passed in 8.64s
+    restaurado -> 276 passed in 8.25s
+```
+
+Y después de todo, `grep -c INVERSION services/monitor_service.py` → **0**, y la suite en
+**276 passed**: el archivo quedó restaurado.
+
+**Las cinco rompen.** Dos cosas que vale aclarar, porque no son lo que yo esperaba:
+
+- **La inversión 1 rompe DOS tests**, no uno: también el de la decisión 4. Tiene sentido —
+  revertir Δ_r a la fase en todas las evaluaciones incluye la del salto— y **no lo arreglé**:
+  el test de la decisión 4 es más específico que el de la 1, no redundante. La inversión 5 lo
+  muestra: revirtiendo **sólo** la evaluación del salto, el de la decisión 1 pasa y el de la 4
+  falla. O sea que los dos tests miden cosas distintas.
+- **La inversión 2 fue la que no rompía** cuando delamor lo señaló. Rompe desde que el test mira
+  **todas** las llamadas a `_combine_W_Delta` y no sólo la última. Lo que cambió fue el test, no
+  la implementación: la exclusión de la torsión ya estaba, lo que faltaba era quien la
+  protegiera.
+
+### Dos tests míos que no podían fallar, y cómo aparecieron
+
+**1. El de la torsión en W_eff, dos veces.** La primera versión sólo comprobaba que W_eff
+*sería* distinta con la torsión, no que Monitor use Δ_r sola. La segunda capturaba el Δ que
+Monitor pasa a `_combine_W_Delta`, pero **miraba sólo la última llamada** — y `evaluate` lo llama
+varias veces (L211 para la relajación del prompt, y otra vez en el bloque de métricas), así que
+la última era una que sí usa Δ_r. **Las dos pasaban con la inversión puesta.** La versión que
+quedó mira **todas** las llamadas.
+
+**2. El de Δ_r desde la órbita.** Pasaba porque en el corpus chico `expulsados == rejected`. Se
+arregló con la W sintética.
+
+Las dos aparecieron **invirtiendo**, no leyendo. Y la aserción `n_torsion > 0` va **primero** en
+los dos tests que dependen de que haya torsión: si no hay nada que medir, eso es UNKNOWN y no OK.
+
+### Un test existente cambió
+
+`test_el_coco_nuevo_nace_vacio` → **`test_el_coco_nuevo_nace_vacio_y_con_su_baseline_fijado`**.
+Pedía `A0 is None` al nacer, que era el comportamiento del CP2b. La decisión 3 lo cambia: ahora
+pide `A0 is not None` **y** que sea el baseline de W sola. Su docstring dice por qué.
+
+### Suite
+
+**276/276.** Nuevos en este sub-paso: 6 (los 3 de la W sintética, el de la decisión 4, el de la
+historia vacía, y el de la torsión aparte). Un existente cambiado.
+
+### Lo que el CP3i NO hizo
+
+- **No tocó `CorpusService`:** sigue creando su COCO y exponiendo `corpus.coco`. Es el CP4.
+- **No tocó el canal:** `ckm_monitor.py` sigue sin `coco_config`, así que en el canal COCO sigue
+  siendo el de Corpus y nada de esto se ejerce ahí. También CP4.
+- No cambió `relax`, `relax_orbit`, ni el criterio ni el momento del rebuild.
+- No promedia la torsión ni la convierte en ángulo.
+
+### No pude revisar
+
+- **El chat** y **el estado del Codespace fuera de git**.
+- **Los 21 `test_caso_*` del canal**: punto ciego declarado. Este sub-paso **cambió qué entra a
+  Δ_r**, que es lo más de fondo que se tocó hasta ahora, y nada automático verifica que esos 21
+  scripts sigan corriendo.
+- **Los tests Armstrong:** usan `thermostat=`, el camino preservado, pero no los corrí. Y
+  **cambió qué entra a Δ_r**, así que sus números podrían moverse si se volvieran a correr: son
+  traza de otra implementación.
+- **El efecto de la decisión 1(a) sobre un recorrido real.** Lo testeé con la W sintética y con
+  el corpus chico. En caso09, donde 16 de 24 textos tienen período 2, el efecto va a ser visible
+  — y el panel ya registra `n_torsion`, así que la próxima corrida larga lo deja en la traza.
+  **No la corrí.**
+- **El clon local de delamor.**

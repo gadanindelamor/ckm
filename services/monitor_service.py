@@ -169,6 +169,9 @@ class MonitorService:
         self._landscape_config = landscape_config
 
         self._Delta_r : Optional[np.ndarray] = None
+        # Δ_r_torsion — los pares que caen en una sola fase de la órbita.
+        # Lo escribe sólo Monitor y **no entra a W_eff** (CP3 punto 1(a)).
+        self._Delta_r_torsion : Optional[np.ndarray] = None
         self._A0    : Optional[float]        = None
         self._N_eff0: Optional[float]      = None   # baseline de N_eff, vive con A0
         # versión de W bajo la que se acumuló Δ_r — ver _invalidar_si_W_cambio
@@ -216,11 +219,25 @@ class MonitorService:
             sigma_prompt, fases_de_orbita(orbita, N)
         )
 
-        # pares rechazados → acumular en Δ
+        # ── qué entra a Δ_r: decisión de delamor (8 oct, CP3 punto 1(a)) ──
+        # A Δ_r —y por lo tanto a W_eff— entran **sólo los expulsados**: los
+        # pares que caen en TODAS las fases de la órbita. La torsión, que es
+        # la marca del período 2, va a un objeto propio que **no entra a
+        # W_eff**. Monitor es el único escritor de los dos.
+        #
+        # `rejected` (los pares de la fase que cayó en max_iter) se sigue
+        # calculando porque el panel lo reporta como `rechazados` y es la
+        # traza comparable con los 80 paneles históricos. Ya no es lo que
+        # entra a Δ_r.
         rejected = self._rejected_pairs(sigma_prompt, sigma_relaxed)
-        for i, j in rejected:
+        for i, j in expulsados:
             self._Delta_r[i, j] += 1
             self._Delta_r[j, i] += 1
+        if self._Delta_r_torsion is None or self._Delta_r_torsion.shape != (N, N):
+            self._Delta_r_torsion = np.zeros((N, N))
+        for i, j in torsion:
+            self._Delta_r_torsion[i, j] += 1
+            self._Delta_r_torsion[j, i] += 1
 
         # métricas
         c_s   = self._cS(sigma_relaxed, W)
@@ -255,6 +272,8 @@ class MonitorService:
             "condicion_W"      : self._condicion_W(W, nodes),
             "n_rejected_pairs" : len(rejected),
             "Delta_r_sum"        : float(np.sum(self._Delta_r)),
+            # La torsión acumulada, aparte. No entra a W_eff (CP3 1(a)).
+            "Delta_r_torsion_sum": float(np.sum(self._Delta_r_torsion)),
             "activos_prompt"   : [nodes[i] for i, s in enumerate(sigma_prompt)   if s > 0],
             "activos_relajado" : [nodes[i] for i, s in enumerate(sigma_relaxed)  if s > 0],
             "rechazados"       : [(nodes[i], nodes[j]) for i, j in rejected],
@@ -380,6 +399,7 @@ class MonitorService:
         causa = self._causa_cambio(self._w_sha, self._w_nodes)
 
         self._Delta_r = np.zeros((len(nodes), len(nodes)))
+        self._Delta_r_torsion = np.zeros((len(nodes), len(nodes)))
         self._A0      = None
         self._N_eff0  = None
         self._w_sha, self._w_nodes = sha_actual, list(nodes)
@@ -485,8 +505,17 @@ class MonitorService:
             kw.setdefault("n_runs", self._n_runs)
             kw.setdefault("seed", self._count_seed)
             kw.setdefault("sampling_mode", self._sampling_mode)
+        # CP3 punto 2(b), delamor: el COCO nuevo **empieza con
+        # landscape_history vacío**. No hereda la del ciclo anterior porque se
+        # midió sobre otra W y no es comparable; el pasado queda en la traza
+        # (el JSONL), así que no se pierde nada. Si coco_config la traía, se
+        # descarta acá y se declara.
+        kw.pop("landscape_history", None)
         anterior = self._thermostat
         self._thermostat = COCO(W=self.corpus.get_W(), **kw)
+        # CP3 punto 3: el baseline se fija al nacer el ciclo, con Δ_r en cero
+        # y por lo tanto W_eff = W.
+        self._thermostat.fijar_baseline()
         self._coco_renacio = True
         self._coco_generacion += 1
         self._coco_id_anterior = id(anterior) if anterior is not None else None

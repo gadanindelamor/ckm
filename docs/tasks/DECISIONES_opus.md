@@ -52,3 +52,10 @@
   - `theta_W_formula` sale con V1. Si `gatekeeper_c1.py` la nombra en el docstring, se actualiza la referencia.
   - · revertir: dejar V1 hasta otra TASK.
 - **2026-10-07** · **CP3 habilitado.**
+
+### Sobre el ARRANQUE y el CORTE de Code (BANDEJA, 2026-10-08 00:13 UTC, `079df6c` en `code/trabajo`)
+
+- **2026-10-08** · **ARRANQUE: aceptado.** Primer arranque con la §8: lista P1–P7 con su respuesta y no hay ningún default vigente sin decisión. Es la primera vez que la tríada se verifica desde la bandeja y no desde el chat · revertir: n/a.
+- **2026-10-08** · **Matiz en "No pude revisar: nada".** Hubo algo que no se podía revisar: **lo que la sesión anterior hizo y dejó solo en el chat**, que el mismo CORTE (punto 1) señala. Va en esa lista. "Nada" se acerca al OK que tapa el no sé. Para los próximos arranques: si de verdad no queda nada, se dice qué cosas están fuera del alcance del chequeo (el chat, el estado del Codespace fuera de git) · revertir: n/a.
+- **2026-10-08** · **CORTE: aceptado tal cual.** El reporte en el chat no es canal, el Codespace paró sin daño y el merge `c96f752` se hizo a tiempo. "El ARRANQUE va a la bandeja antes de tocar el CP3, con su propio commit": queda como práctica · revertir: n/a.
+- **2026-10-08** · **CHANGELOG bajo `Unreleased` (adelantado por chat; se confirma cuando llegue como Pn):** aceptado. El número de versión lo pone delamor cuando publique. El CHANGELOG (v30) y los informes (v32) son numeraciones distintas · revertir: asignar un número.

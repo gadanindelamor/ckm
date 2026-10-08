@@ -97,3 +97,14 @@
   · revertir: n/a.
 - **2026-10-08** · **Se acepta la corrección a la §1 de la TASK:** la invariante "punto fijo ⇒ R_A = R_B" vale **a igual W_eff**, no a lo largo de un recorrido (la divergencia se compone porque Δ_r entra a W_eff). En el CP2 se testea sobre **una** evaluación · revertir: n/a.
 - **2026-10-08** · **P9 sigue escalada a delamor y ahora pesa más:** el CP2 es donde deja de romperse. **CP2 bloqueado hasta que delamor responda la P9.**
+
+### P9 — respuesta de delamor (2026-10-08)
+
+- **delamor: "n 1000".** **Monitor y COCO miden con `n_runs = 1000`**, un solo valor para los dos, que es donde N_eff converge (±2 % respecto de 5000). Decisión de delamor (E3).
+- **El resto de la P9 lo resuelve Opus por debajo del umbral, como default declarado y reversible** (delamor confirmó solo el `n_runs`):
+  - **`n_runs` y `seed` son uno solo para Monitor y COCO, declarados en la Config** como *declarado*. COCO ya no tiene un default propio. La seed por defecto la elige Code en el CP2, la declara y la reporta (es el primer Pn del CP2 si hace falta);
+  - **umbrales de COCO** (`d_ckm_threshold`, `alpha_star`, `frac_rec_min`): **no van a la Config**. Son de Calibración (D6 de la Config v3). Hasta que exista ese proceso, quedan como están y marcados "no recalibrados";
+  - **`track_landscape`, `n_warmup` y `gamma`**: quedan en la configuración de COCO, declarados y fuera de la Config.
+
+  · revertir: subir cualquiera a la Config o bajarla.
+- **CP2 habilitado.**

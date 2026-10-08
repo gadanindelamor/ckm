@@ -24,8 +24,8 @@ Dos identidades distintas:
 
 **theta_W no es un campo de esta config** (delamor, 7 oct 2026): es parámetro
 del Gatekeeper, que lo recibe en c1(..., theta_W=). Pertenece a W estática, no
-al landscape. La clase congelada CKMlandscapeConfigV1 lo conserva porque es
-traza de los runs ya corridos, hasta el CP3.
+al landscape. La clase v1 que lo tenía adentro salió en el CP3; su traza está
+en git y los JSONL ya escritos se leen con ciclo_desde_registro_plano_v1.
 
 Spec: docs/tasks/TASK_CKMlandscapeConfig_v2.md (criterio, clases, I1–I7,
 transición única) y docs/tasks/TASK_CKMlandscapeConfig_v3.md (D1–D6).
@@ -389,88 +389,6 @@ def ciclo_desde_registro_plano_v1(d: dict) -> Ciclo:
         t_senal        = None,
         t_rebuild      = float(d["timestamp"]),
     )
-
-
-# ── la clase congelada, hasta el CP3 ─────────────────────────────────────────
-
-@dataclass(frozen=True)
-class CKMlandscapeConfigV1:
-    """
-    La config v1: una foto congelada de una W, con theta_W adentro.
-
-    **Es traza, no código vivo.** Queda mientras se migran los consumidores
-    (DECISIONES_opus, 7 oct) y sale en el CP3. No se le agrega nada.
-    Spec original: docs/tasks/TASK_CKMlandscapeConfig_v1.md
-    """
-    N               : int
-    mu_W_nonzero    : float
-    mu_W_global     : float
-    beta_c_nonzero  : float
-    beta_c_global   : float
-    theta_W         : float
-    sampling_mode   : str
-    scale           : str
-    w_version_id    : str
-    config_id       : str
-    timestamp       : float
-
-    @classmethod
-    def from_W(
-        cls,
-        W            : np.ndarray,
-        *,
-        theta_W      : float,
-        sampling_mode: str,
-        scale        : str,
-    ) -> "CKMlandscapeConfigV1":
-        """Construye la config midiendo W. Los tres declarados son obligatorios."""
-        W = np.asarray(W, dtype=float)
-        if W.ndim != 2 or W.shape[0] != W.shape[1]:
-            raise ValueError(f"W debe ser cuadrada, shape={W.shape}")
-        if sampling_mode not in SAMPLING_MODES:
-            raise ValueError(f"sampling_mode inválido: {sampling_mode!r} — esperado {SAMPLING_MODES}")
-        if scale not in SCALES:
-            raise ValueError(f"scale inválida: {scale!r} — esperado {SCALES}")
-
-        m = medido(W)
-        return cls(
-            theta_W        = float(theta_W),
-            sampling_mode  = sampling_mode,
-            scale          = scale,
-            w_version_id   = sha256_W(W),
-            config_id      = uuid.uuid4().hex,
-            timestamp      = time.time(),
-            **m,
-        )
-
-    @staticmethod
-    def theta_W_formula(mu_W: float, N: int) -> float:
-        """
-        Fórmula de theta_W como función de mu_W y N — NO decidida.
-
-        Propiedad requerida (PROPUESTA v4, Paso 3 / D1): con la normalización
-        de W declarada, al menos el núcleo A del corpus pasa C1
-        (max|W(nodo, activos)| ≥ theta_W).
-
-        theta_W salió de la config nueva (delamor, 7 oct): es del Gatekeeper.
-        Esta fórmula acompaña a theta_W y se va con esta clase en el CP3.
-        """
-        raise NotImplementedError("fórmula de theta_W abierta — ver docstring")
-
-    def to_dict(self) -> dict:
-        return asdict(self)
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict(), sort_keys=True)
-
-    @classmethod
-    def from_dict(cls, d: dict) -> "CKMlandscapeConfigV1":
-        """Recarga una config serializada: mismos valores, mismo config_id."""
-        return cls(**d)
-
-    @classmethod
-    def from_json(cls, s: str) -> "CKMlandscapeConfigV1":
-        return cls.from_dict(json.loads(s))
 
 
 def _beta_c(N: int, mu_W: float) -> float:

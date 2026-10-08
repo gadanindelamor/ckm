@@ -2,6 +2,63 @@
 
 ---
 
+## Unreleased
+
+**CKMlandscapeConfig: from a frozen snapshot of one W to the trace of its life cycles.**
+
+### services/ckm_landscape_config.py — rewritten (TASK_CKMlandscapeConfig_v2 + v3)
+- Fields are now placed by **what makes them change**, not by what they describe:
+  `medido` changes iff `w_version_id` changes, `declarado` changes when someone declares it,
+  `identidad` is fixed at construction. Two fields with different causes of change no longer
+  share one immutable object.
+- `Ciclo` (frozen): `w_version_id`, the measured values, `causa`, `t_senal`, `t_rebuild`, and
+  `deriva` — **null, not zero**, when nobody signalled (I6). Validates `t_senal <= t_rebuild`.
+- `CKMlandscapeConfig`: identity + declared + a tuple of cycles. **Immutability moved from the
+  object to the trace** (I1): the config gains cycles, it never edits them.
+- **Consistent get (D3):** `ciclo_vigente` and `panel()` read, and `abrir_ciclo` replaces, under
+  the same `threading.RLock`; the replacement is a single reference swap. There is real
+  concurrency in the live channel: a reader in a Gradio thread (`gr.Timer`, every 3 s) and a
+  writer in the event loop. Verified by a test that fails 3/3 without the lock.
+- **Synchronous set (D2):** when `abrir_ciclo` returns, the new cycle is already current.
+- `medido(W)` is a function of W alone (I5). `nodes` is deliberately **not** part of it: node
+  labels are not a function of W.
+- **`theta_W` is gone from this module** (delamor, 7 Oct 2026): it belongs to the Gatekeeper,
+  which receives it as a parameter. `theta_W_formula` left with the v1 class; the open question
+  it carried is now stated in `services/gatekeeper_c1.py`.
+- `scale` is optional, `sampling_mode` is required: what is declared is required according to
+  who uses it, not always (I4, revised).
+- `ciclo_desde_registro_plano_v1` reads the already-written JSONL with the v1 flat config as a
+  single bootstrap cycle. **No historical file is rewritten.**
+- `CKMlandscapeConfigV1` **removed**. Its trace is in git.
+
+### services/monitor_service.py — Monitor opens the cycles (D4)
+- `_invalidar_si_W_cambio` calls `abrir_ciclo` in the same block where it discards Δ_r and A0,
+  with the same cause it returns ("N" | "nodos" | "pesos"), untranslated.
+- **This closes gap D7:** the config no longer falls behind after a rebuild — it gains a cycle
+  instead of going stale. No consumer detects the cycle change on its own any more (I2).
+- The panel carries `config.panel()` — identity, declared and current cycle, without the
+  history (I7) — instead of the whole config.
+- When the cause cannot be derived against the config (same N, and the cycle holds no labels),
+  the cause is `"W_distinta"`: the sha is different and nothing more can be said. **No finer
+  cause is invented.**
+
+### iap_chatroom/ckm_monitor.py
+- `CKMMonitor` builds the config **without W**: the corpus starts in accumulation and W only
+  appears once `min_texts` is crossed. Monitor opens the first cycle, cause `"bootstrap"`.
+- Measured, and not a defect: with `rebuild_suspendido=True` the live channel's config will hold
+  **exactly one cycle**. D4 is wired and has nothing more to open until the suspension is lifted.
+
+### Tests
+- `tests/test_ckm_landscape_config_ciclos.py` — 33 tests: I1–I7, D2, D3, measured values,
+  serialization with history, reading the old trace, and the two identity cases migrated from
+  the v1 test before deleting it.
+- `tests/test_monitor_abre_ciclos.py` — 13 tests. Measured against the previous commit:
+  **12 of 13 fail without the change**; the one that passes is the no-config control.
+- `tests/test_ckm_landscape_config.py` **removed** with the v1 class.
+- Suite: 220 passing.
+
+---
+
 ## v30 — July 2026
 
 **IAP MCP Server. Demo C. W versionado. Firma_CKM. A2A integration analysis.**

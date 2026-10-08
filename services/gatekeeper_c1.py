@@ -9,8 +9,16 @@ process/initial_static_model/core.py:
 
     max|W(nodo, activos)| ≥ theta_W
 
-theta_W es obligatorio y sin fórmula (CKMlandscapeConfig.theta_W_formula
-sigue abierta). El estado activo sigma también lo declara quien llama.
+theta_W es obligatorio y **sin fórmula**: lo declara quien llama, igual que el
+estado activo sigma. theta_W es de este módulo — salió de
+CKMlandscapeConfig en el CP3 de TASK_CKMlandscapeConfig_v3 (decisión de
+delamor, 7 oct 2026): pertenece a W estática, no al landscape.
+
+**La fórmula de theta_W sigue abierta**, y la propiedad que tendría que
+cumplir, que antes vivía en CKMlandscapeConfig.theta_W_formula, es ésta:
+con la normalización de W declarada, al menos el núcleo A del corpus pasa C1
+(max|W(nodo, activos)| ≥ theta_W). Ver PROPUESTA v4, Paso 3 / D1. Mientras no
+exista, theta_W es parámetro obligatorio y nadie le pone default.
 """
 
 from __future__ import annotations

@@ -7,64 +7,57 @@
 
 ## Última escritura
 
-**2026-10-07 04:34 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-08 00:18 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2 — Monitor consume la config.** Cerrado el 2026-10-07. Base: `202488a`.
-(CP0 en `d66a305`, CP1 en `8391319`.)
+**CP3 — los demás consumidores, y v1 sale. La TASK queda cerrada.**
+Cerrado el 2026-10-08. Base: `079df6c`.
+(CP0 en `d66a305`, CP1 en `8391319`, CP2 en `17b6421`.)
 
 ## Qué se hizo
 
-### `services/monitor_service.py`
+Siguiendo el criterio de `DECISIONES_opus.md` (L47), punto por punto:
 
-- **`_invalidar_si_W_cambio` abre el ciclo (D4)**, en el mismo bloque donde descarta
-  Δ_r y A0. La causa que viaja al ciclo es **la misma que el método devuelve**
-  (`"N" | "nodos" | "pesos"`), sin traducir: `Ciclo.causa` es str libre.
-- Dos helpers nuevos: **`_causa_cambio`** (la clasificación, que ya estaba inline) y
-  **`_abrir_ciclo_si_cambio`** (le pide el ciclo a la config; sin config no hace nada,
-  y con el mismo sha `abrir_ciclo` devuelve False por I5).
-- **Primera evaluación:** Δ_r no tiene nada que descartar, pero la config sí puede
-  estar atrás. Ahí también se abre ciclo.
-- **Config sin ciclos:** Monitor abre el primer ciclo con causa `"bootstrap"`. Es el
-  caso del canal, donde W aparece recién al cruzar `min_texts`.
-- **El panel lleva `config.panel()`** y no `to_dict()` (I7): identidad, declarado y
-  ciclo vigente, sin la historia.
-- `import time` agregado.
+1. **`tests/test_ckm_landscape_config.py` se fue con V1** — pero **antes** verifiqué la
+   cobertura, que era la condición del criterio. De sus 7 tests, **dos no estaban
+   cubiertos** y los migré a `test_ckm_landscape_config_ciclos.py`:
+   `test_identidades_dos_configs_sobre_la_misma_W` y `test_el_w_version_id_cambia_con_W`.
+   El de `theta_W_formula` se fue con la fórmula, por criterio.
+2. **Los que usaban V1 como herramienta migraron:** `test_gatekeeper_c1.py` a
+   `medido(W)` —sólo necesitaba los μ_W— y `test_rebuild_consulta_w_version.py` a
+   `CKMlandscapeConfig.create` + `ciclo_vigente.w_version_id`.
+3. **`experiments/replay_sesion_trust.py`** migrado, y **dejó de imprimir θ_W**. Se
+   fueron también las constantes `THETA_W_NO_USADO` y `SCALE_NO_USADO`.
+4. **`P1P4/run_conteo_vs_masa_04oct/conteo_vs_masa.py` no se tocó.**
+5. **`CKMlandscapeConfigV1` borrada.** El módulo baja de 480 a 398 líneas y ya no
+   exporta nada de v1. `grep` de `CKMlandscapeConfigV1` en código: cero.
+6. **`theta_W_formula` salió**, y la referencia del docstring de `gatekeeper_c1.py` se
+   actualizó: ahora **enuncia la pregunta abierta ahí** —la propiedad que la fórmula
+   tendría que cumplir— en vez de apuntar a un método que no existe. La pregunta no se
+   perdió al borrar el stub.
+7. **Entrada al CHANGELOG**, bajo `Unreleased`. Ver P8.
 
-### `iap_chatroom/ckm_monitor.py`
-
-`CKMMonitor` construye **`CKMlandscapeConfig(sampling_mode="uniform")` sin W** y se la
-pasa a `MonitorService`. Sin θ_W ni `scale` (opción iv de delamor). El primer ciclo lo
-abre Monitor en su primera evaluación.
-
-### Tests
-
-- **`tests/test_monitor_abre_ciclos.py`** — nuevo, 13 tests. **12 de los 13 fallan sin
-  el CP2** (medido restaurando `202488a` y volviendo a correr). El que pasa es el
-  control sin config, que debe pasar.
-- **`tests/test_landscape_config_en_runs.py`** — migrado a la config nueva. Es el único
-  test que cambió por el CP2, y cambió porque Monitor ya no recibe la clase congelada.
-  Lo que verificaba se sigue verificando; lo que cambió está declarado en la bandeja.
-- **Suite completa: 227/227.**
+**Suite: 220/220.** Bajan los 9 del archivo borrado y suben los 2 migrados.
 
 ## Qué espera, y de quién
 
-- **Una pregunta nueva, NO BLOQUEA: P7** — la causa no siempre es derivable contra la
-  config, porque el ciclo no guarda las etiquetas (consecuencia de P5, que nadie vio al
-  aceptarla). Default declarado: causa `"W_distinta"`. Ver bandeja.
-- **Un hallazgo que no es pregunta:** en el canal vivo la config va a tener **un solo
-  ciclo**, el bootstrap, porque `CKMMonitor` usa `rebuild_suspendido=True`. D4 queda
-  cableado y sin nada que abrir hasta que alguien levante la suspensión. Medido.
+- **P8, NO BLOQUEA:** bajo qué versión va la entrada del CHANGELOG. Su última versión
+  es **v30 — July 2026** y los informes de trabajo van por **v32**, así que el archivo
+  está atrás y no invento un número. Default declarado: `Unreleased`. Ver bandeja.
+- **Nada más.** P1–P7 respondidas, sin defaults vigentes sin decisión.
 
 ## Próximo paso
 
-**CP3 — los demás consumidores, y v1 sale.** No empezado.
-Lo que queda para el CP3, ya relevado: `gatekeeper_c1.py` no tiene nada que migrar (P2);
-`experiments/replay_sesion_trust.py` y los cuatro tests apuntan a `CKMlandscapeConfigV1`
-y hay que decidir si migran o si se van con ella; `P1P4/.../conteo_vs_masa.py` no se
-toca; borrar `CKMlandscapeConfigV1` y entrada al CHANGELOG.
+**La TASK está cerrada.** No quedan CPs.
+
+Lo que sigue en la fila, ya escrito y fuera de esta TASK:
+- `TASK_monitor_coco_ciclo_orbita_v1` — que COCO renazca con el ciclo. Es lo que esta
+  TASK dejó explícitamente afuera, y ahora tiene de dónde leer el ciclo.
+- `TASK_canal_iap_clock_iniciativa_v1` — el CLOCK, que es de dónde podría venir el
+  `t_senal` que hoy queda nulo, y con él la deriva de I6.
 
 ## Nada quedó a medias
 
-El CP2 se cerró entero: código, canal, tests y suite completa, en un solo commit.
+El CP3 se cerró entero en un solo commit: migraciones, borrado, CHANGELOG, y la suite
+completa en verde.

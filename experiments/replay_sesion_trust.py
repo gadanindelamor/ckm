@@ -117,13 +117,14 @@ def paso_A(tramo_id: str = None) -> dict:
 # corpus de coordinación, no de debate, y ahí los marcadores de oposición
 # funcionan como conectores — paper v26 §5.1, REG_unidad_texto §5.
 
-THETA_W_NO_USADO = 0.0      # el Gatekeeper no participa en este run
-SCALE_NO_USADO   = "log"    # declarativo: nadie lo lee (verificado en el repo)
+# theta_W ya no es campo de la config: salió al Gatekeeper, que no participa
+# en este run (CP3 de TASK_CKMlandscapeConfig_v3). scale tampoco se declara:
+# por I4, lo declarado se exige según quién lo usa, y acá no lo usa nadie.
 
 
 def construir_W(originales: list, top_k: int, tramo_id: str):
     from corpus_service import CorpusService
-    from ckm_landscape_config import CKMlandscapeConfigV1
+    from ckm_landscape_config import CKMlandscapeConfig
 
     textos = [t["texto"] if isinstance(t, dict) else t.texto for t in originales]
     estado = PRIV / f"corpus_state_{tramo_id}_k{top_k}.json"
@@ -136,9 +137,7 @@ def construir_W(originales: list, top_k: int, tramo_id: str):
     W, nodos = c.get_W(), c.get_nodes()
     cfg = None
     if W is not None:
-        cfg = CKMlandscapeConfigV1.from_W(W, theta_W=THETA_W_NO_USADO,
-                                        sampling_mode="uniform",
-                                        scale=SCALE_NO_USADO)
+        cfg = CKMlandscapeConfig.create(W, sampling_mode="uniform")
     return W, nodos, cfg, c
 
 
@@ -157,12 +156,13 @@ def paso_C1(tramo_id: str, top_k: int):
     print(f"  nodos: {nodos}")
     print(f"  densidad {float((u != 0).mean()):.3f} · negativos {int((u < 0).sum())} "
           f"· pares distintos {int((u != 0).sum())} de {len(u)}")
-    print(f"  mu_W_nonzero {cfg.mu_W_nonzero:.4f} · mu_W_global {cfg.mu_W_global:.4f}")
-    print(f"  beta_c_nonzero {cfg.beta_c_nonzero:.4f} · beta_c_global {cfg.beta_c_global:.4f}")
-    print(f"  sha256(W) = {cfg.w_version_id}")
+    ciclo = cfg.ciclo_vigente
+    print(f"  mu_W_nonzero {ciclo.mu_W_nonzero:.4f} · mu_W_global {ciclo.mu_W_global:.4f}")
+    print(f"  beta_c_nonzero {ciclo.beta_c_nonzero:.4f} · beta_c_global {ciclo.beta_c_global:.4f}")
+    print(f"  sha256(W) = {ciclo.w_version_id}")
     print(f"  config_id = {cfg.config_id}")
-    print(f"  theta_W {cfg.theta_W} (NO USADO) · sampling_mode {cfg.sampling_mode} "
-          f"· scale {cfg.scale} (NO USADO)")
+    print(f"  sampling_mode {cfg.sampling_mode} · ciclo \"{ciclo.causa}\" "
+          f"(1 de {len(cfg.ciclos)})")
     reg = getattr(c, "_registro_borde", [])
     if reg:
         emp = [d for d in reg if abs(d["distancia_al_corte"]) <= 1e-12]
@@ -212,7 +212,8 @@ def paso_C3(tramo_id: str, top_k: int):
     occ = ocupacion(proy)
     act = [p["activados"] for p in proy]
 
-    print(f"tramo {tramo_id} · N {len(nodos)} · sha256(W) {cfg.w_version_id[:16]}…")
+    print(f"tramo {tramo_id} · N {len(nodos)} · "
+          f"sha256(W) {cfg.ciclo_vigente.w_version_id[:16]}…")
     print(f"\nnodos activados por respuesta (de {len(nodos)}):")
     for p in proy:
         print(f"  resp {p['i']} · {p['palabras']:4d} palabras · {p['activados']:2d} activos "

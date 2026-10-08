@@ -495,3 +495,85 @@ protocolo sin §8 — es decir, no habría listado las preguntas abiertas.
 
 **Lo que esta sesión hace distinto:** el `ARRANQUE` va a la bandeja **antes** de tocar el CP3,
 y con su propio commit.
+
+---
+
+## REPORTE CP3 — 2026-10-08 00:18 UTC
+
+*TASK `TASK_CKMlandscapeConfig_v3.md` §3.CP3, sobre `079df6c`, rama `code/trabajo`.
+Ejecutado según el criterio de `DECISIONES_opus.md` L47.*
+
+**La TASK queda cerrada.** No quedan CPs.
+
+### Punto por punto, contra el criterio
+
+**1. El test de V1 se fue con V1 — pero verifiqué la cobertura antes**, que era la condición.
+De sus 7 tests:
+
+| test de V1 | ¿estaba cubierto en los de ciclos? |
+|---|---|
+| `test_mu_W_ambas_formas` | sí — `test_medido_coincide_con_los_valores_declarados` |
+| `test_beta_c_global_coincide_con_coco` | sí — mismo nombre |
+| `test_parametros_obligatorios` | sí, con la semántica nueva: `sampling_mode` obligatorio, `scale` opcional, θ_W ya no existe |
+| `test_json_roundtrip` | sí — `test_serializacion_completa_recarga_igual` |
+| `test_theta_W_formula_no_implementada` | se va con la fórmula, por criterio |
+| **`test_identidades`** | **no** → migrado |
+| **`test_w_version_id_cambia_con_W`** | **sólo implícito** → migrado explícito |
+
+Los dos últimos están ahora en `test_ckm_landscape_config_ciclos.py` como
+`test_identidades_dos_configs_sobre_la_misma_W` y `test_el_w_version_id_cambia_con_W`.
+**Sin esa verificación se habrían perdido dos casos**, y el criterio pedía exactamente eso.
+
+**2. Los que usaban V1 como herramienta migraron.**
+`test_gatekeeper_c1.py` sólo necesitaba los μ_W, así que va a **`medido(W)`** y no construye
+ninguna config: es lo medido de W, no un contrato. `test_rebuild_consulta_w_version.py` sólo
+necesitaba el sha, así que va a `CKMlandscapeConfig.create` + `ciclo_vigente.w_version_id`.
+Los dos archivos: **16/16**.
+
+**3. `experiments/replay_sesion_trust.py`** migrado a `create`, y **dejó de imprimir θ_W**.
+Se fueron también sus dos constantes `THETA_W_NO_USADO` y `SCALE_NO_USADO`, que ya no tienen
+a quién declararle nada. Imprime el ciclo vigente en lugar de los campos sueltos. **No lo
+ejecuté:** lee de `process/replay/_private/`, que no se commitea y no está acá. Verifiqué
+sintaxis con `ast.parse`, no comportamiento. Queda declarado.
+
+**4. `conteo_vs_masa.py` no se tocó.**
+
+**5. `CKMlandscapeConfigV1` borrada.** El módulo pasa de 480 a 398 líneas.
+`grep -rn "CKMlandscapeConfigV1"` sobre `*.py` y `*.md`: **cero en código**. Las únicas
+menciones que quedan son en `docs/tasks/` y en esta bandeja, que son traza.
+
+**6. `theta_W_formula` salió, y la pregunta abierta no se fue con ella.** El criterio decía
+"se actualiza la referencia" del docstring de `gatekeeper_c1.py`. Hice algo un poco más que
+eso, y lo declaro: en vez de apuntar a un método que ya no existe, el docstring **enuncia la
+pregunta ahí** — que la fórmula sigue abierta, y la propiedad que tendría que cumplir (con la
+normalización de W declarada, al menos el núcleo A pasa C1). Si sólo hubiera corregido la
+referencia, borrar el stub se habría llevado el único lugar del código donde constaba que θ_W
+no tiene fórmula.
+
+**7. CHANGELOG:** entrada agregada. Ver P8.
+
+### Suite
+
+**220/220.** Bajan los 9 del archivo borrado y suben los 2 migrados (227 − 9 + 2 = 220).
+
+### Un desvío mío, el mismo de ayer
+
+Al preparar el commit usé `git add -A tests/` otra vez y volvió a arrastrar
+**`tests/run_tests.sh`**, que está sin trackear a propósito. Lo saqué del staging **antes** de
+commitear, así que esta vez no llegó al repo. Ayer sí llegó y hubo que revertirlo (`cda1ecd`).
+Es el segundo caso del mismo reflejo: `add -A` sobre un directorio en vez de nombrar archivos.
+
+---
+
+## PREGUNTA P8 — NO BLOQUEA — 2026-10-08 00:18 UTC
+
+**¿Bajo qué versión va la entrada del CHANGELOG?**
+
+`CHANGELOG.md` tiene como última versión **`v30 — July 2026`**, y los informes de trabajo van
+por **v32** (`docs/work_reports/CKM_Informe_Trabajo_v32.md`). El archivo está atrás, y no hay
+sección para lo no publicado. Poner un número de versión es decidir dónde está el proyecto, y
+no me corresponde.
+
+**Default declarado y reversible:** la entrada va bajo **`## Unreleased`**, arriba de v30, y
+escrita en **inglés** para no romper el idioma del archivo. Revertir: cambiar el encabezado
+por el número que corresponda, que es mover una línea.

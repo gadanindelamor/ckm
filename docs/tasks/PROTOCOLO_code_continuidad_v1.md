@@ -128,3 +128,30 @@ Cada lado tiene una relación propia:
 - **Al leer la bandeja, Opus responde todos los `Pn` nuevos**, aunque sea "aceptado". El silencio de Opus no cuenta como aceptación.
 
 *Estado al escribir esto: P1–P7 están en la bandeja y las siete tienen respuesta en DECISIONES. La tríada está cerrada, y queda escrito para que siga así.*
+
+## 9. Los pasos que faltaban: Opus y delamor
+
+*8 oct 2026. delamor: "se están salteando pasos en el protocolo". El protocolo detallaba los pasos de Code y dejaba implícitos los de Opus y los de delamor. Hoy eso costó dos commits de Opus: estaban sin push en el clon local, se corrió un `reset --hard origin/main` pensado para otra máquina y se perdieron. Se recuperaron del reflog.*
+
+### 9.1 Opus, al arrancar cada sesión (en el clon local de delamor)
+
+1. `git fetch --prune origin` y `git status -sb`. Anotar si `main` está **adelante** de GitHub, es decir, si tiene commits de Opus sin push.
+2. `git reflog -5`. Ver si algún commit de Opus quedó fuera de la rama (un reset, un pull). Si pasó, se recupera **antes** de seguir.
+3. Locks en `.git`. Si los hay y no hay ningún git corriendo, se borran. Si falta el permiso de borrado, se pide.
+4. Leer las entradas nuevas de la BANDEJA y responder **cada** `Pn` (§8).
+
+### 9.2 Opus, al cerrar cada intervención
+
+1. Commit nombrando los archivos.
+2. **Decirle a delamor exactamente qué falta subir, cuántos commits, y en qué máquina se corre cada comando.**
+3. **Nunca mezclar** en un mismo bloque comandos para Windows y para el Codespace. Cada bloque lleva su máquina en el título.
+4. Verificar con `fetch` que el push llegó. Hasta que llega, lo de Opus **no existe para Code**.
+
+### 9.3 delamor
+
+- Su paso es uno solo: subir lo de Opus. Lo puede hacer con `git push origin main` o con `tools/sync_main.ps1`.
+- Los comandos de la otra máquina no se corren acá. Si un bloque no dice en qué máquina va, se pregunta.
+
+### 9.4 Code
+
+- Sin cambios: §2 al arrancar y §4 al cerrar cada CP. Con una sola rama: `git pull --rebase origin main` antes de trabajar y antes de cada push.

@@ -655,3 +655,264 @@ orden real de la bandeja es el de los commits, no el de los encabezados.
 
 Para los próximos: la hora se lee con `date -u` **en el momento de escribir la entrada**, no
 al arrancar la sesión.
+
+---
+
+## REPORTE CP0 — 2026-10-08 01:46 UTC
+
+*TASK `TASK_monitor_coco_ciclo_orbita_v2.md` §2.CP0, sobre `6152c71`. Leído §0b primero, como
+pidió delamor. Sin código: todo lo de acá es lectura del repo o demostración.*
+
+### 1. Usos de `relax` de una sola fase — hay dos vivos, y uno no estaba en la lista
+
+`relax()` **es** `relax_orbit(...)[3]`: la fase que cae en `max_iter`.
+
+| sitio | fase u órbita | ¿vivo? |
+|---|---|---|
+| **`monitor_service.py:168`** `self._relax(sigma_prompt, W+Δ_r)` | **una fase** | **SÍ, y es el principal** |
+| `landscape_engine.py:284`, en **`mean_cS`** | **una fase** | **SÍ** — COCO la llama en L299 y L309 |
+| `landscape_engine.py:258`, en `deprecated_count_attractors` | una fase | **no** — nadie la llama |
+| `landscape_engine.py:314`, en `basin_masses` | órbita | sí — es el camino de N_eff y D_ckm |
+| `landscape_engine.py:362/376`, en `basin_distance` | órbita | sí |
+| `monitor_service.py:409` `_relax_orbit` | órbita | **definido y nunca llamado** |
+| `coco.py:591` `_relax_orbit` y `coco.py:595` `_relax` | — | **los dos definidos y nunca llamados** |
+
+**Lo que esto corrige de la TASK.** El CP0 pregunta por `landscape_engine` L258 y L284. De
+esas dos, **L284 alimenta algo vivo y L258 no**. Pero el uso de una sola fase que más pesa
+**no está en `landscape_engine`: es `monitor_service.py:168`**, que es de donde salen
+`rejected` → `Δ_r_pares`, `c_S`, `fabrication_index` y `activos_relajado`. Es el que la §0 de
+la TASK describe en prosa; lo agrego a la tabla para que quede ubicado por archivo y línea.
+
+**Y el camino de D_ckm ya está sobre la órbita.** `count_attractors` es
+`n_eff(basin_masses(...))`, y `basin_masses` agrupa por `relax_orbit`. Así que de las
+cantidades del panel, **N_eff y D_ckm ya no dependen de la paridad**; las que sí dependen son
+`c_S`, `n_rejected_pairs`, `rechazados`, `fabrication_index` y `Δ_r`. Eso acota qué puede
+moverse en el CP1.
+
+### 2. `relax(−σ) = −relax(σ)` — demostrada, no corrida
+
+El paso síncrono es `h = W @ s`, `T(s) = where(h>0, +1, where(h<0, −1, s))`.
+
+**T(−s) = −T(s)**, componente a componente. `W @ (−s) = −(W @ s) = −h`, y entonces:
+
+| caso | `T(s)ᵢ` | `(−h)ᵢ` | `T(−s)ᵢ` | ¿= −T(s)ᵢ? |
+|---|---|---|---|---|
+| hᵢ > 0 | +1 | < 0 | −1 | sí |
+| hᵢ < 0 | −1 | > 0 | +1 | sí |
+| **hᵢ = 0** | **sᵢ** | = 0 | **(−s)ᵢ = −sᵢ** | **sí** |
+
+**El empate es donde la identidad se gana o se pierde.** La regla GOLES —`h = 0` conserva
+`σᵢ`— es lo que la hace valer. Con la convención alternativa (`h=0 → +1`) el tercer caso daría
+`+1` en los dos lados y la identidad se rompería en todo nodo con campo nulo. Es la misma
+regla que el paper declara como premisa del instrumento (§4.2) y la misma del desempate de
+nodos.
+
+**Fase a fase.** Por inducción, `Tᵗ(−σ) = −Tᵗ(σ)` para todo `t ≥ 0`. En `relax_orbit`:
+
+- las colisiones de `visto` caen en los **mismos pasos**, porque `s_a = s_b ⟺ −s_a = −s_b`;
+- entonces `prev`, `per` (el período) y `cola` son **idénticos**, y también el índice
+  `idx = prev + ((max_iter − prev) % per)`;
+- `órbita(−σ) = { −x : x ∈ órbita(σ) }`, con el mismo período;
+- `seq[idx]` del lado de `−σ` es exactamente `−seq[idx]`, así que
+  **`relax(−σ) = −relax(σ)` para cualquier `max_iter`**, y la fase elegida es la negación de la
+  fase correspondiente, no otra fase.
+
+**Lo que la identidad NO dice**, y conviene no confundir: no dice que la órbita sea simétrica
+bajo negación, o sea que `−x` esté en la *misma* órbita que `x`. Dice que la trayectoria desde
+`−σ` es la negación de la trayectoria desde `σ`. Para ρ* = 0.5 alcanza con eso: el muestreo de
+`σ₀` uniforme sobre `{−1,+1}^N` es invariante bajo negación, así que la medida inducida sobre
+órbitas también lo es.
+
+**Condiciones que declaro** (sin ellas la demostración es sobre los reales, no sobre el
+código): la negación en IEEE-754 es exacta (es un bit de signo), y el redondeo a par más
+cercano es simétrico respecto de cero, así que `Σ(−xᵢ) = −Σ(xᵢ)` **bit a bit** siempre que el
+orden de suma sea el mismo — y lo es, porque las formas y los strides son idénticos. Si alguna
+vez el producto se hiciera con una reducción cuyo orden dependiera de los valores, esto habría
+que volver a mirarlo.
+
+### 3. Usuarios de `corpus.coco` — cuatro, y uno está vivo
+
+| sitio | qué usa | estado |
+|---|---|---|
+| **`iap_chatroom/ckm_monitor.py:104`** | **sólo `landscape_history()`** | **vivo** |
+| `iap_chatroom/tests/test_armstrong_via_corpus_v3.py` (L34-48, 75) | el COCO entero, como `thermostat` | traza Armstrong — **no se modifica** |
+| `iap_chatroom/tests/test_armstrong_n_runs_sweep.py:73` | como `thermostat` | traza Armstrong — **no se modifica** |
+| `experiments/coco_lifetime_analytics.py` (L122, 138, 140, 221) | las dos instancias, para medir la divergencia | es el instrumento que la reproduce |
+
+**Dos cosas medidas que importan para el CP4:**
+
+- La línea viva es **L104, no L93** como dice la TASK. El corrimiento lo produjo mi propio CP2
+  de la Config v3, que agregó el bloque de la Config en `__init__`. Lo digo para que la
+  referencia quede exacta.
+- **Lo único que el canal le pide a `corpus.coco` es `landscape_history()`**, no el COCO. Así
+  que cuando CorpusService lo suelte, lo que hay que reemplazar es de dónde sale ese historial
+  —y eso enlaza con el punto 2 del CP3 (`landscape_history` a través del salto), que es de
+  delamor. No es un reemplazo mecánico de `corpus.coco` por `monitor._thermostat`.
+- `test_armstrong_via_corpus_v3.py:37` hace `corpus._coco = COCO(...)`: **escribe el privado**
+  para forzar `seed=123`. Si `_coco` deja de existir, ese test deja de correr tal cual. Es
+  traza y no se toca, así que al sacarlo hay que declarar que queda histórico y por qué.
+
+### 4. Configuración de COCO al renacer — hoy no es la misma, y la diferencia es grande
+
+| | Monitor | COCO (como lo crea Corpus) |
+|---|---|---|
+| **n_runs** | **1000** (`n_runs_attractors`, `monitor_service.py:74`) | **80** (`coco.py:146`) |
+| seed | 0 (`count_seed`) | 0 |
+| sampling_mode | "uniform" | "uniform" |
+| n_warmup | None | None |
+| track_landscape | — | **True** (`corpus_service.py:295`) |
+| gamma | — | 0.01 |
+
+**Monitor cuenta con 1000 muestras y COCO con 80, sobre el mismo campo.** Y 1000 no es un
+número cualquiera: el docstring de Monitor dice que es el valor donde N_eff converge en los
+casos IAP (±2% de 5000) y que **con 50 quedaba 5–20% por debajo**. O sea que el N_eff de COCO,
+con 80, está en la zona donde el propio proyecto midió que no converge.
+
+El `CKMMonitor` del canal no pasa `n_runs_attractors`, así que usa el default 1000.
+
+**Esto no es una pregunta sobre dónde guardar un parámetro: es que los dos aspectos de la misma
+cosa miden con muestreos distintos.** Si van a nacer y morir juntos, cuál de los dos n_runs
+queda es una decisión, no un default heredado. Va en **P9**.
+
+### 5. β — qué acumula y qué muere
+
+`β` no es estado de W: es estado **por device**. `self._rejections_per_device`
+(`coco.py:221`) acumula un `fi` por evaluación (`register_device_eval`, L367-371), `beta_i`
+lee esa lista y `beta_collective` (L384) es la **mediana de los β_i activos**.
+
+Entonces, al renacer COCO con el ciclo:
+
+- **el historial de rechazos por device muere con la instancia**, porque vive en el `dict` de
+  esa instancia;
+- `beta_collective()` vuelve a **None** hasta que haya evaluaciones nuevas, y eso es correcto:
+  es el borde que ya está bien resuelto —`temp_signal` devuelve `signal="UNKNOWN"` con
+  `beta_collective` y `ratio` en None (L438-446)—, y es el modelo de cómo debería comportarse
+  el vacío en los otros bordes (punto 8);
+- lo registrado que cita la TASK —*"β no puede persistir si cambia W; muere con el rebuild; el
+  historial por `w_version_id` puede ir como registro"*— es consistente con lo que leo: **β se
+  calcula sobre `fi`, que Monitor produce con W+Δ_r**, así que un β acumulado a través de dos W
+  mezclaría dos campos.
+
+**Nada en el código de hoy conserva β entre instancias de COCO.** Si el historial por
+`w_version_id` va a existir, hay que crearlo; no es algo que esté y haya que preservar.
+
+### 6. Encaje con la Config v3 → **P9**
+
+Lo medido: el `declarado` de la Config es hoy **`sampling_mode`** (obligatorio) y **`scale`**
+(opcional), y nada más — θ_W salió en el CP3. COCO tiene, además de `sampling_mode`:
+`n_runs`, `seed`, `track_landscape`, `n_warmup`, `gamma`, y tres umbrales
+(`d_ckm_threshold`, `alpha_star`, `frac_rec_min`).
+
+`sampling_mode` sale de la Config sin problema: ya está ahí y Monitor ya valida el suyo contra
+él (`monitor_service.py:117`). **Lo que falta decidir es el resto**, y lo reporto sin decidir,
+como pide el punto 6. Va en **P9**, junto con el choque de `n_runs` del punto 4.
+
+COCO leería el ciclo con `ciclo_vigente` (get entero, bajo lock), nunca campo por campo: eso ya
+está construido y no hay nada que agregar.
+
+### 7. Comparabilidad de lo histórico — declarado
+
+- **Los 80 paneles que hay en el repo tienen `thermostat: None`.** `monitor_trajectory.jsonl`
+  (76) e `iap_chatroom/_state/monitor_trajectory.jsonl` (4): **ninguno** tiene COCO. Así que la
+  divergencia de los dos COCO **no está en estos paneles**; está en lo que mide
+  `coco_lifetime_analytics.py` y en lo registrado en `REG_coco_w_congelada_v1`.
+- **Lo que sí está en los 80, y se escribió desde una sola fase:** `n_rejected_pairs`,
+  `rechazados`, `c_S`, `fabrication_index`, `Delta_r_sum`, `activos_relajado`.
+- **`N_eff` y `D_ckm` de esos paneles no dependen de la paridad**, porque ya salen de
+  `basin_masses` (punto 1).
+- El panel viejo del canal (4 líneas) **no tiene** `N_eff`, `N_eff0`, `D_masa_cuencas`,
+  `Delta_r_reset`, `landscape_config`, `condicion_W`, `saturacion` ni `gatekeeper_c1`: es de
+  antes de esas claves. Al comparar con lo nuevo, esas ausencias son de formato, no mediciones
+  faltantes.
+
+### 8. El vacío al dividir — tres bordes vivos, uno latente, y uno que ya está bien
+
+**Vivos, y hay que cambiarlos:**
+
+1. **`coco.py:570-575` `_classify_zone`:** `if D_ckm is None: return "stable"`. El docstring lo
+   justifica: *"sin medición no se aplica STOP"*. El efecto buscado es correcto —no disparar
+   STOP— pero el nombre que le pone es **"stable"**, que es una medición. Es exactamente el
+   patrón de `c06db07`.
+2. **`coco.py:268`:** `frac_rec = A_current / self._A0 if self._A0 > 0 else 1.0`. **La ausencia
+   de baseline se lee como recuperación total**, que es el valor más tranquilizador posible.
+3. **`coco.py:264-265`:** `if self._A0 is None: self._A0 = self._count_attractors(self.W, ...)`.
+   El baseline **se fija en la primera observación**, en silencio. Al renacer con el ciclo, eso
+   es justo lo que hay que mirar: el A0 nuevo se toma de la W nueva en la primera `observe`, y
+   nada en el panel dice que ese ciclo recién empezó.
+
+**Latente, no activo:** `ThermostatState` (`coco.py:114-123`) tiene por defecto
+`D_ckm = 0.0`, `frac_rec = 1.0`, `zone = "stable"`. **Verifiqué que nadie lo construye sin
+argumentos** (los dos usos, `coco.py:335` y el de `process/`, pasan todo), así que hoy no
+produce ningún dato falso. Pero un `ThermostatState()` vacío se lee como campo medido, estable
+y sin divergencia. Lo reporto como latente, no como vivo, porque es la diferencia entre lo que
+pasa y lo que podría pasar.
+
+**Ya está bien, y es el modelo:** `temp_signal` (`coco.py:436-446`) devuelve
+`signal="UNKNOWN"` con `beta_collective` y `ratio` en `None` cuando no hay devices. Y
+`d_ckm`/`d_masa_cuencas` devuelven `None` con `N_eff0 ≤ 1` (`landscape_engine.py:438`,
+`:487`). Los dos nombran el vacío.
+
+**Revisé el borde que la TASK señala en `landscape_engine.py:418`** —
+`(A0 − A_actual)/A0 if A0 > 0 else 0.0` — y **no está vivo**: está en `deprecated_d_ckm`, y el
+único que lo llama es `tests/test_neff_y_frontera.py`, que fija ese borde a propósito
+(`deprecated_d_ckm(3, 0) == 0.0`) como traza de la forma anterior. No lo toco.
+
+`grep` de `max(0` en los tres módulos: una sola aparición, `coco.py:565`
+`ratio = min(1.0, max(0.0, (D_ckm − t)/(1.0 − t)))`, que es un clamp sobre un `D_ckm` que ya se
+sabe no-None en ese punto. No es un vacío disfrazado.
+
+### 9. Tests afectados
+
+| archivo | tests | corre pytest |
+|---|---|---|
+| `tests/test_monitor_services.py` | 36 | sí |
+| `tests/test_coco.py` | 30 | sí |
+| `tests/test_delta_compresiones_coco.py` | 6 | sí |
+| `tests/test_invalidacion_delta_r.py` | 5 | sí |
+| | **77 de los 220** | |
+| `iap_chatroom/tests/test_caso_*.py` | 21 archivos | **NO — 0 recolectados** |
+
+**Los 21 `test_caso_*` del canal no son tests de pytest.** `pytest iap_chatroom/tests/` recoge
+**0 items**: son scripts con `asyncio.run(...)` en `__main__`. Así que **no están en los 220**,
+y un cambio en Monitor o COCO puede romperlos sin que la suite diga nada. Lo declaro porque el
+punto 9 los lista como "afectados" y conviene que quede claro que esa cobertura no existe
+automáticamente.
+
+### Lo que este CP0 NO hizo
+
+- No corrí nada de lo que se puede demostrar: el punto 2 es una demostración, y la identidad no
+  se verificó numéricamente a propósito.
+- No corrí `coco_lifetime_analytics.py`: eso es el CP1.
+- No conté los 56 incrementos negativos: están registrados y su reproducción es del CP1.
+- No toqué `services/`.
+
+---
+
+## PREGUNTA P9 — **BLOQUEA** — 2026-10-08 01:46 UTC — **[delamor]**
+
+**Con qué configuración nace COCO, y dónde se declara.** El punto 6 del CP0 pide reportarlo sin
+decidir; el punto 4 encontró que hoy no hay una sola configuración, sino dos que no coinciden.
+
+**Lo medido:** Monitor cuenta con **n_runs = 1000** y el COCO que crea Corpus con **n_runs = 80**,
+sobre el mismo campo. El propio docstring de Monitor dice que 1000 es donde N_eff converge en
+los casos IAP (±2% de 5000) y que **con 50 quedaba 5–20% por debajo**. Con 80, el N_eff de COCO
+cae en esa zona.
+
+**Lo que hace falta decidir:**
+
+1. **Qué `n_runs` queda** cuando Monitor y COCO son una sola existencia. No hay default que
+   herede: elegir uno cambia el N_eff de COCO —y con él `frac_rec`, la zona y el STOP— o cambia
+   el costo de cada evaluación de Monitor.
+2. **Qué de COCO va a la Config como `declarado`** y qué queda en su propia configuración.
+   `sampling_mode` ya está en la Config. Los candidatos son `seed`, `n_runs`,
+   `track_landscape`, `n_warmup`, `gamma` y los tres umbrales (`d_ckm_threshold`,
+   `alpha_star`, `frac_rec_min`).
+3. **Si los umbrales son `declarado` o son calibración**, que es un proceso aparte por D6 de la
+   Config v3.
+
+**Por qué BLOQUEA, y dónde:** bloquea el **CP2**, que es donde Monitor pasa a recibir una
+configuración de COCO en vez de una instancia. **No bloquea el CP1**, que mide lo que hoy se
+rompe sin cambiar `services/`. Si se contesta antes del CP2, no frena nada.
+
+**No propongo un default**, porque elegir el `n_runs` cambia lo que el instrumento mide, y eso
+es E3.

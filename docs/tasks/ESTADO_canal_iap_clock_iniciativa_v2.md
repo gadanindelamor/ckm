@@ -11,7 +11,12 @@
 
 ## Último CP cerrado
 
-**CP0b — freeze de la serie IAP.** Cerrado el 2026-10-08.
+**CP1 — el CLOCK del canal.** Cerrado el 2026-10-08. Suite **304/304**, cinco inversiones.
+El canal genera los ticks con su reloj de pared UTC, la Config los registra, y cada tiempo
+declara su procedencia. **La inversión 10 no rompía**: nada protegía que el reloj del canal
+fuera el que sella los mensajes. Cerrado con dos tests nuevos.
+
+Antes: **CP0b — freeze de la serie IAP.** Cerrado el 2026-10-08.
 Copia en `process/iap_series_freeze_20261008/` (67 archivos, 620 KB), verificada por `diff`.
 **Los originales no se tocaron**: `git status` sobre `iap_chatroom/` y `registers/` da vacío.
 
@@ -21,16 +26,24 @@ aceptado en `2ad873e`.
 
 ## Qué espera, y de quién
 
-- **El CLOCK — E3, [delamor]:** dónde vive y de qué reloj se sella cada tiempo. **El CP1 no
-  arranca sin esa respuesta.**
+- **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.
+- Sin implementar hasta el OK de delamor: **el criterio local sin LLM** y **WAIT** (TASK §1).
 
 ## Próximo paso
 
-**CP1 — el CLOCK del canal, sin cambiar a los devices.** Bloqueado por el E3.
-
-`trigger_mode="on_message"` sigue siendo el modo del canal vivo: el freeze lo congeló, pero
-sacarlo es el CP1/CP2 y no se tocó.
+**CP2 — el ODA continuo.** Lo que trae, y está registrado:
+- el ciclo deja de dispararse por mensaje (`trigger_mode` sale del canal vivo);
+- **requisito registrado por Opus:** el `since` sale de timestamps del canal, **nunca** de
+  `time.time()` del device, con un test que pueda fallar. Hoy sigue saliendo del device;
+- el costo se decide ahí: con N=2 y T=60 s, el continuo da 60 a 120 llamadas contra 2 a 20.
 
 ## Base
 
-`b30dddd`. Suite al arrancar: 284/284.
+`eb32605`. Suite al arrancar 284/284, al cerrar el CP1 **304/304**.
+
+## Nada quedó a medias
+
+El CP1 se cerró entero. `grep -c INVERSION` sobre `channel.py`, `ckm_landscape_config.py`,
+`monitor_service.py` y `ckm_monitor.py` → 0, 0, 0, 0.
+Y la diferencia 64/67 del CP0b quedó resuelta con nombre: eran **6** `.pyc` de
+`providers/__pycache__/`, borrados; la carpeta quedó en 62 y 62.

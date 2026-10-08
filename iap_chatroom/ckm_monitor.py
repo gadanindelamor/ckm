@@ -30,6 +30,8 @@ from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
 from node_extractor import NodeExtractorService  # noqa: E402
 
+from iap_chatroom.channel import ChatChannel  # noqa: E402
+
 _STATE_DIR = Path(__file__).resolve().parent / "_state"
 _STATE_DIR.mkdir(exist_ok=True)
 
@@ -109,6 +111,11 @@ class CKMMonitor:
         """Callback registrado en ChatChannel.add_callback."""
         # El historial del paisaje sale del COCO de Monitor, no de Corpus
         # (CP4). Por la decisión 2(b), un COCO recién nacido lo tiene vacío.
+        # El CLOCK del canal entra a la observación. El canal lo genera con su
+        # propio reloj; Monitor lo anota en la Config (CP1, decisión de delamor).
+        # get_clock() además registra el tick, con o sin mensajes: el silencio
+        # queda como dato aunque nadie publique.
+        clock = ChatChannel().get_clock()
         th = self._monitor.thermostat
         signal = th.landscape_history() if th is not None else None
         sha_before = self._corpus.w_sha()
@@ -126,7 +133,9 @@ class CKMMonitor:
             self._ciclos_sin_rebuild += 1
 
         if self._message_count >= self._corpus.min_texts:
-            self._last_panel = self._monitor.evaluate(message.text, device_id=message.device_id)
+            self._last_panel = self._monitor.evaluate(
+                message.text, device_id=message.device_id, clock=clock
+            )
             d_ckm = self._last_panel.get("D_ckm") if self._last_panel else None
             if d_ckm is not None:
                 self._d_ckm_history.append(d_ckm)

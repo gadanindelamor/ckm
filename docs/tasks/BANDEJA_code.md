@@ -2050,3 +2050,204 @@ delamor sobre el CLOCK** (E3).
 - **Si falta algo que la serie usó y no supe nombrar.** Copié lo que la TASK lista y lo que
   encontré; lo que no esté nombrado, no está.
 - **El chat**, **el estado del Codespace fuera de git** y **el clon local de delamor**.
+
+---
+
+## ARRANQUE — 2026-10-08 23:36 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8.*
+
+### Revisé
+
+1. **Locks.** Ninguno. **`git pull --rebase`** limpio; HEAD en `eb32605`. **`git status`** sin
+   nada modificado.
+2. **`ESTADO_canal_iap_clock_iniciativa_v2.md`** → último CP cerrado: **CP0b**. No decía
+   "en curso": la sesión anterior cerró entera.
+3. **`DECISIONES_opus.md`** → leídas `f07a9dc` (el CLOCK, E3) y `eb32605` (CP0b aceptado, CP1
+   habilitado).
+4. **Tests.** Suite: **284/284** al arrancar.
+
+### Preguntas abiertas
+
+**Ninguna. P1–P10 respondidas.** La próxima es **P11**.
+
+### Encontró — la diferencia 64/67 del CP0b, con nombre
+
+**Mis dos números estaban mal, y los de Opus bien.** Lo medido:
+
+- **68** archivos en disco al terminar el CP0b. Mi "67" era un conteo **viejo**: lo tomé
+  **antes** de escribir el README, y después lo reporté como si fuera el final.
+- **62** trackeados por git.
+- **64** archivos en el commit `db4c147` = esos 62 **+ `BANDEJA_code.md` + el ESTADO**, que no
+  están en la carpeta del freeze. El número de Opus era correcto y contaba lo que dijo que
+  contaba.
+
+**Los 6 archivos de la diferencia, con nombre** — todos de
+`process/iap_series_freeze_20261008/providers/__pycache__/`:
+
+```
+__init__.cpython-312.pyc
+anthropic_provider.cpython-312.pyc
+base.cpython-312.pyc
+gemini_provider.cpython-312.pyc
+groq_provider.cpython-312.pyc
+openai_provider.cpython-312.pyc
+```
+
+No entraron porque `.gitignore` excluye `__pycache__`. **Los arrastró mi `cp -r
+iap_chatroom/providers`**: no fue una decisión, fue un efecto. **Los borré de la copia.** Son
+bytecode derivado, no condición nombrable, y están en una carpeta cuyo sentido es ser una copia
+fiel y nombrable. La carpeta queda en **62 en disco y 62 trackeados**, sin diferencia.
+
+**Y la aritmética que no cerraba era de a tres por una razón que importa:** yo dije "67 contra
+64, faltan 3". No faltaban 3: eran **6**, y la cuenta sólo parecía cerrar porque mi 67 estaba
+mal. Dos números equivocados que se compensaban.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider no corren. Punto ciego declarado, y esta
+  TASK toca el canal.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`test_armstrong_via_corpus_v3.py:34`**, roto por el CP4 a sabiendas.
+
+---
+
+## REPORTE CP1 — el CLOCK del canal — 2026-10-08 23:36 UTC
+
+*TASK §2.CP1. Las tres decisiones de delamor (8 oct, E3). **No toqué `trigger_mode` ni el
+`since` del device: eso es el CP2.***
+
+### Qué quedó
+
+**`iap_chatroom/channel.py` — el canal genera (decisión 1).**
+
+- `_ahora()`: **el reloj del canal, una sola fuente.** Es `datetime.now(timezone.utc).timestamp()`
+  — el mismo de donde sale el ISO del mensaje. No es `time.time()` ni `time.monotonic()`.
+- `tick()`: **se deriva del reloj, no se incrementa.** `int((_ahora() − _t0) // TICK_PERIODO_S)`.
+  Por eso avanza aunque nadie publique **y aunque nadie pregunte**: no hay contador que dependa
+  de que alguien lo mueva.
+- `get_clock()`: devuelve `{tick, t, reloj, periodo_s, t0}` y **registra el tick observado, con
+  o sin mensajes**. Un tick sin mensajes es una entrada del log: eso es el silencio como dato.
+  El log es **de ticks, no de consultas** — preguntar cinco veces en el mismo tick registra una.
+- `TICK_PERIODO_S = 1.0`, **declarado, no calibrado**. Los umbrales de decisión son de
+  Calibración y no viven acá.
+- `Message` gana **`tick`** y **`reloj`** (decisión 3), con defaults `-1` y `"desconocido"` para
+  que los `Message` sin ellos —los JSONL históricos— sigan construyéndose.
+
+**`iap_chatroom/mcp_server.py` — la tool.** `get_clock()` devuelve lo del canal. Su docstring
+dice que **no calcula nada por el device**: ni Δt, ni "ticks sin mensajes", ni "quién habló
+último". Eso es fase D.
+
+**`services/ckm_landscape_config.py` — la Config registra (decisión 2).**
+`registrar_tick(tick, reloj)`, con las properties `tick` y `tick_reloj`, bajo el mismo `RLock`
+que el resto. **La Config no llama al canal ni lo conoce**: entra un número que alguien trajo.
+Sin canal, `tick` es **None** — que es UNKNOWN, no 0. El `panel()` lo lleva con su reloj.
+
+**`services/monitor_service.py` — Monitor lo trae.** `evaluate(..., clock=None)` lo anota en la
+Config. **Monitor registra, no genera.** Sin `clock` —los runs de `experiments/` y los tests, que
+no tienen canal— el tick queda en None.
+
+**`iap_chatroom/ckm_monitor.py` — el canal se lo pasa.** `on_message` llama a
+`ChatChannel().get_clock()` y se lo da a `evaluate`. Así el tick queda registrado **con o sin
+mensajes**, porque `get_clock()` registra al ser llamado.
+
+**La dependencia no se invierte**, y hay un test que lo fija leyendo el fuente: `channel.py` no
+nombra ni importa la Config.
+
+### Las cinco inversiones
+
+```
+=== INVERSION 9 — el tick se incrementa en lugar de derivarse del reloj
+    cambio: tick() cuenta consultas en vez de (ahora − t0) // periodo
+    invertido  -> FAILED test_el_tick_sale_del_mismo_reloj_que_sella_los_mensajes
+                  FAILED test_dos_consultas_en_el_mismo_tick_registran_una
+                  FAILED test_la_tool_get_clock_devuelve_lo_del_canal
+                  3 failed, 299 passed
+    restaurado -> 302 passed
+
+=== INVERSION 10 — el tick sale de otro reloj (time.monotonic)
+    cambio: _ahora() usa time.monotonic() en vez del reloj del canal
+    invertido  -> 302 passed            ← NO ROMPIÓ
+    restaurado -> 302 passed
+    (tras agregar dos tests)
+    invertido  -> FAILED test_el_reloj_del_canal_es_el_de_pared_UTC
+                  FAILED test_el_t0_del_canal_tambien_es_de_pared
+                  2 failed, 302 passed
+    restaurado -> 304 passed
+
+=== INVERSION 11 — el log no registra los ticks sin mensajes
+    cambio: get_clock() sólo registra si el tick tiene mensajes
+    invertido  -> FAILED test_el_log_registra_los_ticks_sin_mensajes
+                  FAILED test_dos_consultas_en_el_mismo_tick_registran_una
+                  2 failed, 300 passed
+    restaurado -> 302 passed
+
+=== INVERSION 12 — la Config no registra el tick
+    cambio: Monitor no llama a registrar_tick
+    invertido  -> FAILED test_monitor_anota_el_tick_que_le_dan
+                  FAILED test_el_canal_le_pasa_el_tick_a_la_config
+                  2 failed, 300 passed
+    restaurado -> 302 passed
+
+=== INVERSION 13 — el tick no declara su reloj
+    cambio: RELOJ_CANAL = "desconocido"
+    invertido  -> FAILED test_el_clock_declara_su_reloj
+                  1 failed, 301 passed
+    restaurado -> 302 passed
+```
+
+`grep -c INVERSION` sobre los cuatro archivos tocados → **0, 0, 0, 0**.
+
+### La inversión 10 no rompía, y es el hallazgo del CP1
+
+**Cambiando `_ahora()` a `time.monotonic()` pasaban los 302.** O sea que **nada protegía la
+decisión 1**: que el reloj del canal sea el que sella los mensajes.
+
+Por qué no rompía: `test_el_tick_sale_del_mismo_reloj_que_sella_los_mensajes` verifica que el
+tick y el timestamp del mensaje salgan del **mismo** `_ahora`. Con `monotonic` **siguen saliendo
+del mismo** — consistentes entre sí, y equivocados los dos. El test medía la consistencia
+interna, no cuál es el reloj.
+
+Lo cerré con dos tests nuevos, y el segundo es el que no se puede falsear con un reloj
+arbitrario: **el ISO del mensaje tiene que dar una fecha plausible.** Con `monotonic` —segundos
+desde el arranque de la máquina— la fecha cae en 1970. Después de agregarlos, la inversión 10
+rompe los dos.
+
+**Es el tercer caso de la misma forma** (CP3i tuvo dos, CP4 ninguno), y los tres aparecieron
+invirtiendo, no leyendo.
+
+### Tests
+
+`tests/test_clock_del_canal.py` — **20**: ticks monótonos; **el canal callado también avanza**;
+el tick no depende de que alguien pregunte; el tick y el mensaje salen del mismo reloj; **el
+reloj es de pared UTC** (×2, los nuevos); el clock declara su reloj; el mensaje declara el suyo;
+un `Message` sin reloj dice `desconocido`; el log registra los ticks **sin** mensajes; dos
+consultas en el mismo tick registran una; un tick con mensajes queda marcado; **el canal no
+calcula nada por el device**; `get_messages` **sigue igual que antes** (mismo filtro `since`,
+mismos `message_id`, y las claves de antes siguen estando); la tool devuelve lo del canal; la
+Config registra con su reloj; **`registrar_tick` no abre ciclos**; **el canal no lee la Config**
+(leyendo el fuente); Monitor anota el tick que le dan y sin clock queda en None; y el canal de
+punta a punta le pasa el tick a la Config.
+
+**Suite: 304/304.** Ningún test existente cambió.
+
+### Lo que el CP1 NO hizo
+
+- **No tocó `trigger_mode`** ni el loop de `autonomous_device.py`: el ODA sigue disparándose por
+  mensaje. Es el CP2.
+- **No tocó el `since` del device**, que sigue saliendo de `time.time()` del device — el
+  requisito del CP2 que Opus registró.
+- No implementó el criterio local ni WAIT: esperan el OK de delamor.
+- No agregó el objetivo con condiciones (K): es el CP3.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider. El CP1 **cambió `channel.py` y
+  `mcp_server.py`**, que esos 21 usan.
+- **El `Message` con dos campos nuevos contra los JSONL históricos.** Los defaults están y hay
+  un test, pero **no abrí un JSONL viejo** para confirmar que se relee sin error.
+- **Si `TICK_PERIODO_S = 1.0` es un grano razonable.** Lo declaré, no lo calibré.
+- **El comportamiento con el reloj del sistema corriéndose hacia atrás** (NTP). `tick()` se
+  deriva del reloj de pared, así que **podría retroceder**; el test de monotonía corre en
+  milisegundos y no lo ejerce. Lo digo porque es el precio de derivar en vez de contar.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.

@@ -189,7 +189,7 @@ class CKMlandscapeConfig:
     """
 
     __slots__ = ("_sampling_mode", "_n_runs", "_seed", "_scale", "_config_id",
-                 "_timestamp", "_ciclos", "_lock")
+                 "_timestamp", "_ciclos", "_lock", "_tick", "_tick_reloj")
 
     def __init__(
         self,
@@ -222,6 +222,10 @@ class CKMlandscapeConfig:
         self._timestamp     = timestamp if timestamp is not None else time.time()
         self._ciclos        = tuple(ciclos)
         self._lock          = threading.RLock()
+        # El tick del canal, registrado por Monitor. None hasta que alguien lo
+        # anote: sin canal no hay tick, y eso es UNKNOWN, no 0.
+        self._tick          : Optional[int] = None
+        self._tick_reloj    : Optional[str] = None
 
     # ── construcción ─────────────────────────────────────────────────────────
 
@@ -354,6 +358,40 @@ class CKMlandscapeConfig:
 
     # ── panel y serialización ────────────────────────────────────────────────
 
+    def registrar_tick(self, tick: int, reloj: str) -> None:
+        """
+        Anota el tick vigente del canal. **La Config registra; no genera.**
+
+        Decisión de delamor (8 oct, E3): el canal genera los ticks con su
+        propio reloj, y la Config los *porta* en el sentido de registrarlos —
+        como dimensión del landscape. **La dependencia no se invierte:** acá
+        entra un número que alguien trajo, y la Config no llama al canal ni lo
+        conoce. Quien lo trae es Monitor.
+
+        `reloj` dice de qué reloj viene (decisión 3): la diferencia entre el
+        reloj del canal, el del proceso de Monitor y el del device **no se
+        borra, se nombra**. Los `Ciclo` se sellan con el del proceso de
+        Monitor; esto viene del canal, y por eso lo dice.
+
+        No abre ni cierra ciclos: el tick avanza siempre y un ciclo se abre
+        sólo cuando cambia W (I5). Son dos ejes del mismo objeto.
+        """
+        with self._lock:
+            self._tick = int(tick)
+            self._tick_reloj = str(reloj)
+
+    @property
+    def tick(self) -> Optional[int]:
+        """El último tick registrado, o None si nadie lo anotó todavía."""
+        with self._lock:
+            return self._tick
+
+    @property
+    def tick_reloj(self) -> Optional[str]:
+        """De qué reloj viene el tick registrado (decisión 3)."""
+        with self._lock:
+            return self._tick_reloj
+
     def panel(self) -> dict:
         """
         I7: identidad + declarado + el ciclo vigente, **sin la historia**.
@@ -366,6 +404,10 @@ class CKMlandscapeConfig:
                 **self.identidad,
                 **self.declarado,
                 "ciclo_vigente": self._ciclos[-1].to_dict() if self._ciclos else None,
+                # El tick del canal y de qué reloj viene. None si nadie lo
+                # anotó: sin canal no hay tick, y eso es UNKNOWN, no 0.
+                "tick": self._tick,
+                "tick_reloj": self._tick_reloj,
             }
 
     def to_dict(self) -> dict:

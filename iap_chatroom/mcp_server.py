@@ -66,6 +66,17 @@ async def send_message(device_id: str, text: str) -> dict:
 
 
 @mcp.tool
+async def get_clock() -> dict:
+    """El tick vigente del canal, con su período y de qué reloj viene.
+
+    El CLOCK es parte de lo que se observa (fase O del ODA), no un disparador.
+    Devuelve el tick y su reloj; no calcula Δt ni "cuántos ticks sin mensajes":
+    eso es del device (fase D). Un tick sin mensajes queda registrado igual —
+    el silencio es dato."""
+    return channel.get_clock()
+
+
+@mcp.tool
 async def get_messages(since: Optional[float] = None) -> list[dict]:
     """Mensajes posteriores a `since` (epoch). Si since=None, retorna los ultimos 20."""
     history = channel.get_history()

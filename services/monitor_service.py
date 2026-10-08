@@ -188,10 +188,29 @@ class MonitorService:
     # API pública
     # ------------------------------------------------------------------
 
-    def evaluate(self, text: str, device_id: Optional[str] = None) -> Optional[dict]:
+    def evaluate(
+        self,
+        text: str,
+        device_id: Optional[str] = None,
+        clock: Optional[dict] = None,
+    ) -> Optional[dict]:
         """
         Evalúa un prompt. Devuelve panel o None si corpus en acumulación.
+
+        `clock`: el CLOCK del canal, tal como lo devuelve
+        `ChatChannel.get_clock()` — `{"tick": int, "reloj": str, ...}`. Monitor
+        lo **anota** en la Config (`registrar_tick`) y lo deja en el panel.
+
+        **Monitor registra; no genera.** El tick lo genera el canal con su
+        propio reloj, y Monitor sólo lo trae: Monitor lee el canal, el canal no
+        lee la Config (decisión de delamor, 8 oct, E3). Sin `clock` —los runs
+        de `experiments/` y los tests, que no tienen canal— el tick queda en
+        None, que es UNKNOWN y no 0.
         """
+        if clock is not None and self._landscape_config is not None:
+            self._landscape_config.registrar_tick(
+                clock["tick"], clock.get("reloj", "desconocido")
+            )
         if self.corpus.mode == "accumulation":
             return {"mode": "accumulation", "message": "corpus insuficiente — guardando traza"}
 

@@ -766,7 +766,7 @@ def test_el_panel_declara_si_el_piso_cupo_en_la_corrida() -> None:
     panel = dev.panel_criterio()
     assert panel["piso_dentro_del_horizonte"] is False, \
         "la corrida afirmó haber visto un piso que no alcanzó a disparar"
-    assert panel["vueltas_para_ver_el_piso"] == 6
+    assert panel["vueltas_para_ver_el_piso"] == 7
 
     # con vueltas de sobra, el piso sí cupo
     dev._registros_criterio = _silencio(_filtro(piso_vueltas=5), 30)
@@ -782,3 +782,56 @@ def test_sin_skips_el_horizonte_no_aplica() -> None:
     dev._registros_criterio = [f.evaluar(tick=i, n_nuevos=3) for i in range(1, 6)]
     assert dev.panel_criterio()["n_skips"] == 0
     assert dev.panel_criterio()["piso_dentro_del_horizonte"] is None
+
+
+@pytest.mark.parametrize("piso", [1, 2, 3, 5, 12, 23])
+def test_vueltas_para_ver_el_piso_coincide_con_la_corrida(piso) -> None:
+    """
+    El campo se compara con **la vuelta en que el piso dispara de verdad**, no
+    con una fórmula.
+
+    Tenía `piso_vueltas + 1` y el test lo confirmaba, porque lo había escrito
+    contra el código. Un test que repite la cuenta del código no puede
+    encontrar un off-by-one: sólo lo encuentra correr el filtro y mirar.
+
+    Lo correcto es `piso + 2`: la vuelta 1 la consume `primera_vuelta` —llama y
+    deja el contador en 0— y de ahí el contador necesita `piso` skips más.
+    """
+    f = _filtro(piso_vueltas=piso)
+    primera = next(
+        v for v in range(1, piso + 50)
+        if f.evaluar(tick=v, n_nuevos=0)["motivo"] == MOTIVO_PISO
+    )
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=0.0,
+                           criterio_local=_filtro(piso_vueltas=piso))
+    dev._registros_criterio = _silencio(_filtro(piso_vueltas=piso), 1)
+    assert dev.panel_criterio()["vueltas_para_ver_el_piso"] == primera
+
+
+def test_el_piso_por_default_no_habria_disparado_en_un_vivo_como_el_02() -> None:
+    """
+    **Corrección de un número mío, medida en el log del vivo 02.**
+
+    Reporté *"el vivo 02 corrió 23 vueltas, así que el piso de 12 entraba"*.
+    **23 era el total de llamadas entre los DOS devices**; por device fueron
+    **11 y 12** (`vivo_02_groq_gptoss20b_log.json`, `costo.vueltas`). Leí un
+    agregado como un conteo por unidad — la misma confusión que el `n_agentes`
+    de esta mañana.
+
+    El piso es estado **por device**, así que el horizonte real son 11-12
+    vueltas. Con el default de 12 hacen falta **14**: el piso **no habría
+    disparado nunca**. No estaba "en el borde": estaba afuera.
+    """
+    f = _filtro(piso_vueltas=12)
+    regs = _silencio(f, 12)          # las vueltas que tuvo el device más largo
+    assert all(r["motivo"] != MOTIVO_PISO for r in regs), \
+        "el piso de 12 disparó dentro de 12 vueltas: revisar la cuenta"
+
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=0.0,
+                           criterio_local=_filtro(piso_vueltas=12))
+    dev._registros_criterio = regs
+    panel = dev.panel_criterio()
+    assert panel["piso_dentro_del_horizonte"] is False
+    assert panel["vueltas_para_ver_el_piso"] == 14

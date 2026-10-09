@@ -7,7 +7,7 @@
 
 ## Última escritura
 
-**2026-10-09 05:39 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 05:47 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
@@ -21,8 +21,10 @@ para "nunca llamó". Cuatro inversiones, las cuatro rompen. Control de Opus veri
 **El enunciado de la absorción cambió y dice más:** con el `> 0` fuera de `evaluar`, un `0`
 dispararía el piso *siempre*. La absorción se exhibe con un **piso fuera del horizonte** — que
 el piso sea finito no alcanza, tiene que caer dentro de la ventana observada. Umbral a
-Calibración: **el piso tiene que ser menor que las vueltas de un vivo** (default 12; el vivo 02
-corrió 23). El panel declara `piso_dentro_del_horizonte`: si hubo skips y el piso no disparó, la
+Calibración, medida: **`piso_vueltas + 2 ≤ vueltas por device`** — y las vueltas son **por
+device**, no el total del vivo. El vivo 02 tuvo **11 y 12** por device (23 era el total entre los
+dos: leí un agregado como conteo por unidad). Con el default 12 harían falta **14**, así que el
+piso por default **no habría disparado nunca** en un vivo de 60 s con poll 5: tiene que ser ≤ 9. El panel declara `piso_dentro_del_horizonte`: si hubo skips y el piso no disparó, la
 corrida **no puede decir** si el silencio era absorbente.
 
 Antes: **CP2b sin los ajustes.** Suite **412/412**, 33 tests nuevos en

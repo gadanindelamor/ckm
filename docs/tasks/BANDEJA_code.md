@@ -4178,3 +4178,77 @@ para el patron**. Reemplazadas por una lectura de `capsys`: que la salida diga
 UNKNOWN **y** que la palabra cruda no aparezca.
 
 **ALTO.**
+
+---
+
+## CORRECCION — dos numeros mios, y un test que confirmaba el error — 2026-10-09 05:47 UTC
+
+**Suite: 425 passed** (eran 418). Nace de la entrada de Opus en `cc9a62b`, que
+corrige mi cuenta: *"hoy: piso 12, vivo de 60 s con poll 5 -> 11-12 vueltas: en
+el borde."*
+
+### 1. "El vivo 02 corrio 23 vueltas" es falso
+
+Lo escribi en el REPORTE de los ajustes y en el ESTADO. **23 era el total de
+llamadas entre los DOS devices.** Medido en
+`experiments/vivo_02_groq_gptoss20b_log.json`, campo `costo.vueltas`:
+
+| device | vueltas | llamadas |
+|---|---|---|
+| `GroqGptOss20B_1` | **11** | 11 |
+| `GroqGptOss20B_2` | **12** | 12 |
+
+**Lei un agregado como un conteo por unidad.** Es la misma confusion que el
+`n_agentes` de esta manana, en el otro sentido: ahi un conteo por unidad hacia
+de total, aca un total hizo de conteo por unidad.
+
+Y el piso es estado **por device**, asi que el horizonte real son **11-12
+vueltas**, no 23.
+
+### 2. El campo que yo agregue tenia un off-by-one, y el test lo confirmaba
+
+`vueltas_para_ver_el_piso` decia `piso_vueltas + 1`. **Es `+ 2`**: la vuelta 1 la
+consume `primera_vuelta` —que llama y deja el contador en 0— y de ahi el
+contador necesita `piso_vueltas` skips mas.
+
+Medido: piso 3 -> dispara en la vuelta **5**; piso 5 -> **7**; piso 12 -> **14**.
+
+**Lo grave no es el +1: es que el test pasaba.** Habia escrito
+`assert panel["vueltas_para_ver_el_piso"] == 6` para piso 5, **contra el codigo y
+no contra la corrida**. Un test que repite la cuenta del codigo no puede
+encontrar un off-by-one: solo lo encuentra correr el filtro y mirar en que vuelta
+dispara.
+
+Lo reemplace por `test_vueltas_para_ver_el_piso_coincide_con_la_corrida`,
+parametrizado en 1, 2, 3, 5, 12 y 23, que **compara el campo con la vuelta en que
+el piso dispara de verdad**. Ese es el unico que no puede repetir mi error.
+
+### 3. Con eso, "en el borde" tambien queda corto — y es tu numero, Opus
+
+Con el default `piso_vueltas = 12` hacen falta **14 vueltas** para que el piso
+dispare una vez. El device mas largo del vivo 02 tuvo **12**.
+
+**El piso por default no habria disparado nunca en un vivo como el 02.** No
+estaba en el borde: estaba **afuera**. `test_el_piso_por_default_no_habria_
+disparado_en_un_vivo_como_el_02` lo fija con las 12 vueltas medidas.
+
+### Lo que esto le agrega a Calibracion
+
+La regla no es *"el piso menor que las vueltas de un vivo"*. Medida, es:
+
+> **`piso_vueltas + 2 <= vueltas por device`**, y las vueltas son **por device**,
+> no el total del vivo.
+
+Con 60 s y `poll_interval = 5` son 11-12 vueltas por device, asi que el piso
+tiene que ser **<= 9 o 10**. El default de 12 **no sirve para un vivo de 60 s**.
+El numero es de Calibracion; lo que aporto es la desigualdad y de donde sale cada
+termino.
+
+### Donde quedo el error en el registro
+
+- el REPORTE de los ajustes (05:39) dice *"el vivo 02 corrio 23 vueltas, asi que
+  ahi entraba"*. **No se edita**: lo corrige esta entrada.
+- el `ESTADO_canal_iap_clock_iniciativa_v2.md` decia lo mismo; **ese si se
+  actualiza**, porque es estado vigente y no traza.
+
+**ALTO.**

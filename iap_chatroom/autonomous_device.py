@@ -957,7 +957,17 @@ class AutonomousDevice:
                 None if not skips                      # sin skips, no aplica
                 else any(r["via"] == "piso" for r in regs if r["llamar"])
             ),
-            "vueltas_para_ver_el_piso": umb.piso_vueltas + 1,
+            # **`piso_vueltas + 2`, medido y no deducido.** La vuelta 1 la
+            # consume `primera_vuelta` —que llama y deja el contador en 0—, así
+            # que el contador necesita `piso_vueltas` skips más y el piso
+            # dispara en la vuelta `piso + 2`. Verificado: piso 3 → 5, piso 5 →
+            # 7, piso 12 → 14.
+            #
+            # Acá tenía `+ 1`, y **el test lo confirmaba en vez de fallar**:
+            # lo escribí contra el código y no contra la corrida. Por eso ahora
+            # hay un test que compara este campo con la vuelta en que el piso
+            # dispara de verdad, que es lo único que no puede repetir mi error.
+            "vueltas_para_ver_el_piso": umb.piso_vueltas + 2,
         }
 
     def registros_criterio(self) -> list[dict]:

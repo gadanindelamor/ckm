@@ -1,0 +1,707 @@
+{
+ "que_es": "ESTO MIDE — primer vivo del canal IAP con ODA continuo",
+ "declarado": {
+  "modelo": "llama-3.1-8b-instant",
+  "provider": "groq",
+  "n_devices": 2,
+  "poll_interval_s": 5.0,
+  "duration_s": 60.0,
+  "gate_congelado_en": "f96c234",
+  "system_prompt": "You are an AI device in a shared channel with other AI devices. You observe the channel and decide whether to participate. You do not need to respond to every message."
+ },
+ "repo_commit": "66f3cd66783252f69360b0b42d45377b302f273e",
+ "python": "3.12.1",
+ "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.39",
+ "donde": "Codespace ckm, server en otro proceso del mismo host",
+ "variables_no_consideradas": "todas las que no están en este log",
+ "segundos_reales": 61.91,
+ "errores_fatales": [],
+ "ritmo_declarado_2": {
+  "poll_interval_s": 5.0,
+  "n_devices": 2,
+  "vueltas_por_minuto_por_device": 12.0,
+  "llamadas_por_minuto_piso": 24.0,
+  "llamadas_por_minuto_techo": 48.0,
+  "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+  "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+ },
+ "por_device": [
+  {
+   "costo": {
+    "device_id": "GroqLlama8B_1",
+    "provider": "groq",
+    "model": "llama-3.1-8b-instant",
+    "vueltas": 12,
+    "llamadas_llm": 12,
+    "llamadas_por_vuelta": 1.0,
+    "errores_llm": 12,
+    "errores": [
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     }
+    ],
+    "ilegibles": 0,
+    "ejemplos_ilegibles": [],
+    "errores_rate_limit": 0,
+    "ritmo": {
+     "poll_interval_s": 5.0,
+     "n_devices": 1,
+     "vueltas_por_minuto_por_device": 12.0,
+     "llamadas_por_minuto_piso": 12.0,
+     "llamadas_por_minuto_techo": 24.0,
+     "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+     "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+    },
+    "decisiones_por_tipo": {
+     "UNKNOWN": 12
+    },
+    "vueltas_con_ventana_unknown": 0
+   },
+   "decisiones": [
+    {
+     "vuelta": 1,
+     "tick": 25,
+     "tick_anterior": -1,
+     "reloj": "canal",
+     "n_nuevos": 2,
+     "trigger": "msg-1",
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 2,
+     "tick": 31,
+     "tick_anterior": 25,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 3,
+     "tick": 36,
+     "tick_anterior": 31,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 4,
+     "tick": 41,
+     "tick_anterior": 36,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 5,
+     "tick": 46,
+     "tick_anterior": 41,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 6,
+     "tick": 51,
+     "tick_anterior": 46,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 7,
+     "tick": 56,
+     "tick_anterior": 51,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 8,
+     "tick": 61,
+     "tick_anterior": 56,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 9,
+     "tick": 66,
+     "tick_anterior": 61,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 10,
+     "tick": 71,
+     "tick_anterior": 66,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 11,
+     "tick": 77,
+     "tick_anterior": 71,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 12,
+     "tick": 82,
+     "tick_anterior": 77,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    }
+   ]
+  },
+  {
+   "costo": {
+    "device_id": "GroqLlama8B_2",
+    "provider": "groq",
+    "model": "llama-3.1-8b-instant",
+    "vueltas": 12,
+    "llamadas_llm": 12,
+    "llamadas_por_vuelta": 1.0,
+    "errores_llm": 12,
+    "errores": [
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     },
+     {
+      "causa": "error_provider",
+      "fase": "decide",
+      "excepcion": "NotFoundError",
+      "mensaje": "Error code: 404 - {'error': {'message': 'The model `llama-3.1-8b-instant` does not exist or you do not have access to it.', 'type': 'invalid_request_error', 'code': 'model_not_found'}}",
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "rate_limit": false,
+      "rate_limit_segun": null
+     }
+    ],
+    "ilegibles": 0,
+    "ejemplos_ilegibles": [],
+    "errores_rate_limit": 0,
+    "ritmo": {
+     "poll_interval_s": 5.0,
+     "n_devices": 1,
+     "vueltas_por_minuto_por_device": 12.0,
+     "llamadas_por_minuto_piso": 12.0,
+     "llamadas_por_minuto_techo": 24.0,
+     "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+     "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+    },
+    "decisiones_por_tipo": {
+     "UNKNOWN": 12
+    },
+    "vueltas_con_ventana_unknown": 0
+   },
+   "decisiones": [
+    {
+     "vuelta": 1,
+     "tick": 25,
+     "tick_anterior": -1,
+     "reloj": "canal",
+     "n_nuevos": 2,
+     "trigger": "msg-1",
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 2,
+     "tick": 31,
+     "tick_anterior": 25,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 3,
+     "tick": 36,
+     "tick_anterior": 31,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 4,
+     "tick": 41,
+     "tick_anterior": 36,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 5,
+     "tick": 46,
+     "tick_anterior": 41,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 6,
+     "tick": 51,
+     "tick_anterior": 46,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 7,
+     "tick": 56,
+     "tick_anterior": 51,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 8,
+     "tick": 61,
+     "tick_anterior": 56,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 9,
+     "tick": 66,
+     "tick_anterior": 61,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 10,
+     "tick": 71,
+     "tick_anterior": 66,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 11,
+     "tick": 77,
+     "tick_anterior": 71,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 12,
+     "tick": 82,
+     "tick_anterior": 77,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "UNKNOWN",
+     "trigger_mode": "continuo",
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 1,
+     "ilegibles": 0
+    }
+   ]
+  }
+ ],
+ "canal": {
+  "clock_final": {
+   "tick": 87,
+   "t": 1791519133.63155,
+   "reloj": "canal",
+   "periodo_s": 1.0,
+   "t0": 1791519046.258672
+  },
+  "n_mensajes": 2,
+  "mensajes": [
+   {
+    "device_id": "system",
+    "device_type": "SYSTEM",
+    "text": "GroqLlama8B_2 joined the channel",
+    "timestamp": "2026-10-09T04:11:12.067214+00:00",
+    "tick": 25,
+    "reloj": "canal",
+    "message_id": "msg-0"
+   },
+   {
+    "device_id": "system",
+    "device_type": "SYSTEM",
+    "text": "GroqLlama8B_1 joined the channel",
+    "timestamp": "2026-10-09T04:11:12.069985+00:00",
+    "tick": 25,
+    "reloj": "canal",
+    "message_id": "msg-1"
+   }
+  ],
+  "monitor_state": {
+   "corpus_size": 10,
+   "n_nodes": 32,
+   "message_count": 2,
+   "D_ckm": null,
+   "temp_signal": null,
+   "n_agentes": 1,
+   "corpus_status": "operational"
+  }
+ }
+}

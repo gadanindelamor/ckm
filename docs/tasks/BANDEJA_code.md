@@ -3055,3 +3055,187 @@ de fabricar decisiones.
 - **El precio.** Cuento llamadas, no tokens ni dinero.
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
 - **`process/iap_series_freeze_20261008/README.md:41`**, que sigue diciendo "67 archivos".
+
+---
+
+## ARRANQUE — 2026-10-09 04:13 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8, antes del primer vivo.*
+
+### Revisé
+
+1. **Locks:** ninguno. **`git pull --rebase`:** limpio, HEAD en `c93ce87`. **`git status`:** sin
+   nada modificado.
+2. **`GROQ_API_KEY`: presente**, 56 caracteres, empieza `gsk_`. Nunca la imprimí entera ni la
+   escribí en ningún archivo.
+3. **El gate está congelado:** `git diff f96c234 HEAD -- iap_chatroom/autonomous_device.py` →
+   **vacío**. No se tocó.
+4. **Tests:** **360/360**.
+5. **`DECISIONES_opus.md`** → leídas las entradas del cierre del CP2v y las del gate.
+
+### Preguntas abiertas
+
+**Ninguna.** P1–P10 respondidas. La próxima es **P11**.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: con la clave ya se podrían correr los de sólo Groq, pero **el vivo
+  iba primero** por el orden de delamor. Siguen sin correr.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`process/iap_series_freeze_20261008/README.md:41`**, que sigue diciendo "67 archivos".
+
+---
+
+## REPORTE PRIMER VIVO — 2026-10-09 04:13 UTC
+
+*`experiments/vivo_01_groq_8b.py`, una corrida. Log:
+`experiments/vivo_01_groq_8b_log.json`. **No arreglé nada.***
+
+### Lo declarado antes de correr
+
+2 devices · `GroqProvider("llama-3.1-8b-instant")` · `poll_interval = 5.0` · `duration = 60.0` ·
+gate congelado en `f96c234` · `WELCOME MSG` = `SYSTEM_PROMPT_04A` · una sola corrida.
+Server del canal en otro proceso del mismo host.
+
+### El error, entero y literal
+
+**Las 24 llamadas al LLM fallaron, todas con el mismo error:**
+
+```
+causa:             error_provider
+fase:              decide
+excepcion:         NotFoundError
+mensaje:           Error code: 404 - {'error': {'message': 'The model
+                   `llama-3.1-8b-instant` does not exist or you do not have
+                   access to it.', 'type': 'invalid_request_error',
+                   'code': 'model_not_found'}}
+provider:          groq
+model:             llama-3.1-8b-instant
+rate_limit:        False
+rate_limit_segun:  None
+```
+
+**El modelo que Opus eligió para el primer vivo no existe, o la cuenta no tiene acceso.** Lo dice
+Groq, no yo. **No lo cambié por otro.**
+
+### `costo()` de cada device
+
+| | `GroqLlama8B_1` | `GroqLlama8B_2` |
+|---|---|---|
+| provider · model | groq · `llama-3.1-8b-instant` | groq · `llama-3.1-8b-instant` |
+| **vueltas** | **12** | **12** |
+| **llamadas_llm** | **12** | **12** |
+| llamadas_por_vuelta | 1.0 | 1.0 |
+| **errores_llm** | **12** | **12** |
+| errores_rate_limit | **0** | **0** |
+| **ilegibles** | **0** | **0** |
+| vueltas_con_ventana_unknown | 0 | 0 |
+| **decisiones_por_tipo** | **`{'UNKNOWN': 12}`** | **`{'UNKNOWN': 12}`** |
+
+**Ningún error fatal:** `errores_fatales: []`. Los dos devices corrieron los 60 s completos
+(61.91 s reales) y terminaron solos.
+
+### `ritmo_declarado(2)`
+
+```
+poll_interval_s:                 5.0
+n_devices:                       2
+vueltas_por_minuto_por_device:   12.0
+llamadas_por_minuto_piso:        24.0
+llamadas_por_minuto_techo:       48.0
+limite_de_la_cuenta:             UNKNOWN — se lee en la consola del provider
+```
+
+**Lo declarado coincide exactamente con lo medido: 12 vueltas por device, 24 llamadas en total.**
+El piso era 24 por minuto y hubo 24 en 60 s. Es la primera vez que el ritmo declarado se puede
+comparar contra una corrida real, y da.
+
+### El clock del canal
+
+```
+clock final: tick=87 · t=1791519133.63 · reloj=canal · periodo_s=1.0 · t0=1791519046.26
+```
+
+**¿Crece en silencio? Sí, y se ve en la traza de los devices.** Los ticks observados por el
+device 1, vuelta por vuelta: **25 → 31 → 36 → … → 82**, con **`n_nuevos = 0` desde la vuelta 2**.
+El canal estuvo callado desde el segundo 5 y el tick siguió avanzando.
+
+`ventana: 1.0` en las 24 vueltas: el `periodo_s` llegó siempre, nunca hubo UNKNOWN de grano.
+
+**No pude leer el `clock_log` del canal.** Vive en el proceso del server y **no hay endpoint que
+lo exponga**. Lo que sí tengo es el tick observado en cada vuelta, que es la misma información
+vista del lado del device. **Es una mejora concreta para la lista: exponer `clock_log` por una
+tool o por la API.**
+
+### Mensajes publicados: 2, los dos del canal
+
+```
+msg-0 · system · SYSTEM · "GroqLlama8B_2 joined the channel" · tick 25 · reloj canal
+msg-1 · system · SYSTEM · "GroqLlama8B_1 joined the channel" · tick 25 · reloj canal
+```
+
+**Ningún device publicó**, y no porque haya decidido callar: **nunca pudo decidir**. Las 24
+decisiones son `UNKNOWN`.
+
+Y acá está lo que el CP2v vino a hacer: **este silencio es atribuible**.
+`errores_llm = 12`, `ilegibles = 0`, `decisiones_por_tipo = {'UNKNOWN': 12}`, `rate_limit = 0`.
+**No fue el modelo callando, no fue el canal perdiendo mensajes, no fue rate limit: fue un 404 de
+infraestructura.** Con la traza anterior —que caía a `OP_SILENCE`— esto se habría leído como
+*"los dos devices eligieron el silencio 24 veces"*, que es exactamente la lectura falsa que la
+serie congelada no podría descartar.
+
+### El `monitor_state` del canal
+
+```
+corpus_size: 10 · n_nodes: 32 · message_count: 2
+D_ckm: None · temp_signal: None · n_agentes: 1 · corpus_status: operational
+```
+
+Dos cosas que **no interpreto** y reporto:
+- **`corpus_size: 10` con `message_count: 2`.** El corpus traía 8 textos de antes —el
+  `_state/corpus_state.json` persistido— y sumó los 2 joins. **El estado de disco no se limpió
+  antes del vivo**, y nadie lo declaró. Va a la lista.
+- **`n_agentes: 1` con 2 devices registrados.** No sé por qué. No lo toqué.
+- `temp_signal: None` — no `"UNKNOWN"`. Es una de las grafías de la ausencia que delamor está
+  leyendo, y aparece en vivo.
+
+### Primera vuelta, literal
+
+```
+{'vuelta': 1, 'tick': 25, 'tick_anterior': -1, 'reloj': 'canal', 'n_nuevos': 2,
+ 'trigger': 'msg-1', 'decision': 'UNKNOWN', 'trigger_mode': 'continuo',
+ 'ventana': 1.0, 'llamadas_llm': 1, 'errores_llm': 1, 'ilegibles': 0}
+```
+
+**`n_nuevos: 2` en la vuelta 1:** cada device vio **los dos** joins, incluido el propio —el join
+lo publica `system`, no el device, así que el filtro del propio `device_id` no lo saca—. Lo
+reporto porque es el join entrando **como información**, que es lo que el CP2a′ declaró, y acá se
+ve: el `trigger` fue `msg-1` y no disparó nada; la decisión salió igual.
+
+### Mejoras y bugs que el vivo mostró
+
+1. **El modelo del primer vivo no existe.** 404 de Groq. **[Opus/delamor]** — no lo cambié.
+2. **`clock_log` no se puede leer desde afuera del proceso del server.** No hay tool ni endpoint.
+   **Mejora concreta.**
+3. **El `_state/` no se limpia ni se declara antes de un vivo.** `corpus_size: 10` con 2
+   mensajes: el corpus arrancó con 8 textos de agosto. **Para que un vivo sea atribuible, el
+   estado de partida tiene que estar declarado o vacío.**
+4. **`n_agentes: 1` con 2 devices.** No sé si es bug o es qué cuenta. **No lo investigué.**
+5. **`temp_signal: None`** en vivo, no `"UNKNOWN"`. Es la sexta grafía, y confirma que la lista
+   que delamor está leyendo tiene efecto observable.
+6. **Nada se rompió.** Ningún traceback, ningún error fatal, los dos devices completaron los 60 s
+   y se fueron solos con `leave_channel`. **El canal y el ODA continuo aguantaron una corrida
+   real con el provider fallando en todas las vueltas.**
+
+### No pude revisar
+
+- **Si el canal funciona con el modelo respondiendo.** Este vivo midió el canal y la
+  infraestructura **con el provider caído**, que es la mitad de lo que hay que ver. La otra mitad
+  necesita un modelo que exista.
+- **El `clock_log`**, por lo de arriba.
+- **Si el 429 se detecta bien**: no hubo ninguno. `status_code` leyó bien el **404**
+  (`rate_limit: False`), que es la contraparte útil — el camino de `status_code` funcionó contra
+  un error real.
+- **Los 21 `test_caso_*`.**
+- **El costo en dinero.** 24 llamadas, todas 404. **No sé si un 404 se cobra.**
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.

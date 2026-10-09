@@ -36,6 +36,40 @@ Incoming: {sender}: "{text}"
 
 Respond with exactly one word: INTERACT or OP_SILENCE."""
 
+# ─────────────────────────────────────────────────────────────────────────────
+# GATE DEL ODA CONTINUO — **DECLARADO PARA QUE DELAMOR LO LEA ANTES DE LA
+# CORRIDA VIVA.** Cambia lo que el device puede decidir, y eso es de delamor
+# (decisión del 8 oct, T4). Hasta esa lectura, sólo corre con stubs.
+#
+# Tres diferencias con GATE_PROMPT_04, y cada una tiene una razón:
+#
+#  1. **Tres opciones, no dos.** LEAVE entra como acción con su primitiva
+#     (`leave_channel`), por decisión propia y no porque venció `duration`
+#     (TASK §1). Antes irse no era una decisión: era el final del loop.
+#  2. **El tick y el silencio están en la observación, no en la pregunta.**
+#     El canal no calcula Δt por el device: le da el tick y los timestamps, y
+#     evaluar el tiempo es parte de decidir (TASK §1, fase D).
+#  3. **Puede no haber mensaje nuevo.** `Incoming: (ninguno)` es el silencio, y
+#     es un dato de la observación como cualquier otro. El device decide igual.
+#
+# Lo que NO dice, a propósito: no sugiere qué hacer con el silencio, ni que
+# hablar sea mejor que callar, ni que un Δt grande pida acción. Free will
+# (TRUST): *"No one is obligated to participate."*
+GATE_PROMPT_CONTINUO = """Field state:
+D_ckm={d_ckm} | temp_signal={temp} | c_S={c_s} | fi={fi} | Delta_r={delta_r}
+
+Channel clock: tick={tick} (clock source: {reloj}, tick period: {periodo_s}s)
+Your last turn observed tick {tick_anterior}.
+
+Recent messages (channel timestamps, UTC):
+{history}
+
+New since your last turn: {n_nuevos}
+Incoming: {incoming}
+
+You are not obligated to act. Respond with exactly one word:
+INTERACT (publish), LEAVE (leave the channel), or OP_SILENCE (do nothing this turn)."""
+
 
 def _strip_own_prefix(text: str, device_id: str) -> str:
     """
@@ -76,14 +110,42 @@ class AutonomousDevice:
         provider: Provider,        # de iap_chatroom/providers/
         system_prompt: str,
         mcp_url: str = "http://localhost:7860/mcp",
-        poll_interval: float = 2.0,   # segundos entre polls
+        poll_interval: float = 2.0,   # segundos entre vueltas del ciclo
+        trigger_mode: str = "continuo",
     ):
+        """
+        `trigger_mode` admite **un solo valor: "continuo"** (CP2a, P11).
+
+        El modo viejo —un ODA por mensaje ajeno— **no se mantiene como modo
+        vivo**: quedó congelado en `process/iap_series_freeze_20261008/`, con
+        la serie que corrió bajo él. No está detrás de un flag: el loop se
+        reemplazó. El parámetro existe para que el modo quede **declarado en
+        el log del device**, no para poder volver atrás.
+
+        `poll_interval` es el ritmo de la vuelta, y hoy lo fija el device
+        (TASK §1). No hay mínimo declarado ni WAIT: eso es Calibración.
+        """
+        if trigger_mode != "continuo":
+            raise ValueError(
+                f"trigger_mode={trigger_mode!r} no existe. El único modo vivo es "
+                '"continuo". El modo por mensaje quedó congelado en '
+                "process/iap_series_freeze_20261008/ junto con la serie IAP que "
+                "corrió bajo él (CP0b); no está detrás de un flag."
+            )
         self.device_id = device_id
         self.provider = provider
         self.system_prompt = system_prompt
         self.mcp_url = mcp_url
         self.poll_interval = poll_interval
+        self.trigger_mode = trigger_mode
         self._history: list[dict] = []
+        # message_id de todo lo ya visto: el borde de `since` puede repetir un
+        # mensaje, y se descarta por id (T2).
+        self._vistos: set[str] = set()
+        self._tick_anterior: int = -1
+        # lo que el device decidió, vuelta por vuelta. Traza propia.
+        self._decisiones: list[dict] = []
+        self._se_fue: bool = False
 
     def _to_chat_messages(self) -> list[ChatMessage]:
         chat: list[ChatMessage] = [{"role": "system", "content": self.system_prompt}]
@@ -99,7 +161,12 @@ class AutonomousDevice:
         text = await self.provider.complete(self._to_chat_messages())
         return _strip_own_prefix(text, self.device_id)
 
-    async def _observe(self, client: Client, message: dict) -> dict:
+    async def _observe(
+        self,
+        client: Client,
+        message: Optional[dict] = None,
+        clock: Optional[dict] = None,
+    ) -> dict:
         """
         Fase O del ciclo ODA. No LLM — solo recolección de datos.
 
@@ -107,6 +174,26 @@ class AutonomousDevice:
         estado interno (propias publicaciones recientes). Si CKMMonitor
         no está disponible o el corpus aún acumula, field trae D_ckm=None
         y el resto de las métricas en None — observación válida, no error.
+
+        **`message=None` es el silencio** (CP2a, T5): en el ODA continuo la
+        vuelta corre haya o no mensaje nuevo, y "ninguno" es un dato de la
+        observación como cualquier otro. La firma quedó compatible con la de
+        antes, que exigía el mensaje.
+
+        **El clock entra a la observación** (TASK §1: *"incluye el clock, que
+        es parte del campo"*). El canal no calcula nada por el device: da el
+        tick y su reloj, y evaluar los Δt es de la fase D.
+
+        **El clock se recibe, no se pide acá.** Lo lee el loop **una sola vez
+        por vuelta y antes de `get_messages`** (T2): de esa misma lectura sale
+        el corte de la vuelta siguiente. Si `_observe` lo pidiera por su
+        cuenta serían dos lecturas distintas del mismo tiempo en la misma
+        vuelta, y el corte dejaría de corresponder al tick observado. Antes
+        pedía una y el loop la sobreescribía: la llamada no hacía nada, y nada
+        lo señalaba — lo encontré invirtiendo (CP2a, inversión 19).
+
+        Sin `clock` —nadie se lo pasó— queda `{}`, que es UNKNOWN: el device
+        decide sin esa dimensión en vez de inventarla.
         """
         field_result = await client.call_tool("get_monitor_state", {})
         field_state = field_result.data
@@ -117,6 +204,8 @@ class AutonomousDevice:
         return {
             "field": field_state,
             "history": history,
+            "clock": clock if clock is not None else {},
+            "tick_anterior": self._tick_anterior,
             "trigger": message,
             "own_recent": [
                 m for m in history[-20:] if m.get("device_id") == self.device_id
@@ -129,27 +218,55 @@ class AutonomousDevice:
 
         CKM orienta — no impone. Sin bypass: D_ckm=None llega al prompt
         igual que cualquier otro valor de campo, el device decide con lo
-        que tiene. Devuelve "INTERACT" o "OP_SILENCE".
+        que tiene.
+
+        **Tres opciones** (CP2a, T4): `INTERACT`, `LEAVE` u `OP_SILENCE`. LEAVE
+        es una acción con su primitiva, por decisión propia y no porque venció
+        `duration`. El texto del gate está **declarado para que delamor lo lea
+        antes de la corrida viva**: cambia lo que el device puede decidir.
+
+        **Puede no haber mensaje nuevo.** `Incoming: (ninguno)` es el silencio,
+        y el device decide igual. Los Δt no vienen calculados: están el tick
+        actual, el de su vuelta anterior y los timestamps, y evaluarlos es
+        parte de decidir.
+
+        Cualquier palabra que no sea una de las tres cae a `OP_SILENCE`: no
+        actuar es la salida segura, y una respuesta que no se entiende no
+        autoriza una acción.
         """
         field = observation["field"]
         history = observation["history"]
         trigger = observation["trigger"]
+        clock = observation.get("clock") or {}
 
         history_text = (
-            "\n".join(f'{m["device_id"]}: {m["text"]}' for m in history[-10:])
+            "\n".join(
+                f'[{m.get("timestamp", "?")}] {m["device_id"]}: {m["text"]}'
+                for m in history[-10:]
+            )
             if history
             else "(empty)"
         )
 
-        gate_prompt = GATE_PROMPT_04.format(
+        incoming = (
+            f'{trigger.get("device_id", "unknown")}: "{trigger.get("text", "")}"'
+            if trigger is not None
+            else "(ninguno)"
+        )
+
+        gate_prompt = GATE_PROMPT_CONTINUO.format(
             d_ckm=field.get("D_ckm"),
             temp=field.get("temp_signal", "UNKNOWN"),
             c_s=field.get("c_S"),
             fi=field.get("fi"),
             delta_r=field.get("Delta_r"),
+            tick=clock.get("tick"),
+            reloj=clock.get("reloj", "desconocido"),
+            periodo_s=clock.get("periodo_s"),
+            tick_anterior=observation.get("tick_anterior"),
             history=history_text,
-            sender=trigger.get("device_id", "unknown"),
-            text=trigger.get("text", ""),
+            n_nuevos=observation.get("n_nuevos", 0),
+            incoming=incoming,
         )
 
         response = await self.provider.complete([
@@ -158,21 +275,33 @@ class AutonomousDevice:
         ])
 
         word = response.strip().upper().split()[0] if response.strip() else "OP_SILENCE"
-        return word if word in ("INTERACT", "OP_SILENCE") else "OP_SILENCE"
+        return word if word in ("INTERACT", "LEAVE", "OP_SILENCE") else "OP_SILENCE"
 
     async def _interact(self, client: Client, decision: str, observation: dict) -> None:
         """
-        Fase A del ciclo ODA.
+        Fase A del ciclo ODA. Cada decisión tiene su primitiva del canal.
 
-        OP_SILENCE: no publica. Sin anuncio, sin log en el corpus del
-        canal — solo log local de proceso.
-        INTERACT: genera contenido (con el historial completo del canal,
-        vía _to_chat_messages/_generate) y publica.
+        OP_SILENCE: no actúa en esta vuelta. Sin anuncio, sin log en el corpus
+        del canal — sólo traza local. **El ciclo sigue**: el silencio no
+        termina nada.
+        INTERACT: genera contenido y publica → `send_message`.
+        LEAVE: se va **por decisión propia** → `leave_channel`, y marca
+        `_se_fue` para que el loop corte. Antes irse no era una decisión: era
+        el final del loop cuando vencía `duration`.
+
+        Si mañana el canal ofrece otra primitiva, D la puede elegir sin cambiar
+        el ciclo (TASK §1).
         """
         field_state = observation["field"]
 
         if decision == "OP_SILENCE":
             self._log("OP_SILENCE", field_state)
+            return
+
+        if decision == "LEAVE":
+            await client.call_tool("leave_channel", {"device_id": self.device_id})
+            self._se_fue = True
+            self._log("LEAVE", field_state)
             return
 
         text = await self._generate()
@@ -193,14 +322,35 @@ class AutonomousDevice:
             print(f"[{self.device_id}] {decision}")
 
     async def run(self, duration: float = 60.0) -> None:
-        """Loop principal. Corre durante `duration` segundos."""
+        """
+        El ciclo ODA continuo. Corre a su propio ritmo durante `duration`
+        segundos, o hasta que el device decida irse.
+
+        **Una decisión por vuelta, haya o no mensajes nuevos.** Antes había un
+        ODA por cada mensaje ajeno: cinco mensajes en un poll eran cinco
+        decisiones. Ahora la vuelta junta todo lo observado desde la anterior y
+        decide una vez, con todo eso adelante.
+
+        **El tick no dispara nada: se observa.** Entra a la observación junto
+        con los mensajes nuevos y el campo.
+
+        **El silencio no es absorbente.** Si nadie publicó, la vuelta corre
+        igual y el device vuelve a decidir. Antes, si todos elegían
+        OP_SILENCE, no aparecía ningún mensaje y nadie se disparaba nunca más.
+
+        **El `since` sale del reloj del canal, nunca del propio** (T2). Y se
+        lee **antes** de `get_messages`: si se leyera después, un mensaje que
+        llega entre las dos llamadas se perdería en silencio. En el borde
+        puede repetirse uno, y se descarta por `message_id`.
+
+        El modo viejo quedó congelado en `process/iap_series_freeze_20261008/`.
+        """
         async with Client(self.mcp_url) as client:
-            # last_ts se captura ANTES de join_channel, no después: el
-            # join emite un mensaje SYSTEM en el propio channel.publish()
-            # (ver mcp_server.py) — si last_ts se tomara después, ese
-            # evento quedaría más viejo que el cutoff del primer poll y
-            # get_messages(since=last_ts) lo descartaría en silencio.
-            last_ts = time.time()
+            # El corte inicial sale del reloj del canal, no de time.time():
+            # mezclar el reloj del device con el del canal descarta mensajes en
+            # silencio si el device va adelantado (hallazgo del CP0).
+            clock0 = await client.call_tool("get_clock", {})
+            since = clock0.data["t"]
 
             r = await client.call_tool(
                 "join_channel", {"device_id": self.device_id, "device_type": "AI"}
@@ -208,31 +358,72 @@ class AutonomousDevice:
             assert r.data["ok"], f"join_channel fallo para {self.device_id}"
 
             start = time.monotonic()
+            vuelta = 0
 
-            while time.monotonic() - start < duration:
-                fetched = await client.call_tool("get_messages", {"since": last_ts})
-                new_messages = fetched.data
-                last_ts = time.time()
+            while time.monotonic() - start < duration and not self._se_fue:
+                vuelta += 1
 
-                for message in new_messages:
-                    # Regla estructural — no comunicacional: nunca triggerear
-                    # sobre el propio mensaje visto en el poll.
-                    if message["device_id"] == self.device_id:
-                        continue
+                # (1) el corte de la vuelta SIGUIENTE se lee ANTES de pedir los
+                #     mensajes (T2). Entre esta lectura y get_messages puede
+                #     llegar uno: aparece en la próxima vuelta, no se pierde.
+                clock_result = await client.call_tool("get_clock", {})
+                clock = clock_result.data
+                proximo_since = clock["t"]
 
-                    self._history.append(message)
+                # (2) los mensajes desde el corte anterior
+                fetched = await client.call_tool("get_messages", {"since": since})
+                nuevos = [
+                    m for m in fetched.data
+                    if m.get("message_id") not in self._vistos
+                    and m["device_id"] != self.device_id
+                    and m.get("device_type") in ("AI", "HUMAN", "SYSTEM")
+                ]
+                for m in fetched.data:
+                    if m.get("message_id"):
+                        self._vistos.add(m["message_id"])
+                self._history.extend(nuevos)
 
-                    # Regla estructural: solo AI/HUMAN/SYSTEM disparan el
-                    # ciclo ODA (Caso 0.5 — el join event SYSTEM puede
-                    # actuar como seed). Otros tipos no-LNH quedan fuera.
-                    if message.get("device_type") not in ("AI", "HUMAN", "SYSTEM"):
-                        continue
+                # (3) O — una observación por vuelta, con el clock adentro. El
+                #     trigger es el último mensaje nuevo, o None si hubo
+                #     silencio: "ninguno" es el dato.
+                observation = await self._observe(
+                    client, nuevos[-1] if nuevos else None, clock=clock
+                )
+                observation["n_nuevos"] = len(nuevos)
+                observation["vuelta"] = vuelta
 
-                    observation = await self._observe(client, message)
-                    decision = await self._decide(observation)
-                    await self._interact(client, decision, observation)
+                # (4) D — UNA decisión por vuelta, con todo lo de arriba
+                decision = await self._decide(observation)
 
+                # (5) A — la primitiva que corresponda, o ninguna
+                await self._interact(client, decision, observation)
+
+                self._decisiones.append({
+                    "vuelta": vuelta,
+                    "tick": clock.get("tick"),
+                    "tick_anterior": self._tick_anterior,
+                    "reloj": clock.get("reloj"),
+                    "n_nuevos": len(nuevos),
+                    "trigger": (nuevos[-1].get("message_id") if nuevos else None),
+                    "decision": decision,
+                    "trigger_mode": self.trigger_mode,
+                })
+
+                self._tick_anterior = clock.get("tick", -1)
+                since = proximo_since
+
+                if self._se_fue:
+                    break
                 await asyncio.sleep(self.poll_interval)
 
-            r = await client.call_tool("leave_channel", {"device_id": self.device_id})
-            assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+            # Si se fue por decisión propia, ya llamó a leave_channel en A: no
+            # se llama dos veces. Si venció `duration`, se va acá.
+            if not self._se_fue:
+                r = await client.call_tool(
+                    "leave_channel", {"device_id": self.device_id}
+                )
+                assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+
+    def decisiones(self) -> list[dict]:
+        """La traza de lo decidido, vuelta por vuelta. Copia: no se edita."""
+        return list(self._decisiones)

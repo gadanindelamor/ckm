@@ -2442,3 +2442,187 @@ el on_message está cableado en `run()`.
 aceptado**; cualquier otro levanta `ValueError` nombrando el freeze. Así el nombre que la TASK
 usa existe y el modo viejo no vuelve por un default.
 **Revertir:** aceptar también `"on_message"` y conservar el loop viejo detrás del parámetro.
+
+---
+
+## REPORTE CP2a — el ODA continuo, sin criterio local — 2026-10-09 00:07 UTC
+
+*TASK §2.CP2, primera mitad. **Todo con stubs**: ni una llamada a provider ni a la red. La
+corrida viva espera las claves. **Tocó sólo `iap_chatroom/`** — Monitor, Config y COCO no se
+tocaron (T6 verificado en la evaluación).*
+
+### Qué quedó
+
+**`trigger_mode="continuo"`, único valor** (P11, default aceptado). Cualquier otro levanta
+`ValueError` nombrando el freeze: *"el modo por mensaje quedó congelado en
+`process/iap_series_freeze_20261008/`; no está detrás de un flag"*. El modo queda declarado en
+cada entrada de la traza del device.
+
+**El loop es una vuelta, no un mensaje.** `run()` junta todo lo observado desde la vuelta
+anterior y **decide una vez**. Antes, cinco mensajes en un poll eran cinco decisiones.
+
+**El orden de la vuelta, que es el que pidió Opus (T2):**
+
+1. `get_clock()` — **antes** de pedir mensajes. De esta lectura sale el corte de la vuelta
+   siguiente **y** el tick que se observa. Una sola lectura, un solo tiempo.
+2. `get_messages(since)` con el corte de la vuelta anterior, **del reloj del canal**.
+3. **O** — una observación, con el clock adentro y `trigger=None` si hubo silencio.
+4. **D** — **una** decisión: `INTERACT`, `LEAVE` u `OP_SILENCE`.
+5. **A** — la primitiva que corresponda, o ninguna.
+
+Si un mensaje llega entre (1) y (2), aparece en la vuelta siguiente: no se pierde. En el borde
+puede repetirse, y se descarta por `message_id` (`self._vistos`).
+
+**LEAVE es una decisión** con su primitiva, y `leave_channel` se llama **una sola vez**: si el
+device se fue por decisión, el final del loop no vuelve a llamarlo.
+
+**El gate de tres opciones queda DECLARADO para que delamor lo lea antes de la corrida viva**
+(T4). `GATE_PROMPT_CONTINUO`, en `autonomous_device.py`, con las tres diferencias comentadas:
+tres opciones en vez de dos; el tick y el silencio en la **observación**, no en la pregunta; y
+`Incoming: (ninguno)` como dato válido. Y lo que **no** dice, a propósito: no sugiere qué hacer
+con el silencio, ni que hablar sea mejor que callar, ni que un Δt grande pida acción.
+
+Una palabra que no sea una de las tres **cae a `OP_SILENCE`**: una respuesta que no se entiende
+no autoriza una acción.
+
+### Las ocho inversiones
+
+```
+=== INVERSION 14 — vuelve el ODA por mensaje
+    invertido  -> FAILED test_una_decision_por_vuelta_aunque_entren_varios_mensajes
+                  1 failed, 318 passed
+    restaurado -> 319 passed
+
+=== INVERSION 15 — el since vuelve al reloj del device
+    invertido  -> FAILED test_el_since_sale_del_reloj_del_canal_no_del_device
+                  1 failed, 318 passed
+    restaurado -> 319 passed
+
+=== INVERSION 16 — el since se lee DESPUES de get_messages
+    invertido  -> FAILED test_una_decision_por_vuelta_aunque_entren_varios_mensajes
+                  FAILED test_el_since_sale_del_reloj_del_canal_no_del_device
+                  FAILED test_get_messages_con_el_since_real_del_device
+                  FAILED test_un_mensaje_entre_get_clock_y_get_messages_no_se_pierde
+                  4 failed, 315 passed
+    restaurado -> 319 passed
+
+=== INVERSION 17 — LEAVE sale del vocabulario
+    invertido  -> FAILED test_leave_por_decision_propia_antes_de_duration
+                  1 failed, 318 passed
+    restaurado -> 319 passed
+
+=== INVERSION 18 — el silencio vuelve a ser absorbente
+    invertido  -> FAILED test_los_ticks_no_disparan_decisiones
+                  FAILED test_el_silencio_no_es_absorbente
+                  FAILED test_iniciativa_el_diseno_permite_hablar_primero
+                  FAILED test_leave_por_decision_propia_antes_de_duration
+                  FAILED test_una_palabra_desconocida_cae_a_silencio
+                  FAILED test_dos_publicaciones_seguidas_sin_reaccion_a_la_propia
+                  6 failed, 313 passed
+    restaurado -> 319 passed
+
+=== INVERSION 19 — _observe no pide el clock
+    invertido  -> 319 passed            ← NO ROMPIÓ
+    restaurado -> 319 passed
+
+(después del arreglo, reformulada en dos:)
+
+=== INVERSION 19bis — el loop no lee el clock
+    invertido  -> FAILED test_los_ticks_no_disparan_decisiones
+                  FAILED test_el_since_sale_del_reloj_del_canal_no_del_device
+                  FAILED test_el_log_del_canal_crece_con_el_canal_callado
+                  FAILED test_el_clock_se_lee_una_vez_por_vuelta
+                  4 failed, 317 passed
+
+=== INVERSION 20 — _observe vuelve a pedir el clock (dos lecturas)
+    invertido  -> FAILED test_el_clock_se_lee_una_vez_por_vuelta
+                  FAILED test_el_clock_observado_es_el_que_fija_el_corte
+                  2 failed, 319 passed
+
+    restaurado -> 321 passed
+```
+
+`grep -c INVERSION iap_chatroom/autonomous_device.py` → **0**.
+
+### La inversión 19 no rompía, y encontró código que no hacía nada
+
+**Sacando el `get_clock()` de `_observe` pasaban los 319.** El motivo no era un test débil: era
+que **esa llamada era redundante**. `_observe` pedía el clock, y el loop **sobreescribía** el
+valor dos líneas después con el suyo. Dos lecturas del mismo tiempo en la misma vuelta, y una
+descartada sin que nada lo dijera.
+
+**Lo arreglé en el código, no en el test:** `_observe(client, message=None, clock=None)` **recibe**
+el clock, y el loop se lo pasa — el de la lectura única de (1), que es la que fija el corte.
+Así el tick observado y el corte de la vuelta siguiente **salen de la misma lectura**, que es
+exactamente lo que T2 pedía. Y hay **una llamada MCP menos por vuelta**.
+
+Después de arreglarlo, la inversión se vuelve **dos**, y las dos rompen:
+- **19bis**, el loop no lee el clock → 4 tests;
+- **20**, `_observe` vuelve a pedirlo por su cuenta → 2 tests, incluido el que verifica que el
+  corte y el tick observado salen de la misma lectura.
+
+**Es el cuarto caso de la misma forma** (CP3i dos, CP1 uno, ahora éste), y los cuatro aparecieron
+invirtiendo, no leyendo. Éste además no era un test flojo: era código muerto que ningún test
+podía distinguir, porque su efecto se borraba solo.
+
+### Tres de mis tests fallaron, y el código tenía razón
+
+Sembraba mensajes **antes** de que el device arrancara y esperaba que los viera como nuevos.
+**Un device que se suma no ve como "nuevo" lo que ya estaba**: el corte inicial se toma al
+unirse. Es el comportamiento de siempre —`run()` tomaba `last_ts` antes del join, con un
+comentario que explica por qué— y **el CP2a no lo cambia**. Los arreglé publicando después del
+join, con un gancho en el stub.
+
+**Y un cuarto fallo fue artefacto del test:** congelé el reloj del canal, y entonces el mensaje
+quedaba exactamente en el corte, así que `> since` nunca pasaba. Ahora el reloj del test avanza
+de a 1 ms, muy atrás del de la máquina, que es lo que el test necesita para medir el desfasaje
+sin congelarlo.
+
+Una aserción mía también estaba mal planteada: *"50 ticks no dan 50 vueltas"* se cumplía por
+cualquier motivo. La nítida es **varias vueltas dentro del mismo tick** — si el tick disparara el
+ciclo, un tick daría una vuelta.
+
+### Tests
+
+`tests/test_oda_continuo.py` — **17**, todos con stubs. `ProviderStub` devuelve respuestas de una
+lista y cuenta llamadas; `ClientStub` stubbea el transporte MCP y el campo CKM **contra un
+`ChatChannel` real**, así que lo del canal —CLOCK, reloj, log— no es un doble.
+
+Cubren: los tres valores de `trigger_mode`; **una decisión por vuelta** con cinco mensajes
+entrando juntos; **los ticks no disparan** (varias vueltas en el mismo tick); **el silencio no es
+absorbente** (nadie publica nunca y el ciclo sigue); **iniciativa** (con el canal callado el
+device **puede** hablar primero, y `n_nuevos == 0` lo prueba); **LEAVE** por decisión antes de
+`duration`, con `leave_channel` una sola vez; una palabra desconocida cae a silencio; **dos
+publicaciones seguidas sin reacción a la propia**; **el `since` del canal y no del device**; el
+`since` **real del device** y no `canal._ahora()`; un mensaje entre `get_clock` y `get_messages`
+no se pierde; **el log crece con el canal callado**, con reloj controlado y no `sleep`; y las dos
+del clock leído una vez por vuelta.
+
+**Suite: 321/321.** Ningún test existente cambió.
+
+### Lo que el CP2a NO hizo
+
+- **No implementó el criterio local**: es el CP2b, y espera este ALTO.
+- **No implementó WAIT.** Hoy el ritmo lo fija el device con `poll_interval`, sin mínimo
+  declarado. Es Calibración.
+- **No tocó Monitor, la Config ni COCO** (T6).
+- **No llamó a ningún provider.** El gate de tres opciones está escrito y declarado; **nadie lo
+  corrió contra un modelo**.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves de provider. Y **el CP2a reemplazó el loop que los 21
+  llaman**, además de cambiar la firma de `_observe` —que `test_caso_07.py` sobreescribe— y el
+  vocabulario de decisiones. **Es el punto ciego más grande de toda la TASK**, y el CP2a es el
+  paso que más lo agranda. La serie está a salvo en el freeze; lo que no puedo verificar es si
+  esos 21 scripts del repo vivo siguen corriendo.
+- **Qué decidiría un modelo real** con el gate nuevo. Los stubs prueban el diseño, no el modelo.
+  La pregunta de la TASK (*"puede hablar primero"*) es de diseño y está verificada; lo que no
+  está es si un modelo **lo haría**.
+- **El comportamiento con dos devices a la vez.** Todos los tests corren un device. El silencio
+  no absorbente con N devices —que es el fenómeno de la serie— no se testeó.
+- **El costo real.** Reporté llamadas estimadas (N=2, T=60 s → 60–120), no tokens ni dinero, y
+  **el corte del 90% del criterio local es un supuesto, no una medición**.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos". No toqué
+  `process/`.

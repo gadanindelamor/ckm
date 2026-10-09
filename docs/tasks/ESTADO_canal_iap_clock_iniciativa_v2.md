@@ -7,11 +7,18 @@
 
 ## Última escritura
 
-**2026-10-08 23:06 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 00:07 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP1 — el CLOCK del canal.** Cerrado el 2026-10-08. Suite **304/304**, cinco inversiones.
+**CP2a — el ODA continuo, sin criterio local.** Cerrado el 2026-10-09. Suite **321/321**,
+ocho inversiones. `trigger_mode="continuo"` como único modo, una decisión por vuelta, el
+silencio no absorbente, LEAVE como decisión, y el `since` del reloj del canal leído antes de
+`get_messages`. **La inversión 19 no rompía porque `_observe` pedía el clock y el loop lo
+sobreescribía**: código redundante que ningún test podía distinguir. Arreglado en el código.
+**Tocó sólo `iap_chatroom/`.**
+
+Antes: **CP1 — el CLOCK del canal.** Cerrado el 2026-10-08. Suite **304/304**, cinco inversiones.
 El canal genera los ticks con su reloj de pared UTC, la Config los registra, y cada tiempo
 declara su procedencia. **La inversión 10 no rompía**: nada protegía que el reloj del canal
 fuera el que sella los mensajes. Cerrado con dos tests nuevos.
@@ -24,12 +31,6 @@ Antes: **CP0 — evaluar contra el repo, sin código.** Cerrado el 2026-10-08, c
 aceptado en `2ad873e`.
 
 
-## En curso
-
-**CP2a — el ODA continuo, sin criterio local.** Tensiones T1–T6 evaluadas y contestadas
-(`982b641`). Si esta línea sigue acá en la próxima sesión, el CP2a se cortó: `git status` dice
-qué quedó tocado y la suite si quedó consistente. **No toca Monitor, Config ni COCO.**
-
 ## Qué espera, y de quién
 
 - **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.
@@ -37,11 +38,16 @@ qué quedó tocado y la suite si quedó consistente. **No toca Monitor, Config n
 
 ## Próximo paso
 
-**CP2 — el ODA continuo.** Lo que trae, y está registrado:
-- el ciclo deja de dispararse por mensaje (`trigger_mode` sale del canal vivo);
-- **requisito registrado por Opus:** el `since` sale de timestamps del canal, **nunca** de
-  `time.time()` del device, con un test que pueda fallar. Hoy sigue saliendo del device;
-- el costo se decide ahí: con N=2 y T=60 s, el continuo da 60 a 120 llamadas contra 2 a 20.
+**CP2b — el criterio local encima** (OK de delamor, `e737e78`): `skip` registrado con su motivo,
+auditoría **al azar sobre las dos caras**, umbrales declarados "no calibrados", y el test que
+pide delamor: en silencio y con objetivo, el filtro **igual** deja pasar a D alguna vez — que el
+filtro no vuelva absorbente el silencio.
+
+Los tres requisitos del CP2 quedaron cumplidos en el CP2a: el `since` del canal, el clock
+observado en silencio, y `get_messages` probado con el `since` real del device.
+
+**Después:** el CP3 (el caso Z, de delamor) y la corrida viva, que espera las claves. El costo
+estimado está reportado y lo decide delamor.
 
 ## Base
 

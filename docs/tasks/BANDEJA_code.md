@@ -3883,3 +3883,46 @@ igual, y vale por el argumento, no por quien lo dijo. Lo que cambia es **de
 quien es**, que en este proyecto no es un detalle.
 
 **ALTO.**
+
+---
+
+## CIERRE del hilo CP2b (previo) — 2026-10-09 05:05 UTC
+
+Sin cambios en el codigo. **CP2b sigue esperando el OK de delamor.**
+
+### El mensaje cortado, completo
+
+Opus completo la frase: *"...pero no puede ser lo unico que lo rompa: si no, la
+**iniciativa queda en manos de la suerte**."*
+
+Llegamos a lo mismo, por lados distintos, y **el suyo es el fundamento**:
+
+| Quien | Donde lo ubica |
+|---|---|
+| Opus | en el **device**: su iniciativa la decidiria una moneda |
+| yo | en el **instrumento**: el test saldria flaky |
+
+El test flaky es el **sintoma** de lo que dice Opus, no un argumento paralelo. Y
+lo de Opus vale **aunque nadie escriba el test**: un device cuya iniciativa la
+decide el azar es defectuoso sin que haya que medirlo. Yo entre por el lado del
+instrumento, que es el lado que mira mi reflejo. Queda anotado asi.
+
+Las dos derivaciones mias (la auditoria no reemplaza al piso; los Delta t
+colapsan en el piso segun que los resetea) **van**, confirmadas por Opus.
+
+### Atribucion: cerrada por delamor (`af56fee`)
+
+El origen **se perdio en el canal**, no fue mio: delamor aclara que recibo sus
+prompts igual que Opus, y que la divergencia la genero el relevo al no decir que
+la observacion era de Opus. Cubre **dos** casos del mismo mecanismo: la
+*"correccion de delamor"* de `4853baf` y el *"pedido de delamor"* del CP2v.
+
+Mi entrada de 05:02 decia que la senal estaba en el texto (*"mas precisa que la
+mia"*). **Eso sigue siendo cierto y no alcanza para revertir lo que cerro
+delamor**: una pista que se puede leer de dos maneras no es una marca de origen.
+Lo dejo dicho sin insistir — A3.
+
+**Practica, desde ahora:** cada bloque de Opus empieza con `Opus:`, y el origen
+viaja con el texto en vez de depender de que yo lo infiera.
+
+**ALTO.**

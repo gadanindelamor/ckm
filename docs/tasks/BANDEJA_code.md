@@ -4105,3 +4105,76 @@ sesion, esta vez mio.** Reemplazada por dos aserciones sobre valores distintos
   corro sin OK.**
 
 **ALTO.**
+
+---
+
+## REPORTE CP2b ajustes — los cuatro de Opus — 2026-10-09 05:39 UTC
+
+**Suite: 418 passed** (eran 412). Los cuatro ajustes van, mas el control que
+pidio Opus y una consecuencia de calibracion que quedo medible.
+
+| # | Ajuste | Que cambio |
+|---|---|---|
+| 1 | `piso_ticks` -> **`piso_vueltas`** | el nombre decia ticks y lo medido era `_vueltas_sin_llamar`. Test con el **tick quieto**: el piso igual dispara, que es lo que prueba que cuenta vueltas |
+| 2 | **`ValueError` si `piso_vueltas <= 0`** | el docstring decia que el piso "no es opcional" y el constructor dejaba apagarlo: **el texto afirmaba una cosa y el codigo permitia la otra** |
+| 3 | **publicar exige `INTERACT` explicito** | `_interact` ya no cae a publicar; toda palabra que no reconoce se registra UNKNOWN **sin actuar** |
+| 4 | `_tick_ultima_llamada`: `-1` -> **`None`** | una ausencia representada con un valor de la escala, **puesta por mi en el archivo nuevo**. Y un segundo caso que el ajuste dejo ver: con el clock UNKNOWN **no se sabe en que tick se llamo**, y eso tampoco es el tick -1 |
+
+### El test de la absorcion cambio de enunciado, y dice mas
+
+Con el `> 0` afuera de `evaluar`, **`piso_vueltas=0` ahora dispararia el piso
+SIEMPRE** — lo contrario de apagarlo. Asi que la absorcion ya no se exhibe
+poniendo el piso en cero.
+
+Se exhibe con un **piso fuera del horizonte**, y eso dice algo que *"sin piso el
+silencio es absorbente"* no decia: **que el piso sea finito no alcanza; tiene que
+caer dentro de la ventana que se observa.**
+
+Opus lo cerro con el numero: *"con 12 vueltas de piso y un vivo de 11 vueltas, el
+silencio es absorbente dentro de lo que se observa."* El default es **12** y el
+vivo 02 corrio **23 vueltas**, asi que ahi entraba. **El umbral va a
+Calibracion: el piso tiene que ser menor que las vueltas de un vivo.**
+
+### Lo que agregue, que es del instrumento y no del umbral
+
+`panel_criterio()` ahora declara **`piso_dentro_del_horizonte`**: si hubo skips y
+el piso **no disparo nunca**, esa corrida **no puede decir** si el silencio era
+absorbente. Es UNKNOWN y no "no era". Sin skips queda `None` — la pregunta no se
+hizo — y no `False`, que afirmaria que el piso no cupo. Va con
+`vueltas_para_ver_el_piso`, que es el minimo de vueltas que una corrida necesita
+para poder mirarlo.
+
+No fija el umbral: hace que cada corrida diga **si pudo ver lo que afirma**.
+
+### El control que pidio Opus
+
+*"Que el `ValueError` para valores <= 0 haya quedado puesto. Si
+`piso_vueltas=0` 'llama siempre', tiene que ser porque la construccion no llega a
+ese valor, no porque 0 sea un valor valido con otro significado."*
+
+Verificado sobre el modulo cargado: `__post_init__` existe y levanta; `0` y `-1`
+dan `ValueError`; el default es `12`. **Al valor no se llega por construccion.**
+Cubierto por `test_apagar_el_piso_no_es_una_configuracion_valida` (0, -1, -100) y
+por la **inversion B**.
+
+### Las cuatro inversiones
+
+| # | Que se invirtio | Que test fallo | Suite al restaurar |
+|---|---|---|---|
+| A | el piso vuelve a contar **ticks** (`_t - _u >= piso`) | `test_el_piso_cuenta_vueltas_y_el_nombre_lo_dice`, `test_el_panel_lleva_las_dos_caras` | 418 |
+| B | sin el `ValueError` | `test_apagar_el_piso_no_es_una_configuracion_valida`, `test_un_piso_fuera_del_horizonte_ES_absorbente` | 418 |
+| C | sin la exigencia de `INTERACT` | `test_publicar_exige_INTERACT_explicito` | 418 |
+| D | `-1` en vez de `None` | `test_nunca_llamo_es_None_y_no_un_tick` | 418 |
+
+### Dos aserciones mias que no podian fallar
+
+En `test_publicar_exige_INTERACT_explicito` escribi
+`assert dev.decisiones() == [] or True` y
+`assert ... if hasattr(dev, "_log_decisiones") else True`. **Las dos son
+verdaderas siempre**, y el atributo no existe: `_log` imprime y no guarda.
+
+Es el mismo patron que vengo sacando toda la sesion, **en el test que escribi
+para el patron**. Reemplazadas por una lectura de `capsys`: que la salida diga
+UNKNOWN **y** que la palabra cruda no aparezca.
+
+**ALTO.**

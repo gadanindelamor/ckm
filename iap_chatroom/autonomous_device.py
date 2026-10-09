@@ -477,6 +477,10 @@ class AutonomousDevice:
         `_se_fue` para que el loop corte. Antes irse no era una decisión: era
         el final del loop cuando vencía `duration`.
 
+        **Ninguna rama cae a publicar.** Cada decisión tiene su primitiva y la
+        que no se reconoce se registra como UNKNOWN sin actuar: el default de
+        una ausencia no puede ser una acción sobre el canal.
+
         Si mañana el canal ofrece otra primitiva, D la puede elegir sin cambiar
         el ciclo (TASK §1).
         """
@@ -508,6 +512,20 @@ class AutonomousDevice:
             await client.call_tool("leave_channel", {"device_id": self.device_id})
             self._se_fue = True
             self._log("LEAVE", field_state)
+            return
+
+        if decision != "INTERACT":
+            # **Publicar exige INTERACT explicito** (Opus, 9 oct). Antes esta
+            # funcion caia por default a generar y publicar: toda palabra que
+            # no fuera UNKNOWN/SKIP/OP_SILENCE/LEAVE terminaba en
+            # `send_message`. Hoy `_decide` acota el vocabulario, asi que no
+            # era un defecto vivo — pero **el relleno de la ausencia era una
+            # accion**, y el CP2b ya mostro lo que pasa cuando entra un valor
+            # nuevo: el skip publicaba.
+            #
+            # Una decision que no se reconoce **no autoriza nada** y se
+            # registra como UNKNOWN, igual que la que no existio.
+            self._log(DECISION_UNKNOWN, field_state)
             return
 
         text = await self._generate()
@@ -907,7 +925,7 @@ class AutonomousDevice:
             "calibrado": umb.calibrado,
             "umbrales": {
                 "dt_minimo_s": umb.dt_minimo_s,
-                "piso_ticks": umb.piso_ticks,
+                "piso_vueltas": umb.piso_vueltas,
                 "tasa_auditoria": umb.tasa_auditoria,
             },
             "vueltas_evaluadas": len(regs),
@@ -923,6 +941,23 @@ class AutonomousDevice:
             },
             # el costo del sesgo
             "divergencia_auditoria": divergencia_auditoria(regs),
+            # **Si el piso cayó dentro de lo que esta corrida observó.**
+            #
+            # Opus, 9 oct: *"un piso más largo que la ventana de observación es,
+            # en la práctica, lo mismo que no tener piso: con 12 vueltas de piso
+            # y un vivo de 11 vueltas, el silencio es absorbente dentro de lo
+            # que se observa."*
+            #
+            # El umbral es de Calibración (el piso tiene que ser menor que las
+            # vueltas de un vivo). Lo que sí es del instrumento es **declarar si
+            # esta corrida pudo verlo**: si hubo skips y el piso no disparó
+            # nunca, la corrida **no puede decir** si el silencio era absorbente
+            # — y eso es UNKNOWN, no "no era".
+            "piso_dentro_del_horizonte": (
+                None if not skips                      # sin skips, no aplica
+                else any(r["via"] == "piso" for r in regs if r["llamar"])
+            ),
+            "vueltas_para_ver_el_piso": umb.piso_vueltas + 1,
         }
 
     def registros_criterio(self) -> list[dict]:

@@ -7,11 +7,25 @@
 
 ## Última escritura
 
-**2026-10-09 05:25 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 05:39 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2b — el criterio local.** Cerrado el 2026-10-09. Suite **412/412**, 33 tests nuevos en
+**CP2b — el criterio local, con los cuatro ajustes de Opus.** Cerrado el 2026-10-09. Suite
+**418/418**. Ajustes: `piso_ticks`→`piso_vueltas` (el nombre decía ticks y medía vueltas);
+`ValueError` si `piso_vueltas ≤ 0` (el docstring decía "no opcional" y el constructor dejaba
+apagarlo); publicar exige `INTERACT` explícito (`_interact` ya no cae a publicar); `-1` → `None`
+para "nunca llamó". Cuatro inversiones, las cuatro rompen. Control de Opus verificado: al valor
+0 no se llega por construcción.
+
+**El enunciado de la absorción cambió y dice más:** con el `> 0` fuera de `evaluar`, un `0`
+dispararía el piso *siempre*. La absorción se exhibe con un **piso fuera del horizonte** — que
+el piso sea finito no alcanza, tiene que caer dentro de la ventana observada. Umbral a
+Calibración: **el piso tiene que ser menor que las vueltas de un vivo** (default 12; el vivo 02
+corrió 23). El panel declara `piso_dentro_del_horizonte`: si hubo skips y el piso no disparó, la
+corrida **no puede decir** si el silencio era absorbente.
+
+Antes: **CP2b sin los ajustes.** Suite **412/412**, 33 tests nuevos en
 `tests/test_criterio_local.py`, módulo nuevo `iap_chatroom/criterio_local.py`, **cinco
 inversiones** (la del piso rompe 5 tests, no 1). Las cuatro propiedades de Opus cubiertas:
 registra el salto con su motivo y distinguible de `OP_SILENCE` (`DECISION_SKIP`, tercer valor);

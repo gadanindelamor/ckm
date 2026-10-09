@@ -24,8 +24,8 @@ con el filtro en el lugar del provider caido.
 
 De ahi las dos piezas que **no** son calibracion:
 
-1. **El piso** (`piso_ticks`): deterministico. Pasados N ticks sin llamar, se
-   llama. Es lo que impide que el silencio sea punto fijo, y lo que hace que el
+1. **El piso** (`piso_vueltas`): deterministico. Pasadas N **vueltas** sin
+   llamar, se llama. Es lo que impide que el silencio sea punto fijo, y lo que hace que el
    test pueda fallar **por el motivo correcto**.
 
 2. **La auditoria** (`tasa_auditoria`): al azar, sobre las dos caras. Rompe el
@@ -105,11 +105,25 @@ class UmbralesCriterioLocal:
 
     Si Calibracion entrega numeros, se reemplazan y se pone `calibrado=True`.
 
-    `piso_ticks` **no es un umbral de calibracion en el mismo sentido**: su
+    `piso_vueltas` **no es un umbral de calibracion en el mismo sentido**: su
     valor es calibrable, pero que exista y sea finito no lo es — es lo que
-    impide que el silencio sea absorbente. `piso_ticks=0` desactiva el piso y
-    el filtro vuelve a ser absorbente; hay un test que lo afirma.
+    impide que el silencio sea absorbente.
+
+    Por eso **`piso_vueltas <= 0` levanta `ValueError`** (Opus, 9 oct): antes se
+    aceptaba, y un `0` desactivaba el piso. El docstring decia que el piso "no
+    es opcional" y la configuracion permitia apagarlo: **el texto afirmaba una
+    cosa y el constructor otra**. Volver absorbente el silencio no puede ser una
+    configuracion valida. El test que exhibe la absorcion sin piso la produce por
+    **inversion** (monkeypatch de la rama), que es lo que es.
     """
+
+    def __post_init__(self) -> None:
+        if self.piso_vueltas <= 0:
+            raise ValueError(
+                "piso_vueltas tiene que ser > 0: el piso es lo que impide que "
+                "el silencio sea punto fijo del lazo, y apagarlo no es una "
+                "configuracion valida (CP2b, Opus 9 oct)"
+            )
 
     # Δt minimo desde la ultima llamada para que el criterio por si solo llame.
     # Provisorio: el orden de magnitud sale del `poll_interval=5.0` de los dos
@@ -118,7 +132,7 @@ class UmbralesCriterioLocal:
 
     # Vueltas sin llamar tras las cuales se llama igual. Ver el docstring: que
     # exista no es calibracion.
-    piso_ticks: int = 12
+    piso_vueltas: int = 12
 
     # LAS DOS TASAS DE AUDITORIA, las dos declaradas y sin calibrar (Opus:
     # "las dos van al azar, con la tasa declarada como 'no calibrada', igual
@@ -159,8 +173,10 @@ class CriterioLocal:
     # absorbente de una tirada de moneda.
     rng: random.Random = field(default_factory=random.Random)
 
-    # Estado interno. -1 es "nunca llamo", no "llamo en el tick -1".
-    _tick_ultima_llamada: int = -1
+    # Estado interno. **`None` es "nunca llamo"** (Opus, 9 oct). Antes era `-1`,
+    # que representa una ausencia con un valor de la escala: el mismo relleno
+    # que vengo sacando de todo el resto, puesto por mi en el archivo nuevo.
+    _tick_ultima_llamada: Optional[int] = None
     _vueltas_sin_llamar: int = 0
 
     def evaluar(
@@ -213,7 +229,7 @@ class CriterioLocal:
                 "umbrales_calibrados": umb.calibrado,
                 "umbrales": {
                     "dt_minimo_s": umb.dt_minimo_s,
-                    "piso_ticks": umb.piso_ticks,
+                    "piso_vueltas": umb.piso_vueltas,
                     "tasa_auditoria": umb.tasa_auditoria,
                     "tasa_auditoria_pase": umb.tasa_auditoria_pase,
                 },
@@ -225,7 +241,9 @@ class CriterioLocal:
                     r["auditado_pase"] = (
                         self.rng.random() < umb.tasa_auditoria_pase
                     )
-                self._tick_ultima_llamada = tick if tick is not None else -1
+                # el tick de la llamada, o None si el clock estaba UNKNOWN:
+                # no se sabe en que tick se llamo, y eso no es el tick -1
+                self._tick_ultima_llamada = tick
                 self._vueltas_sin_llamar = 0
             else:
                 self._vueltas_sin_llamar += 1
@@ -240,12 +258,13 @@ class CriterioLocal:
         #     sobre un device que todavia no decidio nada es el mismo relleno
         #     de ausencias que vengo sacando de todo el resto. Ademas sostiene
         #     la iniciativa desde la vuelta 1 y no desde la 12.
-        if self._tick_ultima_llamada == -1 and self._vueltas_sin_llamar == 0:
+        if self._tick_ultima_llamada is None and self._vueltas_sin_llamar == 0:
             return registro(True, MOTIVO_PRIMERA, VIA_CRITERIO)
 
         # (c) El piso, deterministico. Va antes que todo lo demas
         #     para que ningun criterio posterior pueda dejarlo sin efecto.
-        if umb.piso_ticks > 0 and self._vueltas_sin_llamar >= umb.piso_ticks:
+        # `piso_vueltas > 0` lo garantiza __post_init__: no hay rama apagada.
+        if self._vueltas_sin_llamar >= umb.piso_vueltas:
             return registro(True, MOTIVO_PISO, VIA_PISO)
 
         # (d) El criterio propiamente: lo que cambio.

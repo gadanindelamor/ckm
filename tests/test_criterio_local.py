@@ -53,6 +53,28 @@ from tests.test_oda_continuo import ClientStub, ProviderStub, _publicar_sync
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
+def _piso_fuera_del_horizonte(**kw) -> CriterioLocal:
+    """
+    Un filtro cuyo piso está **más lejos que la ventana que se observa**.
+
+    `piso_vueltas <= 0` ya no se puede configurar (`ValueError`, Opus 9 oct), y
+    además, con la guarda `> 0` afuera de `evaluar`, un `0` haría que el piso
+    dispare **todas** las vueltas: lo contrario de apagarlo. Así que la absorción
+    no se exhibe poniendo el piso en cero.
+
+    Se exhibe así: **un piso fuera del horizonte es indistinguible de no tener
+    piso.** Eso es más preciso que "sin piso el silencio es absorbente", y dice
+    algo que el enunciado anterior no decía: que `piso_vueltas` sea finito **no
+    alcanza** — tiene que caer dentro de la ventana que se mira. Eso es
+    calibración, y es exactamente por qué los umbrales van declarados sin
+    calibrar.
+    """
+    kw.setdefault("tasa_auditoria", 0.0)
+    kw.setdefault("tasa_auditoria_pase", 0.0)
+    return CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=10 ** 9, **kw),
+                         rng=random.Random(0))
+
+
 def _filtro(**kw) -> CriterioLocal:
     """Filtro con auditoría apagada y RNG sembrado, salvo que se pida otra cosa."""
     kw.setdefault("tasa_auditoria", 0.0)
@@ -106,7 +128,7 @@ def test_el_silencio_no_vuelve_absorbente_al_filtro() -> None:
     decide → el canal sigue callado.
     """
     N = 40
-    filtro = _filtro(piso_ticks=5)
+    filtro = _filtro(piso_vueltas=5)
     regs = _silencio(filtro, N)
 
     llamadas = [r for r in regs if r["llamar"]]
@@ -119,16 +141,28 @@ def test_el_silencio_no_vuelve_absorbente_al_filtro() -> None:
     assert len(llamadas) >= N // 10
 
 
-def test_sin_piso_el_silencio_ES_absorbente() -> None:
+def test_un_piso_fuera_del_horizonte_ES_absorbente() -> None:
     """
-    **Afirma el agujero.** Con `piso_ticks=0` y sin auditoría, el filtro no
+    **Afirma el agujero.** Con `piso_vueltas=0` y sin auditoría, el filtro no
     llama nunca: el silencio es absorbente.
 
     Este test no está para que el código pase: está para que quede escrito que
     **lo que rompe el punto fijo es el piso**, y que apagarlo lo devuelve. Es la
     inversión del test de arriba, como test.
+
+    **Y el piso 0 ya no se puede configurar** (`ValueError`). Más: con la guarda
+    `> 0` afuera de `evaluar`, un `0` haría disparar el piso **siempre**. Así que
+    la absorción no se exhibe apagando el piso: se exhibe con un piso **fuera del
+    horizonte**, que es indistinguible de no tenerlo.
+
+    Eso dice algo que "sin piso es absorbente" no decía: **que el piso sea finito
+    no alcanza**, tiene que caer dentro de la ventana que se observa. Eso es
+    calibración, y es por qué los umbrales van declarados sin calibrar.
     """
-    filtro = _filtro(piso_ticks=0)
+    with pytest.raises(ValueError):
+        UmbralesCriterioLocal(piso_vueltas=0)   # por configuración, no se llega
+
+    filtro = _piso_fuera_del_horizonte()
     regs = _silencio(filtro, 40)
 
     # la primera vuelta llama igual: "nunca llamó" no es "llamó hace 0 vueltas"
@@ -151,8 +185,10 @@ def test_la_auditoria_sola_puede_no_llamar_nunca() -> None:
         s for s in range(500)
         if all(random.Random(s).random() >= 0.1 for _ in range(20))
     )
+    # piso fuera del horizonte: dentro de las 20 vueltas que se miran, el
+    # piso no existe, y lo único que podría llamar es la auditoría
     filtro = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_ticks=0, tasa_auditoria=0.1),
+        umbrales=UmbralesCriterioLocal(piso_vueltas=10 ** 9, tasa_auditoria=0.1),
         rng=random.Random(semilla),
     )
     regs = _silencio(filtro, 20)
@@ -162,8 +198,8 @@ def test_la_auditoria_sola_puede_no_llamar_nunca() -> None:
 
 def test_el_piso_es_periodico_y_deterministico() -> None:
     """Dos filtros iguales, con la misma entrada, llaman en las mismas vueltas."""
-    a = _silencio(_filtro(piso_ticks=7), 30)
-    b = _silencio(_filtro(piso_ticks=7), 30)
+    a = _silencio(_filtro(piso_vueltas=7), 30)
+    b = _silencio(_filtro(piso_vueltas=7), 30)
     assert [r["llamar"] for r in a] == [r["llamar"] for r in b]
     assert [r["motivo"] for r in a].count(MOTIVO_PISO) >= 3
 
@@ -188,7 +224,7 @@ def test_skip_no_es_OP_SILENCE_ni_UNKNOWN() -> None:
 def test_en_la_traza_del_device_el_skip_se_distingue(canal) -> None:
     """Y la distinción llega al log del device, no sólo a la constante."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=3))
+                  criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     tipos = {d["decision"] for d in dev.decisiones()}
@@ -219,7 +255,7 @@ def test_un_skip_no_publica_nada(canal) -> None:
     mecanismo, no corregido de paso.
     """
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=3))
+                  criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     skips = [d for d in dev.decisiones() if d["decision"] == DECISION_SKIP]
@@ -232,7 +268,7 @@ def test_un_skip_no_publica_nada(canal) -> None:
 def test_un_skip_no_gasta_una_llamada(canal) -> None:
     """Lo que el filtro es para: la vuelta que skipea no llama al LLM."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=3))
+                  criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     for d in dev.decisiones():
@@ -248,7 +284,7 @@ def test_cada_vuelta_lleva_su_motivo() -> None:
     turno**. Un contador dice cuántos, no cuáles, y cuáles es lo que hace falta
     para saber si el silencio estaba decidido.
     """
-    regs = _silencio(_filtro(piso_ticks=4), 20)
+    regs = _silencio(_filtro(piso_vueltas=4), 20)
     assert all(r["motivo"] for r in regs), "una vuelta quedó sin motivo"
     assert all("deltas" in r for r in regs)
     # los motivos no son todos el mismo: el piso se distingue del sin_cambio
@@ -261,7 +297,7 @@ def test_la_via_dice_por_que_SI_se_llamo() -> None:
     llamada del piso y una del criterio se ven iguales, y la divergencia de la
     auditoría se mezclaría con el resto.
     """
-    f = _filtro(piso_ticks=3)
+    f = _filtro(piso_vueltas=3)
     regs = [f.evaluar(tick=1, n_nuevos=0),          # primera
             f.evaluar(tick=2, n_nuevos=2),          # mensajes
             f.evaluar(tick=3, n_nuevos=0),
@@ -275,7 +311,8 @@ def test_la_via_dice_por_que_SI_se_llamo() -> None:
 
 def test_la_auditoria_queda_marcada_como_tal() -> None:
     """Una llamada de auditoría no se confunde con una del criterio."""
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_ticks=0,
+    # el piso puesto lejos para que no estorbe: eso sí es configuración válida
+    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=99,
                                                      tasa_auditoria=1.0),
                       rng=random.Random(0))
     f.evaluar(tick=1, n_nuevos=0)                   # primera vuelta
@@ -293,21 +330,21 @@ def test_los_umbrales_nacen_sin_calibrar() -> None:
 
 def test_el_sin_calibrar_viaja_en_cada_registro() -> None:
     """No en un comentario del código: en el registro de cada vuelta."""
-    for r in _silencio(_filtro(piso_ticks=4), 10):
+    for r in _silencio(_filtro(piso_vueltas=4), 10):
         assert r["umbrales_calibrados"] is False
-        assert r["umbrales"]["piso_ticks"] == 4
+        assert r["umbrales"]["piso_vueltas"] == 4
 
 
 def test_el_panel_declara_los_umbrales_sin_calibrar(canal) -> None:
     """**Pedido de Opus:** umbrales declarados "no calibrados" **en el panel**."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=3))
+                  criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     panel = dev.panel_criterio()
     assert panel is not None
     assert panel["calibrado"] is False
-    assert panel["umbrales"]["piso_ticks"] == 3
+    assert panel["umbrales"]["piso_vueltas"] == 3
     assert panel["n_skips"] + panel["n_llamadas"] == panel["vueltas_evaluadas"]
     assert dev.costo()["criterio_local"]["calibrado"] is False
 
@@ -351,7 +388,7 @@ def test_objetivo_y_presupuesto_van_ausentes_declarados() -> None:
     No existen hasta el caso Z (CP3, delamor). Van `None`, no `0` ni `False`:
     la ausencia es el estado del observador, no un valor de la escala.
     """
-    r = _filtro(piso_ticks=4).evaluar(tick=1, n_nuevos=0)
+    r = _filtro(piso_vueltas=4).evaluar(tick=1, n_nuevos=0)
     assert r["deltas"]["estado_objetivo"] is None
     assert r["deltas"]["presupuesto"] is None
 
@@ -361,14 +398,14 @@ def test_el_clock_UNKNOWN_llama_a_D() -> None:
     Sin tick no se puede saber si el piso venció. El filtro no se arroga el
     silencio sobre una dimensión que no observó.
     """
-    f = _filtro(piso_ticks=4)
+    f = _filtro(piso_vueltas=4)
     f.evaluar(tick=1, n_nuevos=0)                   # gasta la primera vuelta
     r = f.evaluar(tick=None, n_nuevos=0)
     assert r["llamar"] and r["motivo"] == "tick_UNKNOWN"
 
 
 def test_nombrar_al_device_llama_a_D() -> None:
-    f = _filtro(piso_ticks=99)
+    f = _filtro(piso_vueltas=99)
     f.evaluar(tick=1, n_nuevos=0)
     r = f.evaluar(tick=2, n_nuevos=0, nombrado=True)
     assert r["llamar"] and r["motivo"] == "nombrado"
@@ -384,7 +421,7 @@ def test_delta_mensajes_cuenta_solo_ajenos(canal) -> None:
     propios mensajes no pueden contar como mensajes nuevos.
     """
     dev = _device(ProviderStub(["INTERACT"] + ["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=99))
+                  criterio_local=_filtro(piso_vueltas=99))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     propios = [m for m in canal.messages if m.device_id == dev.device_id]
@@ -399,7 +436,7 @@ def test_delta_mensajes_cuenta_solo_ajenos(canal) -> None:
 
 def test_sin_auditorias_la_tasa_es_None_no_cero() -> None:
     """`0.0` afirma que se auditó y no divergió. Son dos cosas distintas."""
-    d = divergencia_auditoria(_silencio(_filtro(piso_ticks=4), 10))
+    d = divergencia_auditoria(_silencio(_filtro(piso_vueltas=4), 10))
     assert d["n_auditados"] == 0
     assert d["tasa"] is None
 
@@ -456,13 +493,13 @@ def test_los_deltas_NO_entran_al_prompt_del_gate(canal) -> None:
     que D los vea, se para y se reporta.
     """
     prov = ProviderStub(["OP_SILENCE"] * 50)
-    dev = _device(prov, criterio_local=_filtro(piso_ticks=3))
+    dev = _device(prov, criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     import json
     enviado = json.dumps(prov.llamadas, default=str)
     for marca in ("dt_desde_ajeno", "dt_desde_que_hable", "vueltas_sin_llamar",
-                  "piso_ticks", "tasa_auditoria", "umbrales"):
+                  "piso_vueltas", "tasa_auditoria", "umbrales"):
         assert marca not in enviado, f"{marca} se filtró al prompt del gate"
 
 
@@ -552,7 +589,7 @@ def test_una_cara_sin_datos_da_None_y_no_cero() -> None:
 def test_el_panel_lleva_las_dos_caras(canal) -> None:
     """Y las dos caras llegan al panel, que es donde se leen."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_ticks=3))
+                  criterio_local=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     div = dev.panel_criterio()["divergencia_auditoria"]
@@ -574,7 +611,7 @@ def test_las_dos_tasas_van_declaradas_sin_calibrar() -> None:
     # verdadera casi siempre: no podía fallar. Es el mismo patrón que vengo
     # sacando de los tests ajenos toda la sesión, esta vez mío.
     f = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_ticks=4, tasa_auditoria=0.3,
+        umbrales=UmbralesCriterioLocal(piso_vueltas=4, tasa_auditoria=0.3,
                                        tasa_auditoria_pase=0.7),
         rng=random.Random(0),
     )
@@ -598,7 +635,7 @@ def test_el_muestreo_del_pase_no_cuesta_una_llamada() -> None:
     """
     def correr(tasa_pase):
         f = CriterioLocal(
-            umbrales=UmbralesCriterioLocal(piso_ticks=3, tasa_auditoria=0.0,
+            umbrales=UmbralesCriterioLocal(piso_vueltas=3, tasa_auditoria=0.0,
                                            tasa_auditoria_pase=tasa_pase),
             rng=random.Random(7),
         )
@@ -613,3 +650,135 @@ def test_el_muestreo_del_pase_no_cuesta_una_llamada() -> None:
         "el sorteo del pase cambió qué vueltas llaman: no debería"
     assert marcadas_0 == 0 and marcadas_1 > 0, \
         "el sorteo del pase no cambió qué vueltas quedan en la muestra"
+
+
+# ── los cuatro ajustes de Opus (9 oct) ──────────────────────────────────────
+
+def test_el_piso_cuenta_vueltas_y_el_nombre_lo_dice() -> None:
+    """
+    **Ajuste 1.** Se llamaba `piso_ticks` y lo que mide es `_vueltas_sin_llamar`.
+    El nombre decía otra cosa que lo medido, y con `poll_interval` y el período
+    del tick distintos los dos números se separan.
+
+    Se verifica que cuenta **vueltas**: con el tick quieto —el mismo número en
+    todas las evaluaciones— el piso igual dispara.
+    """
+    assert not hasattr(UmbralesCriterioLocal(), "piso_ticks")
+    f = _filtro(piso_vueltas=4)
+    regs = [f.evaluar(tick=7, n_nuevos=0) for _ in range(12)]   # tick QUIETO
+    assert any(r["motivo"] == MOTIVO_PISO for r in regs), \
+        "con el tick quieto el piso no disparó: estaría contando ticks"
+
+
+def test_apagar_el_piso_no_es_una_configuracion_valida() -> None:
+    """
+    **Ajuste 2.** El docstring decía que el piso "no es opcional" y el
+    constructor dejaba pasar un `0` que lo apagaba: **el texto afirmaba una cosa
+    y el código permitía la otra.**
+    """
+    for v in (0, -1, -100):
+        with pytest.raises(ValueError, match="piso_vueltas"):
+            UmbralesCriterioLocal(piso_vueltas=v)
+    assert UmbralesCriterioLocal(piso_vueltas=1).piso_vueltas == 1
+
+
+def test_publicar_exige_INTERACT_explicito(canal, capsys) -> None:
+    """
+    **Ajuste 3.** `_interact` caía por default a generar y publicar: toda palabra
+    que no fuera UNKNOWN/SKIP/OP_SILENCE/LEAVE terminaba en `send_message`.
+
+    Hoy `_decide` acota el vocabulario, así que no era un defecto vivo. Pero
+    **el relleno de la ausencia era una acción sobre el canal**, y el CP2b ya
+    mostró lo que pasa cuando entra un valor nuevo: el skip publicaba.
+
+    Una decisión que no se reconoce no autoriza nada, y se registra como UNKNOWN
+    igual que la que no existió.
+    """
+    dev = _device(ProviderStub(["OP_SILENCE"]))
+    client = ClientStub(canal, dev.device_id)
+
+    import iap_chatroom.autonomous_device as mod
+    orig = mod.Client
+    mod.Client = lambda url: client
+    try:
+        asyncio.run(client.call_tool(
+            "join_channel", {"device_id": dev.device_id, "device_type": "AI"}))
+        asyncio.run(dev._interact(client, "PALABRA_QUE_NO_EXISTE",
+                                  {"field": None}))
+    finally:
+        mod.Client = orig
+
+    publicados = [m for m in canal.messages if m.device_id == dev.device_id]
+    assert not publicados, "una decisión desconocida publicó un mensaje"
+
+    # Y quedó registrada como UNKNOWN, no como la palabra cruda. `_log` imprime
+    # y no guarda, así que se lee de la salida — no de un atributo que no
+    # existe. Las dos aserciones que había acá (`== [] or True` y un `if
+    # hasattr(...) else True`) **no podían fallar**: el mismo patrón, en el
+    # test que escribí para el patrón.
+    salida = capsys.readouterr().out
+    assert "UNKNOWN" in salida, "la decisión desconocida no se registró"
+    assert "PALABRA_QUE_NO_EXISTE" not in salida, \
+        "la palabra cruda entró al log en vez de UNKNOWN"
+
+
+def test_nunca_llamo_es_None_y_no_un_tick() -> None:
+    """
+    **Ajuste 4.** `_tick_ultima_llamada` arrancaba en `-1`: una ausencia
+    representada con un valor de la escala. Es el mismo relleno que vengo
+    sacando de todo el resto de la sesión, puesto por mí en el archivo nuevo.
+
+    Y hay un segundo caso: si el clock está UNKNOWN, **no se sabe en qué tick se
+    llamó**, y eso tampoco es el tick `-1`.
+    """
+    f = _filtro(piso_vueltas=4)
+    assert f._tick_ultima_llamada is None, "nunca llamó se representa con None"
+
+    f.evaluar(tick=3, n_nuevos=0)
+    assert f._tick_ultima_llamada == 3
+
+    f2 = _filtro(piso_vueltas=4)
+    f2.evaluar(tick=1, n_nuevos=0)          # gasta la primera vuelta
+    f2.evaluar(tick=None, n_nuevos=0)       # clock UNKNOWN → llama
+    assert f2._tick_ultima_llamada is None, \
+        "un tick UNKNOWN quedó registrado como el tick -1"
+
+
+def test_el_panel_declara_si_el_piso_cupo_en_la_corrida() -> None:
+    """
+    **Consecuencia de calibración que nombró Opus:** un piso más largo que la
+    ventana observada es, en la práctica, lo mismo que no tener piso. Con 12
+    vueltas de piso y un vivo de 11, el silencio es absorbente **dentro de lo
+    que se observa**.
+
+    El umbral es de Calibración. Lo del instrumento es **declarar si esta
+    corrida pudo verlo**: si hubo skips y el piso no disparó nunca, la corrida
+    no puede decir si el silencio era absorbente, y eso es UNKNOWN y no "no
+    era".
+    """
+    import iap_chatroom.autonomous_device as mod
+
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=0.0,
+                           criterio_local=_filtro(piso_vueltas=5))
+    # 4 vueltas de silencio: menos de las que el piso necesita
+    dev._registros_criterio = _silencio(_filtro(piso_vueltas=5), 4)
+    panel = dev.panel_criterio()
+    assert panel["piso_dentro_del_horizonte"] is False, \
+        "la corrida afirmó haber visto un piso que no alcanzó a disparar"
+    assert panel["vueltas_para_ver_el_piso"] == 6
+
+    # con vueltas de sobra, el piso sí cupo
+    dev._registros_criterio = _silencio(_filtro(piso_vueltas=5), 30)
+    assert dev.panel_criterio()["piso_dentro_del_horizonte"] is True
+
+
+def test_sin_skips_el_horizonte_no_aplica() -> None:
+    """`False` diría "el piso no cupo"; sin skips la pregunta no se hizo."""
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=0.0,
+                           criterio_local=_filtro(piso_vueltas=5))
+    f = _filtro(piso_vueltas=5)
+    dev._registros_criterio = [f.evaluar(tick=i, n_nuevos=3) for i in range(1, 6)]
+    assert dev.panel_criterio()["n_skips"] == 0
+    assert dev.panel_criterio()["piso_dentro_del_horizonte"] is None

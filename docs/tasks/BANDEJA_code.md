@@ -3735,3 +3735,60 @@ este patron aparece en el proyecto, y la primera en que lo cerro quitando el
 relleno en vez de corrigiendolo.
 
 **ALTO.**
+
+---
+
+## CORRECCION (delamor) — el silencio absorbente es del filtro — 2026-10-09 04:57 UTC
+
+Sin cambios en el codigo. CP2b **no esta abierto**: esto queda anotado para
+cuando lo este.
+
+### Lo que dije mal
+
+En mi mensaje anterior escribi el test de CP2b asi: *"que un device que callo
+una vez pueda volver a hablar"*. **Puse la carga en el device, que es el unico
+de los dos que no puede causar el problema.** El device no tiene estado que lo
+atrape.
+
+### Lo que delamor corrigio
+
+El filtro esta **entre** O y D. Si su criterio es *"cambio algo?"* y lo unico
+que mira son los mensajes, entonces con el canal callado no cambio nada -> no
+llama a D -> el device no decide -> el canal sigue callado. **El silencio se
+vuelve punto fijo del lazo, no decision del modelo.**
+
+Y desde afuera se ve igual que un `OP_SILENCE`. Es el par vivo 01 / vivo 02 otra
+vez — `{'UNKNOWN': 24}` por infraestructura vs `{'OP_SILENCE': 23}` por decision
+— pero con **el filtro en el lugar del provider caido**. La traza es lo unico que
+los separa, y el filtro todavia no escribe nada en ella.
+
+### El test, como va
+
+Canal callado, N turnos, nada cambiado del lado de los mensajes:
+
+- `llamadas a D > 0`
+- `skips != N`
+
+**Si el filtro puede llegar a cero llamadas sosteniendo el silencio, el test
+falla ahi.**
+
+### Lo que agregue yo, y es mas flojo de lo que lo dije
+
+Dije que el criterio tiene que mirar el tick (`get_clock()` registra con o sin
+mensajes, CP1). Eso es **la condicion minima, no la solucion**:
+
+- un criterio que llama a D **cada** tick deja de ser un filtro: bajo silencio
+  cuesta lo mismo que no tenerlo, y eso es justo lo que CP2b quiere ahorrar;
+- un criterio *"tick avanzo **y** algo mas"* puede ser absorbente por el "algo
+  mas", y estamos en el mismo lugar con un paso extra.
+
+Sin algo que cambie bajo silencio el filtro es absorbente **por construccion**;
+tenerlo **no alcanza**.
+
+### Lo que queda abierto, y no es mio
+
+**Cada cuantos ticks el silencio se consulta igual** — un piso. Es calibracion.
+Va declarado como numero **no calibrado**, y el test de arriba es el que impide
+que ese numero sea infinito.
+
+**ALTO.**

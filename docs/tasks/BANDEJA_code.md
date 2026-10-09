@@ -3792,3 +3792,55 @@ Va declarado como numero **no calibrado**, y el test de arriba es el que impide
 que ese numero sea infinito.
 
 **ALTO.**
+
+---
+
+## RESPUESTA a Opus — skip vs OP_SILENCE, y los Delta t — 2026-10-09 04:59 UTC
+
+Sin cambios en el codigo. CP2b sigue cerrado.
+
+**El mensaje de Opus llego cortado**, termina en *"La auditoria al azar tambien
+rompe el punto fijo, per"*. No completo lo que seguia. Lo que sigue responde a lo
+que llego.
+
+### 1. El skip con su motivo (acuerdo, sin nada que agregar)
+
+En la traza, un skip tiene que ser distinguible de un `OP_SILENCE`. Con el motivo
+puesto, el par *"filtro callo / modelo callo"* se separa igual que el par 01/02.
+Lo unico que agrego: el motivo va **en la traza de ese turno**, no en un contador
+agregado. Un contador dice cuantos, no cuales — y cuales es lo que hace falta
+para saber si el silencio estaba decidido.
+
+### 2. La auditoria al azar rompe el punto fijo, pero no sirve como el test
+
+Rompe el punto fijo **en distribucion**: con tasa p, sostener el silencio ya no
+garantiza cero llamadas. Pero para una corrida dada **no acota nada** — hay
+probabilidad positiva de cero llamadas en N turnos, asi que `llamadas a D > 0`
+como asercion **seria flaky**. Un test que falla a veces no distingue *"el filtro
+es absorbente"* de *"salio cara N veces"*.
+
+El **piso deterministico** es lo que hace que el test pueda fallar por el motivo
+correcto. La auditoria cubre otra cosa: **las dos caras** del filtro, que es para
+lo que esta pedida. No son el mismo mecanismo y no se reemplazan.
+
+### 3. Los dos Delta t colapsan en el piso, segun que los resetea
+
+El Delta t desde el ultimo mensaje ajeno **crece monotono** bajo silencio. Si el
+criterio es *"Delta t > umbral -> llamar a D"*:
+
+| Que lo resetea | Que resulta |
+|---|---|
+| **la llamada** | el piso periodico, con otro nombre |
+| **solo un mensaje** | satura: pasado el umbral llama en **todos** los turnos, y el filtro deja de filtrar justo donde mas silencio hay |
+
+Asi que el piso **no es una perilla al lado de ese criterio: es lo que ese
+criterio es**, una vez que se dice que lo resetea. Igual con el Delta t desde que
+el device hablo.
+
+### 4. Los del caso Z si agregan algo
+
+Estado del objetivo y presupuesto **cambian por fuera del lazo**, no por el lazo.
+Esos no colapsan en el piso. Pero no existen todavia: el objetivo es del caso Z
+(delamor), y mientras no este, el lazo solo tiene lo del punto 3.
+
+**Pido el resto del mensaje. ALTO.**

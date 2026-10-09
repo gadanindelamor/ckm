@@ -227,3 +227,12 @@
 - **2026-10-09** · **Registrado de Code:** dos inversiones no midieron (la 37 no se aplicó; la 36 pegó en la línea equivocada). Repetidas, rompen. *Una inversión que no se aplica se ve igual que una que no rompe.* Desde ahora, cada inversión verifica que se aplicó (`grep -c INVERSION` ≥ 1 antes de correr la suite).
 - **2026-10-09** · **El gate queda congelado en `f96c234`** (decisión de delamor). Para su lectura, Opus agrega al punto (5): dentro del prompt la ausencia tiene **seis grafías**: `None` (campo), `UNKNOWN` (temp_signal, timestamp), `desconocido` (reloj), `unknown` (device de Incoming), `(empty)` (history) y `(ninguno)` (Incoming). No se toca hasta que delamor lo lea.
 - **2026-10-09** · **Siguiente: primer vivo con Groq**, cuando delamor tenga `GROQ_API_KEY` en el Codespace y el límite de su cuenta. `poll_interval` se fija con ese número. Después, CP2b.
+
+### Gate, punto (5) — delamor (2026-10-09)
+
+- **2026-10-09** · **delamor, regla:** *si UNKNOWN es tipo de dato, None y UNKNOWN significan cosas distintas: se mantienen ambos, no se mapea. Si UNKNOWN es un label string que representa None, función de mapeo para unificar al visualizar, sin impactar la lógica del modelo testeado.*
+- **2026-10-09** · **Lectura de Opus del código (`4e445ff`): es el segundo caso.** `"UNKNOWN"` es un string, no un tipo, y donde aparece representa lo mismo que `None`, "no se midió": `ckm_monitor.py:163` (`ts or "UNKNOWN"`). El propio `temp_signal` sale `None` mientras el corpus acumula (`get_state`, L156) y `"UNKNOWN"` después si no hay thermostat: misma ausencia, dos grafías. → **mapeo sólo al armar el prompt; la lógica sigue recibiendo `None`.**
+- **2026-10-09** · **Pero las seis grafías no son una sola ausencia (hallazgo de Opus):**
+  - **(a) no medido** — `D_ckm`, `temp_signal`, timestamp, `reloj` "desconocido", device "unknown": se mapean a `UNKNOWN` al mostrar.
+  - **(b) nunca enviado** — `c_S`, `fi` y `Delta_r` **no existen en `get_state()`** (L167-175). El gate los pide con `field.get(...)`, así que el modelo ve `None` **siempre**, en todas las vueltas. No es "todavía no se midió": el canal no los lleva. Mapearlos a `UNKNOWN` escondería eso. **Pregunta a delamor (cambio del gate congelado):** ¿se sacan del prompt, o se muestran con otra etiqueta?
+  - **(c) no es ausencia** — `(empty)` (history vacío) y `(ninguno)` (Incoming en silencio) son **dato**: cero mensajes, silencio. No se mapean a `UNKNOWN`.

@@ -349,15 +349,23 @@ class AutonomousDevice:
         lee **antes** de `get_messages`: si se leyera después, un mensaje que
         llega entre las dos llamadas se perdería en silencio.
 
-        **Y el corte se atrasa una vuelta.** `get_messages` filtra con
-        `timestamp > since`, estricto. Si la vuelta k+1 usara el corte leído en
-        la vuelta k, un mensaje sellado **exactamente** en ese instante y que
-        llega después del `get_messages` de la vuelta k no pasaría `> t_k` en
-        la k+1: se perdería en silencio. Así que la vuelta usa el corte de
-        **dos** vueltas atrás —un solape de una vuelta— y los duplicados se
-        descartan por `message_id` (`_vistos`), que ya existía para el otro
-        borde. Señalado por Opus sobre el CP2a; antes lo había tomado por un
-        artefacto del test, y no lo era.
+        **Y el corte se atrasa un tick: `since = t − periodo_s`.**
+        `get_messages` filtra con `timestamp > since`, estricto. Un mensaje
+        sellado **exactamente** en el corte y que llega después del
+        `get_messages` de su vuelta no pasaría `> since` nunca más. Con la
+        ventana, el corte queda **estrictamente menor** que cualquier sello de
+        ese instante, así que pasa; los duplicados se descartan por
+        `message_id` (`_vistos`), que ya existía para el otro borde.
+
+        **Por qué en tiempo y no en vueltas.** La primera versión usaba el
+        corte de **dos vueltas atrás**. Medido: con el reloj congelado **todos
+        los cortes son el mismo número**, así que mover cuál se usa no cambia
+        nada — 256 vueltas, 0 mensajes vistos. El solape por vueltas depende de
+        que el reloj avance; la ventana en tiempo no.
+
+        **Declarado:** la ventana cubre resoluciones de reloj menores que un
+        tick, y `_vistos` crece durante la sesión. El `periodo_s` lo trae el
+        propio clock: el device no cablea la constante del canal.
 
         El modo viejo quedó congelado en `process/iap_series_freeze_20261008/`.
         """
@@ -366,10 +374,13 @@ class AutonomousDevice:
             # mezclar el reloj del device con el del canal descarta mensajes en
             # silencio si el device va adelantado (hallazgo del CP0).
             clock0 = await client.call_tool("get_clock", {})
-            # Los cortes leídos, del más viejo al más nuevo. La vuelta usa el
-            # de dos atrás: el solape de una vuelta cubre el borde
-            # `timestamp == since` del filtro estricto de get_messages.
-            cortes: list[float] = [clock0.data["t"]]
+            # El corte arranca un tick antes de ahora, por la misma razón que
+            # en cada vuelta: el filtro de get_messages es `>` estricto.
+            ventana0 = self._ventana(clock0.data)
+            # Sin grano, el corte inicial es None: `get_messages(since=None)`
+            # devuelve el historial reciente, así que todo cuenta como nuevo.
+            # Es ruidoso y **no pierde nada**, que es la dirección segura.
+            since = (clock0.data["t"] - ventana0) if ventana0 is not None else None
 
             r = await client.call_tool(
                 "join_channel", {"device_id": self.device_id, "device_type": "AI"}
@@ -387,11 +398,17 @@ class AutonomousDevice:
                 #     llegar uno: aparece en la próxima vuelta, no se pierde.
                 clock_result = await client.call_tool("get_clock", {})
                 clock = clock_result.data
-                cortes.append(clock["t"])
-                # El corte de esta vuelta: dos lecturas atrás si las hay, y si
-                # no la más vieja que tenemos. Nunca el de la vuelta anterior.
-                since = cortes[-3] if len(cortes) >= 3 else cortes[0]
-                del cortes[:-3]
+                # El corte de la vuelta siguiente: un tick antes de esta
+                # lectura. Ventana en tiempo, no en vueltas: con el reloj
+                # quieto, todos los cortes serían el mismo número y mover cuál
+                # se usa no cubriría nada.
+                ventana = self._ventana(clock)
+                if ventana is None:
+                    # UNKNOWN: el corte NO avanza. Duplicados sí —los descarta
+                    # _vistos—, pérdidas no.
+                    proximo_since = since
+                else:
+                    proximo_since = clock["t"] - ventana
 
                 # (2) los mensajes desde el corte anterior
                 fetched = await client.call_tool("get_messages", {"since": since})
@@ -430,9 +447,13 @@ class AutonomousDevice:
                     "trigger": (nuevos[-1].get("message_id") if nuevos else None),
                     "decision": decision,
                     "trigger_mode": self.trigger_mode,
+                    # el grano con el que se calculó el corte, o UNKNOWN si el
+                    # canal no lo declaró
+                    "ventana": ventana if ventana is not None else "UNKNOWN",
                 })
 
                 self._tick_anterior = clock.get("tick", -1)
+                since = proximo_since
 
                 if self._se_fue:
                     break
@@ -445,6 +466,40 @@ class AutonomousDevice:
                     "leave_channel", {"device_id": self.device_id}
                 )
                 assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+
+    @staticmethod
+    def _ventana(clock: dict) -> Optional[float]:
+        """
+        El ancho de la ventana del corte: un tick del canal. **None es UNKNOWN.**
+
+        Sin `periodo_s` utilizable no hay ventana que calcular. Tres respuestas
+        posibles, y las tres se consideraron:
+
+        1. **`or 0.0`** — lo que hacía la primera versión. Una ventana de 0
+           deja el corte en `t` exacto: **el agujero que la ventana vino a
+           cerrar, reintroducido en silencio por el fallback.** Es NOMINAL por
+           ausencia (`c06db07`). **Descartada.**
+        2. **Levantar.** Fue mi segunda respuesta. Nombra la ausencia, pero
+           **mata el instrumento**: el device deja de observar. Y el criterio
+           del proyecto no es ése — `temp_signal` devuelve `"UNKNOWN"` y sigue,
+           `_classify_zone` devuelve UNKNOWN y no dispara STOP. UNKNOWN **no
+           autoriza una acción**; no termina el proceso. **Descartada**, a
+           pregunta de delamor (*"¿UNKNOWN? ¿podría ser?"*).
+        3. **UNKNOWN, y no avanzar el corte.** Es la que quedó. Devuelve None,
+           queda registrado en la traza de la vuelta, y el loop **conserva el
+           `since` anterior**. Quedarse atrás produce **duplicados**, que
+           `_vistos` ya descarta, y **nunca pérdidas** — que es el daño que
+           importa. La dirección segura es hacia atrás, no hacia adelante.
+
+        `bool` se excluye a propósito: `True` es `int` en Python y 1.0 sería un
+        grano inventado.
+        """
+        periodo = clock.get("periodo_s")
+        if isinstance(periodo, bool) or not isinstance(periodo, (int, float)):
+            return None
+        if periodo <= 0:
+            return None
+        return float(periodo)
 
     def decisiones(self) -> list[dict]:
         """La traza de lo decidido, vuelta por vuelta. Copia: no se edita."""

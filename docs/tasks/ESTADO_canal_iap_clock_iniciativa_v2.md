@@ -7,11 +7,16 @@
 
 ## Última escritura
 
-**2026-10-09 00:16 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 00:30 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2a′ — el borde de T2, el join y dos devices.** Cerrado el 2026-10-09. Suite **326/326**.
+**CP2a″ — la ventana en tiempo. Con esto el CP2a queda cerrado.** Cerrado el 2026-10-09.
+Suite **338/338**. `since = t − periodo_s`: el borde `timestamp == since` se cierra sin tocar
+`get_messages`. Dos preguntas de delamor cambiaron el diseño: el fallback `or 0.0` reintroducía
+el agujero, y levantar mataba el instrumento — quedó **UNKNOWN y el corte no avanza**.
+
+Antes: **CP2a′ — el borde de T2, el join y dos devices.** Cerrado el 2026-10-09. Suite **326/326**.
 Implementado el solape de una vuelta que propuso Opus. **El test con reloj congelado que pidió
 no puede pasar con el solape, y lo medí**: con el reloj quieto todos los cortes son el mismo
 número, así que mover cuál se usa no cambia nada. Escrito midiendo el agujero, no evitándolo.
@@ -39,10 +44,8 @@ aceptado en `2ad873e`.
 
 ## Qué espera, y de quién
 
-- **El borde `timestamp == since` con reloj congelado — [delamor]:** el arreglo sería `>=` en
-  `get_messages`. Cambia qué entrega el canal para **todos** los que la llaman, incluidos los 21
-  `test_caso_*` que no puedo correr. **No lo toqué.** Hay un test que afirma el agujero y que
-  **debe fallar** cuando se arregle.
+- **Nada bloqueante.** El borde se cerró con la ventana en tiempo, sin tocar `get_messages`: el
+  `>=` ya no hace falta y no se escala.
 
 - **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.
 - Sin implementar hasta el OK de delamor: **el criterio local sin LLM** y **WAIT** (TASK §1).

@@ -441,14 +441,14 @@ def test_el_clock_se_lee_una_vez_por_vuelta(canal) -> None:
         f"{clocks} lecturas de get_clock para {vueltas} vueltas: no es una por vuelta"
 
 
-def test_el_corte_se_atrasa_una_vuelta(canal, monkeypatch) -> None:
+def test_el_corte_se_atrasa_un_tick(canal, monkeypatch) -> None:
     """
-    El corte de la vuelta sale de **dos** lecturas atrás, no de la anterior.
+    El corte es `t − periodo_s`: una ventana **en tiempo**, no en vueltas.
 
-    Reemplaza a `test_el_clock_observado_es_el_que_fija_el_corte`, cuya
-    afirmación **dejó de ser cierta a propósito**: el solape de una vuelta es
-    lo que cubre el borde `timestamp == since` del filtro estricto de
-    `get_messages` (señalado por Opus sobre el CP2a).
+    Reemplaza a `test_el_corte_se_atrasa_una_vuelta`, que fijaba el solape por
+    vueltas. Ese solape **no cubría el borde**: con el reloj congelado todos
+    los cortes son el mismo número y mover cuál se usa no cambia nada (medido:
+    256 vueltas, 0 vistos). La corrección es de Opus.
     """
     t0 = canal._t0
     reloj = {"t": t0}
@@ -456,8 +456,7 @@ def test_el_corte_se_atrasa_una_vuelta(canal, monkeypatch) -> None:
 
     client = ClientStub(canal)
     original = client.call_tool
-    ts_leidos = []
-    cortes_usados = []
+    ts_leidos, cortes_usados = [], []
 
     async def registrando(nombre, args=None):
         if nombre == "get_clock":
@@ -465,7 +464,7 @@ def test_el_corte_se_atrasa_una_vuelta(canal, monkeypatch) -> None:
         r = await original(nombre, args)
         if nombre == "get_clock":
             ts_leidos.append(r.data["t"])
-        if nombre == "get_messages" and args.get("since") is not None:
+        if nombre == "get_messages" and (args or {}).get("since") is not None:
             cortes_usados.append(args["since"])
         return r
 
@@ -473,55 +472,29 @@ def test_el_corte_se_atrasa_una_vuelta(canal, monkeypatch) -> None:
     dev = _device(ProviderStub(["OP_SILENCE"] * 10))
     _correr(dev, client, duration=0.03)
 
-    assert len(ts_leidos) >= 4, "hacen falta varias vueltas para medirlo"
-    # ts_leidos[0] es la lectura inicial, anterior al join. La vuelta n usa
-    # ts_leidos[n-1], que es la lectura de DOS vueltas atrás contando la
-    # inicial: el solape de una vuelta.
+    assert len(cortes_usados) >= 3, "hacen falta varias vueltas"
     for k, corte in enumerate(cortes_usados):
-        esperado = ts_leidos[max(0, k - 1)]
-        assert corte == esperado, \
-            f"vuelta {k}: corte {corte} != lectura de dos atrás {esperado}"
-        assert corte != ts_leidos[k + 1], \
-            "el corte salió de la lectura de ESTA vuelta: no hay solape"
+        assert corte == pytest.approx(ts_leidos[k] - TICK_PERIODO_S), \
+            f"vuelta {k}: el corte no es la lectura menos un tick"
+        assert corte < ts_leidos[k], "el corte tiene que quedar ESTRICTAMENTE antes"
 
 
-def test_el_borde_timestamp_igual_al_corte_SIGUE_ABIERTO(canal, monkeypatch) -> None:
+def test_un_mensaje_sellado_en_el_corte_no_se_pierde(canal, monkeypatch) -> None:
     """
-    **El borde de T2 con el reloj congelado NO está cubierto, y este test lo
-    mide en vez de evitarlo.**
+    **El borde de T2, con el reloj CONGELADO.** El test que Opus pidió y que la
+    primera versión —solape por vueltas— no podía pasar.
 
-    Opus pidió un test con el reloj congelado donde *"un mensaje sellado en el
-    corte aparece en alguna vuelta"*. **No puede pasar con el solape**, y lo
-    medí antes de afirmarlo: con el reloj quieto **todos los cortes son el
-    mismo número**, igual al sello del mensaje, y `get_messages` filtra con
-    `timestamp > since`, estricto. El solape mueve **cuál** corte se usa;
-    cuando todos son el mismo, mover cuál no cambia nada.
+    Con el reloj quieto, todas las lecturas dan el mismo instante, y un mensaje
+    sellado ahí no pasaría `> since` si el corte fuera ese mismo instante. Con
+    la ventana en tiempo el corte queda **estrictamente antes**, así que pasa.
 
-    Medido: 256 vueltas, 0 mensajes vistos, 1 corte distinto.
-
-    **El solape sí cubre el caso real** —el reloj avanzando— y eso lo verifica
-    `test_el_solape_no_duplica_mensajes` junto con los del `since`. Lo que
-    queda abierto es el reloj congelado, y el arreglo sería `>=` en
-    `get_messages` más el descarte por `message_id` que el device ya hace.
-    **Eso toca `get_messages`, que el enunciado excluyó: no lo toqué y lo
-    escalé.**
-
-    Este test afirma el estado actual. **Si algún día se arregla, este test
-    falla**, y eso es correcto: hay que borrarlo y poner el que Opus pidió.
+    Y pasa **una sola vez**: la ventana lo devuelve en varias vueltas y
+    `_vistos` descarta las repeticiones.
     """
     congelado = canal._t0 + TICK_PERIODO_S * 3
     monkeypatch.setattr(ChatChannel, "_ahora", staticmethod(lambda: congelado))
 
     client = ClientStub(canal)
-    cortes = []
-    original = client.call_tool
-
-    async def registrando(nombre, args=None):
-        if nombre == "get_messages" and (args or {}).get("since") is not None:
-            cortes.append(args["since"])
-        return await original(nombre, args)
-
-    client.call_tool = registrando
     client.publicados_entre = lambda: _publicar_sync(canal, "otro", "en el corte")
 
     dev = _device(ProviderStub(["OP_SILENCE"] * 10))
@@ -529,16 +502,11 @@ def test_el_borde_timestamp_igual_al_corte_SIGUE_ABIERTO(canal, monkeypatch) -> 
 
     sellado = _epoch(canal.get_history()[0].timestamp)
     assert sellado == congelado, "el test necesita el mensaje sellado en el corte"
-    assert len(set(cortes)) == 1, \
-        "con el reloj congelado todos los cortes tienen que ser el mismo"
-    assert set(cortes) == {sellado}, "y tienen que ser iguales al sello"
-    assert len(dev.decisiones()) > 10, "hubo muchas vueltas, no una"
 
     vistos = sum(d["n_nuevos"] for d in dev.decisiones())
-    assert vistos == 0, (
-        "el borde se arregló: borrar este test y poner el que pidió Opus "
-        "—un mensaje sellado en el corte aparece en alguna vuelta—"
-    )
+    assert vistos >= 1, \
+        "el mensaje sellado exactamente en el instante del corte se perdió"
+    assert vistos == 1, f"se contó {vistos} veces: _vistos no descartó el solape"
 
 
 def test_el_solape_no_duplica_mensajes(canal) -> None:
@@ -632,3 +600,182 @@ def test_dos_devices_uno_habla_y_el_otro_lo_ve(canal) -> None:
         "d2 no vio lo que publicó d1"
     assert all(d["n_nuevos"] == 0 for d in d1.decisiones()), \
         "d1 contó su propio mensaje como nuevo"
+
+
+def test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history(
+    canal, monkeypatch
+) -> None:
+    """
+    **El lado opuesto de la carrera del join**, con orden fijo (lo pidió Opus).
+
+    Si d1 publica **antes** de que d2 tome su corte, d2 **no** lo cuenta en
+    `n_nuevos` —no es nuevo para él— pero **sí lo tiene en `history`**, porque
+    `_observe` pide el historial con `since=None`.
+
+    Eso es lo que el CP2a llamó "el comportamiento de siempre": un device que
+    se suma no ve como nuevo lo que ya estaba, y lo de antes del corte entra
+    como historia.
+
+    **Más de un tick antes**: la ventana del corte inicial (`t − periodo_s`)
+    alcanza hacia atrás, así que lo publicado *dentro* de ese tick sí cuenta
+    como nuevo. Eso lo mide `test_la_ventana_inicial_alcanza_un_tick_hacia_atras`.
+    """
+    reloj = {"t": canal._t0}
+    monkeypatch.setattr(ChatChannel, "_ahora", staticmethod(lambda: reloj["t"]))
+
+    asyncio.run(canal.publish("otro", "AI", "antes del corte"))
+    reloj["t"] += TICK_PERIODO_S * 3          # el device arranca 3 ticks después
+    assert len(canal.get_history()) == 1
+
+    dev = _device(ProviderStub(["OP_SILENCE"] * 5), device_id="d2")
+    client = ClientStub(canal, "d2")
+    historias = []
+    original = client.call_tool
+
+    async def registrando(nombre, args=None):
+        r = await original(nombre, args)
+        if nombre == "get_messages" and (args or {}).get("since") is None:
+            historias.append([m["text"] for m in r.data])
+        return r
+
+    client.call_tool = registrando
+    _correr(dev, client, duration=0.02)
+
+    assert all(d["n_nuevos"] == 0 for d in dev.decisiones()), \
+        "contó como nuevo algo publicado más de un tick antes de su corte"
+    assert all(d["trigger"] is None for d in dev.decisiones())
+    assert historias, "_observe tiene que haber pedido el historial"
+    assert all("antes del corte" in h for h in historias), \
+        "lo de antes del corte tiene que estar en history, aunque no sea nuevo"
+
+
+def test_la_ventana_inicial_alcanza_un_tick_hacia_atras(canal, monkeypatch) -> None:
+    """
+    **Efecto de la ventana, medido y declarado.**
+
+    El corte inicial es `t − periodo_s`, así que lo publicado **dentro de ese
+    tick**, antes de que el device existiera, **cuenta como nuevo**. Está
+    acotado a un tick y es el precio de cerrar el borde `timestamp == since`.
+
+    Lo encontró este test: lo escribí esperando que nada de antes del join
+    contara, y la ventana lo desmintió.
+    """
+    congelado = canal._t0 + TICK_PERIODO_S * 2
+    monkeypatch.setattr(ChatChannel, "_ahora", staticmethod(lambda: congelado))
+
+    asyncio.run(canal.publish("otro", "AI", "dentro del tick"))
+
+    dev = _device(ProviderStub(["OP_SILENCE"] * 5), device_id="d3")
+    _correr(dev, ClientStub(canal, "d3"), duration=0.02)
+
+    vistos = sum(d["n_nuevos"] for d in dev.decisiones())
+    assert vistos == 1, (
+        "lo publicado dentro del tick anterior al corte inicial tiene que "
+        "contar como nuevo: es el alcance de la ventana, acotado a un tick"
+    )
+
+
+def test_un_clock_sin_periodo_s_es_UNKNOWN_y_el_ciclo_sigue(canal) -> None:
+    """
+    **Sin `periodo_s` el corte no avanza, y queda UNKNOWN en la traza.**
+    Lo preguntó delamor: *"¿UNKNOWN? ¿podría ser?"*.
+
+    Mi primera respuesta fue `or 0.0` —que reintroducía el agujero en
+    silencio— y la segunda levantar, que **mata el instrumento**. El criterio
+    del proyecto es el tercero: UNKNOWN **no autoriza una acción** —acá, elegir
+    un corte nuevo— pero **no termina el proceso**. Quedarse atrás da
+    duplicados, que `_vistos` descarta, y nunca pérdidas.
+    """
+    client = ClientStub(canal)
+    original = client.call_tool
+
+    async def sin_periodo(nombre, args=None):
+        r = await original(nombre, args)
+        if nombre == "get_clock":
+            d = dict(r.data); d.pop("periodo_s", None)
+            class _R:
+                data = d
+            return _R()
+        return r
+
+    client.call_tool = sin_periodo
+    client.publicados_entre = lambda: _publicar_sync(canal, "otro", "igual lo veo")
+
+    dev = _device(ProviderStub(["OP_SILENCE"] * 10))
+    _correr(dev, client, duration=0.02)       # no levanta
+
+    ds = dev.decisiones()
+    assert ds, "el ciclo tiene que seguir corriendo"
+    assert all(d["ventana"] == "UNKNOWN" for d in ds), \
+        "la ausencia del grano tiene que quedar nombrada en la traza"
+    vistos = sum(d["n_nuevos"] for d in ds)
+    assert vistos == 1, \
+        f"con el corte quieto el mensaje no se pierde ni se duplica (vistos={vistos})"
+
+
+@pytest.mark.parametrize("malo", [None, 0, 0.0, -1.0, "un segundo", True])
+def test_un_periodo_s_invalido_es_UNKNOWN(canal, malo) -> None:
+    """Cero, negativo, no numérico y `True` —que es `int` en Python—."""
+    dev = _device(ProviderStub(["OP_SILENCE"]))
+    assert dev._ventana({"t": 1.0, "periodo_s": malo}) is None
+
+
+def test_el_ancho_de_la_ventana_es_el_periodo_declarado(canal) -> None:
+    """La ventana sale del clock, no de una constante cableada en el device."""
+    dev = _device(ProviderStub(["OP_SILENCE"]))
+    assert dev._ventana({"t": 1.0, "periodo_s": 2.5}) == 2.5
+    assert dev._ventana({"t": 1.0, "periodo_s": TICK_PERIODO_S}) == TICK_PERIODO_S
+
+
+def test_con_grano_la_traza_lleva_la_ventana(canal) -> None:
+    dev = _device(ProviderStub(["OP_SILENCE"] * 5))
+    _correr(dev, ClientStub(canal), duration=0.02)
+    assert all(d["ventana"] == TICK_PERIODO_S for d in dev.decisiones())
+
+
+def test_sin_grano_Y_con_reloj_congelado_el_corte_quieto_salva_el_mensaje(
+    canal, monkeypatch
+) -> None:
+    """
+    **El caso donde "no avanzar el corte" es lo que salva.**
+
+    Lo encontré invirtiendo: con el reloj avanzando, dejar que el corte avance
+    a `t` exacto **igual deja pasar** el mensaje —porque el sello queda después
+    de la lectura— así que los 337 pasaban. El riesgo está con el reloj
+    congelado: ahí `t` **es** el sello, y avanzar el corte lo pierde para
+    siempre.
+
+    Sin grano el corte no avanza —se queda en `None`, el inicial— y el mensaje
+    aparece.
+    """
+    congelado = canal._t0 + TICK_PERIODO_S * 3
+    monkeypatch.setattr(ChatChannel, "_ahora", staticmethod(lambda: congelado))
+
+    client = ClientStub(canal)
+    original = client.call_tool
+
+    async def sin_periodo(nombre, args=None):
+        r = await original(nombre, args)
+        if nombre == "get_clock":
+            d = dict(r.data); d.pop("periodo_s", None)
+            class _R:
+                data = d
+            return _R()
+        return r
+
+    client.call_tool = sin_periodo
+    client.publicados_entre = lambda: _publicar_sync(canal, "otro", "sellado en t")
+
+    dev = _device(ProviderStub(["OP_SILENCE"] * 10))
+    _correr(dev, client, duration=0.02)
+
+    ds = dev.decisiones()
+    assert all(d["ventana"] == "UNKNOWN" for d in ds)
+    assert _epoch(canal.get_history()[0].timestamp) == congelado, \
+        "el test necesita el mensaje sellado en el instante del corte"
+    vistos = sum(d["n_nuevos"] for d in ds)
+    assert vistos >= 1, (
+        "con el reloj congelado y sin grano, el corte tiene que quedarse "
+        "quieto: si avanzara a t exacto, el mensaje se perdería para siempre"
+    )
+    assert vistos == 1, f"se contó {vistos} veces: _vistos no descartó"

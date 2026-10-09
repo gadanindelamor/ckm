@@ -2745,3 +2745,130 @@ nada más, y el test que afirma el agujero **tiene que fallar** y ser reemplazad
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
 - **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos". No toqué
   `process/`.
+
+---
+
+## REPORTE CP2a″ — la ventana en tiempo, y lo que preguntó delamor — 2026-10-09 00:30 UTC
+
+*Cierra el CP2a. **Tocó sólo `iap_chatroom/autonomous_device.py` y `tests/`.***
+
+### La ventana en tiempo cierra el borde
+
+Implementado lo que corrigió Opus: **`since = t − periodo_s`**, una ventana **en tiempo**, no en
+vueltas. Se fue la lista de cortes; el código quedó más corto.
+
+**El test que Opus había pedido ahora pasa:** con el reloj congelado, un mensaje sellado
+exactamente en el instante del corte **aparece**, y aparece **una sola vez** — la ventana lo
+devuelve en varias vueltas y `_vistos` descarta las repeticiones.
+`test_el_borde_timestamp_igual_al_corte_SIGUE_ABIERTO` se borró, como su propio docstring
+anticipaba, y lo reemplaza `test_un_mensaje_sellado_en_el_corte_no_se_pierde`.
+
+**El grano lo trae el propio clock** (`periodo_s`), no una constante cableada en el device.
+
+### Un efecto de la ventana que no estaba visto
+
+**La ventana inicial alcanza un tick hacia atrás del join.** Lo encontró un test que escribí
+esperando lo contrario: lo publicado **dentro** de ese tick, antes de que el device existiera,
+**cuenta como nuevo**. Está acotado a un tick y es el precio de cerrar el borde.
+`test_la_ventana_inicial_alcanza_un_tick_hacia_atras` lo fija, y
+`test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history` usa **tres** ticks de
+distancia para medir lo otro.
+
+### Las dos preguntas de delamor cambiaron el diseño
+
+**`"¿y si clock llega sin el periodo_s?"`** — mi código hacía `clock.get("periodo_s") or 0.0`.
+Una ventana de **0** deja el corte en `t` exacto: **el agujero que la ventana acababa de cerrar,
+reintroducido en silencio por el fallback.** Es NOMINAL por ausencia (`c06db07`), en el mismo
+commit donde lo estaba arreglando.
+
+**`"¿UNKNOWN? ¿podría ser?"`** — mi segunda respuesta fue **levantar**. Levantar nombra la
+ausencia, pero **mata el instrumento**: el device deja de observar. Y el criterio del proyecto no
+es ése: `temp_signal` devuelve `"UNKNOWN"` y sigue, `_classify_zone` devuelve UNKNOWN y no
+dispara STOP. **UNKNOWN no autoriza una acción; no termina el proceso.**
+
+**La tercera versión es la que quedó: UNKNOWN, y el corte no avanza.** Devuelve `None`, queda
+registrado en la traza de cada vuelta (`"ventana": "UNKNOWN"`), y el loop **conserva el `since`
+anterior**. Quedarse atrás produce **duplicados**, que `_vistos` ya descarta, y **nunca
+pérdidas** — que es el daño que importa. **La dirección segura es hacia atrás.**
+
+Las tres respuestas quedaron escritas en el docstring de `_ventana`, con por qué se descartaron
+las dos primeras y la pregunta citada. Y `bool` se excluye a propósito: `True` es `int` en
+Python, y 1.0 sería un grano inventado.
+
+### Las tres inversiones
+
+```
+=== INVERSION 22 — sin ventana en tiempo (corte en t exacto)
+    invertido  -> FAILED test_el_corte_se_atrasa_un_tick
+                  FAILED test_un_mensaje_sellado_en_el_corte_no_se_pierde
+                  FAILED test_la_ventana_inicial_alcanza_un_tick_hacia_atras
+                  3 failed, 334 passed
+    restaurado -> 337 passed
+
+=== INVERSION 23 — el fallback vuelve a 0.0 (NOMINAL por ausencia)
+    invertido  -> FAILED test_un_clock_sin_periodo_s_es_UNKNOWN_y_el_ciclo_sigue
+                  FAILED test_un_periodo_s_invalido_es_UNKNOWN[None]
+                  FAILED …[0]  …[0.0]  …[-1.0]  …[un segundo]  …[True]
+                  7 failed, 330 passed
+    restaurado -> 337 passed
+
+=== INVERSION 24 — con UNKNOWN el corte avanza igual (a t exacto)
+    invertido  -> 337 passed            ← NO ROMPIÓ
+    restaurado -> 337 passed
+    (tras agregar un test)
+    invertido  -> FAILED test_sin_grano_Y_con_reloj_congelado_el_corte_quieto_salva_el_mensaje
+                  1 failed, 337 passed
+    restaurado -> 338 passed
+```
+
+`grep -c INVERSION` → **0**.
+
+### La inversión 24 no rompía, y el motivo es el de siempre
+
+**Mi test del camino UNKNOWN no ejercitaba el caso donde "no avanzar" importa.** Con el reloj
+**avanzando**, dejar que el corte avance a `t` exacto **igual deja pasar** el mensaje, porque el
+sello queda después de la lectura. El riesgo está con el reloj **congelado**: ahí `t` **es** el
+sello, y avanzar el corte lo pierde para siempre.
+
+El test nuevo pone las dos condiciones juntas —**sin grano y con el reloj congelado**— y
+entonces la inversión rompe. **Quinto caso de la misma forma**, y como los otros cuatro:
+apareció invirtiendo, no leyendo.
+
+### El lado faltante del join
+
+`test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history`, con **orden fijo** y sin
+carrera: lo publicado tres ticks antes de que el device exista **no** cuenta en `n_nuevos`, y
+**sí** está en `history` —porque `_observe` pide el historial con `since=None`—. Es lo que el
+CP2a llamó *"el comportamiento de siempre"*, ahora medido por los dos lados.
+
+### Tests y suite
+
+`tests/test_oda_continuo.py` — **34**. Nuevos en este sub-paso: el corte atrasado un tick; el
+mensaje sellado en el corte que ya no se pierde; el alcance de la ventana inicial; el clock sin
+grano que es UNKNOWN y no detiene el ciclo; `periodo_s` inválido en seis formas; el ancho que
+sale del clock; la ventana en la traza; el caso sin grano **y** con reloj congelado; y el lado
+faltante del join.
+
+**Suite: 338/338.** Ningún test existente ajeno cambió. Dos tests **míos** se reemplazaron
+porque dejaron de ser ciertos a propósito: `…_SIGUE_ABIERTO` (el agujero se cerró) y
+`test_el_corte_se_atrasa_una_vuelta` (el solape pasó a ser en tiempo).
+
+### Lo que NO entra, y lo que queda declarado
+
+- **La ventana cubre resoluciones de reloj menores que un tick.** Si dos mensajes caen en el
+  mismo instante y uno llega después del `get_messages`, la ventana lo alcanza.
+- **`_vistos` crece durante la sesión.** Un device largo acumula `message_id`. No lo acoté: con
+  los tamaños de la serie no es un problema, y acotarlo sería inventar un límite.
+- **No toqué `get_messages`.** El `>=` ya no hace falta: la ventana cierra el borde desde el
+  lado del device.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves. El CP2a″ volvió a tocar el loop.
+- **Si un `periodo_s` que cambia a mitad de sesión se maneja bien.** La ventana se recalcula en
+  cada vuelta, así que debería, pero **no lo testeé**: el canal hoy lo tiene constante.
+- **Dos devices contra el server real.** Los tests de N=2 corren con `ClientStub` sobre un
+  `ChatChannel` real: sin MCP, sin red, sin server.
+- **Qué decidiría un modelo real.** Nada se corrió contra un provider.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos".

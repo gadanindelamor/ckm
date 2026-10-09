@@ -3685,3 +3685,53 @@ memoria.
 - Los 21 `test_caso_*`.
 
 **ALTO.**
+
+---
+
+## REPORTE n_agentes obligatorio — 2026-10-09 04:51 UTC
+
+**Suite: 379 passed.** Aceptado el REPORTE FIXES en DECISIONES `7175468`.
+
+`firmar()` ya no tiene default en `n_agentes` (`firma_ckm.py:96`). El conteo lo
+declara quien firma, o no firma.
+
+### Divergencia con la instruccion
+
+Opus nombro **cuatro** llamadores a corregir (`test_firma_ckm.py` 109, 122, 136,
+139). Son **nueve, en ocho tests**: 84, 109, 122, **136 y 139** (los dos en el
+mismo test), 159, 182, 207, 221. Los cuatro de la instruccion estan entre ellos;
+faltaban cinco. Los nueve pasan ahora `n_agentes=0` explicito — **0 porque en
+esos fixtures no hay agentes**, no por heredar el default que se saco.
+
+La suite lo mostro sola: al sacar el default, **9 failed**, ocho por `TypeError`
+en `test_firma_ckm.py` y uno mio. No lo encontre leyendo; lo encontro el cambio
+al romper. El `grep -rn "firmar("` que corri **antes** de tocar nada ya listaba
+los nueve: la divergencia estaba a la vista desde el principio.
+
+El unico llamador de produccion, `ckm_monitor.py:224`, ya lo pasaba explicito.
+
+### Un test mio quedo superado, no roto
+
+`test_el_default_de_firmar_es_0_no_1` (lo escribi ayer) afirmaba que el default
+era `0`. Con el default afuera, esa afirmacion **se volvio falsa** — y lo que
+afirmaba era mas debil que lo que ahora vale. Lo **reemplace**, no lo arregle,
+por `test_firmar_sin_n_agentes_levanta_TypeError`, que verifica dos cosas: que
+el parametro no tenga default (`inspect.Parameter.empty`) y el `TypeError` real
+al llamar sin el. Lo digo porque un test que se vuelve falso al mejorar el
+codigo es facil de parchear en silencio.
+
+### Inversion D
+
+| Que se invirtio | Que test fallo | Suite al restaurar |
+|---|---|---|
+| `firma_ckm.py:96` -> `n_agentes: int = 0` | `test_firmar_sin_n_agentes_levanta_TypeError` — rompe por las **dos** mitades: el default deja de ser `empty`, y la llamada sin el argumento ya no da `TypeError` (da `AttributeError` mas adentro) | 379 passed |
+
+### Lo que el cambio dejo dicho
+
+Con el `1` el hueco se veia, porque el numero era falso. Con el `0` el hueco se
+tapaba, porque el numero era casi siempre correcto. **El UNKNOWN por ausencia no
+se arregla eligiendo mejor el valor que lo rellena.** Esta es la cuarta vez que
+este patron aparece en el proyecto, y la primera en que lo cerro quitando el
+relleno en vez de corrigiendolo.
+
+**ALTO.**

@@ -306,14 +306,27 @@ def test_con_cero_devices_la_firma_dice_0(monitor) -> None:
         "la firma certificó un agente que no existió"
 
 
-def test_el_default_de_firmar_es_0_no_1(monitor) -> None:
-    """Si nadie declara cuántos agentes hubo, la firma no inventa uno."""
+def test_firmar_sin_n_agentes_levanta_TypeError() -> None:
+    """
+    **Opus, 9 oct: `n_agentes` es obligatorio y no tiene default.**
+
+    Hasta ayer el default era `1` y la firma certificaba un agente que no
+    existió. Ponerlo en `0` arreglaba el número y dejaba el hueco: el `0` que
+    nadie pasó es tan inventado como el `1`. Un default no es un conteo.
+
+    Este test reemplaza a `test_el_default_de_firmar_es_0_no_1`, que afirmaba
+    algo más débil — que el default fuera 0 — y que ahora sería falso.
+    """
     import inspect
 
     from firma_ckm import FirmaService
     sig = inspect.signature(FirmaService.firmar)
-    assert sig.parameters["n_agentes"].default == 0, \
-        "el default de n_agentes volvió a 1"
+    assert sig.parameters["n_agentes"].default is inspect.Parameter.empty, \
+        "n_agentes volvió a tener default; un default no es un conteo"
+
+    # y el TypeError de verdad, no sólo la firma inspeccionada
+    with pytest.raises(TypeError):
+        FirmaService().firmar(object(), object())
 
 
 def test_nada_divide_por_n_agentes() -> None:

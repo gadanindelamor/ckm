@@ -81,7 +81,7 @@ def test_firma_none_when_accumulation():
         corpus.ingest(["solo un texto"])
         monitor = MonitorService(corpus, storage_path=tmp_m)
         svc = FirmaService()
-        assert svc.firmar(corpus, monitor) is None
+        assert svc.firmar(corpus, monitor, n_agentes=0) is None
     finally:
         cleanup([tmp_c, tmp_m])
 
@@ -106,7 +106,7 @@ def test_firma_w_sha_correcto():
     corpus, monitor, paths = make_corpus_monitor()
     try:
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         assert f.w_sha == corpus.w_sha()
         assert len(f.w_sha) == 64
@@ -119,7 +119,7 @@ def test_firma_delta_sha_ceros_sin_evaluate():
     corpus, monitor, paths = make_corpus_monitor()
     try:
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         N = len(corpus.get_nodes())
         expected = _sha256(np.zeros((N, N)))
@@ -133,10 +133,10 @@ def test_firma_delta_sha_cambia_tras_evaluate():
     corpus, monitor, paths = make_corpus_monitor()
     try:
         svc = FirmaService()
-        f1 = svc.firmar(corpus, monitor)
+        f1 = svc.firmar(corpus, monitor, n_agentes=0)
 
         monitor.evaluate("chocolate ice cream prevents all crime")
-        f2 = svc.firmar(corpus, monitor)
+        f2 = svc.firmar(corpus, monitor, n_agentes=0)
 
         assert f2 is not None
         # delta_sha puede cambiar si hubo rechazos
@@ -156,7 +156,7 @@ def test_firma_temp_signal_unknown_sin_thermostat():
     corpus, monitor, paths = make_corpus_monitor(with_thermostat=False)
     try:
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         assert f.temp_signal == "UNKNOWN"
     finally:
@@ -179,7 +179,7 @@ def test_firma_temp_signal_con_thermostat_es_senal_str():
         monitor.evaluate("gun control reduces violence", device_id="d1")
         monitor._thermostat.register_device_eval("d1", 0.5)
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         assert isinstance(f.temp_signal, str)
         assert f.temp_signal in ("TOO_COLD", "NOMINAL", "TOO_HOT")
@@ -204,7 +204,7 @@ def test_verificar_firma_valida():
     corpus, monitor, paths = make_corpus_monitor()
     try:
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         resultado = svc.verificar(f, corpus)
         assert resultado["w_sha_en_historial"] is True
@@ -218,7 +218,7 @@ def test_verificar_firma_invalida():
     corpus, monitor, paths = make_corpus_monitor()
     try:
         svc = FirmaService()
-        f = svc.firmar(corpus, monitor)
+        f = svc.firmar(corpus, monitor, n_agentes=0)
         assert f is not None
         # Firma con w_sha fabricado
         f_falsa = Firma(

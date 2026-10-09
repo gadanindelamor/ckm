@@ -8,11 +8,13 @@ Campos (REG_firma_corpus_v1):
     sha256(W_momento)         — estado del suelo en ese instante
     D_ckm(t)                  — posición en el paisaje
     temp_signal               — UNKNOWN / TOO_COLD / NOMINAL / TOO_HOT
-    n_agentes                 — presencia, sin identidad si no se declara.
-                                **El conteo real: 0 si no hubo agentes.** El
-                                default era 1, y con cero agentes la firma
-                                certificaba uno (delamor, 9 oct). Verificado
-                                antes de cambiarlo: nada divide por este valor.
+    n_agentes                 — presencia, sin identidad. **Obligatorio y sin
+                                default** (Opus, 9 oct): el conteo lo declara
+                                quien firma. El default era 1 y con cero
+                                agentes la firma certificaba uno (delamor);
+                                pasarlo a 0 arreglaba el número y no el hueco
+                                — un default no es un conteo. Verificado antes
+                                de todo esto: nada divide por este valor.
     timestamp
     sha256(Delta_r_acumulado) — huella del contacto
 
@@ -91,11 +93,17 @@ class FirmaService:
         self,
         corpus,
         monitor,
-        n_agentes: int = 0,
+        n_agentes: int,
     ) -> Optional[Firma]:
         """
         Produce Firma del estado actual del campo.
         Devuelve None si W no existe todavía (corpus en acumulación).
+
+        `n_agentes` es **obligatorio**: no tiene default (Opus, 9 oct 2026).
+        Un default no es un conteo. El `0` sin que nadie lo pase es tan
+        inventado como el `1` que estuvo hasta hoy a la mañana: certifica una
+        presencia que el llamador no midió. Quien firma declara cuántos
+        agentes hubo, o no firma.
         """
         w_sha = corpus.w_sha()
         if w_sha is None:

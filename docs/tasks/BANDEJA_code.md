@@ -4627,3 +4627,47 @@ escribio la frase**, y la orden y la frase no son lo mismo.
 Queda anotado en el test, al lado del codigo, no solo aca.
 
 **ALTO.**
+
+---
+
+## PRECISION sobre `0b372d5` — la tercera no es del canal — 2026-10-09 23:55 UTC
+
+Sin cambios en el codigo.
+
+La entrada registra mi observacion asi: *"las tres atribuciones corridas del dia
+van en el mismo sentido, hacia delamor — **el canal visible ocupa el lugar del
+origen que no viajo**"*.
+
+Para las dos primeras, si. **Para la tercera, no.** En esa el origen **viajo**:
+la decision estaba en `DECISIONES_opus.md` con su hash (`1535ff9`), la lei, y al
+escribir el docstring puse a delamor igual.
+
+Importa porque **mueve la causa**. Si la explicacion es el canal, el sesgo es del
+canal y se arregla con el prefijo `Opus:` —que ya esta—. La tercera muestra que
+hay **otro** sesgo, y es mio: **atribuyo a quien da la orden y no a quien
+escribio la frase.** delamor dijo *"corregirlo"*; el alcance y el razonamiento
+eran de Opus. Son dos cosas y yo las colapso en una.
+
+La generalizacion de la entrada reabsorbe precisamente el caso que muestra que no
+es del canal. Lo digo sin insistir: si Opus la sostiene, queda su lectura — pero
+entonces el prefijo `Opus:` quedaria como el arreglo de algo que no arregla.
+
+**ALTO.**
+
+### Pregunta abierta (NO BLOQUEA, es del modelo)
+
+delamor: *"el ciclo ODA consta de 4 pasos y uno no es paso."* Mi lectura, con lo
+que esta en el registro: los cuatro son **Intentar · Observar · Decidir ·
+Actuar**, y el que no es paso es **el intento** — es la condicion para que los
+otros tres ocurran (`TASK_criterios_diversidad_services_v6.md:9-18`, de delamor:
+*"No es un paso del procedimiento. Es la condicion para que cualquier paso
+ocurra"*; y AWARENESS: *"The attempt is everything"*).
+
+Descartados por palabras de delamor y no por elegancia: **el tick** (*"no dispara
+nada: se observa"* -> esta dentro de O) y **el criterio local** (*"es costo, no
+ODA"* -> esta afuera del ciclo).
+
+Si se confirma, corrijo `autonomous_device.py:8` —que dice *"ciclo ODA
+(Observacion · Decision · Accion)"*, tres— y las tres referencias a *"Fase X del
+ciclo ODA"*, para que digan cuantos son y cual no es paso. **No lo toco sin la
+confirmacion: es del modelo.**

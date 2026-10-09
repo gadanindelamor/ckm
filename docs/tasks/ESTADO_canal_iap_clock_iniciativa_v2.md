@@ -7,11 +7,18 @@
 
 ## Última escritura
 
-**2026-10-09 00:30 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 00:58 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2a″ — la ventana en tiempo. Con esto el CP2a queda cerrado.** Cerrado el 2026-10-09.
+**CP2v — preparación del primer vivo.** Cerrado el 2026-10-09. Suite **360/360**, nueve
+inversiones (dos repetidas porque no se habían aplicado). Llamadas contadas y no inferidas; las
+dos ausencias de `_decide` a UNKNOWN; la respuesta cruda con su causa; el 429 por `status_code`
+con el método declarado; el ritmo declarado sin inventar el límite. **El `ProviderStub` agotado
+fabricaba decisiones** y se corrigió. **Un cambio del gate: el timestamp ausente pasó de `[?]` a
+`[UNKNOWN]`** — delamor lo lee antes del vivo.
+
+Antes: **CP2a″ — la ventana en tiempo. Con esto el CP2a queda cerrado.** Cerrado el 2026-10-09.
 Suite **338/338**. `since = t − periodo_s`: el borde `timestamp == since` se cierra sin tocar
 `get_messages`. Dos preguntas de delamor cambiaron el diseño: el fallback `or 0.0` reintroducía
 el agujero, y levantar mataba el instrumento — quedó **UNKNOWN y el corte no avanza**.
@@ -52,7 +59,10 @@ aceptado en `2ad873e`.
 
 ## Próximo paso
 
-**CP2b — el criterio local encima** (OK de delamor, `e737e78`): `skip` registrado con su motivo,
+**El primer vivo con Groq**, que **no es mío**: necesita la clave como secret del Codespace, el
+límite de la cuenta, y que delamor lea el gate. Después, **CP2b**.
+
+Lo que sigue después del vivo: **CP2b — el criterio local encima** (OK de delamor, `e737e78`): `skip` registrado con su motivo,
 auditoría **al azar sobre las dos caras**, umbrales declarados "no calibrados", y el test que
 pide delamor: en silencio y con objetivo, el filtro **igual** deja pasar a D alguna vez — que el
 filtro no vuelva absorbente el silencio.

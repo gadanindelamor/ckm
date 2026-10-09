@@ -32,15 +32,32 @@ class ProviderStub(Provider):
 
     name = "stub"
 
-    def __init__(self, respuestas: List[str]):
-        super().__init__(api_key=None, model="stub")
+    def __init__(self, respuestas: List[str], falla_en: Optional[set] = None,
+                 model: str = "stub"):
+        super().__init__(api_key=None, model=model)
         self.respuestas = list(respuestas)
         self.llamadas: List[List[ChatMessage]] = []
+        # índices de llamada (1-based) en los que simula una falla del provider
+        self.falla_en = set(falla_en or ())
 
     async def complete(self, messages: List[ChatMessage]) -> str:
+        """
+        **Agotado devuelve vacío, no `OP_SILENCE`** (pedido de Opus, CP2v).
+
+        Antes el default era `"OP_SILENCE"`, y eso **fabricaba decisiones**:
+        una vuelta sin respuesta guionada producía un "el modelo decidió
+        callar" que nadie decidió. Un instrumento de medición que inventa el
+        dato más tranquilizador es el peor lugar donde tener este error.
+
+        Vacío entra al camino de respuesta ilegible → `UNKNOWN`, que es lo que
+        de verdad pasó: no hubo decisión. Varios tests cambiaron por esto, y
+        el cambio **es el punto**: medían contra decisiones del instrumento.
+        """
         self.llamadas.append(messages)
+        if len(self.llamadas) in self.falla_en:
+            raise RuntimeError("provider caido (simulado)")
         if not self.respuestas:
-            return "OP_SILENCE"
+            return ""
         return self.respuestas.pop(0)
 
 
@@ -215,13 +232,17 @@ def test_el_silencio_no_es_absorbente(canal) -> None:
     Antes, si todos elegían OP_SILENCE no aparecía ningún mensaje nuevo y
     nadie volvía a dispararse: el silencio terminaba el proceso.
     """
-    prov = ProviderStub(["OP_SILENCE"] * 20)
+    # 2000 respuestas explícitas: el silencio que este test mide tiene que ser
+    # DECIDIDO, no el default del stub. Con el default viejo (`OP_SILENCE`) una
+    # parte de estas vueltas medía una decisión que nadie tomó.
+    prov = ProviderStub(["OP_SILENCE"] * 2000)
     dev = _device(prov)
     _correr(dev, ClientStub(canal), duration=0.08)
 
     ds = dev.decisiones()
     assert len(ds) >= 3, f"el ciclo se detuvo con el canal callado: {len(ds)} vueltas"
-    assert all(d["decision"] == "OP_SILENCE" for d in ds)
+    assert all(d["decision"] == "OP_SILENCE" for d in ds), \
+        "alguna vuelta no decidió: el test necesita respuestas para todas"
     assert all(d["n_nuevos"] == 0 for d in ds)
     assert len(canal.get_history()) == 0, "nadie publicó, y el ciclo siguió igual"
 
@@ -268,14 +289,76 @@ def test_si_vence_duration_tambien_se_va(canal) -> None:
     assert client.llamadas.count("leave_channel") == 1
 
 
-def test_una_palabra_desconocida_cae_a_silencio(canal) -> None:
-    """No actuar es la salida segura: una respuesta que no se entiende no
-    autoriza una acción."""
-    dev = _device(ProviderStub(["QUIZAS"]))     # el resto cae al default
+def test_una_palabra_desconocida_es_UNKNOWN_no_silencio(canal) -> None:
+    """
+    **Una respuesta ilegible es UNKNOWN, no OP_SILENCE.**
+
+    No actuar sigue siendo la salida segura, pero el nombre no puede ser una
+    decisión que nadie tomó. Antes este test pedía `OP_SILENCE`; lo corrigió
+    la segunda mitad de la nota de Opus sobre el CP2v, que delamor me pasó.
+    """
+    dev = _device(ProviderStub(["QUIZAS"] + ["OP_SILENCE"] * 2000))
     _correr(dev, ClientStub(canal), duration=0.02)
-    assert dev.decisiones()[0]["decision"] == "OP_SILENCE"
-    assert all(d["decision"] == "OP_SILENCE" for d in dev.decisiones())
-    assert len(canal.get_history()) == 0
+    ds = dev.decisiones()
+    assert ds[0]["decision"] == "UNKNOWN"
+    assert ds[0]["ilegibles"] == 1
+    assert all(d["decision"] == "OP_SILENCE" for d in ds[1:]), \
+        "las vueltas siguientes tienen respuesta explícita y son legibles"
+    assert len(canal.get_history()) == 0, "UNKNOWN no autoriza ninguna acción"
+
+    c = dev.costo()
+    assert c["ilegibles"] == 1
+    assert c["errores_llm"] == 0, \
+        "el provider respondió: no es un error de infraestructura"
+
+    # la respuesta CRUDA, con su causa (pedido de delamor para el vivo con 8B)
+    ej = c["ejemplos_ilegibles"][0]
+    assert ej["causa"] == "respuesta_ilegible"
+    assert ej["respuesta_cruda"] == "QUIZAS"
+    assert ej["truncada"] is False and ej["largo"] == 6
+    assert ej["model"] == "stub"
+
+
+def test_la_respuesta_cruda_queda_entera_y_sin_normalizar(canal) -> None:
+    """
+    **Cruda**: sin `strip`, sin `upper`. En el vivo con el 8B, esa respuesta es
+    lo que va a mostrar si el problema está en el gate —el prompt pide una
+    palabra y el modelo contesta una frase— o en el modelo.
+    """
+    cruda = "  Creo que lo mejor sería esperar un momento antes de responder.\n"
+    dev = _device(ProviderStub([cruda]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+
+    ej = dev.costo()["ejemplos_ilegibles"][0]
+    assert ej["respuesta_cruda"] == cruda, \
+        "la respuesta se guardó normalizada: se pierde lo que hay que mirar"
+    assert ej["causa"] == "respuesta_ilegible"
+    assert dev.decisiones()[0]["decision"] == "UNKNOWN"
+
+
+def test_una_respuesta_larga_se_trunca_y_se_declara(canal) -> None:
+    larga = "x" * 900
+    dev = _device(ProviderStub([larga]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+    ej = dev.costo()["ejemplos_ilegibles"][0]
+    assert len(ej["respuesta_cruda"]) == 500
+    assert ej["truncada"] is True and ej["largo"] == 900
+
+
+def test_una_respuesta_vacia_tambien_es_ilegible(canal) -> None:
+    dev = _device(ProviderStub([""]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+    ds = dev.decisiones()
+    assert ds[0]["decision"] == "UNKNOWN" and ds[0]["ilegibles"] == 1
+    assert dev.costo()["ejemplos_ilegibles"][0]["respuesta_cruda"] == ""
+
+
+def test_los_errores_llevan_su_causa(canal) -> None:
+    """`error_provider` o `rate_limit`, para poder filtrar la traza."""
+    prov = ProviderStub(["OP_SILENCE"] * 5, falla_en={1})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+    assert dev.costo()["errores"][0]["causa"] == "error_provider"
 
 
 # ── dos publicaciones seguidas, sin reaccionar a la propia ──────────────────
@@ -779,3 +862,325 @@ def test_sin_grano_Y_con_reloj_congelado_el_corte_quieto_salva_el_mensaje(
         "quieto: si avanzara a t exacto, el mensaje se perdería para siempre"
     )
     assert vistos == 1, f"se contó {vistos} veces: _vistos no descartó"
+
+
+# ── instrumentación para el primer vivo (pedido de delamor) ─────────────────
+
+def test_las_llamadas_al_llm_se_cuentan_no_se_infieren(canal) -> None:
+    """
+    Cada vuelta registra **cuántas llamadas al LLM hizo de verdad**.
+
+    Hoy toda vuelta llama al gate, así que vueltas == llamadas. Con el criterio
+    local (CP2b) deja de ser cierto —una vuelta con skip cuesta cero— y la
+    inferencia se rompe justo cuando el filtro entra. Por eso se cuentan.
+    """
+    prov = ProviderStub(["OP_SILENCE"] * 10)
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    ds = dev.decisiones()
+    assert all(d["llamadas_llm"] == 1 for d in ds), \
+        "una vuelta que calla cuesta una llamada: la del gate"
+    assert sum(d["llamadas_llm"] for d in ds) == len(prov.llamadas), \
+        "lo contado no coincide con lo que el provider recibió"
+    assert dev.costo()["llamadas_llm"] == len(prov.llamadas)
+
+
+def test_una_vuelta_que_publica_cuesta_dos_llamadas(canal) -> None:
+    """Gate + generación. Es el `1 + p` del costo estimado."""
+    dev = _device(ProviderStub(["INTERACT", "hola"] + ["OP_SILENCE"] * 10))
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    ds = dev.decisiones()
+    publicaron = [d for d in ds if d["decision"] == "INTERACT"]
+    assert publicaron, "el test necesita al menos una publicación"
+    assert all(d["llamadas_llm"] == 2 for d in publicaron)
+    assert all(d["llamadas_llm"] == 1 for d in ds if d["decision"] == "OP_SILENCE")
+
+
+def test_un_error_del_provider_queda_registrado_y_el_ciclo_sigue(canal) -> None:
+    """
+    Una falla del provider **no mata el run**, y **no se traga**.
+
+    Sin registro, un vivo silencioso no se puede atribuir entre el modelo que
+    calla, el canal que pierde y la infraestructura que falla. Con registro, sí.
+    """
+    prov = ProviderStub(["OP_SILENCE"] * 10, falla_en={1, 2})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.03)   # no levanta
+
+    ds = dev.decisiones()
+    assert len(ds) >= 3, "el ciclo tiene que seguir después del error"
+    assert ds[0]["errores_llm"] == 1 and ds[1]["errores_llm"] == 1
+    assert ds[0]["decision"] == "UNKNOWN", \
+        "un error del provider no es OP_SILENCE: no hubo decisión"
+    assert ds[0]["ilegibles"] == 0, \
+        "el provider no respondió: no es una respuesta ilegible"
+
+    c = dev.costo()
+    assert c["errores_llm"] == 2
+    assert all(e["fase"] == "decide" for e in c["errores"])
+    assert all(e["provider"] == "stub" for e in c["errores"])
+    assert c["llamadas_llm"] >= 2, \
+        "una llamada que falló igual se hizo: cuenta para el costo"
+
+
+def test_un_error_al_generar_no_publica_nada(canal) -> None:
+    """Decidió INTERACT pero el provider falló al generar: no se publica."""
+    # llamada 1 = gate (INTERACT), llamada 2 = generate (falla)
+    prov = ProviderStub(["INTERACT", "no deberia publicarse"], falla_en={2})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.0001)
+
+    assert len(canal.get_history()) == 0, "publicó pese a que la generación falló"
+    c = dev.costo()
+    assert c["errores_llm"] == 1
+    assert c["errores"][0]["fase"] == "generate"
+    assert dev.decisiones()[0]["llamadas_llm"] == 2, \
+        "las dos llamadas se hicieron, aunque la segunda falló"
+
+
+def test_el_costo_registra_provider_y_modelo(canal) -> None:
+    """
+    El modelo es **parte de las condiciones** (README del freeze), así que cada
+    run queda etiquetado: lo medido con un modelo barato no se transfiere a uno
+    de frontera.
+    """
+    dev = _device(ProviderStub(["OP_SILENCE"] * 2000,
+                               model="llama-3.3-70b-versatile"))
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    c = dev.costo()
+    assert c["provider"] == "stub"
+    assert c["model"] == "llama-3.3-70b-versatile"
+    assert c["device_id"] == "dev"
+    assert c["vueltas"] == len(dev.decisiones())
+    assert c["llamadas_por_vuelta"] == pytest.approx(
+        c["llamadas_llm"] / c["vueltas"], abs=1e-3
+    )
+    assert c["decisiones_por_tipo"] == {"OP_SILENCE": c["vueltas"]}
+
+
+def test_el_costo_cuenta_las_vueltas_con_ventana_unknown(canal) -> None:
+    """Para atribuir: una vuelta con el grano UNKNOWN es del canal, no del modelo."""
+    client = ClientStub(canal)
+    original = client.call_tool
+
+    async def sin_periodo(nombre, args=None):
+        r = await original(nombre, args)
+        if nombre == "get_clock":
+            d = dict(r.data); d.pop("periodo_s", None)
+            class _R:
+                data = d
+            return _R()
+        return r
+
+    client.call_tool = sin_periodo
+    dev = _device(ProviderStub(["OP_SILENCE"] * 10))
+    _correr(dev, client, duration=0.02)
+
+    c = dev.costo()
+    assert c["vueltas_con_ventana_unknown"] == c["vueltas"] > 0
+
+
+def test_error_e_ilegible_se_registran_por_separado(canal) -> None:
+    """
+    **Dos causas, una consecuencia.** Las dos dan UNKNOWN y ninguna actúa,
+    pero se cuentan aparte: para atribuir un vivo silencioso no es lo mismo
+    que falle la infraestructura que el modelo conteste algo ilegible.
+    """
+    prov = ProviderStub(["QUIZAS"], falla_en={2})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    c = dev.costo()
+    assert c["ilegibles"] >= 1 and c["errores_llm"] >= 1
+    ds = dev.decisiones()
+    assert ds[0]["ilegibles"] == 1 and ds[0]["errores_llm"] == 0
+    assert ds[1]["errores_llm"] == 1 and ds[1]["ilegibles"] == 0
+    assert all(d["decision"] == "UNKNOWN" for d in ds[:2])
+
+
+def test_un_429_queda_marcado_aparte(canal) -> None:
+    """
+    El rate limit se distingue del resto: no dice "algo se rompió", dice "vas
+    demasiado rápido". Es información sobre el ritmo.
+    """
+    class _Prov(ProviderStub):
+        async def complete(self, messages):
+            self.llamadas.append(messages)
+            raise RuntimeError("Error code: 429 - rate limit exceeded")
+
+    dev = _device(_Prov([]))
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    c = dev.costo()
+    assert c["errores_llm"] >= 1
+    assert c["errores_rate_limit"] == c["errores_llm"], \
+        "el 429 tiene que quedar marcado como rate_limit"
+    assert all(e["rate_limit"] for e in c["errores"])
+    assert all(d["decision"] == "UNKNOWN" for d in dev.decisiones())
+
+
+def test_un_error_que_no_es_429_no_se_marca_como_rate_limit(canal) -> None:
+    """Y si no matchea, queda como genérico — pero se registra igual."""
+    prov = ProviderStub(["OP_SILENCE"] * 5, falla_en={1})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+    c = dev.costo()
+    assert c["errores_llm"] == 1
+    assert c["errores_rate_limit"] == 0
+    assert c["errores"][0]["rate_limit"] is False
+
+
+def test_el_ritmo_declarado_no_invent_el_limite_de_la_cuenta(canal) -> None:
+    """
+    El ritmo se declara; **el límite del provider es UNKNOWN** y se lee en su
+    consola. No lo invento.
+    """
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=2.0)
+    r = dev.ritmo_declarado(n_devices=2)
+    assert r["poll_interval_s"] == 2.0
+    assert r["vueltas_por_minuto_por_device"] == 30.0
+    assert r["llamadas_por_minuto_piso"] == 60.0    # 30 x 2 devices
+    assert r["llamadas_por_minuto_techo"] == 120.0  # el doble si actúa siempre
+    assert r["limite_de_la_cuenta"].startswith("UNKNOWN")
+
+
+def test_sin_pausa_el_ritmo_no_se_puede_declarar(canal) -> None:
+    """Con poll_interval=0 el ritmo lo fija la latencia del provider."""
+    dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
+                           system_prompt="s", poll_interval=0.0)
+    r = dev.ritmo_declarado()
+    assert r["vueltas_por_minuto_por_device"] is None
+    assert r["llamadas_por_minuto_piso"] is None
+    assert "latencia" in r["nota"]
+
+
+# ── las cuatro correcciones de Opus al CP2v ────────────────────────────────
+
+def test_el_stub_agotado_no_fabrica_decisiones(canal) -> None:
+    """
+    **El instrumento no inventa el dato más tranquilizador.**
+
+    El stub agotado devuelve vacío → `UNKNOWN`, no `OP_SILENCE`. Antes
+    producía un "el modelo decidió callar" que nadie decidió, y tres tests
+    estaban midiendo contra eso.
+    """
+    prov = ProviderStub([])                      # ninguna respuesta guionada
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    ds = dev.decisiones()
+    assert ds, "el ciclo corre igual"
+    assert all(d["decision"] == "UNKNOWN" for d in ds), \
+        "el stub agotado fabricó una decisión"
+    assert all(d["ilegibles"] == 1 for d in ds)
+    assert dev.costo()["ejemplos_ilegibles"][0]["respuesta_cruda"] == ""
+
+
+def test_un_429_por_status_code_se_lee_del_dato(canal) -> None:
+    """
+    **`status_code` primero, texto como respaldo.** Un 429 en el atributo es un
+    dato; inferirlo del mensaje es una heurística, y la traza dice cuál fue.
+    """
+    class _Prov(ProviderStub):
+        async def complete(self, messages):
+            self.llamadas.append(messages)
+            e = RuntimeError("algo pasó")        # el texto NO dice 429
+            e.status_code = 429
+            raise e
+
+    dev = _device(_Prov([]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+
+    err = dev.costo()["errores"][0]
+    assert err["rate_limit"] is True
+    assert err["rate_limit_segun"] == "status_code", \
+        "se leyó del texto cuando el status_code estaba"
+    assert err["causa"] == "rate_limit"
+
+
+def test_un_429_sin_status_code_se_infiere_del_texto_y_se_declara(canal) -> None:
+    """Sin el atributo, el respaldo heurístico — y queda dicho que es texto."""
+    class _Prov(ProviderStub):
+        async def complete(self, messages):
+            self.llamadas.append(messages)
+            raise RuntimeError("Error code: 429 - rate limit exceeded")
+
+    dev = _device(_Prov([]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+
+    err = dev.costo()["errores"][0]
+    assert err["rate_limit"] is True
+    assert err["rate_limit_segun"] == "texto"
+
+
+def test_un_error_comun_no_se_marca_y_dice_como_se_supo(canal) -> None:
+    prov = ProviderStub(["OP_SILENCE"] * 2000, falla_en={1})
+    dev = _device(prov)
+    _correr(dev, ClientStub(canal), duration=0.02)
+    err = dev.costo()["errores"][0]
+    assert err["rate_limit"] is False
+    assert err["rate_limit_segun"] is None
+    assert err["causa"] == "error_provider"
+
+
+def test_un_status_code_que_no_es_429_no_se_marca(canal) -> None:
+    """Un 500 es una falla, no un límite de ritmo."""
+    class _Prov(ProviderStub):
+        async def complete(self, messages):
+            self.llamadas.append(messages)
+            e = RuntimeError("server error")
+            e.status_code = 500
+            raise e
+
+    dev = _device(_Prov([]))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+    err = dev.costo()["errores"][0]
+    assert err["rate_limit"] is False and err["rate_limit_segun"] is None
+
+
+def test_un_provider_sin_nombre_queda_en_None_no_en_interrogacion(canal) -> None:
+    """La ausencia no se rellena con un valor inventado como "?"."""
+    class _SinNombre(ProviderStub):
+        pass
+    _SinNombre.name = None
+
+    dev = _device(_SinNombre(["OP_SILENCE"] * 2000))
+    _correr(dev, ClientStub(canal), duration=0.0001)
+    assert dev.costo()["provider"] is None
+
+
+def test_un_mensaje_sin_timestamp_dice_UNKNOWN_en_el_prompt(canal) -> None:
+    """
+    Esto entra al prompt que el modelo lee: "?" no le dice nada, UNKNOWN le
+    dice que el dato no estaba.
+    """
+    prov = ProviderStub(["OP_SILENCE"] * 2000)
+    dev = _device(prov)
+    client = ClientStub(canal)
+    original = client.call_tool
+
+    async def sin_timestamp(nombre, args=None):
+        r = await original(nombre, args)
+        if nombre == "get_messages":
+            msgs = [dict(m) for m in r.data]
+            for m in msgs:
+                m["timestamp"] = None
+            class _R:
+                data = msgs
+            return _R()
+        return r
+
+    client.call_tool = sin_timestamp
+    client.publicados_entre = lambda: _publicar_sync(canal, "otro", "sin sello")
+    _correr(dev, client, duration=0.03)
+
+    prompts = [m[-1]["content"] for m in prov.llamadas]
+    con_hist = [p for p in prompts if "sin sello" in p]
+    assert con_hist, "el historial tenía que llegar al prompt"
+    assert all("[UNKNOWN] " in p for p in con_hist), \
+        "un timestamp ausente llegó al prompt como algo distinto de UNKNOWN"
+    assert not any('[?]' in p for p in prompts)

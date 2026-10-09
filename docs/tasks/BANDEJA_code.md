@@ -2872,3 +2872,186 @@ porque dejaron de ser ciertos a propósito: `…_SIGUE_ABIERTO` (el agujero se c
 - **Qué decidiría un modelo real.** Nada se corrió contra un provider.
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
 - **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos".
+
+---
+
+## REPORTE CP2v — preparación del primer vivo — 2026-10-09 00:58 UTC
+
+*Orden de delamor: **CP2v → primer vivo con Groq → CP2b**. El vivo va antes del CP2b para medir
+las llamadas sin filtro: es la línea de base contra la que el criterio local se va a medir.
+**Todo con stubs. Ni una llamada a provider.** Tocó sólo `iap_chatroom/autonomous_device.py` y
+`tests/`.*
+
+### 1. Las llamadas al LLM se cuentan, no se infieren
+
+Cada vuelta registra **`llamadas_llm`**: las que esa vuelta hizo de verdad. Hoy toda vuelta llama
+al gate, así que vueltas = llamadas — **pero con el criterio local (CP2b) deja de ser cierto**, y
+la inferencia se rompe justo cuando el filtro entra. Por eso se cuentan.
+
+**Una llamada que falló igual se cuenta**: se hizo, y para costo eso es lo que importa.
+
+Y un método **`costo()`**: vueltas, llamadas, llamadas por vuelta, errores con su causa y fase,
+ilegibles con su respuesta cruda, decisiones por tipo, vueltas con `ventana` UNKNOWN, y el ritmo
+declarado.
+
+### 2. Las dos ausencias de la misma función, las dos a UNKNOWN
+
+| qué pasó | antes | ahora | se cuenta en |
+|---|---|---|---|
+| el provider falla | `OP_SILENCE` | **`UNKNOWN`** | `errores_llm` |
+| la respuesta no es una de las tres palabras | `OP_SILENCE` | **`UNKNOWN`** | `ilegibles` |
+
+**`OP_SILENCE` es una decisión que el modelo tomó; ninguna de las dos lo es.** Confundirlas hace
+que un vivo silencioso no se pueda atribuir — que es exactamente lo que el primer vivo tiene que
+separar. UNKNOWN es el estado del que observa, no un valor de la escala (§19, `c06db07`), y **no
+autoriza ninguna acción**: `_interact` no publica ni se va con UNKNOWN.
+
+La primera la corrigió Opus; **la segunda no me había llegado** y delamor me la pasó. Estaban a
+una línea de distancia en la misma función.
+
+**Dos causas, una consecuencia, y se registran por separado**: para atribuir no es lo mismo que
+falle la infraestructura que el modelo conteste algo ilegible.
+
+### 3. La respuesta cruda, con su causa
+
+Pedido de **Opus** para el vivo con el 8B. Cada ilegible guarda
+`causa: "respuesta_ilegible"`, **`respuesta_cruda`** sin `strip` ni `upper`, `truncada`, `largo`,
+`fase`, `provider` y `model`. Truncada a 500 **y declarado si se truncó**. Un vacío también es
+ilegible y guarda `""`.
+
+Sin el texto, "ilegible" es un número y no se puede mirar. Con el texto se ve si el problema está
+en el gate —el prompt pide una palabra y el modelo contesta una frase— o en el modelo.
+
+### 4. El 429 aparte, y **cómo se supo**
+
+`status_code` primero —`status_code`, `status`, `code`, `http_status`—, y las firmas de texto como
+**respaldo declaradamente heurístico**. La traza dice cuál de los dos fue:
+**`rate_limit_segun: "status_code" | "texto" | None`**.
+
+Un 429 leído del atributo **es un dato**; inferirlo del mensaje **es una heurística**, y no es lo
+mismo. Las firmas pueden dar falsos positivos —un mensaje que diga "quota" sin ser un 429— y
+falsos negativos; si no matchea, el error queda genérico y **igual se registra**. Un 500 no se
+marca.
+
+El 429 no dice "algo se rompió": dice **"vas demasiado rápido"**. Es información sobre el ritmo.
+
+### 5. El ritmo declarado, sin inventar el límite
+
+`ritmo_declarado(n_devices)` devuelve vueltas por minuto, piso y techo de llamadas, y
+**`limite_de_la_cuenta: "UNKNOWN — se lee en la consola del provider"`**.
+
+Con **`poll_interval = 2.0` y 2 devices: 60 a 120 llamadas por minuto.** Ese es el número a
+comparar contra la cuenta de Groq. **El límite no lo invento.** Con `poll_interval = 0` el ritmo
+lo fija la latencia y **no se puede declarar de antemano**: devuelve `None`.
+
+### 6. El instrumento mentía, y era el peor lugar
+
+**El `ProviderStub` agotado devolvía `"OP_SILENCE"`.** O sea que **fabricaba decisiones**: una
+vuelta sin respuesta guionada producía un *"el modelo decidió callar"* que nadie decidió. Un
+instrumento de medición rellenando la ausencia con el valor más tranquilizador.
+
+Lo señaló Opus. Ahora devuelve **vacío → UNKNOWN**.
+
+**Rompió tres tests, y eso era el punto:** `test_el_silencio_no_es_absorbente`,
+`test_una_palabra_desconocida…` y `test_el_costo_registra_provider_y_modelo` estaban midiendo
+contra decisiones del instrumento. Les di respuestas **explícitas** —2000 cada uno— para que el
+silencio que miden sea **decidido**. Y el test nuevo pasa `[]`: con cero respuestas guionadas,
+todas las vueltas son UNKNOWN.
+
+### 7. `"?"` → `None`, y un quinto que encontré
+
+`provider` sin nombre quedaba en `"?"`. Es un valor inventado: pasó a **`None`**.
+
+Y buscando los `"?"` apareció uno que no estaba en la lista:
+**`m.get("timestamp", "?")` ponía `"?"` en el prompt que el modelo lee.**
+
+> ### ⚠ CAMBIO DEL GATE — delamor lo lee antes del vivo
+>
+> **El timestamp ausente en el historial pasó de `[?]` a `[UNKNOWN]`.** Es **texto que el modelo
+> ve**, no traza interna: `"?"` no le dice nada, `UNKNOWN` le dice que el dato no estaba.
+>
+> Se suma a lo que ya estaba declarado del gate: las **tres opciones**
+> (`INTERACT` / `LEAVE` / `OP_SILENCE`), el bloque `Channel clock: tick=… (clock source…, tick
+> period…)`, `New since your last turn`, `Incoming: (ninguno)` para el silencio, y
+> `You are not obligated to act.`
+>
+> Hay un test que verifica que **`[?]` no aparece en ningún prompt**.
+
+**Y lo que NO toqué, por indicación de Opus:** el resto del prompt sigue mostrando `None` —
+`D_ckm=None`, `c_S=None`, `fi=None`, `Delta_r=None`. **No unifiqué `None` y `UNKNOWN` ahí.** Está
+entre lo que delamor lee del gate y es decisión suya; hasta entonces queda como está.
+
+### Las nueve inversiones
+
+```
+=== 25 las llamadas se infieren       -> 2 failed, 342 passed  | restaurado 344
+=== 26 el error se traga              -> 2 failed, 342 passed  | restaurado 344
+=== 27 la llamada que falla no cuenta -> 1 failed, 343 passed  | restaurado 344
+=== 28 un error al generar publica    -> 1 failed, 343 passed  | restaurado 344
+=== 29 el error vuelve a OP_SILENCE   -> 3 failed, 350 passed  | restaurado 353
+=== 30 el ilegible vuelve a OP_SILENCE-> 7 failed, 346 passed  | restaurado 353
+=== 31 la cruda se guarda normalizada -> 1 failed, 352 passed  | restaurado 353
+=== 32 UNKNOWN autoriza acción        -> 3 failed, 350 passed  | restaurado 353
+=== 33 el 429 no se distingue         -> 1 failed, 352 passed  | restaurado 353
+=== 34 el stub agotado da OP_SILENCE  -> FAILED test_el_stub_agotado_no_fabrica_decisiones
+                                         1 failed, 359 passed  | restaurado 360
+=== 35 el 429 solo por texto          -> FAILED test_un_429_por_status_code_se_lee_del_dato
+                                         1 failed, 359 passed  | restaurado 360
+=== 36 provider sin nombre -> "?"     -> 360 passed  ← NO SE APLICÓ DONDE DEBÍA
+=== 37 timestamp -> "?"               -> 360 passed  ← NO SE APLICÓ (escapeo roto)
+
+(repetidas bien:)
+=== 36bis el provider de costo() -> "?"  -> FAILED test_un_provider_sin_nombre_queda_en_None…
+                                            1 failed, 359 passed
+=== 37bis el timestamp -> "?"            -> FAILED test_un_mensaje_sin_timestamp_dice_UNKNOWN…
+                                            1 failed, 359 passed
+    restaurado -> 360 passed
+```
+
+`grep -c INVERSION` sobre el device y el test → **0 y 0**.
+
+### Dos inversiones mías no midieron nada, y lo digo
+
+- **La 37 no se aplicó**: el escapeo de las comillas en el shell falló y el `python` levantó
+  `NO ENCONTRE`. **Ese "360 passed" no significaba nada**, y si no hubiera leído la salida
+  completa lo habría reportado como "no rompe".
+- **La 36 se aplicó a la línea equivocada**: reemplazó el `provider` de `_ilegibles`, no el de
+  `costo()`, porque usé la primera coincidencia del texto y había tres iguales. **Mi test estaba
+  bien; mi inversión estaba mal apuntada.**
+
+Las dos repetidas con precisión rompen el test que les corresponde. Lo reporto porque **una
+inversión que no se aplica se ve igual que una que no rompe**, y la diferencia es todo.
+
+### Tests y suite
+
+`tests/test_oda_continuo.py` — **56**. Nuevos en el CP2v: llamadas contadas; dos llamadas si
+publica; el error registrado con el ciclo siguiendo; el error al generar que no publica;
+provider y modelo en el costo; vueltas con ventana UNKNOWN; la palabra desconocida como UNKNOWN;
+error e ilegible por separado; el 429 marcado; el no-429; el ritmo declarado; sin pausa no se
+declara; la cruda entera y sin normalizar; la larga truncada; la vacía; las causas de los
+errores; el stub que no fabrica; el 429 por `status_code`; el 429 por texto; el 500; el provider
+sin nombre; y el timestamp UNKNOWN en el prompt.
+
+**Suite: 360/360.** Ningún test ajeno cambió. **Tres tests míos** cambiaron porque el stub dejó
+de fabricar decisiones.
+
+### Lo que falta para el vivo, y no es mío
+
+1. **`GROQ_API_KEY` como secret del Codespace** — nunca en el repo.
+2. **El límite de la cuenta de Groq**, para comparar contra los 60–120 por minuto.
+3. **Que delamor lea el gate**: las tres opciones, el bloque del clock, `Incoming: (ninguno)`, el
+   `[UNKNOWN]` del timestamp, y el `None` del resto del prompt que **no** unifiqué.
+4. **El modelo del primer vivo**: `llama-3.1-8b-instant` por decisión de Opus.
+   `llama-3.3-70b-versatile` queda disponible.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves. Con la clave, Opus dejó registrado correr los que usen
+  **sólo Groq**, para achicar este punto ciego.
+- **Si Groq con el 8B contesta el gate con una sola palabra.** Es lo primero que el vivo va a
+  mostrar, y `respuesta_cruda` está puesto justamente para eso.
+- **Si las firmas de texto del 429 matchean lo que devuelve el SDK de Groq.** `status_code` va
+  primero y debería alcanzar, pero **no lo vi contra un 429 real**.
+- **El precio.** Cuento llamadas, no tokens ni dinero.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`process/iap_series_freeze_20261008/README.md:41`**, que sigue diciendo "67 archivos".

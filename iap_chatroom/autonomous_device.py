@@ -26,6 +26,45 @@ from fastmcp import Client
 
 from iap_chatroom.providers.base import ChatMessage, Provider
 
+# La decisión que no hubo. **No es un valor de la escala**: es el estado del
+# que observa cuando el provider no respondió (§19). No autoriza ninguna
+# acción, igual que OP_SILENCE, pero se distingue de él: OP_SILENCE lo decidió
+# el modelo, UNKNOWN significa que no se pudo decidir.
+DECISION_UNKNOWN = "UNKNOWN"
+
+# Atributos donde los SDK suelen poner el código HTTP. **Se miran primero**:
+# un 429 en `status_code` es un dato, no una coincidencia de texto.
+_ATRIBUTOS_STATUS = ("status_code", "status", "code", "http_status")
+
+# Firmas en el texto del error. **Respaldo, y declaradamente heurístico**: si
+# el SDK no expone el código, se busca por texto. Puede dar falsos positivos
+# —un mensaje que mencione "quota" sin ser un 429— y falsos negativos. Si no
+# matchea, el error queda como genérico y **igual se registra**: no se pierde.
+_FIRMAS_RATE_LIMIT = ("429", "rate limit", "rate_limit", "too many requests",
+                      "quota", "ratelimit")
+
+
+def _es_rate_limit(e: Exception) -> tuple:
+    """
+    Si la excepción es un rate limit, y **cómo se supo**.
+
+    Returns: (es_rate_limit, metodo) con metodo ∈ {"status_code", "texto", None}.
+    El método se registra: un 429 leído del `status_code` es un dato; uno
+    inferido del texto es una heurística, y la traza tiene que decir cuál fue.
+    """
+    for attr in _ATRIBUTOS_STATUS:
+        valor = getattr(e, attr, None)
+        if isinstance(valor, bool):
+            continue
+        if isinstance(valor, int) and valor == 429:
+            return True, "status_code"
+        if isinstance(valor, str) and valor.strip() == "429":
+            return True, "status_code"
+    texto = f"{type(e).__name__}: {e}".lower()
+    if any(f in texto for f in _FIRMAS_RATE_LIMIT):
+        return True, "texto"
+    return False, None
+
 GATE_PROMPT_04 = """Field state:
 D_ckm={d_ckm} | temp_signal={temp} | c_S={c_s} | fi={fi} | Delta_r={delta_r}
 
@@ -124,6 +163,22 @@ class AutonomousDevice:
 
         `poll_interval` es el ritmo de la vuelta, y hoy lo fija el device
         (TASK §1). No hay mínimo declarado ni WAIT: eso es Calibración.
+
+        **El ritmo contra el límite de la cuenta** (CP2v, pedido de Opus). Sin criterio local,
+        cada vuelta cuesta **1 llamada al gate + 1 si actúa**, así que con N
+        devices durante T segundos:
+
+            llamadas ≈ N · (T / poll_interval) · (1 + p)
+
+        y por minuto, por device: `60 / poll_interval` como piso, el doble si
+        actúa siempre. Con `poll_interval = 2.0` son **30 a 60 por minuto y por
+        device**.
+
+        **El límite de la cuenta es UNKNOWN**: se lee en la consola del
+        provider, y no lo invento. `ritmo_declarado()` devuelve el cálculo para
+        poder compararlo contra ese número cuando exista; si el provider
+        devuelve 429, queda marcado `rate_limit: True` en la traza de la
+        vuelta, que es la medición de que el ritmo no entró.
         """
         if trigger_mode != "continuo":
             raise ValueError(
@@ -145,6 +200,20 @@ class AutonomousDevice:
         self._tick_anterior: int = -1
         # lo que el device decidió, vuelta por vuelta. Traza propia.
         self._decisiones: list[dict] = []
+        # Llamadas al LLM efectivamente hechas, acumuladas. La traza de cada
+        # vuelta guarda el delta: con el criterio local (CP2b) una vuelta
+        # puede costar cero, así que "vueltas" deja de ser "llamadas" y hay
+        # que contarlas, no inferirlas (pedido de delamor para el primer vivo).
+        self._llamadas_llm: int = 0
+        # Errores del provider, acumulados, para poder atribuir un silencio:
+        # el modelo que calla, el canal que pierde, o la infraestructura que
+        # falla, son tres cosas distintas.
+        self._errores_llm: list[dict] = []
+        # Respuestas del gate que no eran ninguna de las tres palabras. Se
+        # registran aparte de los errores del provider: el provider respondió,
+        # lo que no se pudo fue leer la respuesta. Son dos causas distintas de
+        # la misma consecuencia (UNKNOWN), y para atribuir hay que separarlas.
+        self._ilegibles: list[dict] = []
         self._se_fue: bool = False
 
     def _to_chat_messages(self) -> list[ChatMessage]:
@@ -156,9 +225,56 @@ class AutonomousDevice:
         turn_msgs = _coalesce([c for c in chat if c["role"] != "system"])
         return system_msgs + turn_msgs
 
-    async def _generate(self) -> str:
-        """Construye el prompt con historial acumulado del canal y llama al provider."""
-        text = await self.provider.complete(self._to_chat_messages())
+    async def _llamar_llm(self, messages: list, fase: str) -> Optional[str]:
+        """
+        Llama al provider, cuenta la llamada y registra el error si hubo.
+
+        **La llamada se cuenta antes de saber si salió bien**: una llamada que
+        falló igual se hizo, y para medir costo eso es lo que importa.
+
+        **Devuelve None si el provider falló**, y el error queda en
+        `_errores_llm` con su fase. No se propaga: una falla del provider en
+        una vuelta no mata un run de 300 s. Pero **tampoco se traga**: sin
+        registro, un vivo silencioso no se puede atribuir entre el modelo que
+        calla, el canal que pierde y la infraestructura que falla — que es
+        justo lo que el primer vivo tiene que separar (delamor).
+
+        Quien recibe None decide qué hacer, y la dirección segura es no actuar.
+        """
+        self._llamadas_llm += 1
+        try:
+            return await self.provider.complete(messages)
+        except Exception as e:                      # noqa: BLE001 — se registra
+            rate_limit, metodo = _es_rate_limit(e)
+            self._errores_llm.append({
+                "causa": "rate_limit" if rate_limit else "error_provider",
+                "fase": fase,
+                "excepcion": type(e).__name__,
+                "mensaje": str(e)[:300],
+                # None si el provider no declara su nombre: la ausencia no se
+                # rellena con un valor inventado como "?".
+                "provider": getattr(self.provider, "name", None),
+                "model": getattr(self.provider, "model", None),
+                # 429 se distingue del resto: no dice "algo se rompió", dice
+                # "vas demasiado rápido". Es información sobre el ritmo, y el
+                # ritmo es lo que el CP2v tiene que declarar.
+                "rate_limit": rate_limit,
+                # Cómo se supo: "status_code" es un dato, "texto" es una
+                # heurística. None si no es rate limit.
+                "rate_limit_segun": metodo,
+            })
+            self._log(f"ERROR_PROVIDER({fase}): {type(e).__name__}"
+                      + (" [RATE_LIMIT]" if rate_limit else ""))
+            return None
+
+    async def _generate(self) -> Optional[str]:
+        """
+        Construye el prompt con historial acumulado del canal y llama al
+        provider. **None si el provider falló** — ver `_llamar_llm`.
+        """
+        text = await self._llamar_llm(self._to_chat_messages(), "generate")
+        if text is None:
+            return None
         return _strip_own_prefix(text, self.device_id)
 
     async def _observe(
@@ -237,9 +353,11 @@ class AutonomousDevice:
         actual, el de su vuelta anterior y los timestamps, y evaluarlos es
         parte de decidir.
 
-        Cualquier palabra que no sea una de las tres cae a `OP_SILENCE`: no
-        actuar es la salida segura, y una respuesta que no se entiende no
-        autoriza una acción.
+        **Dos causas, una consecuencia.** Si el provider falla o si la
+        respuesta no es una de las tres palabras, el resultado es `UNKNOWN`:
+        no actuar. Pero se registran **por separado** —`_errores_llm` y
+        `_ilegibles`— porque para atribuir un vivo silencioso no es lo mismo
+        que la infraestructura falle que el modelo conteste algo ilegible.
         """
         field = observation["field"]
         history = observation["history"]
@@ -248,7 +366,10 @@ class AutonomousDevice:
 
         history_text = (
             "\n".join(
-                f'[{m.get("timestamp", "?")}] {m["device_id"]}: {m["text"]}'
+                # Un mensaje sin timestamp dice UNKNOWN, no "?": esto entra
+                # al prompt que el modelo lee, y "?" no le dice nada mientras
+                # UNKNOWN le dice que el dato no estaba.
+                f'[{m.get("timestamp") or "UNKNOWN"}] {m["device_id"]}: {m["text"]}'
                 for m in history[-10:]
             )
             if history
@@ -276,13 +397,52 @@ class AutonomousDevice:
             incoming=incoming,
         )
 
-        response = await self.provider.complete([
+        response = await self._llamar_llm([
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": gate_prompt},
-        ])
+        ], "decide")
 
-        word = response.strip().upper().split()[0] if response.strip() else "OP_SILENCE"
-        return word if word in ("INTERACT", "LEAVE", "OP_SILENCE") else "OP_SILENCE"
+        if response is None:
+            # **El provider falló: no hubo decisión, y eso NO es OP_SILENCE.**
+            # OP_SILENCE es una decisión que el modelo tomó; un error del
+            # provider no es una decisión. Confundirlas hace que un vivo
+            # silencioso no se pueda atribuir entre el modelo que calla, el
+            # canal que pierde y la infraestructura que falla — que es
+            # exactamente lo que el primer vivo tiene que separar.
+            #
+            # UNKNOWN es el estado del que observa, no un valor de la escala
+            # (§19 / `c06db07`). Y no autoriza ninguna acción: `_interact` no
+            # publica ni se va con UNKNOWN. Corregido a señalamiento de Opus
+            # sobre el CP2v; antes caía a OP_SILENCE.
+            return DECISION_UNKNOWN
+
+        # **Una palabra fuera del vocabulario también es UNKNOWN**, no
+        # OP_SILENCE. Antes caía a OP_SILENCE, con el argumento de que "no
+        # actuar es la salida segura" — y la salida segura sigue siendo no
+        # actuar, pero **el nombre era una decisión que nadie tomó**. Si el
+        # modelo contestó algo ilegible, lo que pasó es que no se pudo
+        # decidir, igual que si el provider hubiera fallado. Un vacío también.
+        # Segunda mitad de la nota de Opus sobre el CP2v.
+        word = response.strip().upper().split()[0] if response.strip() else ""
+        if word in ("INTERACT", "LEAVE", "OP_SILENCE"):
+            return word
+        # **La respuesta cruda, con su causa** (pedido de Opus para el
+        # primer vivo con el 8B, relevado por delamor): es lo único que después va a mostrar si el
+        # problema está en el gate —el prompt pide una palabra y el modelo
+        # contesta una frase— o en el modelo. Sin el texto, "ilegible" es un
+        # número y no se puede mirar.
+        #
+        # Cruda: sin strip, sin upper. Truncada a 500 y declarado si se truncó.
+        self._ilegibles.append({
+            "causa": "respuesta_ilegible",
+            "respuesta_cruda": response[:500],
+            "truncada": len(response) > 500,
+            "largo": len(response),
+            "fase": "decide",
+            "provider": getattr(self.provider, "name", None),
+            "model": getattr(self.provider, "model", None),
+        })
+        return DECISION_UNKNOWN
 
     async def _interact(self, client: Client, decision: str, observation: dict) -> None:
         """
@@ -301,6 +461,12 @@ class AutonomousDevice:
         """
         field_state = observation["field"]
 
+        if decision == DECISION_UNKNOWN:
+            # No hubo decisión. UNKNOWN no autoriza ninguna acción, y se
+            # distingue de OP_SILENCE en la traza.
+            self._log(DECISION_UNKNOWN, field_state)
+            return
+
         if decision == "OP_SILENCE":
             self._log("OP_SILENCE", field_state)
             return
@@ -312,6 +478,11 @@ class AutonomousDevice:
             return
 
         text = await self._generate()
+        if text is None:
+            # El provider falló al generar: la decisión fue INTERACT pero no
+            # hay qué publicar. Queda registrado, y no se publica nada.
+            self._log("INTERACT_SIN_TEXTO", field_state)
+            return
         await client.call_tool(
             "send_message", {"device_id": self.device_id, "text": text}
         )
@@ -433,6 +604,9 @@ class AutonomousDevice:
                 observation["vuelta"] = vuelta
 
                 # (4) D — UNA decisión por vuelta, con todo lo de arriba
+                llamadas_antes = self._llamadas_llm
+                errores_antes = len(self._errores_llm)
+                ilegibles_antes = len(self._ilegibles)
                 decision = await self._decide(observation)
 
                 # (5) A — la primitiva que corresponda, o ninguna
@@ -450,6 +624,12 @@ class AutonomousDevice:
                     # el grano con el que se calculó el corte, o UNKNOWN si el
                     # canal no lo declaró
                     "ventana": ventana if ventana is not None else "UNKNOWN",
+                    # Llamadas al LLM que ESTA vuelta hizo de verdad, y errores
+                    # del provider en ella. Contadas, no inferidas de la
+                    # cantidad de vueltas.
+                    "llamadas_llm": self._llamadas_llm - llamadas_antes,
+                    "errores_llm": len(self._errores_llm) - errores_antes,
+                    "ilegibles": len(self._ilegibles) - ilegibles_antes,
                 })
 
                 self._tick_anterior = clock.get("tick", -1)
@@ -504,3 +684,68 @@ class AutonomousDevice:
     def decisiones(self) -> list[dict]:
         """La traza de lo decidido, vuelta por vuelta. Copia: no se edita."""
         return list(self._decisiones)
+
+    def ritmo_declarado(self, n_devices: int = 1) -> dict:
+        """
+        Cuántas llamadas al LLM implica este ritmo, para comparar contra el
+        límite de la cuenta. **No conoce el límite: lo devuelve como UNKNOWN.**
+
+        Sin criterio local, cada vuelta cuesta 1 llamada (el gate) y 2 si
+        actúa. El piso y el techo salen de ahí. El límite del provider se lee
+        en su consola; acá no se inventa.
+        """
+        if self.poll_interval <= 0:
+            vueltas_min = None      # sin pausa, el ritmo lo fija la latencia
+        else:
+            vueltas_min = 60.0 / self.poll_interval
+        return {
+            "poll_interval_s": self.poll_interval,
+            "n_devices": n_devices,
+            "vueltas_por_minuto_por_device": vueltas_min,
+            "llamadas_por_minuto_piso": (
+                round(vueltas_min * n_devices, 2) if vueltas_min else None
+            ),
+            "llamadas_por_minuto_techo": (
+                round(vueltas_min * n_devices * 2, 2) if vueltas_min else None
+            ),
+            "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+            "nota": (
+                "sin poll_interval el ritmo lo fija la latencia del provider y "
+                "no se puede declarar de antemano"
+            ),
+        }
+
+    def costo(self) -> dict:
+        """
+        Lo que el run costó, en llamadas al LLM. **Contadas, no estimadas.**
+
+        No dice dinero ni tokens: eso depende del provider y del tamaño de los
+        prompts, y el device no lo mide. Dice llamadas, vueltas y errores, que
+        es lo que permite atribuir un silencio.
+        """
+        ds = self._decisiones
+        return {
+            "device_id": self.device_id,
+            "provider": getattr(self.provider, "name", None),
+            "model": getattr(self.provider, "model", None),
+            "vueltas": len(ds),
+            "llamadas_llm": self._llamadas_llm,
+            "llamadas_por_vuelta": (
+                round(self._llamadas_llm / len(ds), 3) if ds else None
+            ),
+            "errores_llm": len(self._errores_llm),
+            "errores": list(self._errores_llm),
+            "ilegibles": len(self._ilegibles),
+            "ejemplos_ilegibles": list(self._ilegibles[:5]),
+            "errores_rate_limit": sum(
+                1 for e in self._errores_llm if e.get("rate_limit")
+            ),
+            "ritmo": self.ritmo_declarado(),
+            "decisiones_por_tipo": {
+                d: sum(1 for x in ds if x["decision"] == d)
+                for d in sorted({x["decision"] for x in ds})
+            },
+            "vueltas_con_ventana_unknown": sum(
+                1 for x in ds if x.get("ventana") == "UNKNOWN"
+            ),
+        }

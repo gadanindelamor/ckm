@@ -7,11 +7,17 @@
 
 ## Última escritura
 
-**2026-10-09 00:07 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 00:16 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2a — el ODA continuo, sin criterio local.** Cerrado el 2026-10-09. Suite **321/321**,
+**CP2a′ — el borde de T2, el join y dos devices.** Cerrado el 2026-10-09. Suite **326/326**.
+Implementado el solape de una vuelta que propuso Opus. **El test con reloj congelado que pidió
+no puede pasar con el solape, y lo medí**: con el reloj quieto todos los cortes son el mismo
+número, así que mover cuál se usa no cambia nada. Escrito midiendo el agujero, no evitándolo.
+**Escalado: el arreglo sería `>=` en `get_messages`, que el enunciado excluyó.**
+
+Antes: **CP2a — el ODA continuo, sin criterio local.** Cerrado el 2026-10-09. Suite **321/321**,
 ocho inversiones. `trigger_mode="continuo"` como único modo, una decisión por vuelta, el
 silencio no absorbente, LEAVE como decisión, y el `since` del reloj del canal leído antes de
 `get_messages`. **La inversión 19 no rompía porque `_observe` pedía el clock y el loop lo
@@ -32,6 +38,11 @@ aceptado en `2ad873e`.
 
 
 ## Qué espera, y de quién
+
+- **El borde `timestamp == since` con reloj congelado — [delamor]:** el arreglo sería `>=` en
+  `get_messages`. Cambia qué entrega el canal para **todos** los que la llaman, incluidos los 21
+  `test_caso_*` que no puedo correr. **No lo toqué.** Hay un test que afirma el agujero y que
+  **debe fallar** cuando se arregle.
 
 - **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.
 - Sin implementar hasta el OK de delamor: **el criterio local sin LLM** y **WAIT** (TASK §1).

@@ -180,6 +180,13 @@ class AutonomousDevice:
         observación como cualquier otro. La firma quedó compatible con la de
         antes, que exigía el mensaje.
 
+        **El join dejó de ser semilla, y se declara.** En la serie congelada el
+        mensaje SYSTEM "X joined the channel" podía disparar el ciclo (Caso
+        0.5). En el continuo **nada dispara**: el join entra como información,
+        contado en `n_nuevos` como cualquier otro mensaje, y el lugar del seed
+        lo ocupa la iniciativa del device. Lo que viene de antes es el **corte
+        tomado antes del join**, no el seed (precisión de Opus sobre el CP2a).
+
         **El clock entra a la observación** (TASK §1: *"incluye el clock, que
         es parte del campo"*). El canal no calcula nada por el device: da el
         tick y su reloj, y evaluar los Δt es de la fase D.
@@ -340,8 +347,17 @@ class AutonomousDevice:
 
         **El `since` sale del reloj del canal, nunca del propio** (T2). Y se
         lee **antes** de `get_messages`: si se leyera después, un mensaje que
-        llega entre las dos llamadas se perdería en silencio. En el borde
-        puede repetirse uno, y se descarta por `message_id`.
+        llega entre las dos llamadas se perdería en silencio.
+
+        **Y el corte se atrasa una vuelta.** `get_messages` filtra con
+        `timestamp > since`, estricto. Si la vuelta k+1 usara el corte leído en
+        la vuelta k, un mensaje sellado **exactamente** en ese instante y que
+        llega después del `get_messages` de la vuelta k no pasaría `> t_k` en
+        la k+1: se perdería en silencio. Así que la vuelta usa el corte de
+        **dos** vueltas atrás —un solape de una vuelta— y los duplicados se
+        descartan por `message_id` (`_vistos`), que ya existía para el otro
+        borde. Señalado por Opus sobre el CP2a; antes lo había tomado por un
+        artefacto del test, y no lo era.
 
         El modo viejo quedó congelado en `process/iap_series_freeze_20261008/`.
         """
@@ -350,7 +366,10 @@ class AutonomousDevice:
             # mezclar el reloj del device con el del canal descarta mensajes en
             # silencio si el device va adelantado (hallazgo del CP0).
             clock0 = await client.call_tool("get_clock", {})
-            since = clock0.data["t"]
+            # Los cortes leídos, del más viejo al más nuevo. La vuelta usa el
+            # de dos atrás: el solape de una vuelta cubre el borde
+            # `timestamp == since` del filtro estricto de get_messages.
+            cortes: list[float] = [clock0.data["t"]]
 
             r = await client.call_tool(
                 "join_channel", {"device_id": self.device_id, "device_type": "AI"}
@@ -368,7 +387,11 @@ class AutonomousDevice:
                 #     llegar uno: aparece en la próxima vuelta, no se pierde.
                 clock_result = await client.call_tool("get_clock", {})
                 clock = clock_result.data
-                proximo_since = clock["t"]
+                cortes.append(clock["t"])
+                # El corte de esta vuelta: dos lecturas atrás si las hay, y si
+                # no la más vieja que tenemos. Nunca el de la vuelta anterior.
+                since = cortes[-3] if len(cortes) >= 3 else cortes[0]
+                del cortes[:-3]
 
                 # (2) los mensajes desde el corte anterior
                 fetched = await client.call_tool("get_messages", {"since": since})
@@ -410,7 +433,6 @@ class AutonomousDevice:
                 })
 
                 self._tick_anterior = clock.get("tick", -1)
-                since = proximo_since
 
                 if self._se_fue:
                     break

@@ -2626,3 +2626,122 @@ del clock leído una vez por vuelta.
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
 - **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos". No toqué
   `process/`.
+
+---
+
+## REPORTE CP2a′ — el borde de T2, el join y dos devices — 2026-10-09 00:16 UTC
+
+*Corrección del CP2a sobre lo que Opus señaló en `f6981a9`. **Tocó sólo
+`iap_chatroom/autonomous_device.py` y `tests/`.***
+
+### El borde `timestamp == since`: Opus tiene razón, y yo estaba equivocado dos veces
+
+**Lo que dije:** que era *"artefacto del test"*. **Lo que es:** el borde real de T2.
+
+`get_messages` filtra con `timestamp > since`, **estricto**. Un mensaje sellado exactamente en
+`t_k` que llega **después** del `get_messages` de la vuelta k no pasa `> t_k` en la k+1: se
+pierde en silencio.
+
+**Y lo peor no es el error, es cómo lo tapé.** Hice que el reloj del test **avanzara 1 ms por
+llamada** para que la condición no apareciera, y después lo llamé artefacto. Es exactamente la
+forma que vengo encontrando en otros tests, hecha por mí: **cambié el test para que la condición
+no se diera, en vez de ver que la condición era real.**
+
+**Implementé el solape que propuso Opus:** la vuelta usa el corte de **dos** lecturas atrás, y
+los duplicados se descartan por `message_id` (`_vistos`, que ya existía para el otro borde). La
+inversión 21 —volver al corte de la vuelta anterior— **rompe**
+`test_el_corte_se_atrasa_una_vuelta`.
+
+### Pero el test con reloj congelado que pidió Opus **no puede pasar**, y lo medí
+
+Opus pidió: *"Test con reloj congelado: un mensaje sellado en el corte aparece en alguna
+vuelta."*
+
+**Medido antes de afirmarlo:**
+
+```
+RELOJ CONGELADO
+  mensaje sellado en : 1791504787.62982
+  cortes distintos   : 1 -> [1791504787.62982]
+  todos los cortes == sellado? True
+  vistos             : 0 de 1
+  vueltas            : 256
+```
+
+**Con el reloj quieto todos los cortes son el mismo número**, igual al sello. El solape mueve
+**cuál** corte se usa; cuando todos son el mismo, mover cuál **no cambia nada**. No es que el
+solape esté mal implementado: **no puede cubrir este caso**.
+
+**El solape sí cubre el caso real** —el reloj avanzando—, y eso lo verifican los tests del
+`since` y `test_el_solape_no_duplica_mensajes`.
+
+**El arreglo del caso congelado sería `>=` en `get_messages`** más el descarte por `message_id`
+que el device ya hace. **Eso toca `get_messages`, que el enunciado excluyó: no lo toqué.**
+Lo escalo.
+
+**Y escribí el test midiendo lo que pasa, no evitándolo:**
+`test_el_borde_timestamp_igual_al_corte_SIGUE_ABIERTO` afirma que **se pierde** —0 vistos, 1
+corte distinto, 256 vueltas— y su docstring dice que **si algún día se arregla, este test falla,
+y eso es correcto: hay que borrarlo y poner el que pidió Opus.**
+
+No lo dejé pasando con el reloj avanzando. Eso habría sido tapar el agujero por segunda vez.
+
+### El join deja de ser semilla, declarado
+
+Lo agregué al docstring de `_observe`: en la serie congelada el SYSTEM *"X joined the channel"*
+podía disparar el ciclo (Caso 0.5). **En el continuo nada dispara**: el join entra como
+información, contado en `n_nuevos` como cualquier otro mensaje, y el lugar del seed lo ocupa la
+iniciativa.
+
+**Y mi frase era imprecisa**: dije *"el comportamiento de siempre"* sobre todo el bloque. Lo de
+siempre es **el corte tomado antes del join**, no el seed. Corregido donde estaba, con la
+precisión de Opus.
+
+### Dos devices: el punto ciego que señaló Opus, cubierto con stubs
+
+**`test_dos_devices_el_silencio_no_es_absorbente_entre_ellos`** — los dos eligen OP_SILENCE
+siempre, nadie publica nunca, y **los dos siguen decidiendo** (≥3 vueltas cada uno, canal vacío).
+Es el fenómeno de la serie, y antes no estaba testeado.
+
+**`test_dos_devices_uno_habla_y_el_otro_lo_ve`** — d1 publica y d2 lo ve en su observación, y d1
+**no** cuenta su propio mensaje como nuevo.
+
+**Este segundo falló primero, y era una carrera de mi test:** d1 publicaba en su vuelta 1, que
+podía caer **antes** de que d2 tomara su corte inicial — y entonces para d2 eso es historia, no
+mensaje nuevo. No es un fallo del código: **un device que se suma no ve como nuevo lo que ya
+estaba.** Lo arreglé haciendo que d1 calle las primeras vueltas, y lo dejé comentado en el test.
+
+### Tests y suite
+
+`tests/test_oda_continuo.py` — **22** (17 del CP2a + 5): el corte atrasado una vuelta, el borde
+congelado que sigue abierto, el solape que no duplica, el join que no dispara, y los dos de dos
+devices.
+
+**Suite: 326/326.** Ningún test existente cambió. Un test **mío** del CP2a se reemplazó:
+`test_el_clock_observado_es_el_que_fija_el_corte` **dejó de ser cierto a propósito** —el corte se
+atrasa ahora— y pasó a `test_el_corte_se_atrasa_una_vuelta`.
+
+**Inversión 21** — el corte vuelve a ser el de la vuelta anterior:
+`FAILED test_el_corte_se_atrasa_una_vuelta`, 1 failed 325 passed. Restaurado: 326 passed.
+`grep -c INVERSION` → 0.
+
+### Lo que escalo
+
+**El borde con reloj congelado necesita `>=` en `get_messages`.** No lo toqué porque el enunciado
+excluyó `get_messages` y porque cambiar `>` por `>=` cambia el comportamiento para **todos** los
+que la llaman —los 21 `test_caso_*`, que no puedo correr, y `_observe` con `since=None`—. Es
+E3-ish: cambia qué entrega el canal. **Decide delamor.**
+
+Si se arregla: el device ya descarta por `message_id`, así que del lado del device no hace falta
+nada más, y el test que afirma el agujero **tiene que fallar** y ser reemplazado.
+
+### No pude revisar
+
+- **Los 21 `test_caso_*`**: sin claves. Y el CP2a′ **volvió a tocar el loop** que los 21 llaman.
+- **Si dos devices contra el server real se comportan como contra el stub.** Los dos tests de dos
+  devices corren con `ClientStub` sobre un `ChatChannel` real, pero **sin MCP, sin red y sin
+  server**. El orden de las vueltas en un `asyncio.gather` local no es el de dos procesos.
+- **Qué decidiría un modelo real.** Sigue sin correrse nada contra un provider.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+- **`process/iap_series_freeze_20261008/README.md:41`** sigue diciendo "67 archivos". No toqué
+  `process/`.

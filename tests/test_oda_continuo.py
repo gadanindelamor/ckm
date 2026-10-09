@@ -441,11 +441,14 @@ def test_el_clock_se_lee_una_vez_por_vuelta(canal) -> None:
         f"{clocks} lecturas de get_clock para {vueltas} vueltas: no es una por vuelta"
 
 
-def test_el_clock_observado_es_el_que_fija_el_corte(canal, monkeypatch) -> None:
+def test_el_corte_se_atrasa_una_vuelta(canal, monkeypatch) -> None:
     """
-    El tick que el device observa y el corte de la vuelta siguiente salen de la
-    MISMA lectura. Si fueran dos lecturas distintas, el corte no
-    correspondería al tick observado.
+    El corte de la vuelta sale de **dos** lecturas atrás, no de la anterior.
+
+    Reemplaza a `test_el_clock_observado_es_el_que_fija_el_corte`, cuya
+    afirmación **dejó de ser cierta a propósito**: el solape de una vuelta es
+    lo que cubre el borde `timestamp == since` del filtro estricto de
+    `get_messages` (señalado por Opus sobre el CP2a).
     """
     t0 = canal._t0
     reloj = {"t": t0}
@@ -454,21 +457,178 @@ def test_el_clock_observado_es_el_que_fija_el_corte(canal, monkeypatch) -> None:
     client = ClientStub(canal)
     original = client.call_tool
     ts_leidos = []
+    cortes_usados = []
 
     async def registrando(nombre, args=None):
         if nombre == "get_clock":
             reloj["t"] += TICK_PERIODO_S * 1.5
         r = await original(nombre, args)
         if nombre == "get_clock":
-            ts_leidos.append((r.data["tick"], r.data["t"]))
-        if nombre == "get_messages":
-            # el since que el device usó tiene que ser el t de la lectura anterior
-            if len(ts_leidos) >= 2 and args.get("since") is not None:
-                assert args["since"] == ts_leidos[-2][1], \
-                    "el corte no sale de la misma lectura que el tick observado"
+            ts_leidos.append(r.data["t"])
+        if nombre == "get_messages" and args.get("since") is not None:
+            cortes_usados.append(args["since"])
         return r
 
     client.call_tool = registrando
     dev = _device(ProviderStub(["OP_SILENCE"] * 10))
+    _correr(dev, client, duration=0.03)
+
+    assert len(ts_leidos) >= 4, "hacen falta varias vueltas para medirlo"
+    # ts_leidos[0] es la lectura inicial, anterior al join. La vuelta n usa
+    # ts_leidos[n-1], que es la lectura de DOS vueltas atrás contando la
+    # inicial: el solape de una vuelta.
+    for k, corte in enumerate(cortes_usados):
+        esperado = ts_leidos[max(0, k - 1)]
+        assert corte == esperado, \
+            f"vuelta {k}: corte {corte} != lectura de dos atrás {esperado}"
+        assert corte != ts_leidos[k + 1], \
+            "el corte salió de la lectura de ESTA vuelta: no hay solape"
+
+
+def test_el_borde_timestamp_igual_al_corte_SIGUE_ABIERTO(canal, monkeypatch) -> None:
+    """
+    **El borde de T2 con el reloj congelado NO está cubierto, y este test lo
+    mide en vez de evitarlo.**
+
+    Opus pidió un test con el reloj congelado donde *"un mensaje sellado en el
+    corte aparece en alguna vuelta"*. **No puede pasar con el solape**, y lo
+    medí antes de afirmarlo: con el reloj quieto **todos los cortes son el
+    mismo número**, igual al sello del mensaje, y `get_messages` filtra con
+    `timestamp > since`, estricto. El solape mueve **cuál** corte se usa;
+    cuando todos son el mismo, mover cuál no cambia nada.
+
+    Medido: 256 vueltas, 0 mensajes vistos, 1 corte distinto.
+
+    **El solape sí cubre el caso real** —el reloj avanzando— y eso lo verifica
+    `test_el_solape_no_duplica_mensajes` junto con los del `since`. Lo que
+    queda abierto es el reloj congelado, y el arreglo sería `>=` en
+    `get_messages` más el descarte por `message_id` que el device ya hace.
+    **Eso toca `get_messages`, que el enunciado excluyó: no lo toqué y lo
+    escalé.**
+
+    Este test afirma el estado actual. **Si algún día se arregla, este test
+    falla**, y eso es correcto: hay que borrarlo y poner el que Opus pidió.
+    """
+    congelado = canal._t0 + TICK_PERIODO_S * 3
+    monkeypatch.setattr(ChatChannel, "_ahora", staticmethod(lambda: congelado))
+
+    client = ClientStub(canal)
+    cortes = []
+    original = client.call_tool
+
+    async def registrando(nombre, args=None):
+        if nombre == "get_messages" and (args or {}).get("since") is not None:
+            cortes.append(args["since"])
+        return await original(nombre, args)
+
+    client.call_tool = registrando
+    client.publicados_entre = lambda: _publicar_sync(canal, "otro", "en el corte")
+
+    dev = _device(ProviderStub(["OP_SILENCE"] * 10))
     _correr(dev, client, duration=0.02)
-    assert len(dev.decisiones()) >= 2, "hacen falta dos vueltas para medirlo"
+
+    sellado = _epoch(canal.get_history()[0].timestamp)
+    assert sellado == congelado, "el test necesita el mensaje sellado en el corte"
+    assert len(set(cortes)) == 1, \
+        "con el reloj congelado todos los cortes tienen que ser el mismo"
+    assert set(cortes) == {sellado}, "y tienen que ser iguales al sello"
+    assert len(dev.decisiones()) > 10, "hubo muchas vueltas, no una"
+
+    vistos = sum(d["n_nuevos"] for d in dev.decisiones())
+    assert vistos == 0, (
+        "el borde se arregló: borrar este test y poner el que pidió Opus "
+        "—un mensaje sellado en el corte aparece en alguna vuelta—"
+    )
+
+
+def test_el_solape_no_duplica_mensajes(canal) -> None:
+    """El solape de una vuelta repite mensajes, y `_vistos` los descarta."""
+    client = ClientStub(canal)
+    client.publicados_entre = lambda: [
+        _publicar_sync(canal, "otro", f"m{i}") for i in range(3)
+    ]
+    dev = _device(ProviderStub(["OP_SILENCE"] * 10))
+    _correr(dev, client, duration=0.04)
+
+    vistos = sum(d["n_nuevos"] for d in dev.decisiones())
+    assert vistos == 3, f"con el solape se contaron {vistos} de 3 mensajes"
+
+
+def test_el_join_no_dispara_el_ciclo(canal) -> None:
+    """
+    El join dejó de ser semilla: entra como información, no como disparador.
+
+    En la serie congelada el SYSTEM "joined" podía disparar el ciclo (Caso
+    0.5). En el continuo nada dispara — y el lugar del seed lo ocupa la
+    iniciativa.
+    """
+    dev = _device(ProviderStub(["OP_SILENCE"] * 5))
+    _correr(dev, ClientStub(canal), duration=0.02)
+
+    ds = dev.decisiones()
+    assert ds, "el ciclo corre igual, sin ningún disparador"
+    # el ClientStub no publica el SYSTEM del join; lo que importa es que el
+    # ciclo no dependió de ningún mensaje para arrancar
+    assert ds[0]["n_nuevos"] == 0
+    assert ds[0]["trigger"] is None
+
+
+def test_dos_devices_el_silencio_no_es_absorbente_entre_ellos(canal) -> None:
+    """
+    **Dos devices a la vez**, que es el fenómeno de la serie y no estaba
+    testeado (punto ciego que señaló Opus).
+
+    Los dos eligen OP_SILENCE siempre. Antes eso terminaba el proceso: sin
+    mensajes nuevos nadie se disparaba. Ahora los dos siguen decidiendo.
+    """
+    d1 = _device(ProviderStub(["OP_SILENCE"] * 20), device_id="d1")
+    d2 = _device(ProviderStub(["OP_SILENCE"] * 20), device_id="d2")
+    c1, c2 = ClientStub(canal, "d1"), ClientStub(canal, "d2")
+
+    import iap_chatroom.autonomous_device as mod
+    orig = mod.Client
+    clientes = {"d1": c1, "d2": c2}
+
+    async def ambos():
+        await asyncio.gather(d1.run(duration=0.06), d2.run(duration=0.06))
+
+    try:
+        mod.Client = lambda url: clientes.pop(next(iter(clientes)))
+        asyncio.run(ambos())
+    finally:
+        mod.Client = orig
+
+    assert len(d1.decisiones()) >= 3, "d1 se detuvo con el canal callado"
+    assert len(d2.decisiones()) >= 3, "d2 se detuvo con el canal callado"
+    assert len(canal.get_history()) == 0, "nadie publicó, y los dos siguieron"
+
+
+def test_dos_devices_uno_habla_y_el_otro_lo_ve(canal) -> None:
+    """Con dos devices, lo que uno publica entra a la observación del otro."""
+    # d1 calla las primeras vueltas: si publicara en la vuelta 1, podría
+    # hacerlo ANTES de que d2 tomara su corte inicial, y entonces para d2 eso
+    # sería historia y no mensaje nuevo. No es un fallo: un device que se suma
+    # no ve como nuevo lo que ya estaba. Era una carrera en el test.
+    d1 = _device(ProviderStub(["OP_SILENCE"] * 20 + ["INTERACT", "hola d2"]
+                              + ["OP_SILENCE"] * 50), device_id="d1")
+    d2 = _device(ProviderStub(["OP_SILENCE"] * 200), device_id="d2")
+    c1, c2 = ClientStub(canal, "d1"), ClientStub(canal, "d2")
+
+    import iap_chatroom.autonomous_device as mod
+    orig = mod.Client
+    pendientes = [c1, c2]
+
+    async def ambos():
+        await asyncio.gather(d1.run(duration=0.12), d2.run(duration=0.12))
+
+    try:
+        mod.Client = lambda url: pendientes.pop(0)
+        asyncio.run(ambos())
+    finally:
+        mod.Client = orig
+
+    assert any(m.text == "hola d2" for m in canal.get_history()), "d1 no publicó"
+    assert sum(d["n_nuevos"] for d in d2.decisiones()) >= 1, \
+        "d2 no vio lo que publicó d1"
+    assert all(d["n_nuevos"] == 0 for d in d1.decisiones()), \
+        "d1 contó su propio mensaje como nuevo"

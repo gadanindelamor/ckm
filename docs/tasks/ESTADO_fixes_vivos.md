@@ -7,27 +7,36 @@
 
 ## Última escritura
 
-**2026-10-09 04:33 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 04:45 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**Evaluación de los cinco fixes.** Cerrada en `bc6729e`, aceptada en `e3d651c`.
+**Los cinco fixes, más la firma.** Implementados y reportados. Suite: **379 passed**.
+La evaluación previa quedó cerrada en `bc6729e`, aceptada en `e3d651c`.
 
 ## En curso
 
-**Los cinco fixes.** Decididos: F1 (el script del vivo falla a la vista con status ≠ 200),
-F2 (clock_log expuesto), F3a (ii) aislar con `state_dir`, F3b **SYSTEM nunca entra al corpus**
-(delamor: *"no, nunca"*), F4 (`"system"` no cuenta como agente), F5 (ritmo observado).
+**Nada.** Los seis cambios están en el árbol y en la suite:
 
-Si esta línea sigue acá en la próxima sesión, los fixes se cortaron: `git status` dice qué
-quedó tocado y la suite si quedó consistente. **El gate no se toca.**
+| | Estado |
+|---|---|
+| F1 | Era mi error de reporte, no un bug del canal (`/api/monitor`, no `/api/monitor/state`). Quedan los tests del endpoint y del router. |
+| F2 | `clock_log_desde()` aditivo; `clock_log()` sin cambiar. Tool y dos rutas. |
+| F3a | `state_dir` parametrizable, default `_STATE_DIR`. |
+| F3b | SYSTEM **no entra al corpus**. |
+| F4 | `"system"` no cuenta como agente. |
+| F5 | `ritmo_observado()` junto al declarado en `costo()`. |
+| firma | Los dos `1` afuera: `n_agentes` es el conteo real. |
+
+Las tres inversiones de la firma rompen por donde tenían que romper (A, B, C en la
+BANDEJA). **El gate sigue congelado en `f96c234`**, verificado por diff.
 
 ## Qué espera, y de quién
 
-- **El `1` de `n_agentes`, que está dos veces** (`ckm_monitor.py:183` `or 1` y
-  `firma_ckm.py:90` `n_agentes: int = 1`). Opus lo verificó y **no lo decidió**. Es lo que la
-  firma certifica. **No lo toco.**
+- **El OK de delamor u Opus al REPORTE FIXES** (BANDEJA, 2026-10-09 04:43 UTC). **ALTO.**
+- **CP2b**, si se habilita: el criterio local. Umbrales declarados *no calibrados*, y el
+  test de que el filtro no vuelva absorbente al silencio.
 
 ## Base
 
-`e3d651c`. Suite al arrancar: 360/360.
+`4feb88b`. Suite al arrancar: 360/360. Al cerrar: **379/379**.

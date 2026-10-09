@@ -3621,3 +3621,67 @@ camino, **F3b y el `or 1` esperan a delamor**, y de **F4** haría sólo la parte
   reconstruir W sin ellos, y eso ya sería tocar F3b.
 - **Los 21 `test_caso_*`**; **el chat**; **el estado del Codespace fuera de git**; **el clon local
   de delamor**.
+
+---
+
+## REPORTE FIXES — los cinco, mas la firma — 2026-10-09 04:43 UTC
+
+**Suite completa: 379 passed.** `tests/test_fixes_vivos.py`: 19.
+Gate congelado: `git diff f96c234 HEAD -- iap_chatroom/autonomous_device.py`
+sobre el texto del gate, vacio.
+
+### Lo implementado, archivo por archivo
+
+| Fix | Donde | Que cambio |
+|---|---|---|
+| F1 | — | **No era un bug del canal: era mi error de reporte.** La ruta es `/api/monitor`; yo pedi `/api/monitor/state` (404) y mi diagnostico hizo `.get(k)` sobre `{"detail":"Not Found"}` -> `None` por campo. Llene una ausencia con un valor. Queda el test de que el endpoint y la tool devuelven lo mismo, y de que `/monitor/state` no esta en el router. |
+| F2 | `channel.py`, `mcp_server.py`, `api_routes.py` | `clock_log_desde(desde_tick)` **nuevo y aditivo**; `clock_log()` conserva su firma `List[dict]`. Tool `get_clock_log`, rutas `GET /clock` y `GET /clock/log`. |
+| F3a | `ckm_monitor.py` | `CKMMonitor(min_texts=3, state_dir=None)`; `state_dir` como property; default sigue siendo `_STATE_DIR`. Aislar el estado de un vivo ya no pide tocar el modulo. |
+| F3b | `ckm_monitor.py` | `es_system = getattr(message, "device_type", None) == "SYSTEM"`; con `es_system`, **no se ingesta**. delamor: *"no, nunca"*. En el vivo 02, **8 de 12 textos del corpus eran `"X joined the channel"`**: dos tercios de lo que construia W. |
+| F4 | `ckm_monitor.py` | `if not es_system: self._devices_seen.add(...)`. `"system"` no es un agente. |
+| F5 | `autonomous_device.py` | `_t_inicio` / `_t_fin` y `ritmo_observado()`. `costo()` lleva declarado y observado juntos. |
+| firma | `ckm_monitor.py:233`, `firma_ckm.py:94` | **Se sacaron los dos `1`** (delamor, DECISIONES `4feb88b`): el `or 1` y el default. `n_agentes` es el conteo real; **0 es 0**. |
+
+### La condicion que delamor puso antes de sacar los `1`
+
+*"verifica que nada divida por `n_agentes`; si algo divide, para y reporta."*
+
+`grep -rn "n_agentes"` sobre el repo: **nada divide**. Solo se guarda
+(`firma_ckm.py:136`) y se lee. Esa verificacion quedo como test
+(`test_nada_divide_por_n_agentes`), porque era una precondicion y no un
+chequeo de una vez: si manana alguien divide, el `0` honesto pasa de dato a
+`ZeroDivisionError`.
+
+### Las tres inversiones de la firma
+
+| # | Que se invirtio | Que test fallo | Suite al restaurar |
+|---|---|---|---|
+| A | `ckm_monitor.py:233` -> `len(self._devices_seen) or 1` | `test_con_cero_devices_la_firma_dice_0` — `assert 1 == 0`, *"la firma certifico un agente que no existio"* | 379 passed |
+| B | `firma_ckm.py:94` -> `n_agentes: int = 1` | `test_el_default_de_firmar_es_0_no_1` — `assert 1 == 0` | 379 passed |
+| C | `firma_ckm.py:100` + `_dummy = 1.0 / n_agentes` | **dos**: `test_nada_divide_por_n_agentes` (lo detecta leyendo el codigo) y `test_con_cero_devices_la_firma_dice_0` (`ZeroDivisionError`) | 379 passed |
+
+**La inversion C se hizo dos veces.** La primera la puse dentro del literal
+del constructor y rompio la indentacion: 9 errores de coleccion, 7 fallos.
+Eso **no midio nada** — un `IndentationError` no es el test fallando, es el
+archivo sin cargar. La reubique en el cuerpo de `firmar` y ahi si rompe por
+donde tenia que romper. Lo anoto porque ya me paso antes (inversiones 36 y
+37): **una inversion mal aplicada se ve parecida a una que mide.**
+
+### Lo que C dejo a la vista
+
+Que nada divida hoy no es una propiedad del codigo: es un hecho de este
+commit. El `0` de `n_agentes` es honesto **a condicion** de que nadie lo use
+como divisor, y esa condicion ahora esta sostenida por un test y no por mi
+memoria.
+
+### Pendiente, no mio
+
+- `process/iap_series_freeze_20261008/README.md:41` sigue diciendo
+  "67 archivos"; son 62.
+- **CP2b** — el criterio local: skip con su motivo, auditoria al azar sobre
+  las dos caras, umbrales declarados "no calibrados", y el test de que el
+  filtro no vuelva absorbente al silencio.
+- `test_armstrong_via_corpus_v3.py:34`, roto por CP4 a sabiendas.
+- Los 21 `test_caso_*`.
+
+**ALTO.**

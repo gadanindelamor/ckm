@@ -8,7 +8,11 @@ Campos (REG_firma_corpus_v1):
     sha256(W_momento)         — estado del suelo en ese instante
     D_ckm(t)                  — posición en el paisaje
     temp_signal               — UNKNOWN / TOO_COLD / NOMINAL / TOO_HOT
-    n_agentes                 — presencia, sin identidad si no se declara
+    n_agentes                 — presencia, sin identidad si no se declara.
+                                **El conteo real: 0 si no hubo agentes.** El
+                                default era 1, y con cero agentes la firma
+                                certificaba uno (delamor, 9 oct). Verificado
+                                antes de cambiarlo: nada divide por este valor.
     timestamp
     sha256(Delta_r_acumulado) — huella del contacto
 
@@ -52,7 +56,7 @@ class Firma:
     w_sha    : str    # sha256(W_momento)
     d_ckm    : Optional[float]  # D_ckm(t) al momento de la firma; None sin medición
     temp_signal: str  # UNKNOWN | TOO_COLD | NOMINAL | TOO_HOT
-    n_agentes: int    # número de agentes presentes
+    n_agentes: int    # número de agentes presentes. 0 es 0, no se redondea a 1
     timestamp: float  # time.time()
     delta_sha: str    # sha256(Delta_r_acumulado)
 
@@ -87,7 +91,7 @@ class FirmaService:
         self,
         corpus,
         monitor,
-        n_agentes: int = 1,
+        n_agentes: int = 0,
     ) -> Optional[Firma]:
         """
         Produce Firma del estado actual del campo.

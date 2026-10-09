@@ -77,6 +77,17 @@ async def get_clock() -> dict:
 
 
 @mcp.tool
+async def get_clock_log(desde_tick: Optional[int] = None) -> dict:
+    """El log de ticks observados del canal, con y sin mensajes.
+
+    Un tick sin mensajes es una entrada: el silencio es dato. `desde_tick`
+    filtra desde ese tick inclusive, y `total` va aparte para poder paginar
+    sin perder la cuenta. Hasta el fix F2 esto sólo se podía leer desde dentro
+    del proceso del server."""
+    return channel.clock_log_desde(desde_tick=desde_tick)
+
+
+@mcp.tool
 async def get_messages(since: Optional[float] = None) -> list[dict]:
     """Mensajes posteriores a `since` (epoch). Si since=None, retorna los ultimos 20."""
     history = channel.get_history()

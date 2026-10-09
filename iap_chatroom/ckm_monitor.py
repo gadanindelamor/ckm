@@ -50,16 +50,31 @@ class CKMMonitor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, min_texts: int = 3) -> None:
+    def __init__(self, min_texts: int = 3, state_dir: "str | Path | None" = None) -> None:
+        """
+        `state_dir`: dónde viven `corpus_state.json`, `corpus_G_state.json` y
+        `monitor_trajectory.jsonl`. **Default: el de siempre**
+        (`iap_chatroom/_state/`), así que nada cambia para quien no lo pase.
+
+        **Por qué existe (F3a).** El estado se acumulaba entre vivos: el corpus
+        pasó de 10 a 12 textos entre el vivo 01 y el 02, y nadie lo declaraba.
+        Con un directorio por vivo, cada corrida arranca de un estado conocido.
+        **El de agosto no se borra**: se deja de usar, y queda como traza
+        —8 de sus 12 textos son joins, que es la condición en la que corrió la
+        serie congelada—.
+        """
         if self._initialized:
             return
         self._initialized = True
 
-        _monitor_jsonl_path = str(_STATE_DIR / "monitor_trajectory.jsonl")
+        state = Path(state_dir) if state_dir is not None else _STATE_DIR
+        state.mkdir(parents=True, exist_ok=True)
+        self._state_dir = state
+        _monitor_jsonl_path = str(state / "monitor_trajectory.jsonl")
 
         self._extractor = NodeExtractorService(top_k=32)
         self._corpus = CorpusService(
-            storage_path=str(_STATE_DIR / "corpus_state.json"),
+            storage_path=str(state / "corpus_state.json"),
             min_texts=min_texts,  # default=3; configurable por el caller
             top_k=32,
             # rebuild suspendido también en vivo (delamor): W se construye
@@ -74,7 +89,7 @@ class CKMMonitor:
         # cambio quirurgico, unico punto de integracion real posible
         # sin volver G retroactivo.
         self._behavior_graph = BehaviorGraph(
-            storage_path=str(_STATE_DIR / "corpus_G_state.json"),
+            storage_path=str(state / "corpus_G_state.json"),
             min_texts=min_texts,
         )
         # Config del instrumento. Se construye **sin W**: el corpus arranca
@@ -107,6 +122,11 @@ class CKMMonitor:
         self._ciclos_sin_rebuild = 0
         self._last_rebuild_signal = False
 
+    @property
+    def state_dir(self) -> Path:
+        """Dónde vive el estado de este CKMMonitor. Declarable por vivo (F3a)."""
+        return self._state_dir
+
     def on_message(self, message) -> None:
         """Callback registrado en ChatChannel.add_callback."""
         # El historial del paisaje sale del COCO de Monitor, no de Corpus
@@ -116,14 +136,38 @@ class CKMMonitor:
         # get_clock() además registra el tick, con o sin mensajes: el silencio
         # queda como dato aunque nadie publique.
         clock = ChatChannel().get_clock()
+
+        # ── F3b — delamor, 9 oct: "no, nunca." ──────────────────────────────
+        # **Los mensajes SYSTEM no entran al corpus.** Los joins y los leaves
+        # son eventos operacionales del canal, no texto de la interacción, y
+        # hasta hoy entraban: medido en los vivos 01 y 02, **8 de los 12
+        # textos del corpus eran "X joined the channel"** — dos tercios de lo
+        # que construye W.
+        #
+        # El corpus de agosto **queda como está**, como traza: la serie
+        # congelada corrió con los joins adentro, y la serie nueva no se
+        # compara con ella (CP0b).
+        #
+        # Siguen contándose en `message_count` y siguen llegando a los devices
+        # por `get_messages`: lo que no hacen es entrar a W.
+        es_system = getattr(message, "device_type", None) == "SYSTEM"
+
         th = self._monitor.thermostat
         signal = th.landscape_history() if th is not None else None
         sha_before = self._corpus.w_sha()
-        self._corpus.ingest([message.text], landscape_signal=signal)
+        if not es_system:
+            self._corpus.ingest([message.text], landscape_signal=signal)
         sha_after = self._corpus.w_sha()
 
         self._message_count += 1
-        self._devices_seen.add(message.device_id)
+
+        # ── F4 — `"system"` no cuenta como agente ──────────────────────────
+        # `_devices_seen` cuenta **device_ids que publicaron**, y el
+        # pseudo-device del canal entraba como uno: en los dos vivos, con dos
+        # devices que nunca publicaron, `n_agentes` dio **1** y ese 1 era el
+        # canal. El canal no es un participante.
+        if not es_system:
+            self._devices_seen.add(message.device_id)
 
         # rebuild real (_rebuild() corrió y cambió W) detectado por sha,
         # no un flag que ingest() no expone — reset del contador de ciclos.
@@ -180,6 +224,12 @@ class CKMMonitor:
         firma = self._firma.firmar(
             self._corpus,
             self._monitor,
-            n_agentes=len(self._devices_seen) or 1,
+            # **Sin `or 1`** (delamor, 9 oct: *"sí"*). `n_agentes` en la
+            # firma es el conteo real: **0 si no hubo agentes**. El `or 1`
+            # hacía que con cero devices vistos la firma certificara 1 agente
+            # — NOMINAL por ausencia en lo que certifica el estado
+            # estructural. Verificado antes de sacarlo: **nada divide por
+            # `n_agentes`** en el repo; sólo se guarda y se lee.
+            n_agentes=len(self._devices_seen),
         )
         return firma.to_dict() if firma is not None else None

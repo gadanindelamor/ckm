@@ -76,6 +76,18 @@ async def chat_stream(ws: WebSocket):
         channel.unsubscribe(ws)
 
 
+@router.get("/clock")
+async def get_clock():
+    """El tick vigente del canal, con su período y su reloj."""
+    return channel.get_clock()
+
+
+@router.get("/clock/log")
+async def get_clock_log(desde_tick: Optional[int] = None):
+    """El log de ticks observados, con y sin mensajes (fix F2)."""
+    return channel.clock_log_desde(desde_tick=desde_tick)
+
+
 @router.get("/monitor")
 async def get_monitor_state():
     return ckm_monitor.get_state()

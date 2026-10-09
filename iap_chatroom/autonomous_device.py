@@ -215,6 +215,10 @@ class AutonomousDevice:
         # la misma consecuencia (UNKNOWN), y para atribuir hay que separarlas.
         self._ilegibles: list[dict] = []
         self._se_fue: bool = False
+        # Inicio y fin del run, para el ritmo OBSERVADO (F5). None hasta que
+        # corra: sin corrida no hay ritmo que medir, y eso es UNKNOWN, no 0.
+        self._t_inicio: Optional[float] = None
+        self._t_fin: Optional[float] = None
 
     def _to_chat_messages(self) -> list[ChatMessage]:
         chat: list[ChatMessage] = [{"role": "system", "content": self.system_prompt}]
@@ -559,6 +563,7 @@ class AutonomousDevice:
             assert r.data["ok"], f"join_channel fallo para {self.device_id}"
 
             start = time.monotonic()
+            self._t_inicio = start
             vuelta = 0
 
             while time.monotonic() - start < duration and not self._se_fue:
@@ -639,6 +644,8 @@ class AutonomousDevice:
                     break
                 await asyncio.sleep(self.poll_interval)
 
+            self._t_fin = time.monotonic()
+
             # Si se fue por decisión propia, ya llamó a leave_channel en A: no
             # se llama dos veces. Si venció `duration`, se va acá.
             if not self._se_fue:
@@ -715,6 +722,44 @@ class AutonomousDevice:
             ),
         }
 
+    def ritmo_observado(self) -> dict:
+        """
+        El ritmo que **de hecho** hubo: vueltas y llamadas reales por minuto.
+
+        **Va al lado del declarado, no lo reemplaza** (F5). Lo medido en los
+        dos vivos: con `poll_interval = 5.0` el declarado da 12 vueltas por
+        minuto, y el observado fue 12 y 12 en el vivo 01 —los 404 volvían al
+        instante— y **11 y 12 en el 02**. El declarado es el **piso teórico**;
+        el observado es el piso **menos la latencia** del provider.
+
+        Sin corrida devuelve todo en None: **UNKNOWN, no 0**.
+        """
+        if self._t_inicio is None or self._t_fin is None:
+            return {
+                "segundos": None,
+                "vueltas_por_minuto": None,
+                "llamadas_por_minuto": None,
+                "segundos_por_vuelta": None,
+                "nota": "sin corrida no hay ritmo observado — UNKNOWN, no 0",
+            }
+        seg = self._t_fin - self._t_inicio
+        n = len(self._decisiones)
+        if seg <= 0:
+            return {
+                "segundos": round(seg, 3),
+                "vueltas_por_minuto": None,
+                "llamadas_por_minuto": None,
+                "segundos_por_vuelta": None,
+                "nota": "duración no positiva: no hay ritmo que calcular",
+            }
+        return {
+            "segundos": round(seg, 3),
+            "vueltas": n,
+            "vueltas_por_minuto": round(n * 60.0 / seg, 3),
+            "llamadas_por_minuto": round(self._llamadas_llm * 60.0 / seg, 3),
+            "segundos_por_vuelta": round(seg / n, 3) if n else None,
+        }
+
     def costo(self) -> dict:
         """
         Lo que el run costó, en llamadas al LLM. **Contadas, no estimadas.**
@@ -740,7 +785,8 @@ class AutonomousDevice:
             "errores_rate_limit": sum(
                 1 for e in self._errores_llm if e.get("rate_limit")
             ),
-            "ritmo": self.ritmo_declarado(),
+            "ritmo_declarado": self.ritmo_declarado(),
+            "ritmo_observado": self.ritmo_observado(),
             "decisiones_por_tipo": {
                 d: sum(1 for x in ds if x["decision"] == d)
                 for d in sorted({x["decision"] for x in ds})

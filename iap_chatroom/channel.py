@@ -148,6 +148,35 @@ class ChatChannel:
         """Los ticks observados, con y sin mensajes. Copia: no se edita."""
         return list(self._clock_log)
 
+    def clock_log_desde(self, desde_tick: int | None = None) -> dict:
+        """
+        El log de ticks, **con su total aparte**, para leerlo desde afuera (F2).
+
+        Hasta el fix, `clock_log()` sólo se podía llamar desde dentro del
+        proceso del server: los dos vivos lo reportaron como no verificable.
+        Ahora lo exponen una tool MCP y un endpoint, y los dos pasan por acá.
+
+        **No reemplaza a `clock_log()`**, que sigue devolviendo la lista: el
+        fix era aditivo, y cambiarle la firma rompía a sus llamadores — me pasó
+        al escribirlo, y cuatro tests lo dijeron.
+
+        `desde_tick` filtra desde ese tick inclusive. **El total va aparte**,
+        así que paginar no pierde la cuenta: el log crece de a uno por tick
+        observado y un run largo lo vuelve grande.
+        """
+        entradas = list(self._clock_log)
+        total = len(entradas)
+        if desde_tick is not None:
+            entradas = [e for e in entradas if e["tick"] >= desde_tick]
+        return {
+            "total": total,
+            "devueltas": len(entradas),
+            "desde_tick": desde_tick,
+            "periodo_s": TICK_PERIODO_S,
+            "reloj": RELOJ_CANAL,
+            "entradas": entradas,
+        }
+
     async def publish(self, device_id: str, device_type: str, text: str) -> Message:
         ahora = self._ahora()
         message = Message(

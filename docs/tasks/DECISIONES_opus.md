@@ -272,3 +272,12 @@
 
 - **2026-10-09** · **delamor: "CP2b confirmado."** Arranca. Requisitos acumulados (TASK §1, `e737e78`, `4853baf`/`1ea136a`/`17e14e8`): skip registrado **con su motivo** y distinguible de `OP_SILENCE` en la traza; auditoría al azar **sobre las dos caras**; umbrales declarados **"no calibrados" en el panel**; **piso determinístico** (cada K ticks de silencio se consulta a D igual, K no calibrado); test: canal callado N vueltas → `llamadas a D > 0` y `skips != N`; Δ mensajes cuenta sólo ajenos. Medido contra la línea de base del vivo 02.
 - **2026-10-09** · **Tensión anotada por Opus antes de arrancar:** la TASK §1 dice que los deltas *"entran como información a D cuando sí se lo llama"*. Eso **cambia el texto del gate**, que está congelado (delamor). En el CP2b los deltas **no entran al prompt**: se registran en la traza. Si hace falta que D los vea, se para y se reporta.
+
+### Sobre el CP2b (`8cfacc7`)
+
+- **2026-10-09** · Opus verificó: **gate intacto** (texto y `format()` idénticos a `f96c234`, normalizando CRLF); el filtro vive en `criterio_local.py`; SKIP es tercer valor y `_interact` lo trata explícito; piso determinístico antes que el criterio; auditoría con dos tasas declaradas sin calibrar.
+- **2026-10-09** · **Cuatro ajustes antes de cerrar (Opus, dentro del umbral):**
+  1. **`piso_ticks` cuenta vueltas, no ticks** (`_vueltas_sin_llamar`, L248; el comentario dice "Vueltas sin llamar"). El nombre dice otra cosa que lo que mide → `piso_vueltas`.
+  2. **`piso_ticks=0` desactiva el piso** y vuelve absorbente el silencio por configuración. El docstring dice que el piso "no es opcional". → `ValueError` si ≤ 0; el test que muestra la absorción con piso 0 lo hace como inversión (monkeypatch), no como configuración válida.
+  3. **`_interact` sigue publicando por caída:** cualquier decisión que no sea UNKNOWN/SKIP/OP_SILENCE/LEAVE genera y publica. Hoy `_decide` acota el vocabulario, pero el relleno sería una **acción**. → publicar exige `INTERACT` explícito; cualquier otro valor se registra como UNKNOWN sin actuar. Test + inversión.
+  4. **`_tick_ultima_llamada == -1`** representa "nunca llamó" con un valor de la escala (L243). → `None`.

@@ -3239,3 +3239,192 @@ ve: el `trigger` fue `msg-1` y no disparó nada; la decisión salió igual.
 - **Los 21 `test_caso_*`.**
 - **El costo en dinero.** 24 llamadas, todas 404. **No sé si un 404 se cobra.**
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+
+---
+
+## ARRANQUE — 2026-10-09 04:21 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8, antes del vivo 02.*
+
+### Revisé
+
+1. **Locks:** ninguno. **`git pull --rebase`:** limpio, HEAD en `ad6d2da`. **`git status`:**
+   nada modificado.
+2. **`GROQ_API_KEY`: presente**, 56 chars, prefijo `gsk_`. **Nunca la imprimí.**
+3. **El gate sigue congelado:** `git diff f96c234 HEAD -- iap_chatroom/autonomous_device.py`
+   → **vacío**.
+4. **Tests: 360/360.**
+
+### Preguntas abiertas
+
+**Ninguna.** La próxima es **P11**.
+
+### No pude revisar
+
+- Los 21 `test_caso_*`; el chat; el estado del Codespace fuera de git; el clon local.
+- `process/iap_series_freeze_20261008/README.md:41`, que sigue diciendo "67 archivos".
+
+---
+
+## REPORTE VIVO 02 — el modelo responde, y elige el silencio — 2026-10-09 04:21 UTC
+
+*`experiments/vivo_02_groq_gptoss20b.py`, una corrida. Log:
+`experiments/vivo_02_groq_gptoss20b_log.json`. **No arreglé nada.***
+
+### 1. Los modelos de la cuenta, y una infraestructura que no era la clave
+
+**El `GET` crudo a `https://api.groq.com/openai/v1/models` da `403` con cuerpo
+`error code: 1010` y `Content-Type: text/plain`.** Eso **no es un error de la API de Groq: es
+Cloudflare** bloqueando por firma del cliente —`urllib` manda un user-agent de Python—. **La
+clave no tenía nada que ver.**
+
+Con el **SDK de Groq**, el mismo endpoint responde. **Los 11 modelos de la cuenta:**
+
+```
+allam-2-7b
+canopylabs/orpheus-arabic-saudi
+canopylabs/orpheus-v1-english
+meta-llama/llama-prompt-guard-2-22m
+meta-llama/llama-prompt-guard-2-86m
+openai/gpt-oss-120b
+openai/gpt-oss-20b
+openai/gpt-oss-safeguard-20b
+qwen/qwen3.8-27b
+whisper-large-v3
+whisper-large-v3-turbo
+```
+
+**`llama-3.3-70b-versatile` no está.** Y **no hay ningún modelo de chat con "llama"**: los dos
+`meta-llama/llama-prompt-guard-2-*` son **clasificadores de prompt-guard**, no modelos de chat —
+no contestan un gate con una palabra.
+
+### 2. El modelo elegido, declarado
+
+**`openai/gpt-oss-20b`.** La regla decía *"el primero con llama o gpt-oss"*, y la lectura literal
+daba dos opciones malas: un `prompt-guard` (no es de chat) o `gpt-oss-120b` (alfabéticamente
+primero, más caro). **Elegí el `gpt-oss` más chico**, por el criterio económico del plan. Está en
+la lista. **Declarado y reversible.**
+
+### 3. Estado de partida, declarado y sin limpiar
+
+Leído por MCP **antes** de arrancar:
+
+```
+corpus_size: 10 · message_count: 0 · n_nodes: 32 · n_agentes: 0
+D_ckm: None · temp_signal: None · corpus_status: operational
+mensajes en el canal: 0 · clock tick: 15
+en disco: corpus_state.json con 10 textos · monitor_trajectory.jsonl con 4 líneas
+```
+
+**Los 10 son 8 textos de agosto más los 2 joins del vivo 01**, que quedaron escritos. **No limpié
+nada**, como se pidió.
+
+**Y encontré que el endpoint REST no sirve para esto:** `GET /api/monitor/state` devolvió **`None`
+en todos los campos**. Lo leí por la tool MCP, que sí funciona. **No lo arreglé.**
+
+### 4. `costo()` de cada device
+
+| | `GroqGptOss20B_1` | `GroqGptOss20B_2` |
+|---|---|---|
+| provider · model | groq · `openai/gpt-oss-20b` | groq · `openai/gpt-oss-20b` |
+| **vueltas** | **11** | **12** |
+| **llamadas_llm** | **11** | **12** |
+| llamadas_por_vuelta | 1.0 | 1.0 |
+| **errores_llm** | **0** | **0** |
+| errores_rate_limit | **0** | **0** |
+| **ilegibles** | **0** | **0** |
+| vueltas_con_ventana_unknown | 0 | 0 |
+| **decisiones_por_tipo** | **`{'OP_SILENCE': 11}`** | **`{'OP_SILENCE': 12}`** |
+
+**`errores_fatales: []`.** 65.41 s reales. Los dos terminaron solos.
+
+**23 llamadas, 0 errores, 0 ilegibles.** El modelo contestó **una sola palabra del vocabulario en
+las 23**, sin una sola respuesta fuera de las tres opciones. El gate congelado funcionó con un
+modelo de 20B.
+
+### 5. `ritmo_declarado(2)`
+
+```
+poll_interval_s: 5.0 · vueltas_por_minuto_por_device: 12.0
+llamadas_por_minuto_piso: 24.0 · techo: 48.0
+limite_de_la_cuenta: UNKNOWN — se lee en la consola del provider
+```
+
+Medido: **23 llamadas** contra un piso declarado de 24. El device 1 dio **11 vueltas y el 2 dio
+12**: la diferencia es la latencia del provider sumada al `poll_interval`, y el vivo 01 —donde
+los 404 volvían al instante— dio 12 y 12. **El ritmo real es el declarado menos la latencia.**
+
+### 6. El clock
+
+```
+clock final: tick=111 · periodo_s=1.0 · reloj=canal · t0=1791519490.32
+```
+
+**Crece en silencio, y se ve:** ticks del device 1 **46 → 52 → 57 → … → 101**, con
+**`n_nuevos = 0` desde la vuelta 2**. `ventana: 1.0` en las 23 vueltas, nunca UNKNOWN de grano.
+
+**Sigue sin poder leerse el `clock_log`** desde afuera del proceso del server: no hay tool ni
+endpoint. Es la misma mejora pendiente del vivo 01.
+
+### 7. Mensajes publicados: 2, los dos del canal
+
+```
+msg-0 · system · SYSTEM · "GroqGptOss20B_2 joined the channel" · tick 46
+msg-1 · system · SYSTEM · "GroqGptOss20B_1 joined the channel" · tick 46
+```
+
+**Ningún device publicó.** Y acá está la diferencia con el vivo 01:
+
+| | vivo 01 | vivo 02 |
+|---|---|---|
+| decisiones | `{'UNKNOWN': 24}` | **`{'OP_SILENCE': 23}`** |
+| errores_llm | 24 | **0** |
+| ilegibles | 0 | 0 |
+| mensajes de devices | 0 | 0 |
+
+**Los dos vivos terminaron con el canal callado, y son dos silencios distintos.** El del 01 fue
+infraestructura; **el del 02 lo decidió el modelo 23 veces, sin un solo error.** La traza
+distingue las dos cosas, que es exactamente para lo que se construyó.
+
+**No interpreto por qué el modelo eligió callar.**
+
+### 8. `monitor_state` al cerrar
+
+```
+corpus_size: 12 · n_nodes: 32 · message_count: 2
+D_ckm: None · temp_signal: None · n_agentes: 1 · corpus_status: operational
+```
+
+- `corpus_size` pasó de **10 a 12**: entraron los 2 joins. **El vivo escribe en `_state/`**, así
+  que el próximo arranca con 12.
+- **`n_agentes: 1` con 2 devices registrados**, igual que en el vivo 01. **Se repite.** No sé qué
+  cuenta. **No lo investigué.**
+- `temp_signal: None`, no `"UNKNOWN"`. Se repite.
+
+### Mejoras y bugs que el vivo 02 mostró
+
+1. **`GET /api/monitor/state` devuelve `None` en todos los campos.** La tool MCP del mismo
+   nombre funciona. **Bug nuevo.**
+2. **El `GET` crudo a la API de Groq da 403 de Cloudflare.** Hay que usar el SDK. **No es la
+   clave**, y conviene que quede dicho para no volver a sospecharla.
+3. **`clock_log` sigue sin ser legible desde afuera.** Repetido del vivo 01.
+4. **El `_state/` se acumula entre vivos** y nadie lo declara: 10 → 12. **Repetido, y ahora
+   medido en dos corridas.**
+5. **`n_agentes: 1` con 2 devices.** **Repetido.**
+6. **El ritmo real es el declarado menos la latencia:** 11 y 12 vueltas contra 12 declaradas.
+   `ritmo_declarado` da el **piso teórico**, no el observado. **Mejora: que la traza compare los
+   dos.**
+7. **Nada se rompió.** Ningún traceback. **Y el gate congelado funcionó: 23 de 23 respuestas
+   dentro del vocabulario, con un modelo de 20B.**
+
+### No pude revisar
+
+- **Por qué el modelo eligió callar.** No interpreto, y el objetivo era canal e infraestructura.
+- **El `clock_log`**, por lo de arriba.
+- **Si el 429 se detecta**: no hubo ninguno. Lo que sí se verificó contra un error real fue el
+  **404** del vivo 01, por `status_code`.
+- **Los 21 `test_caso_*`.** Ahora hay un modelo que existe, así que los de sólo Groq se podrían
+  correr — pero habría que cambiarles el modelo, y **el modelo es parte de las condiciones de la
+  serie congelada**. No los toqué.
+- **El costo en dinero.** 23 llamadas. No sé la tarifa.
+- **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.

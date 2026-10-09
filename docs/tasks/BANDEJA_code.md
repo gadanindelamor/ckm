@@ -3926,3 +3926,182 @@ Lo dejo dicho sin insistir — A3.
 viaja con el texto en vez de depender de que yo lo infiera.
 
 **ALTO.**
+
+---
+
+## ARRANQUE CP2b — el criterio local — 2026-10-09 05:09 UTC
+
+*OK de delamor (este chat, explicito: "soy delamor CP2b confirmo. OK").
+Especificacion: DECISIONES `e737e78` + TASK §1 (*"Propuesta de delamor (7 oct):
+un criterio local antes de D, sin LLM"*). El CP2b del `monitor_coco` es **otro**
+y esta cerrado: la etiqueta se repite entre TASKs.*
+
+### Lo que pide la especificacion
+
+1. `skip` de cada vuelta **con su motivo**;
+2. **auditoria al azar** sobre las dos caras, con la tasa de divergencia como
+   medida del costo del sesgo;
+3. umbrales **declarados "no calibrados"** (son de Calibracion) — *"no los
+   inventa Code"*;
+4. test que pueda fallar: en silencio y con objetivo, el filtro **igual** deja
+   pasar a D alguna vez.
+
+Mas lo de este hilo: el motivo va en la traza **del turno**; la auditoria no
+alcanza sola (iniciativa en manos de la suerte, Opus); el piso.
+
+### Lo que decido yo, y lo digo
+
+- **Modulo nuevo, `iap_chatroom/criterio_local.py`.** No meto el filtro en
+  `autonomous_device.py` mas alla del cableado: el gate esta congelado en
+  `f96c234` y un modulo aparte se testea solo, sin levantar el lazo.
+- **`DECISION_SKIP = "SKIP"`, tercer valor.** Hoy hay dos formas de terminar sin
+  accion: `OP_SILENCE` (**lo decidio el modelo**) y `UNKNOWN` (**fallo el
+  provider**). El skip es la tercera (**no se llamo**) y va con las otras dos en
+  la traza, distinguible. Es el pedido de Opus: el par *"filtro callo / modelo
+  callo"* se separa igual que el par vivo 01 / vivo 02.
+- **El criterio devuelve un registro, no un `bool`.** Lleva `llamar`, `motivo`,
+  los deltas y **`via`** ∈ {`criterio`, `piso`, `auditoria`}: *por que* se llamo
+  queda tan trazable como por que no.
+- **Los umbrales van en un `frozen dataclass` con `calibrado: bool = False`**, y
+  ese `False` viaja en **cada** registro, no en un comentario. Es lo mas cerca de
+  *"no los inventa Code"* que puedo estar implementando: los valores son
+  provisorios **y lo dicen de si mismos**.
+- **El piso es deterministico** (`piso_ticks`), y la auditoria tiene su RNG
+  inyectable. Con la auditoria sola el test seria flaky y no distinguiria un
+  filtro absorbente de una tirada de moneda.
+- **Los Δt salen de los timestamps del canal**, nunca del reloj del device
+  (TASK §0.4). `n_nuevos` ya cuenta **solo mensajes ajenos** — el lazo filtra
+  `m["device_id"] != self.device_id`: lo verifico, no lo asumo.
+
+### Lo que NO hago, y por que
+
+- **El estado del objetivo (K) y el presupuesto**: no existen. El objetivo es del
+  **caso Z (CP3, delamor)**. Van como **ausentes declarados**, no como `0` ni como
+  `False` — es el patron que vengo cerrando toda la sesion.
+- **La zona horaria propia del device**: la TASK la marca **opcional** (*"si el
+  device quiere"*). No la implemento; queda declarada sin implementar.
+- **No toco Monitor, Config ni COCO.** Si aparece que hay que tocarlos, **ALTO**.
+
+### Pregunta (NO BLOQUEA)
+
+Los valores provisorios de los umbrales los pongo yo con el `calibrado=False`
+encima, porque sin valores no hay codigo. **Si Calibracion ya tiene numeros, los
+cambio por los suyos y los declaro.** No espero por esto.
+
+Arranco.
+
+---
+
+## REPORTE CP2b — el criterio local — 2026-10-09 05:25 UTC
+
+**Suite: 412 passed** (eran 379). `tests/test_criterio_local.py`: **33**.
+Archivo nuevo: `iap_chatroom/criterio_local.py`.
+
+### Las cuatro propiedades que pidio Opus, y donde se verifica cada una
+
+| | Propiedad | Test |
+|---|---|---|
+| **Que registre** | cada salto, con su motivo, distinguible de un `OP_SILENCE` | `test_skip_no_es_OP_SILENCE_ni_UNKNOWN`, `test_en_la_traza_del_device_el_skip_se_distingue`, `test_cada_vuelta_lleva_su_motivo` |
+| **Que permita** | canal callado -> el piso deja pasar a D, `llamadas > 0` | `test_el_silencio_no_vuelve_absorbente_al_filtro` |
+| **Las dos caras** | la auditoria no mira un solo lado | `test_la_auditoria_mira_las_dos_caras`, `test_las_dos_caras_distinguen_sus_errores` |
+| **Que declare** | umbrales "no calibrados" en el panel | `test_el_panel_declara_los_umbrales_sin_calibrar` |
+
+`DECISION_SKIP = "SKIP"` es el **tercer** valor: `OP_SILENCE` lo decidio el
+modelo, `UNKNOWN` fue el provider cayendose, `SKIP` es el filtro no habiendo
+llamado. Las tres terminan la vuelta sin accion y las tres se distinguen.
+
+### Lo que encontre implementando, y es del instrumento
+
+**`_interact` cae por default a generar y publicar.** Sus ramas son UNKNOWN,
+OP_SILENCE y LEAVE; cualquier otra palabra **sigue de largo hasta
+`send_message`**. Al agregar `DECISION_SKIP`, la vuelta que el filtro skipeaba
+**publicaba un mensaje**.
+
+Lo vi **de costado**: lo encontro `test_un_skip_no_gasta_una_llamada`, que mira
+la llamada al LLM. Ese test es **mas debil que el defecto** — una llamada de mas
+es costo, una publicacion de mas es el canal cambiado por el filtro. Por eso
+ahora existe `test_un_skip_no_publica_nada` aparte, midiendo lo que hay que
+medir.
+
+El fallthrough **queda como esta**: hoy solo lo alcanza INTERACT, porque
+`_decide` manda toda palabra desconocida a UNKNOWN. No es un defecto vivo, es el
+**mecanismo** — y es el mismo de toda la sesion: un fallback que acierta lo
+suficiente como para no notarse. Queda reportado, no corregido de paso.
+
+### Donde diverjo de Opus, y lo medi
+
+Opus: *"las dos [caras] van al azar, con la tasa declarada"*. **Las dos tasas van
+declaradas y sin calibrar**, como pidio. Pero el muestreo **no cuesta lo mismo en
+las dos caras**:
+
+- **cara del skip**: cada vuelta sorteada **cuesta una llamada**. Es lo que se
+  paga por ver lo que el filtro tapaba. Sin muestrearla es **invisible**.
+- **cara del pase**: la llamada **ya se hizo**. El sorteo no ahorra nada; lo
+  unico que decide es si la vuelta entra a la muestra, y descarta observaciones
+  **gratis**.
+
+Medido, no opinado: `test_el_muestreo_del_pase_no_cuesta_una_llamada` corre el
+filtro con la tasa del pase en 0 y en 1 y **las vueltas que llaman son las
+mismas**; lo unico que cambia es cuantas quedan marcadas.
+
+Asi que la cara del pase lleva **las dos lecturas, etiquetadas**: la muestra con
+su tasa declarada (lo aceptado en el CP0) y el **censo** sobre todas las que
+pasaron. No elijo por el lector.
+
+### Las cinco inversiones
+
+| # | Que se invirtio | Que test fallo | Suite al restaurar |
+|---|---|---|---|
+| 1 | el piso (`if False and ...`) | **5**: `..._silencio_no_vuelve_absorbente_al_filtro`, `test_el_piso_es_periodico_y_deterministico`, `test_cada_vuelta_lleva_su_motivo`, `test_la_via_dice_por_que_SI_se_llamo`, `test_el_panel_lleva_las_dos_caras` | 412 |
+| 2 | la rama `DECISION_SKIP` de `_interact` | `test_un_skip_no_publica_nada`, `test_un_skip_no_gasta_una_llamada` | 412 |
+| 3 | `calibrado: bool = True` | **4**, entre ellos `test_el_panel_declara_los_umbrales_sin_calibrar` | 412 |
+| 4 | `dt_desde` devuelve `0.0` en vez de `None` | `test_un_dt_que_no_se_pudo_medir_es_None_no_cero` | 412 |
+| 5 | se saca la cara del pase | **4**, entre ellos `test_la_auditoria_mira_las_dos_caras` | 412 |
+
+**La inversion 1 rompe cinco tests y no uno**: el piso sostiene mas de lo que
+dice su nombre. Y `test_sin_piso_el_silencio_ES_absorbente` **sigue verde bajo la
+inversion 1**, que es exactamente lo que tiene que pasar: ese test **afirma el
+agujero**, no lo tapa.
+
+### Dos tests que afirman el agujero, a proposito
+
+- `test_sin_piso_el_silencio_ES_absorbente`: con `piso_ticks=0` el filtro no
+  llama nunca. Deja escrito que **lo que rompe el punto fijo es el piso**.
+- `test_la_auditoria_sola_puede_no_llamar_nunca`: busca una semilla con la que no
+  sale ninguna auditoria en 20 vueltas. La *"iniciativa en manos de la suerte"* de
+  Opus deja de ser un argumento y pasa a ser una corrida.
+
+### Un test mio no podia fallar
+
+`test_las_dos_tasas_van_declaradas_sin_calibrar` tenia
+`assert x == 0.0 or "tasa_auditoria_pase" in r["umbrales"]`: verdadera casi
+siempre. **Es el mismo patron que vengo sacando de los tests ajenos toda la
+sesion, esta vez mio.** Reemplazada por dos aserciones sobre valores distintos
+(0.3 y 0.7) que si pueden fallar.
+
+### Lo que el CP2b NO hizo
+
+- **El filtro esta apagado por default** (`criterio_local=None`): D en cada
+  vuelta, que es el CP2a y los dos vivos. Con el filtro por default, la linea de
+  base del vivo 02 (23 llamadas, 23 `OP_SILENCE`) dejaria de ser comparable **sin
+  que nada lo dijera**. `test_sin_criterio_local_D_corre_en_cada_vuelta`.
+- **Los deltas NO entran al prompt** (tension de Opus): el gate esta congelado.
+  Se registran en la traza. `test_los_deltas_NO_entran_al_prompt_del_gate` y
+  `test_el_texto_del_gate_sigue_congelado`.
+- **Objetivo (K) y presupuesto van ausentes declarados** (`None`, no `0`): son
+  del **caso Z (CP3, delamor)**. Son los dos unicos que cambian **por fuera del
+  lazo**, y por eso los unicos que no colapsan en el piso.
+- **La zona horaria propia del device**: la TASK la marca opcional. Sin
+  implementar, declarado.
+- **No se toco Monitor, Config ni COCO.**
+
+### Pendiente
+
+- **Los valores de los umbrales son provisorios** (`dt_minimo_s=5.0`,
+  `piso_ticks=12`, las dos tasas `0.1`). Si Calibracion entrega numeros, se
+  reemplazan y se pone `calibrado=True`.
+- El `_interact` con fallthrough, reportado arriba.
+- Un vivo con el filtro puesto, contra la linea de base del vivo 02. **No lo
+  corro sin OK.**
+
+**ALTO.**

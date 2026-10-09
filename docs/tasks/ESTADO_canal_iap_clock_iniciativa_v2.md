@@ -7,11 +7,27 @@
 
 ## Última escritura
 
-**2026-10-09 00:58 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 05:25 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2v — preparación del primer vivo.** Cerrado el 2026-10-09. Suite **360/360**, nueve
+**CP2b — el criterio local.** Cerrado el 2026-10-09. Suite **412/412**, 33 tests nuevos en
+`tests/test_criterio_local.py`, módulo nuevo `iap_chatroom/criterio_local.py`, **cinco
+inversiones** (la del piso rompe 5 tests, no 1). Las cuatro propiedades de Opus cubiertas:
+registra el salto con su motivo y distinguible de `OP_SILENCE` (`DECISION_SKIP`, tercer valor);
+el **piso determinístico** deja pasar a D con el canal callado; la auditoría mira **las dos
+caras**; los umbrales se declaran **no calibrados en el panel**.
+
+Hallazgo del instrumento: **`_interact` cae por default a publicar**, así que el skip publicaba
+un mensaje. Corregido con su rama; el fallthrough queda reportado y no corregido de paso.
+
+Divergencia medida con Opus: las dos tasas van declaradas, pero el muestreo de la **cara del
+pase no cuesta una llamada** (ya se hizo), así que esa cara lleva muestra **y** censo.
+
+El filtro queda **apagado por default**: con él puesto por default, la línea de base del vivo 02
+dejaría de ser comparable sin que nada lo dijera.
+
+Antes: **CP2v — preparación del primer vivo.** Cerrado el 2026-10-09. Suite **360/360**, nueve
 inversiones (dos repetidas porque no se habían aplicado). Llamadas contadas y no inferidas; las
 dos ausencias de `_decide` a UNKNOWN; la respuesta cruda con su causa; el 429 por `status_code`
 con el método declarado; el ritmo declarado sin inventar el límite. **El `ProviderStub` agotado

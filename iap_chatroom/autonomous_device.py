@@ -24,6 +24,12 @@ from typing import Optional
 
 from fastmcp import Client
 
+from iap_chatroom.criterio_local import (
+    DECISION_SKIP,
+    CriterioLocal,
+    divergencia_auditoria,
+    dt_desde,
+)
 from iap_chatroom.providers.base import ChatMessage, Provider
 
 # La decisión que no hubo. **No es un valor de la escala**: es el estado del
@@ -151,6 +157,7 @@ class AutonomousDevice:
         mcp_url: str = "http://localhost:7860/mcp",
         poll_interval: float = 2.0,   # segundos entre vueltas del ciclo
         trigger_mode: str = "continuo",
+        criterio_local: Optional[CriterioLocal] = None,
     ):
         """
         `trigger_mode` admite **un solo valor: "continuo"** (CP2a, P11).
@@ -163,6 +170,13 @@ class AutonomousDevice:
 
         `poll_interval` es el ritmo de la vuelta, y hoy lo fija el device
         (TASK §1). No hay mínimo declarado ni WAIT: eso es Calibración.
+
+        **`criterio_local=None` es sin filtro** (CP2b): D en cada vuelta, que
+        es el comportamiento del CP2a y el de los dos vivos. El default no se
+        cambió a propósito: el filtro mueve **cuántas llamadas hace el device**,
+        y con él puesto por default la línea de base del vivo 02 (23 llamadas,
+        23 `OP_SILENCE`) dejaría de ser comparable sin que nada lo dijera.
+        Quien quiera el filtro lo pasa.
 
         **El ritmo contra el límite de la cuenta** (CP2v, pedido de Opus). Sin criterio local,
         cada vuelta cuesta **1 llamada al gate + 1 si actúa**, así que con N
@@ -193,6 +207,9 @@ class AutonomousDevice:
         self.mcp_url = mcp_url
         self.poll_interval = poll_interval
         self.trigger_mode = trigger_mode
+        self.criterio_local = criterio_local
+        # registros del filtro, uno por vuelta que lo consulto
+        self._registros_criterio: list[dict] = []
         self._history: list[dict] = []
         # message_id de todo lo ya visto: el borde de `since` puede repetir un
         # mensaje, y se descarta por id (T2).
@@ -471,6 +488,18 @@ class AutonomousDevice:
             self._log(DECISION_UNKNOWN, field_state)
             return
 
+        if decision == DECISION_SKIP:
+            # **El filtro no llamó: no hay decisión y no hay acción.** Va antes
+            # del fallthrough a propósito. `_interact` cae por default a
+            # generar y publicar, así que al agregar DECISION_SKIP la vuelta
+            # que el filtro skipeaba **publicaba un mensaje** — lo encontró
+            # `test_un_skip_no_gasta_una_llamada` (CP2b), que sólo miraba la
+            # llamada. El fallthrough queda como está: hoy sólo lo alcanza
+            # INTERACT, porque `_decide` manda cualquier palabra desconocida a
+            # UNKNOWN. Pero es el mecanismo, y queda reportado.
+            self._log(DECISION_SKIP, field_state)
+            return
+
         if decision == "OP_SILENCE":
             self._log("OP_SILENCE", field_state)
             return
@@ -608,11 +637,57 @@ class AutonomousDevice:
                 observation["n_nuevos"] = len(nuevos)
                 observation["vuelta"] = vuelta
 
+                # (3b) el criterio local, ENTRE O y D (CP2b). Sin filtro
+                #      puesto, `reg` queda None y D corre siempre: es el
+                #      comportamiento del CP2a y el de los dos vivos.
+                #
+                #      Los Δt salen de los timestamps DEL CANAL, los dos: el
+                #      `clock["t"]` y el `timestamp` del mensaje los puso
+                #      `ChatChannel._ahora()`. Nunca el reloj del device
+                #      (TASK §0.4).
+                reg = None
+                if self.criterio_local is not None:
+                    ajeno = self._history[-1] if self._history else None
+                    propio = (
+                        observation["own_recent"][-1]
+                        if observation["own_recent"] else None
+                    )
+                    reg = self.criterio_local.evaluar(
+                        tick=clock.get("tick"),
+                        # solo mensajes ajenos: el loop ya filtró los propios
+                        n_nuevos=len(nuevos),
+                        nombrado=any(
+                            self.device_id in (m.get("text") or "") for m in nuevos
+                        ),
+                        dt_desde_ajeno=dt_desde(
+                            clock.get("t"), ajeno.get("timestamp") if ajeno else None
+                        ),
+                        dt_desde_que_hable=dt_desde(
+                            clock.get("t"), propio.get("timestamp") if propio else None
+                        ),
+                        # declarados ausentes hasta el caso Z (CP3, delamor)
+                        estado_objetivo=None,
+                        presupuesto=None,
+                    )
+                    reg["vuelta"] = vuelta
+                    self._registros_criterio.append(reg)
+
                 # (4) D — UNA decisión por vuelta, con todo lo de arriba
                 llamadas_antes = self._llamadas_llm
                 errores_antes = len(self._errores_llm)
                 ilegibles_antes = len(self._ilegibles)
-                decision = await self._decide(observation)
+                if reg is not None and not reg["llamar"]:
+                    # **El skip NO es OP_SILENCE.** OP_SILENCE lo decidió el
+                    # modelo; UNKNOWN fue el provider cayéndose; SKIP es el
+                    # filtro no habiendo llamado. Las tres terminan la vuelta
+                    # sin acción y las tres se distinguen en la traza.
+                    decision = DECISION_SKIP
+                else:
+                    decision = await self._decide(observation)
+                    if reg is not None:
+                        # lo que D decidió en una vuelta auditada: es lo que
+                        # mide el costo del sesgo
+                        reg["decision"] = decision
 
                 # (5) A — la primitiva que corresponda, o ninguna
                 await self._interact(client, decision, observation)
@@ -626,6 +701,16 @@ class AutonomousDevice:
                     "trigger": (nuevos[-1].get("message_id") if nuevos else None),
                     "decision": decision,
                     "trigger_mode": self.trigger_mode,
+                    # el filtro: motivo y via, o None si no hay filtro puesto.
+                    # El motivo va en el registro DEL TURNO y no en un
+                    # contador: un contador dice cuántos, no cuáles, y cuáles
+                    # es lo que hace falta para saber si el silencio estaba
+                    # decidido (pedido de Opus).
+                    "criterio_motivo": reg["motivo"] if reg else None,
+                    "criterio_via": reg["via"] if reg else None,
+                    "umbrales_calibrados": (
+                        reg["umbrales_calibrados"] if reg else None
+                    ),
                     # el grano con el que se calculó el corte, o UNKNOWN si el
                     # canal no lo declaró
                     "ventana": ventana if ventana is not None else "UNKNOWN",
@@ -794,4 +879,52 @@ class AutonomousDevice:
             "vueltas_con_ventana_unknown": sum(
                 1 for x in ds if x.get("ventana") == "UNKNOWN"
             ),
+            "criterio_local": self.panel_criterio(),
         }
+
+    def panel_criterio(self) -> Optional[dict]:
+        """
+        El panel del criterio local. `None` sin filtro puesto — no es un panel
+        con todo en cero: cero skips porque no hay filtro y cero skips porque
+        el filtro llamó siempre son dos cosas distintas.
+
+        **Los umbrales van declarados acá, con su `calibrado`** (pedido de
+        Opus: *"umbrales declarados 'no calibrados' en el panel"*). Con
+        `calibrado=False`, cualquier lectura de esta corrida está leyendo
+        números sin calibrar, y el panel lo dice en vez de dejarlo en un
+        comentario del código.
+
+        `skips_por_motivo` y `llamadas_por_via` salen de los registros de cada
+        vuelta, que son los que llevan el motivo. El panel los agrega; los
+        registros siguen estando, porque el agregado dice cuántos y no cuáles.
+        """
+        if self.criterio_local is None:
+            return None
+        regs = self._registros_criterio
+        umb = self.criterio_local.umbrales
+        skips = [r for r in regs if not r["llamar"]]
+        return {
+            "calibrado": umb.calibrado,
+            "umbrales": {
+                "dt_minimo_s": umb.dt_minimo_s,
+                "piso_ticks": umb.piso_ticks,
+                "tasa_auditoria": umb.tasa_auditoria,
+            },
+            "vueltas_evaluadas": len(regs),
+            "n_skips": len(skips),
+            "n_llamadas": len(regs) - len(skips),
+            "skips_por_motivo": {
+                m: sum(1 for r in skips if r["motivo"] == m)
+                for m in sorted({r["motivo"] for r in skips})
+            },
+            "llamadas_por_via": {
+                v: sum(1 for r in regs if r["llamar"] and r["via"] == v)
+                for v in sorted({r["via"] for r in regs if r["llamar"]})
+            },
+            # el costo del sesgo
+            "divergencia_auditoria": divergencia_auditoria(regs),
+        }
+
+    def registros_criterio(self) -> list[dict]:
+        """Los registros del filtro, uno por vuelta. El motivo de cada skip."""
+        return list(self._registros_criterio)

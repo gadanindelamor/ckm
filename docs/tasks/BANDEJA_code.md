@@ -4486,3 +4486,98 @@ tenia los 10 textos de agosto detras.
    vueltas la cara del skip sale UNKNOWN la mitad de las veces**.
 
 **ALTO.**
+
+---
+
+## REPORTE fix generacion vacia — 2026-10-09 23:45 UTC
+
+*delamor: "corregirlo". Alcance de Opus (DECISIONES `1535ff9`). El REPORTE del
+vivo 03 ya fue, tal cual paso.*
+
+**Suite: 438 passed** (eran 425). Archivo nuevo:
+`tests/test_generacion_vacia.py`, **13 tests**.
+
+### El fix
+
+`autonomous_device.py`, en **`_generate`** y no en `_interact`: ahi la **cruda
+esta antes del strip**.
+
+```python
+cruda = await self._llamar_llm(...)
+if cruda is None:
+    return None
+text = _strip_own_prefix(cruda, self.device_id)
+if not text.strip():          # <- antes: `if text is None` en _interact
+    self._ilegibles.append({"causa": "generacion_vacia", ...})
+    return None
+```
+
+`not text.strip()` cubre vacio **y solo espacios**, incluido el espacio duro
+`\u00a0`, que no se ve al leer un log.
+
+Se registra en `_ilegibles`, que **ya existia** con `causa` y `respuesta_cruda`:
+no invente un lugar nuevo. `_interact` loguea `INTERACT_SIN_TEXTO` por su rama
+de siempre.
+
+### Lo que el fix dejo ver: un vacio tiene dos origenes
+
+El registro los separa, porque de otro modo se ven iguales:
+
+| campo | que dice |
+|---|---|
+| `vacia_antes_de_strip` | el provider devolvio vacio |
+| `la_vacio_el_strip` | el provider devolvio algo y **`_strip_own_prefix` lo dejo en nada** |
+
+El segundo es un mensaje que era **solo el prefijo de identidad del propio
+device** — familia del leak del Caso 0.14 (`[TinkerBellucio]:` dentro del
+mensaje de Mark). Sin esta distincion el log diria "generacion vacia" en los dos
+y **el stripper quedaria invisible**. `test_distingue_el_vacio_del_provider_
+del_que_dejo_el_strip`.
+
+### Y `ilegibles` se partio por causa
+
+El fix mete las generaciones vacias en el mismo contador que las respuestas del
+gate ilegibles, y **son dos cosas**: una es el modelo contestando fuera del
+vocabulario, la otra es el modelo no diciendo nada. `costo()` ahora lleva
+`ilegibles_por_causa`. El total sigue estando.
+
+### Lo que NO se toco, con un test que lo sostiene
+
+**`[assistant]` sigue publicandose.** delamor: filtrar contenido seria
+interpretar. `test_assistant_SIGUE_publicandose` lo afirma, y esta escrito para
+que **si algun dia se decide filtrarlo, ese test falle primero** y alguien venga
+a leer por que estaba.
+
+### La inversion
+
+| Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|
+| `if not text.strip()` -> `if text is None` | **11 tests**, entre ellos `test_una_generacion_vacia_no_se_publica` y los 6 de solo-espacios | **438** |
+
+### Tres errores mios en el andamiaje, los tres del mismo tipo
+
+El codigo salio bien de una; **los tests no**, y los tres fallos fueron por
+**contar mal cuantas respuestas consume el stub**:
+
+1. El helper tomaba dos respuestas *"la primera a D, la segunda a generate"*.
+   Pero llamo a `_interact` **directo**, asi que `_decide` no corre y **la
+   primera va a generate**: el test "se publica el texto" publicaba la palabra
+   del gate (`assert 'INTERACT' == 'hola, estoy aca'`).
+2. `{"field": None}` en el stub de observacion: `_decide` lee `field.get("D_ckm")`
+   y rompia con `AttributeError`. Romper no es lo que el test mide.
+3. El ultimo test llevaba **tres** respuestas donde van dos: la tercera nunca se
+   consumia y se publicaba `"INTERACT"`.
+
+Lo anoto porque es el mismo tipo de error que vengo corrigiendo en los numeros
+de hoy —el `23` que era un total, el `+1` que era `+2`—: **contar mal cuantas
+unidades consume algo.** Tres veces en un archivo de tests.
+
+### Lo que dejo aparte, y por que
+
+Opus: *"hacer F3a alcanzable desde el server va con el fix del vacio o
+despues."* **Lo dejo aparte.** Este fix esta cerrado, testeado e invertido;
+hacer F3a alcanzable toca `server.py` y `mcp_server.py`, que son entry points, y
+merece su propia inversion. Mezclarlos haria que una sola inversion no pudiera
+separar cual de los dos rompio. El launcher queda como camino declarado.
+
+**ALTO.**

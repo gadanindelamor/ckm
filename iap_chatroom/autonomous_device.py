@@ -292,11 +292,46 @@ class AutonomousDevice:
         """
         Construye el prompt con historial acumulado del canal y llama al
         provider. **None si el provider falló** — ver `_llamar_llm`.
+
+        **None también si la generación quedó vacía** (delamor, 9 oct:
+        *"corregirlo"*). En el vivo 03 un device decidió INTERACT, el provider
+        devolvió `""`, y **se publicó un mensaje vacío que entró al corpus**:
+        `_interact` chequeaba `if text is None` y un vacío no es `None`. La
+        guarda miraba el **marcador de ausencia** y no el **valor vacío**.
+
+        Vacío acá es `not text.strip()`: también los que son sólo espacios.
+
+        **La cruda se guarda antes del strip**, y el registro distingue dos
+        casos que de otro modo se verían iguales:
+
+        - `vacia_antes_de_strip` — el provider devolvió vacío;
+        - `la_vacio_el_strip` — el provider devolvió algo y
+          `_strip_own_prefix` lo dejó en nada (un mensaje que era sólo el
+          prefijo de identidad del propio device).
+
+        El segundo caso es de la familia del `[assistant]` del vivo 03 y del
+        leak de prefijo del Caso 0.14. **No se filtra contenido** —eso sería
+        interpretar (delamor)—: sólo se registra qué lo vació.
         """
-        text = await self._llamar_llm(self._to_chat_messages(), "generate")
-        if text is None:
+        cruda = await self._llamar_llm(self._to_chat_messages(), "generate")
+        if cruda is None:
             return None
-        return _strip_own_prefix(text, self.device_id)
+
+        text = _strip_own_prefix(cruda, self.device_id)
+        if not text.strip():
+            self._ilegibles.append({
+                "causa": "generacion_vacia",
+                "respuesta_cruda": cruda[:500],
+                "truncada": len(cruda) > 500,
+                "largo": len(cruda),
+                "vacia_antes_de_strip": not cruda.strip(),
+                "la_vacio_el_strip": bool(cruda.strip()) and not text.strip(),
+                "fase": "generate",
+                "provider": getattr(self.provider, "name", None),
+                "model": getattr(self.provider, "model", None),
+            })
+            return None
+        return text
 
     async def _observe(
         self,
@@ -885,6 +920,14 @@ class AutonomousDevice:
             "errores": list(self._errores_llm),
             "ilegibles": len(self._ilegibles),
             "ejemplos_ilegibles": list(self._ilegibles[:5]),
+            # **Separadas por causa.** Sin esto, el contador `ilegibles` juntaría
+            # una respuesta del gate que no se pudo leer con una generación que
+            # salió vacía, y son dos cosas: la primera es el modelo contestando
+            # fuera del vocabulario, la segunda es el modelo no diciendo nada.
+            "ilegibles_por_causa": {
+                c: sum(1 for x in self._ilegibles if x.get("causa") == c)
+                for c in sorted({x.get("causa") for x in self._ilegibles})
+            },
             "errores_rate_limit": sum(
                 1 for e in self._errores_llm if e.get("rate_limit")
             ),

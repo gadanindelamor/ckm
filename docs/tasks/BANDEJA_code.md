@@ -3428,3 +3428,196 @@ D_ckm: None · temp_signal: None · n_agentes: 1 · corpus_status: operational
   serie congelada**. No los toqué.
 - **El costo en dinero.** 23 llamadas. No sé la tarifa.
 - **El chat**, **el estado del Codespace fuera de git**, **el clon local de delamor**.
+
+---
+
+## ARRANQUE — 2026-10-09 04:29 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 + §8, antes de la TASK de fixes.*
+
+### Revisé
+
+1. **Locks:** ninguno. **`git pull --rebase`:** limpio, HEAD en `a110d40`. **`git status`:**
+   nada modificado.
+2. **El gate sigue congelado:** `git diff f96c234 HEAD -- iap_chatroom/autonomous_device.py`
+   → **vacío**.
+3. **`DECISIONES_opus.md`** → leída la entrada del vivo 02 y la lista de cinco fixes.
+4. **Tests: 360/360.**
+
+### Preguntas abiertas
+
+**Ninguna.** La próxima es **P11**.
+
+### Encontró
+
+- **Un `pkill -f "iap_chatroom/server.py"` mató el propio shell** (exit 144) y abortó el comando
+  que iba a escribir este reporte: el patrón matcheó el proceso que lo ejecutaba. **Nada se
+  escribió a medias** —`git status` quedó limpio y la entrada no existía—, así que no hubo daño.
+  El server quedó parado, verificado aparte. Lo anoto porque fue un corte autoinfligido y la
+  forma de pararlo era la mala.
+
+### No pude revisar
+
+- Los 21 `test_caso_*`; el chat; el estado del Codespace fuera de git; el clon local.
+- `process/iap_series_freeze_20261008/README.md:41`, que sigue diciendo "67 archivos".
+
+---
+
+## REPORTE — evaluación de los cinco fixes, antes de tocar código — 2026-10-09 04:29 UTC
+
+*Server levantado y parado para medir. **Sin código.** Gate intacto.*
+
+### F1 — **No es un bug del canal. Es un error de mi reporte del vivo 02.**
+
+**La ruta no existe.** `api_routes.py:79` declara `@router.get("/monitor")`, montado en `/api`
+→ **`GET /api/monitor`**. Yo usé **`/api/monitor/state`**, que no está en ninguna ruta.
+
+**Medido, los tres juntos:**
+
+```
+GET /api/monitor/state     -> HTTP 404  {"detail":"Not Found"}
+GET /api/monitor           -> HTTP 200  {"corpus_size":12,"n_nodes":32,"message_count":0,
+                                        "D_ckm":null,"temp_signal":null,"n_agentes":0,
+                                        "corpus_status":"operational"}
+tool MCP get_monitor_state ->          {"corpus_size": 12, "n_nodes": 32, "message_count": 0,
+                                        "D_ckm": null, "temp_signal": null, "n_agentes": 0,
+                                        "corpus_status": "operational"}
+```
+
+**El endpoint y la tool ya devuelven lo mismo, campo por campo.**
+
+**Y por qué lo reporté como bug:** mi diagnóstico hizo `d.get(k)` sobre el cuerpo del 404
+—`{"detail":"Not Found"}`— y eso da `None` para cada clave que pedí. **Rellené una ausencia (un
+404) con un valor (`None`) y lo leí como dato.** Es exactamente el patrón que vengo persiguiendo
+en el código del proyecto; esta vez estaba en mi instrumento de lectura, y pasó al reporte como
+un bug del canal.
+
+**No hay nada que arreglar.** Propongo sólo un test que fije que el endpoint y la tool coinciden,
+para que la próxima vez no haga falta levantar el server a mano. **La corrección del reporte del
+vivo 02 queda acá**, sin editar la entrada anterior (§6).
+
+### F2 — `clock_log` no tiene tool ni endpoint: confirmado
+
+`ChatChannel.clock_log()` existe (`channel.py:147`) y **nadie lo expone**. `grep` sobre el repo:
+sólo lo llaman los tests y los dos drivers de vivo, **todos dentro del mismo proceso**. Desde
+afuera del server no hay forma.
+
+**Trabajo nuevo, chico, sin tensión.** No toca Monitor, Config ni COCO.
+
+**Una decisión a declarar:** el log crece sin tope, uno por tick observado. **Default que
+propongo:** la tool acepta `desde_tick` y devuelve el total aparte, para poder paginar sin perder
+la cuenta. Reversible.
+
+### F3a — el `_state` se acumula: confirmado, ya va por 12
+
+`corpus_state.json` tenía **10** textos antes del vivo 02 y **12** después. **El vivo escribe.**
+
+**La tensión, y por qué no lo decido:** `_STATE_DIR` es `iap_chatroom/_state/`, fijo en
+`ckm_monitor.py:32`. Aislar el estado por vivo **cambia de dónde lee `CKMMonitor`**, y eso
+cambia **qué datos ve Monitor** —sin tocar su código, pero es el límite que delamor puso.
+
+**Dos caminos, y no elijo:**
+- **(i) declarar**, sin mover nada: el driver lee el estado de partida y lo deja en su log y en
+  el reporte, como hice en el vivo 02. **Costo cero, y el corpus sigue creciendo.**
+- **(ii) aislar**: `CKMMonitor(..., state_dir=...)`, un directorio por vivo, con default igual al
+  de hoy. **El de agosto no se borra**, se deja de usar.
+
+**(ii) es aditivo y reversible, pero cambia qué corpus ve Monitor en un vivo. [delamor].**
+
+### F3b — **sólo evaluado. Y es más grande de lo que yo había dicho.**
+
+**8 de los 12 textos del corpus son joins:**
+
+```
+'TinkerBellucio joined the channel'    'test_agent joined the channel'
+'PeterPlam joined the channel'         'GroqLlama8B_2 joined the channel'
+'MarkOpolus joined the channel'        'GroqLlama8B_1 joined the channel'
+'GroqGptOss20B_2 joined the channel'   'GroqGptOss20B_1 joined the channel'
+```
+
+Los otros **4** son de la serie congelada.
+
+**Dos tercios del corpus que construye W son la frase "X joined the channel".** Yo había
+reportado que "los joins entran"; **lo medido es que son mayoría**.
+
+**Por qué entran:** `on_message` hace `ingest([message.text])` **para todo mensaje**, y
+`join_channel` publica un `Message` con `device_type="SYSTEM"`. **No hay filtro por tipo en la
+ingesta.**
+
+**No lo toco: sacarlos cambia qué mide W.** Lo que agrego es qué cambiaría:
+- W quedaría sobre **4 textos**;
+- `n_nodes` hoy es 32 con los 12; con 4, el `NodeExtractor` podría no distinguir y
+  `corpus_status` volvería a `accumulating`;
+- **la serie congelada corrió así.** Si los joins salen, los corpus de 0.4–0.15 **dejan de ser
+  comparables**. La regla de ingesta es parte de las condiciones, igual que el modelo.
+
+**[delamor]. No propongo default.**
+
+### F4 — encontrado qué cuenta, y hay un `or 1` adentro
+
+**`n_agentes = len(self._devices_seen)`** (`ckm_monitor.py:173`), y `_devices_seen` se llena en
+`on_message` con `message.device_id` (`:126`).
+
+**En los dos vivos los únicos mensajes fueron los joins, cuyo `device_id` es `"system"`.** Así
+que `_devices_seen = {"system"}` → **1**.
+
+**No es un error de conteo: el nombre y el objeto no coinciden.** `n_agentes` no cuenta devices
+registrados: cuenta **device_ids que publicaron**, y el pseudo-device `"system"` cuenta como uno.
+Con dos devices que nunca publicaron, el único "agente" visto fue el canal.
+
+**Y un segundo hallazgo que no estaba en la lista:**
+
+```python
+# ckm_monitor.py:183
+n_agentes=len(self._devices_seen) or 1,
+```
+
+**Un `or 1` en la llamada a la firma.** Con cero devices vistos, **la firma reporta 1 agente**.
+NOMINAL por ausencia, y en lo que **certifica** el estado estructural. **Lo señalo y no lo toco:**
+cambiar lo que la firma certifica no es mío.
+
+**Lo arreglable sin decidir nada del modelo:** que `"system"` no cuente como agente — es el
+canal, no un participante. **Default que propongo:** `_devices_seen` ignora
+`device_type == "SYSTEM"`, con test que pueda fallar.
+
+**Lo que NO propongo:** que `n_agentes` cuente devices **registrados** en vez de vistos. Eso
+cambia lo que la firma mide. **[delamor].**
+
+### F5 — ritmo observado: trabajo nuevo, sin tensión
+
+`run()` tiene `start = time.monotonic()` (`:561`) y **no lo guarda**, así que `costo()` no puede
+dar vueltas por minuto reales.
+
+**Aditivo:** guardar inicio y fin, y agregar a `costo()` un bloque `ritmo_observado` **al lado**
+del declarado.
+
+**Lo medido en los dos vivos, que es lo que el fix hace explícito:** con `poll_interval = 5.0` el
+declarado da **12 vueltas/minuto**; el observado fue **12 y 12** en el vivo 01 —los 404 volvían al
+instante— y **11 y 12** en el 02. **El declarado es el piso teórico; el observado es el piso menos
+la latencia.**
+
+### Resumen
+
+| | qué es | lo hago |
+|---|---|---|
+| **F1** | **no es bug: error de mi reporte** | un test de coincidencia endpoint/tool |
+| **F2** | confirmado, trabajo nuevo | sí, aditivo |
+| **F3a** | confirmado (10 → 12) | **(i) declarar** o **(ii) aislar** → **[delamor]** |
+| **F3b** | **8 de 12 textos son joins** | **sólo evaluado. [delamor]** |
+| **F4** | cuenta publicadores, y `"system"` es uno. **Más un `or 1` en la firma** | sacar SYSTEM: sí. La firma o el criterio: **[delamor]** |
+| **F5** | confirmado, trabajo nuevo | sí, aditivo |
+
+**Nada toca Monitor, Config ni COCO.** F3a (ii) cambiaría **qué datos** ve Monitor sin tocar su
+código, y por eso lo reporto en vez de decidirlo.
+
+**Arranco por F1, F2 y F5** —los tres sin tensión— salvo que llegue otra cosa. **F3a espera** el
+camino, **F3b y el `or 1` esperan a delamor**, y de **F4** haría sólo la parte de SYSTEM.
+
+### No pude revisar
+
+- **Si `/api/monitor/state` aparece en algún otro lugar del repo.** Busqué la ruta; no busqué
+  todos los consumidores de la API REST.
+- **Qué pasa con `n_nodes` si los joins salen del corpus.** Lo razoné, **no lo corrí**: habría que
+  reconstruir W sin ellos, y eso ya sería tocar F3b.
+- **Los 21 `test_caso_*`**; **el chat**; **el estado del Codespace fuera de git**; **el clon local
+  de delamor**.

@@ -267,3 +267,8 @@
 - **2026-10-09** · **Error de Opus, registrado como suyo:** nombré **cuatro** llamadores; eran **nueve** en ocho tests. Mi `grep` estaba cortado con `head`: lo que no se ve, no se cuenta. Code lo encontró porque la suite rompió.
 - **2026-10-09** · **Siguiente: CP2b (criterio local), espera el OK de delamor.**
 - **2026-10-09** · **Pregunta abierta cerrada (atribución):** delamor aclara que Code recibe sus prompts igual que Opus; la divergencia ("corrección de delamor" en `4853baf`, "pedido de delamor" en el CP2v) la generó el canal al no decir que la observación era de Opus. Code leyó bien lo que le llegó. **Práctica (Opus):** cada bloque para Code empieza con `Opus:`, para que el origen viaje con el texto.
+
+### CP2b (criterio local)
+
+- **2026-10-09** · **delamor: "CP2b confirmado."** Arranca. Requisitos acumulados (TASK §1, `e737e78`, `4853baf`/`1ea136a`/`17e14e8`): skip registrado **con su motivo** y distinguible de `OP_SILENCE` en la traza; auditoría al azar **sobre las dos caras**; umbrales declarados **"no calibrados" en el panel**; **piso determinístico** (cada K ticks de silencio se consulta a D igual, K no calibrado); test: canal callado N vueltas → `llamadas a D > 0` y `skips != N`; Δ mensajes cuenta sólo ajenos. Medido contra la línea de base del vivo 02.
+- **2026-10-09** · **Tensión anotada por Opus antes de arrancar:** la TASK §1 dice que los deltas *"entran como información a D cuando sí se lo llama"*. Eso **cambia el texto del gate**, que está congelado (delamor). En el CP2b los deltas **no entran al prompt**: se registran en la traza. Si hace falta que D los vea, se para y se reporta.

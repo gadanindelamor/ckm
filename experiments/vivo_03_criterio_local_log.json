@@ -1,0 +1,1417 @@
+{
+ "que_es": "ESTO MIDE — vivo 03: el criterio local del CP2b, en vivo",
+ "orden": "delamor, E1 (DECISIONES 4115efa): opcion (a), 60 s con piso en la ventana",
+ "prediccion_escrita_antes_de_correr": {
+  "donde": "BANDEJA_code.md, ARRANQUE VIVO 03, 2026-10-09 23:32 UTC",
+  "deterministico_con_silencio_puro": {
+   "llama_en_las_vueltas": [
+    1,
+    8
+   ],
+   "motivos": [
+    "primera_vuelta",
+    "piso"
+   ],
+   "skips_en_12_vueltas": 10,
+   "nota": "la vuelta 14 seria el siguiente piso y no entra"
+  },
+  "auditorias_cara_skip": "~Binomial(10, 0.1), esperanza 1",
+  "llamadas_por_device_esperadas": "2 a 4",
+  "no_es_teorema": [
+   "los joins SYSTEM cuentan en n_nuevos y rompen el silencio puro",
+   "que decide el modelo cuando se lo llama",
+   "cuantas vueltas sale cada device (latencia de Groq)",
+   "los sorteos de la auditoria, sin semilla en vivo"
+  ]
+ },
+ "estado_de_partida_leido_por_MCP": {
+  "monitor_state": {
+   "corpus_size": 0,
+   "n_nodes": 0,
+   "message_count": 0,
+   "D_ckm": null,
+   "temp_signal": null,
+   "n_agentes": 0,
+   "corpus_status": "accumulating"
+  },
+  "clock": {
+   "tick": 18,
+   "t": 1791588909.592873,
+   "reloj": "canal",
+   "periodo_s": 1.0,
+   "t0": 1791588891.447913
+  },
+  "mensajes_en_el_canal": 0
+ },
+ "diferencia_declarada_con_el_vivo_02": "el vivo 02 arranco con corpus_size=10 (sin limpiar); este arranca aislado. La comparacion es sobre LLAMADAS, no sobre el corpus.",
+ "declarado": {
+  "modelo": "openai/gpt-oss-20b",
+  "provider": "groq",
+  "n_devices": 2,
+  "poll_interval_s": 5.0,
+  "duration_s": 60.0,
+  "gate_congelado_en": "f96c234",
+  "system_prompt": "You are an AI device in a shared channel with other AI devices. You observe the channel and decide whether to participate. You do not need to respond to every message.",
+  "criterio_local": "ENCENDIDO",
+  "umbrales": {
+   "dt_minimo_s": 5.0,
+   "piso_vueltas": 6,
+   "tasa_auditoria": 0.1,
+   "tasa_auditoria_pase": 0.1
+  },
+  "umbrales_calibrados": false,
+  "state_dir": "/workspaces/ckm/experiments/_state_vivo_03"
+ },
+ "repo_commit": "4115efa8403332f4031897d0fdf86664398bcc7d",
+ "python": "3.12.1",
+ "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.39",
+ "donde": "Codespace ckm, server en otro proceso del mismo host",
+ "variables_no_consideradas": "todas las que no estan en este log",
+ "segundos_reales": 62.53,
+ "errores_fatales": [],
+ "ritmo_declarado_2": {
+  "poll_interval_s": 5.0,
+  "n_devices": 2,
+  "vueltas_por_minuto_por_device": 12.0,
+  "llamadas_por_minuto_piso": 24.0,
+  "llamadas_por_minuto_techo": 48.0,
+  "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+  "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+ },
+ "linea_de_base_vivo_02": {
+  "llamadas_totales": 23,
+  "vueltas_por_device": [
+   11,
+   12
+  ],
+  "decisiones_por_tipo": {
+   "OP_SILENCE": 23
+  },
+  "errores": 0
+ },
+ "llamadas_totales_vivo_03": 9,
+ "por_device": [
+  {
+   "costo": {
+    "device_id": "GroqGptOss20B_1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "vueltas": 12,
+    "llamadas_llm": 5,
+    "llamadas_por_vuelta": 0.417,
+    "errores_llm": 0,
+    "errores": [],
+    "ilegibles": 0,
+    "ejemplos_ilegibles": [],
+    "errores_rate_limit": 0,
+    "ritmo_declarado": {
+     "poll_interval_s": 5.0,
+     "n_devices": 1,
+     "vueltas_por_minuto_por_device": 12.0,
+     "llamadas_por_minuto_piso": 12.0,
+     "llamadas_por_minuto_techo": 24.0,
+     "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+     "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+    },
+    "ritmo_observado": {
+     "segundos": 62.4,
+     "vueltas": 12,
+     "vueltas_por_minuto": 11.538,
+     "llamadas_por_minuto": 4.808,
+     "segundos_por_vuelta": 5.2
+    },
+    "decisiones_por_tipo": {
+     "INTERACT": 1,
+     "OP_SILENCE": 3,
+     "SKIP": 8
+    },
+    "vueltas_con_ventana_unknown": 0,
+    "criterio_local": {
+     "calibrado": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1
+     },
+     "vueltas_evaluadas": 12,
+     "n_skips": 8,
+     "n_llamadas": 4,
+     "skips_por_motivo": {
+      "sin_cambio": 8
+     },
+     "llamadas_por_via": {
+      "auditoria": 1,
+      "criterio": 2,
+      "piso": 1
+     },
+     "divergencia_auditoria": {
+      "dijo_no": {
+       "metodo": "muestreo",
+       "n_vueltas": 1,
+       "n_con_decision": 1,
+       "n_sin_decision": 0,
+       "n_divergieron": 0,
+       "tasa": 0.0,
+       "que_mide": "el filtro tapaba una decision"
+      },
+      "dijo_si": {
+       "metodo": "muestreo+censo",
+       "n_vueltas": 0,
+       "n_con_decision": 0,
+       "n_sin_decision": 0,
+       "n_divergieron": 0,
+       "tasa": null,
+       "censo": {
+        "n_vueltas": 3,
+        "n_con_decision": 3,
+        "n_sin_decision": 0,
+        "n_divergieron": 2,
+        "tasa": 0.6666666666666666
+       },
+       "que_mide": "el filtro pago una llamada de mas"
+      },
+      "n_auditados": 1,
+      "n_con_decision": 1,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": 0.0
+     },
+     "piso_dentro_del_horizonte": true,
+     "vueltas_para_ver_el_piso": 8
+    }
+   },
+   "panel_criterio": {
+    "calibrado": false,
+    "umbrales": {
+     "dt_minimo_s": 5.0,
+     "piso_vueltas": 6,
+     "tasa_auditoria": 0.1
+    },
+    "vueltas_evaluadas": 12,
+    "n_skips": 8,
+    "n_llamadas": 4,
+    "skips_por_motivo": {
+     "sin_cambio": 8
+    },
+    "llamadas_por_via": {
+     "auditoria": 1,
+     "criterio": 2,
+     "piso": 1
+    },
+    "divergencia_auditoria": {
+     "dijo_no": {
+      "metodo": "muestreo",
+      "n_vueltas": 1,
+      "n_con_decision": 1,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": 0.0,
+      "que_mide": "el filtro tapaba una decision"
+     },
+     "dijo_si": {
+      "metodo": "muestreo+censo",
+      "n_vueltas": 0,
+      "n_con_decision": 0,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": null,
+      "censo": {
+       "n_vueltas": 3,
+       "n_con_decision": 3,
+       "n_sin_decision": 0,
+       "n_divergieron": 2,
+       "tasa": 0.6666666666666666
+      },
+      "que_mide": "el filtro pago una llamada de mas"
+     },
+     "n_auditados": 1,
+     "n_con_decision": 1,
+     "n_sin_decision": 0,
+     "n_divergieron": 0,
+     "tasa": 0.0
+    },
+    "piso_dentro_del_horizonte": true,
+    "vueltas_para_ver_el_piso": 8
+   },
+   "registros_criterio": [
+    {
+     "llamar": true,
+     "motivo": "primera_vuelta",
+     "via": "criterio",
+     "tick": 18,
+     "deltas": {
+      "n_nuevos": 2,
+      "nombrado": true,
+      "dt_desde_ajeno": 0.009446144104003906,
+      "dt_desde_que_hable": null,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 1,
+     "decision": "OP_SILENCE"
+    },
+    {
+     "llamar": true,
+     "motivo": "mensajes_nuevos",
+     "via": "criterio",
+     "tick": 23,
+     "deltas": {
+      "n_nuevos": 1,
+      "nombrado": false,
+      "dt_desde_ajeno": 4.654000997543335,
+      "dt_desde_que_hable": null,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 2,
+     "decision": "INTERACT"
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 29,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 5.010433912277222,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 3
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 34,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 10.043347120285034,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 1
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 4
+    },
+    {
+     "llamar": true,
+     "motivo": "auditoria",
+     "via": "auditoria",
+     "tick": 39,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 15.079627990722656,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 2
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 5,
+     "decision": "OP_SILENCE"
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 45,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 20.41471791267395,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 6
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 50,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 25.44710612297058,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 1
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 7
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 55,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 30.47753596305847,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 2
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 8
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 60,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 35.50777006149292,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 3
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 9
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 65,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 40.54027605056763,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 4
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 10
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 70,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 45.57546305656433,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 5
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 11
+    },
+    {
+     "llamar": true,
+     "motivo": "piso",
+     "via": "piso",
+     "tick": 75,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 50.61179804801941,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 6
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 12,
+     "decision": "OP_SILENCE"
+    }
+   ],
+   "decisiones": [
+    {
+     "vuelta": 1,
+     "tick": 18,
+     "tick_anterior": -1,
+     "reloj": "canal",
+     "n_nuevos": 2,
+     "trigger": "msg-1",
+     "decision": "OP_SILENCE",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "primera_vuelta",
+     "criterio_via": "criterio",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 2,
+     "tick": 23,
+     "tick_anterior": 18,
+     "reloj": "canal",
+     "n_nuevos": 1,
+     "trigger": "msg-2",
+     "decision": "INTERACT",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "mensajes_nuevos",
+     "criterio_via": "criterio",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 2,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 3,
+     "tick": 29,
+     "tick_anterior": 23,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 4,
+     "tick": 34,
+     "tick_anterior": 29,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 5,
+     "tick": 39,
+     "tick_anterior": 34,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "OP_SILENCE",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "auditoria",
+     "criterio_via": "auditoria",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 6,
+     "tick": 45,
+     "tick_anterior": 39,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 7,
+     "tick": 50,
+     "tick_anterior": 45,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 8,
+     "tick": 55,
+     "tick_anterior": 50,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 9,
+     "tick": 60,
+     "tick_anterior": 55,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 10,
+     "tick": 65,
+     "tick_anterior": 60,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 11,
+     "tick": 70,
+     "tick_anterior": 65,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 12,
+     "tick": 75,
+     "tick_anterior": 70,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "OP_SILENCE",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "piso",
+     "criterio_via": "piso",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 0,
+     "ilegibles": 0
+    }
+   ]
+  },
+  {
+   "costo": {
+    "device_id": "GroqGptOss20B_2",
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "vueltas": 12,
+    "llamadas_llm": 4,
+    "llamadas_por_vuelta": 0.333,
+    "errores_llm": 0,
+    "errores": [],
+    "ilegibles": 0,
+    "ejemplos_ilegibles": [],
+    "errores_rate_limit": 0,
+    "ritmo_declarado": {
+     "poll_interval_s": 5.0,
+     "n_devices": 1,
+     "vueltas_por_minuto_por_device": 12.0,
+     "llamadas_por_minuto_piso": 12.0,
+     "llamadas_por_minuto_techo": 24.0,
+     "limite_de_la_cuenta": "UNKNOWN — se lee en la consola del provider",
+     "nota": "sin poll_interval el ritmo lo fija la latencia del provider y no se puede declarar de antemano"
+    },
+    "ritmo_observado": {
+     "segundos": 62.341,
+     "vueltas": 12,
+     "vueltas_por_minuto": 11.549,
+     "llamadas_por_minuto": 3.85,
+     "segundos_por_vuelta": 5.195
+    },
+    "decisiones_por_tipo": {
+     "INTERACT": 1,
+     "OP_SILENCE": 2,
+     "SKIP": 9
+    },
+    "vueltas_con_ventana_unknown": 0,
+    "criterio_local": {
+     "calibrado": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1
+     },
+     "vueltas_evaluadas": 12,
+     "n_skips": 9,
+     "n_llamadas": 3,
+     "skips_por_motivo": {
+      "sin_cambio": 9
+     },
+     "llamadas_por_via": {
+      "criterio": 2,
+      "piso": 1
+     },
+     "divergencia_auditoria": {
+      "dijo_no": {
+       "metodo": "muestreo",
+       "n_vueltas": 0,
+       "n_con_decision": 0,
+       "n_sin_decision": 0,
+       "n_divergieron": 0,
+       "tasa": null,
+       "que_mide": "el filtro tapaba una decision"
+      },
+      "dijo_si": {
+       "metodo": "muestreo+censo",
+       "n_vueltas": 0,
+       "n_con_decision": 0,
+       "n_sin_decision": 0,
+       "n_divergieron": 0,
+       "tasa": null,
+       "censo": {
+        "n_vueltas": 3,
+        "n_con_decision": 3,
+        "n_sin_decision": 0,
+        "n_divergieron": 2,
+        "tasa": 0.6666666666666666
+       },
+       "que_mide": "el filtro pago una llamada de mas"
+      },
+      "n_auditados": 0,
+      "n_con_decision": 0,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": null
+     },
+     "piso_dentro_del_horizonte": true,
+     "vueltas_para_ver_el_piso": 8
+    }
+   },
+   "panel_criterio": {
+    "calibrado": false,
+    "umbrales": {
+     "dt_minimo_s": 5.0,
+     "piso_vueltas": 6,
+     "tasa_auditoria": 0.1
+    },
+    "vueltas_evaluadas": 12,
+    "n_skips": 9,
+    "n_llamadas": 3,
+    "skips_por_motivo": {
+     "sin_cambio": 9
+    },
+    "llamadas_por_via": {
+     "criterio": 2,
+     "piso": 1
+    },
+    "divergencia_auditoria": {
+     "dijo_no": {
+      "metodo": "muestreo",
+      "n_vueltas": 0,
+      "n_con_decision": 0,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": null,
+      "que_mide": "el filtro tapaba una decision"
+     },
+     "dijo_si": {
+      "metodo": "muestreo+censo",
+      "n_vueltas": 0,
+      "n_con_decision": 0,
+      "n_sin_decision": 0,
+      "n_divergieron": 0,
+      "tasa": null,
+      "censo": {
+       "n_vueltas": 3,
+       "n_con_decision": 3,
+       "n_sin_decision": 0,
+       "n_divergieron": 2,
+       "tasa": 0.6666666666666666
+      },
+      "que_mide": "el filtro pago una llamada de mas"
+     },
+     "n_auditados": 0,
+     "n_con_decision": 0,
+     "n_sin_decision": 0,
+     "n_divergieron": 0,
+     "tasa": null
+    },
+    "piso_dentro_del_horizonte": true,
+    "vueltas_para_ver_el_piso": 8
+   },
+   "registros_criterio": [
+    {
+     "llamar": true,
+     "motivo": "primera_vuelta",
+     "via": "criterio",
+     "tick": 18,
+     "deltas": {
+      "n_nuevos": 2,
+      "nombrado": true,
+      "dt_desde_ajeno": 0.012662172317504883,
+      "dt_desde_que_hable": null,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 1,
+     "decision": "INTERACT"
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 24,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": null,
+      "dt_desde_que_hable": 5.010447978973389,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 2
+    },
+    {
+     "llamar": true,
+     "motivo": "mensajes_nuevos",
+     "via": "criterio",
+     "tick": 29,
+     "deltas": {
+      "n_nuevos": 1,
+      "nombrado": false,
+      "dt_desde_ajeno": 4.594649076461792,
+      "dt_desde_que_hable": 10.042243957519531,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 1
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 3,
+     "decision": "OP_SILENCE"
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 34,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 10.173917055130005,
+      "dt_desde_que_hable": 15.621511936187744,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 4
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 39,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 15.204442024230957,
+      "dt_desde_que_hable": 20.652036905288696,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 1
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 5
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 44,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 20.23746109008789,
+      "dt_desde_que_hable": 25.68505597114563,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 2
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 6
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 49,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 25.277873039245605,
+      "dt_desde_que_hable": 30.725467920303345,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 3
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 7
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 54,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 30.32689595222473,
+      "dt_desde_que_hable": 35.77449083328247,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 4
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 8
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 60,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 35.39182209968567,
+      "dt_desde_que_hable": 40.83941698074341,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 5
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 9
+    },
+    {
+     "llamar": true,
+     "motivo": "piso",
+     "via": "piso",
+     "tick": 65,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 40.42451095581055,
+      "dt_desde_que_hable": 45.872105836868286,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 6
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "auditado_pase": false,
+     "vuelta": 10,
+     "decision": "OP_SILENCE"
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 70,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 45.97673296928406,
+      "dt_desde_que_hable": 51.4243278503418,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 0
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 11
+    },
+    {
+     "llamar": false,
+     "motivo": "sin_cambio",
+     "via": null,
+     "tick": 75,
+     "deltas": {
+      "n_nuevos": 0,
+      "nombrado": false,
+      "dt_desde_ajeno": 51.01355791091919,
+      "dt_desde_que_hable": 56.46115279197693,
+      "estado_objetivo": null,
+      "presupuesto": null,
+      "vueltas_sin_llamar": 1
+     },
+     "umbrales_calibrados": false,
+     "umbrales": {
+      "dt_minimo_s": 5.0,
+      "piso_vueltas": 6,
+      "tasa_auditoria": 0.1,
+      "tasa_auditoria_pase": 0.1
+     },
+     "vuelta": 12
+    }
+   ],
+   "decisiones": [
+    {
+     "vuelta": 1,
+     "tick": 18,
+     "tick_anterior": -1,
+     "reloj": "canal",
+     "n_nuevos": 2,
+     "trigger": "msg-1",
+     "decision": "INTERACT",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "primera_vuelta",
+     "criterio_via": "criterio",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 2,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 2,
+     "tick": 24,
+     "tick_anterior": 18,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 3,
+     "tick": 29,
+     "tick_anterior": 24,
+     "reloj": "canal",
+     "n_nuevos": 1,
+     "trigger": "msg-3",
+     "decision": "OP_SILENCE",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "mensajes_nuevos",
+     "criterio_via": "criterio",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 4,
+     "tick": 34,
+     "tick_anterior": 29,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 5,
+     "tick": 39,
+     "tick_anterior": 34,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 6,
+     "tick": 44,
+     "tick_anterior": 39,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 7,
+     "tick": 49,
+     "tick_anterior": 44,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 8,
+     "tick": 54,
+     "tick_anterior": 49,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 9,
+     "tick": 60,
+     "tick_anterior": 54,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 10,
+     "tick": 65,
+     "tick_anterior": 60,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "OP_SILENCE",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "piso",
+     "criterio_via": "piso",
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 1,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 11,
+     "tick": 70,
+     "tick_anterior": 65,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    },
+    {
+     "vuelta": 12,
+     "tick": 75,
+     "tick_anterior": 70,
+     "reloj": "canal",
+     "n_nuevos": 0,
+     "trigger": null,
+     "decision": "SKIP",
+     "trigger_mode": "continuo",
+     "criterio_motivo": "sin_cambio",
+     "criterio_via": null,
+     "umbrales_calibrados": false,
+     "ventana": 1.0,
+     "llamadas_llm": 0,
+     "errores_llm": 0,
+     "ilegibles": 0
+    }
+   ]
+  }
+ ],
+ "canal": {
+  "clock_final": {
+   "tick": 80,
+   "t": 1791588972.231126,
+   "reloj": "canal",
+   "periodo_s": 1.0,
+   "t0": 1791588891.447913
+  },
+  "n_mensajes": 4,
+  "mensajes": [
+   {
+    "device_id": "system",
+    "device_type": "SYSTEM",
+    "text": "GroqGptOss20B_1 joined the channel",
+    "timestamp": "2026-10-09T23:35:09.760848+00:00",
+    "tick": 18,
+    "reloj": "canal",
+    "message_id": "msg-0"
+   },
+   {
+    "device_id": "system",
+    "device_type": "SYSTEM",
+    "text": "GroqGptOss20B_2 joined the channel",
+    "timestamp": "2026-10-09T23:35:09.763512+00:00",
+    "tick": 18,
+    "reloj": "canal",
+    "message_id": "msg-1"
+   },
+   {
+    "device_id": "GroqGptOss20B_2",
+    "device_type": "AI",
+    "text": "",
+    "timestamp": "2026-10-09T23:35:10.621102+00:00",
+    "tick": 19,
+    "reloj": "canal",
+    "message_id": "msg-2"
+   },
+   {
+    "device_id": "GroqGptOss20B_1",
+    "device_type": "AI",
+    "text": "[assistant]",
+    "timestamp": "2026-10-09T23:35:16.068697+00:00",
+    "tick": 24,
+    "reloj": "canal",
+    "message_id": "msg-3"
+   }
+  ],
+  "monitor_state": {
+   "corpus_size": 2,
+   "n_nodes": 0,
+   "message_count": 4,
+   "D_ckm": null,
+   "temp_signal": null,
+   "n_agentes": 2,
+   "corpus_status": "accumulating"
+  }
+ }
+}

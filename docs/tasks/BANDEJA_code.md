@@ -4252,3 +4252,237 @@ termino.
   actualiza**, porque es estado vigente y no traza.
 
 **ALTO.**
+
+---
+
+## ARRANQUE VIVO 03 — el filtro puesto — 2026-10-09 23:32 UTC
+
+*Orden de delamor (E1, DECISIONES `4115efa`): vivo 03 con filtro -> calibrar ->
+caso Z. Opcion (a): 60 s con `piso_vueltas` dentro de la ventana.*
+
+### El teorema, escrito ANTES de correr
+
+Regla del proyecto: *"antes de una corrida, preguntar si el resultado es un
+teorema; si lo es, se demuestra en una linea."* **Parte lo es, y va escrita acá
+para que la corrida sea falsable y no confirmatoria.**
+
+Con `piso_vueltas = 6`, silencio puro y 12 vueltas, el filtro llama en:
+
+| vuelta | motivo |
+|---|---|
+| **1** | `primera_vuelta` |
+| **8** | `piso` |
+
+**2 llamadas del criterio+piso, 10 skips.** La vuelta 14 seria la siguiente del
+piso y no entra en la ventana. Medido con el modulo, no deducido.
+
+Mas las auditorias de la cara del skip: **~Binomial(10, 0.1)**, esperanza **1**.
+Asi que la prediccion es **2 a 4 llamadas por device**, contra 11-12 del vivo 02.
+
+### Lo que NO es teorema, y es lo que la corrida mide
+
+1. **Los joins SYSTEM cuentan en `n_nuevos`.** SYSTEM sale del **corpus** (F3b)
+   pero sigue en la **observacion** del device. Asi que el join del otro device
+   va a disparar `mensajes_nuevos` y **rompe el silencio puro** de la prediccion.
+   No se cuantas veces: depende de en que vuelta caiga cada join.
+2. **Que decide el modelo cuando se lo llama.** Si alguna vez decide INTERACT, el
+   canal deja de estar callado y toda la dinamica cambia. El vivo 02 dio 23
+   `OP_SILENCE` de 23, pero eso **no es una propiedad del modelo**: es lo que
+   decidio esa vez. No se interpreta.
+3. **Cuantas vueltas sale cada device** (11 o 12 en el vivo 02): depende de la
+   latencia de Groq.
+4. **Los sorteos de la auditoria**: hay RNG sin semilla en la corrida viva.
+
+### Un hueco de F3a, y el camino que tomé
+
+La orden pide `state_dir` **nuevo y aislado**. `CKMMonitor` acepta `state_dir`
+desde el CP2b/F3a, **pero ningun camino vivo puede pasarlo**: `server.py:31` y
+`mcp_server.py:23` construyen `CKMMonitor()` sin argumentos, y no hay hook de
+entorno (verificado: `grep environ|getenv` en `iap_chatroom/` da vacio).
+
+**F3a agrego el parametro y dejo el camino vivo sin poder usarlo.** Lo reporto
+como hallazgo: no es que algo rompa, es que la pieza aceptada no es alcanzable
+donde importa.
+
+**No toco `server.py` ni `mcp_server.py`.** Hay un camino que no modifica ningun
+archivo existente: `CKMMonitor` es singleton real (`__new__` + `_instance`,
+L45-51), asi que un **launcher nuevo** que construya
+`CKMMonitor(state_dir=...)` **antes** de importar el server fija la instancia, y
+el `CKMMonitor()` del server devuelve esa misma. Archivos nuevos:
+
+- `experiments/vivo_03_server.py` — el launcher, con el `state_dir` aislado
+- `experiments/vivo_03_criterio_local.py` — el driver
+
+El de agosto (`iap_chatroom/_state/`) **no se toca**: queda como traza.
+
+### Setup declarado
+
+`openai/gpt-oss-20b` · 2 devices · `poll_interval = 5.0` · `duration = 60 s` ·
+criterio local **encendido** · umbrales por default **no calibrados** salvo
+`piso_vueltas = 6` · gate congelado en `f96c234` · `state_dir` nuevo.
+
+Arranco.
+
+---
+
+## REPORTE VIVO 03 — el filtro en vivo — 2026-10-09 23:38 UTC
+
+*Server parado con `TaskStop`. Log:
+`experiments/vivo_03_criterio_local_log.json`. Archivos nuevos:
+`experiments/vivo_03_server.py`, `experiments/vivo_03_criterio_local.py`.*
+
+**62.53 s reales · 0 errores fatales · 0 errores de provider · 0 rate_limit ·
+0 ilegibles.**
+
+### Lo central: 23 -> 9
+
+| | vivo 02 | vivo 03 |
+|---|---|---|
+| **llamadas totales** | **23** | **9** |
+| vueltas por device | 11 y 12 | **12 y 12** |
+| llamadas por device | 11 y 12 | **5 y 4** |
+| decisiones | `{OP_SILENCE: 23}` | `{SKIP: 17, OP_SILENCE: 5, INTERACT: 2}` |
+
+**61% menos llamadas.** Y las 9 se descomponen: **7 al gate** (4 y 3) mas **2 de
+`_generate`**, que son las dos que acompanan a los INTERACT.
+
+### La prediccion contra lo observado
+
+Escrita antes de correr (ARRANQUE 23:32): *"2 a 4 llamadas por device"*.
+
+| device | gate | total | prediccion |
+|---|---|---|---|
+| `_1` | **4** | 5 | dentro |
+| `_2` | **3** | 4 | dentro |
+
+**Se cumple en llamadas al gate, y mi prediccion estaba mal especificada:** dije
+"llamadas" sin separar las del gate de la de `_generate`. Un INTERACT cuesta dos.
+El numero que predije era el del gate y no lo dije.
+
+**Y la parte deterministica no se cumplio como estaba escrita, por la razon que
+yo mismo habia anotado.** Predije que el piso disparaba en la **vuelta 8**;
+disparo en la **12** (`_1`) y la **10** (`_2`). Causa: `criterio` disparo dos
+veces por `mensajes_nuevos` —los joins SYSTEM y los dos mensajes publicados— y
+cada llamada resetea el contador. Era el punto 1 de *"lo que NO es teorema"*: el
+silencio puro no se dio. **La corrida fue falsable y lo que la desvio estaba
+escrito de antemano.**
+
+### El piso y la auditoria: por que no se reemplazan, medido
+
+| device | piso disparo | `piso_dentro_del_horizonte` | auditorias cara skip |
+|---|---|---|---|
+| `_1` | vuelta 12 | `True` | **1** (tasa 0.0, 0 de 1 divergio) |
+| `_2` | vuelta 10 | `True` | **0** (tasa **`None`**) |
+
+**El piso disparo en los dos. La auditoria, en uno.** Con ~8-9 skips al 10% la
+esperanza era 0.85, asi que 1 y 0 esta en distribucion.
+
+Eso es exactamente lo de Opus —*"la iniciativa queda en manos de la suerte"*—
+pero con la suerte cayendo del lado de **la medicion** y no de la iniciativa: el
+piso sostuvo la iniciativa de los dos devices, y la auditoria **dejo el costo del
+sesgo de `_2` sin medir**. `tasa = None` y no `0.0`, que es lo correcto: no se
+miro, no es que no divergio.
+
+### Las dos caras, y por que el censo no era un adorno
+
+| cara | metodo | `_1` | `_2` |
+|---|---|---|---|
+| skip | muestreo | 1 vuelta, tasa 0.0 | **0 vueltas, tasa `None`** |
+| pase | muestreo | **0 vueltas, tasa `None`** | **0 vueltas, tasa `None`** |
+| pase | **censo** | **tasa 0.667** | **tasa 0.667** |
+
+**El muestreo de la cara del pase midio cero en los dos devices.** Con
+`tasa_auditoria_pase = 0.1` y 3-4 pases cada uno, la esperanza era 0.35: cero es
+lo esperable.
+
+**Si la cara del pase fuera solo muestreo —como decia la especificacion— este
+vivo no reportaria nada de ella.** El censo dice que **2 de cada 3 llamadas que
+el filtro dejo pasar terminaron sin accion**. Ese numero es el que contesta "el
+filtro cuesta?", y existe porque la llamada ya se habia hecho y no habia nada que
+ahorrar sorteandola. No lo discuti: lo midio la corrida.
+
+### F3b y F4, confirmados contra un canal real
+
+- **4 mensajes en el canal, 2 en el corpus.** Los dos que quedaron afuera son
+  exactamente los joins SYSTEM. F3b funciona en vivo.
+- **`n_agentes = 2`**: los dos devices que publicaron. `system` no cuenta. F4
+  funciona en vivo.
+- **Ningun SKIP publico**: 2 INTERACT decididos, 2 mensajes no-SYSTEM. El arreglo
+  del fallthrough de `_interact` se sostiene.
+
+### HALLAZGO — el corpus se construyo con un vacio y con `[assistant]`
+
+Los dos mensajes publicados, literales:
+
+```
+GroqGptOss20B_2 -> ''            (len 0)
+GroqGptOss20B_1 -> '[assistant]' (len 11)
+```
+
+**Los dos entraron al corpus** (`corpus_size = 2`). No interpreto que dijo el
+modelo; reporto que lo que construye W fueron esos dos strings.
+
+El mecanismo del vacio esta a la vista en `autonomous_device.py:532`:
+
+```python
+text = await self._generate()
+if text is None:        # <- solo None
+```
+
+**Un string vacio no es `None`, asi que pasa la guarda y se publica.** Es el
+mismo patron de todo el dia: la guarda chequea el **marcador de ausencia** y no
+el **valor vacio**.
+
+El `[assistant]` es de la familia del leak de prefijo de identidad del Caso 0.14
+(`[TinkerBellucio]:` dentro del mensaje de Mark). `_strip_own_prefix` existe y no
+lo agarro.
+
+**No lo arreglo** — la orden dice *"si algo rompe: no arreglar, ALTO"*, y esto no
+rompio la corrida: la completo y dejo el rastro. Queda reportado.
+
+### Ritmo
+
+Declarado: piso **12 llamadas/min por device**. Observado: **11.54
+vueltas/min**, y **4.81** y **3.85 llamadas/min**. El filtro bajo el ritmo de
+llamadas al **40%** y al **32%** del piso declarado sin filtro.
+
+### HALLAZGO — F3a no era alcanzable desde el camino vivo
+
+`CKMMonitor` acepta `state_dir` desde el CP2b, y **ningun entry point puede
+pasarlo**: `server.py:31` y `mcp_server.py:23` construyen `CKMMonitor()` sin
+argumentos, y no hay hook de entorno (`grep environ|getenv` en `iap_chatroom/`:
+vacio). **No toque ninguno de los dos.**
+
+Camino que use, sin modificar nada existente: `CKMMonitor` es singleton real
+(`__new__` + `_instance`, L45-51), asi que `experiments/vivo_03_server.py`
+lo construye con el `state_dir` del vivo **antes** de importar el server, y
+verifica con dos `assert` que `server.ckm_monitor` y `mcp_server.ckm_monitor`
+**sean la misma instancia** — si el server construyera una propia, el
+aislamiento seria aparente y el log diria una cosa mientras el corpus escribe en
+otra.
+
+Funciono: estado de partida **`corpus_size = 0`, `n_nodes = 0`,
+`message_count = 0`, `n_agentes = 0`, `D_ckm = None`, `corpus_status =
+accumulating`**. El `_state/` de agosto **no se toco**.
+
+**Diferencia declarada con el vivo 02:** el 02 arranco con `corpus_size = 10`
+sin limpiar. Este arranco en 0. **La comparacion de arriba es sobre llamadas, no
+sobre el corpus**, que difiere por construccion.
+
+### Sin W, y es por el umbral
+
+`n_nodes = 0`, `D_ckm = None`, `corpus_status = accumulating`: hay 2 textos y
+`min_texts = 3`. No hay W, asi que no hay nada de CKM que leer en este vivo. **Es
+lo esperable con el corpus aislado**, y el precio del aislamiento: el vivo 02
+tenia los 10 textos de agosto detras.
+
+### Pendiente, no mio
+
+1. El vacio y el `[assistant]` en el corpus.
+2. F3a sin camino vivo (hoy lo resuelve un launcher por vivo).
+3. **Calibracion** es el siguiente de la orden: la auditoria de la cara del skip
+   midio 1 y 0 vueltas; con tasas tan bajas y ventanas de 12 vueltas, esa cara
+   casi no se mide. El numero es de Calibracion; el dato es que **con 0.1 y 12
+   vueltas la cara del skip sale UNKNOWN la mitad de las veces**.
+
+**ALTO.**

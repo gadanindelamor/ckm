@@ -7,11 +7,32 @@
 
 ## Última escritura
 
-**2026-10-09 05:47 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
+**2026-10-09 23:38 UTC** — Claude Opus 5 (Code, Codespace `ckm`).
 
 ## Último CP cerrado
 
-**CP2b — el criterio local, con los cuatro ajustes de Opus.** Cerrado el 2026-10-09. Suite
+**VIVO 03 — el criterio local en vivo.** Corrido el 2026-10-09. **23 → 9 llamadas** (7 al gate
++ 2 de `_generate`), 62.5 s, 12 vueltas por device, 0 errores. El piso disparó en los dos
+devices (vueltas 12 y 10, no la 8 predicha: `criterio` reseteó el contador por los joins y los
+mensajes — estaba escrito como "no es teorema"). `piso_dentro_del_horizonte = True` en los dos.
+
+**La auditoría disparó en uno solo** (1 y 0): el piso sostuvo la iniciativa de los dos, la
+auditoría dejó el costo del sesgo de uno sin medir (`tasa = None`, no `0.0`). **El muestreo de
+la cara del pase midió cero en los dos**; el **censo** dice 0.667 — si esa cara fuera sólo
+muestreo, el vivo no reportaría nada de ella.
+
+F3b y F4 confirmados en vivo: 4 mensajes, 2 al corpus (los 2 joins afuera), `n_agentes = 2`.
+Ningún SKIP publicó.
+
+**Dos hallazgos, no corregidos (orden: reportar y ALTO):** (1) el corpus se construyó con un
+string **vacío** y con **`[assistant]`** — `_interact:532` chequea `if text is None` y un vacío
+no es None; (2) **F3a no era alcanzable desde el camino vivo** (los dos entry points construyen
+`CKMMonitor()` sin argumentos), resuelto con un launcher por vivo que gana la carrera del
+singleton, sin tocar `server.py` ni `mcp_server.py`.
+
+Sin W: 2 textos y `min_texts = 3`. Es el precio del `state_dir` aislado, declarado.
+
+Antes: **CP2b — el criterio local, con los cuatro ajustes de Opus.** Cerrado el 2026-10-09. Suite
 **418/418**. Ajustes: `piso_ticks`→`piso_vueltas` (el nombre decía ticks y medía vueltas);
 `ValueError` si `piso_vueltas ≤ 0` (el docstring decía "no opcional" y el constructor dejaba
 apagarlo); publicar exige `INTERACT` explícito (`_interact` ya no cae a publicar); `-1` → `None`

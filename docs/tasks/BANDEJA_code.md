@@ -4581,3 +4581,49 @@ merece su propia inversion. Mezclarlos haria que una sola inversion no pudiera
 separar cual de los dos rompio. El launcher queda como camino declarado.
 
 **ALTO.**
+
+---
+
+## CORRECCION de atribucion — eran tres lugares, no uno — 2026-10-09 23:51 UTC
+
+**Suite: 438 passed.** Nace de `8b062a7`, donde Opus marca que *"No se filtra
+contenido —eso seria interpretar (delamor)"* es **suyo** (`1535ff9`), y que
+delamor dijo *"corregirlo"*, que era sobre el mensaje vacio.
+
+### No lo deje para "la proxima vez que se toque el archivo"
+
+Opus escribio: *"se corrige la proxima vez que se toque el archivo"*. **Lo
+corregi ahora.** Una atribucion equivocada en un docstring **esta en el codigo**:
+quien lo lea la toma como un hecho, y *"la proxima vez"* es una fecha que no
+existe. Cuesta una linea.
+
+### Eran tres, y Opus nombro uno
+
+| archivo | linea | decia |
+|---|---|---|
+| `autonomous_device.py` | 314 | *"seria interpretar (delamor)"* |
+| `test_generacion_vacia.py` | 15 | *"seria interpretar (delamor)"* |
+| `test_generacion_vacia.py` | 147 | *"**delamor: no se toca `[assistant]`**"* |
+
+Los tres pasan a **Opus, `1535ff9`**, y dicen que delamor dijo *"corregirlo"*
+sobre el vacio, que es lo que dijo.
+
+Es la misma forma que *"cuatro llamadores eran nueve"*: el que avisa ve el que
+tiene delante, y el barrido lo tiene que hacer el que toca el archivo.
+
+### Tercera vez hoy, y las tres en el mismo sentido
+
+1. `4853baf` — atribui a delamor una correccion de Opus (el filtro absorbente).
+2. CP2v — *"pedido de delamor"* por un pedido de Opus.
+3. Esta.
+
+**Las tres se corrieron hacia delamor.** Las dos primeras las cerro delamor
+diciendo que el canal perdio el origen (`af56fee`), y desde entonces los bloques
+vienen con `Opus:`. **Esta no tiene esa excusa:** la decision estaba escrita en
+DECISIONES con su hash, yo la lei, y al escribir el docstring puse a delamor
+igual. El sesgo no es del canal: **atribuyo a quien da la orden y no a quien
+escribio la frase**, y la orden y la frase no son lo mismo.
+
+Queda anotado en el test, al lado del codigo, no solo aca.
+
+**ALTO.**

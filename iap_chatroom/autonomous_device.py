@@ -311,7 +311,8 @@ class AutonomousDevice:
 
         El segundo caso es de la familia del `[assistant]` del vivo 03 y del
         leak de prefijo del Caso 0.14. **No se filtra contenido** —eso sería
-        interpretar (delamor)—: sólo se registra qué lo vació.
+        interpretar (**Opus**, `1535ff9`; delamor dijo *"corregirlo"*, que era
+        sobre el mensaje vacío)—: sólo se registra qué lo vació.
         """
         cruda = await self._llamar_llm(self._to_chat_messages(), "generate")
         if cruda is None:

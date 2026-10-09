@@ -12,8 +12,8 @@ espacios **no se publica**; se registra con `causa: "generacion_vacia"` y la
 respuesta cruda. Test + inversión.
 
 **Y lo que NO se toca:** el otro texto del vivo 03 era `'[assistant]'`. Filtrar
-contenido sería interpretar (delamor), así que sigue publicándose y hay un test
-que lo afirma — para que no se "arregle" después sin decidirlo.
+contenido sería interpretar (**Opus**, `1535ff9`), así que sigue publicándose y
+hay un test que lo afirma — para que no se "arregle" después sin decidirlo.
 """
 
 from __future__ import annotations
@@ -144,9 +144,14 @@ def test_distingue_el_vacio_del_provider_del_que_dejo_el_strip(canal) -> None:
 
 def test_assistant_SIGUE_publicandose(canal) -> None:
     """
-    **delamor: no se toca `[assistant]`.** Era el otro texto del vivo 03 y
-    filtrarlo sería interpretar el contenido: nadie decidió que `[assistant]`
-    no sea un mensaje.
+    **No se toca `[assistant]`** (**Opus**, `1535ff9`). Era el otro texto del
+    vivo 03 y filtrarlo sería interpretar el contenido: nadie decidió que
+    `[assistant]` no sea un mensaje.
+
+    Lo que dijo delamor fue *"corregirlo"*, y era sobre el **mensaje vacío**.
+    Atribuí a delamor la frase sobre no filtrar, que es de Opus: tercera vez hoy
+    que una atribución se me corre, y las tres en el mismo sentido — hacia
+    delamor.
 
     Este test existe para que no se "arregle" de paso. Si algún día se decide
     filtrarlo, **este test tiene que fallar primero** y alguien tiene que venir

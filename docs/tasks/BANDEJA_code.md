@@ -3844,3 +3844,42 @@ Esos no colapsan en el piso. Pero no existen todavia: el objetivo es del caso Z
 (delamor), y mientras no este, el lazo solo tiene lo del punto 3.
 
 **Pido el resto del mensaje. ALTO.**
+
+---
+
+## CORRECCION de atribucion — la correccion del filtro es de Opus — 2026-10-09 05:02 UTC
+
+Sin cambios en el codigo. Las entradas anteriores **no se editan**: esto las
+corrige desde aca.
+
+### Que atribui mal
+
+La entrada **CORRECCION (delamor) — el silencio absorbente es del filtro**
+(04:57 UTC, commit `4853baf`) y su mensaje de commit dicen *"delamor corrige"*.
+**No es de delamor: es de Opus.** delamor lo relevo sin marcarlo, y despues lo
+explicito.
+
+Afecta dos lugares, los dos ya pusheados y por eso no reescritos:
+
+- esta BANDEJA, entrada de 04:57 — corregida **por esta entrada**;
+- el mensaje de `4853baf` — queda como esta, con esta entrada al lado.
+
+### Que de eso era mio
+
+delamor toma la divergencia como suya, por no haber marcado el relevo en el
+prompt. Que sin la marca no era distinguible, es cierto.
+
+Pero **la senal estaba en el texto que me paso**. El mensaje de Opus que delamor relevo
+abria con *"Asi es, y la forma en que lo dice Code es mas precisa que **la
+mia**"*. *"La mia"* solo tiene sentido si la formulacion original era suya. Lo
+lei como asentimiento a algo que ya estaba atribuido, y no como autoria. **Tenia
+con que corregirlo antes de que me lo dijeran y no lo use.**
+
+### Lo que no cambia
+
+El contenido de la correccion: el filtro es el unico de los dos que tiene estado
+entre O y D, y por eso el unico que puede hacer absorbente al silencio. Eso vale
+igual, y vale por el argumento, no por quien lo dijo. Lo que cambia es **de
+quien es**, que en este proyecto no es un detalle.
+
+**ALTO.**

@@ -11,7 +11,24 @@
 
 ## Último CP cerrado
 
-**VIVO 03 — el criterio local en vivo.** Corrido el 2026-10-09. **23 → 9 llamadas** (7 al gate
+**CP0 — mapa de quién juzga contra W.** Cerrado el 2026-10-10 (`8f97a54`), sin código.
+Suite **451**. `get_W()` devuelve una copia, así que por construcción nadie sabe cuándo
+envejeció. Monitor es el único que pregunta; COCO no tiene noción de versión y no puede fechar
+sus mediciones; `gatekeeper_c1.c1` es función pura **sin un solo llamador vivo**; la Firma sella
+el sha de ahora y reporta un `D_ckm` de otra W, teniendo el dato para detectarlo en el mismo
+dict (`panel["condicion_W"]["w_sha"]`). D7 no tiene consumidores. El rebuild se decide dentro
+de `ingest`: un umbral de cuenta y un booleano entre "cada ingest" y "una sola vez".
+**Cinco mecanismos construidos y ningún consumidor** — un criterio nuevo sería el sexto.
+Respuesta sobre las dos formas del Gatekeeper en `16fab95`.
+
+**Fixes de la serie `7cd48d3`:** 1 cerrado (`f7b87b6`, el README del freeze decía 67 y 620 KB;
+son 62 y 441 kB, y 67 nunca fue cierto). 2 cerrado (`9140de5`, `--state-dir` como argumento de
+arranque; lo que hace al fix es el orden de dos líneas). `iap_chatroom/_state/` trackeado
+(`4ab7be8`, la razón para ignorarlo era falsa). **3 ABIERTO**: driver listo en
+`experiments/fix3_smoke_casos_groq.py`, **no corrido** — espera la decisión de delamor sobre el
+tope (162-324 llamadas con `--tope 20`, 888-1776 sin tope). **4 SIN ARRANCAR** (AgentDeviceSkin).
+
+Antes: **VIVO 03 — el criterio local en vivo.** Corrido el 2026-10-09. **23 → 9 llamadas** (7 al gate
 + 2 de `_generate`), 62.5 s, 12 vueltas por device, 0 errores. El piso disparó en los dos
 devices (vueltas 12 y 10, no la 8 predicha: `criterio` reseteó el contador por los joins y los
 mensajes — estaba escrito como "no es teorema"). `piso_dentro_del_horizonte = True` en los dos.
@@ -104,27 +121,14 @@ aceptado en `2ad873e`.
 
 ## Qué espera, y de quién
 
-- **Nada bloqueante.** El borde se cerró con la ventana en tiempo, sin tocar `get_messages`: el
-  `>=` ya no hace falta y no se escala.
-
-- **Nada bloqueante.** El CLOCK quedó decidido (E3, `f07a9dc`) e implementado en el CP1.
-- Sin implementar hasta el OK de delamor: **el criterio local sin LLM** y **WAIT** (TASK §1).
-
-## Próximo paso
-
-**El primer vivo con Groq**, que **no es mío**: necesita la clave como secret del Codespace, el
-límite de la cuenta, y que delamor lea el gate. Después, **CP2b**.
-
-Lo que sigue después del vivo: **CP2b — el criterio local encima** (OK de delamor, `e737e78`): `skip` registrado con su motivo,
-auditoría **al azar sobre las dos caras**, umbrales declarados "no calibrados", y el test que
-pide delamor: en silencio y con objetivo, el filtro **igual** deja pasar a D alguna vez — que el
-filtro no vuelva absorbente el silencio.
-
-Los tres requisitos del CP2 quedaron cumplidos en el CP2a: el `since` del canal, el clock
-observado en silencio, y `get_messages` probado con el `since` real del device.
-
-**Después:** el CP3 (el caso Z, de delamor) y la corrida viva, que espera las claves. El costo
-estimado está reportado y lo decide delamor.
+1. **Fix 3** — si se corre el smoke y con qué tope. **delamor.**
+2. **Fix 4** — AgentDeviceSkin: agente devuelve `None` → UNKNOWN (no `OP_SILENCE`); `trigger=None`
+   no rompe. Pedido en `7cd48d3`, sin arrancar.
+3. **La forma del Gatekeeper** (a: pregunta quien llama / b: recibe el sha obligatorio). El mapa
+   dice que (b) es la única que se puede hacer hoy y la que vuelve (a) inevitable.
+4. **Calibración: EN PAUSA** (delamor, conceptual). No arrancar el CP0 de Calibración.
+5. **El cuarto paso del ODA**: pregunta abierta, de delamor. Las dos lecturas del registro son de
+   instancias; retiré la mía como fundada (`3ef7620`). `autonomous_device.py:8` no se toca.
 
 ## Base
 

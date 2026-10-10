@@ -216,6 +216,11 @@ class CKMMonitor:
             "temp_signal": temp_signal,
             "n_agentes": len(self._devices_seen),
             "corpus_status": corpus_status,
+            # **Dónde está escribiendo esto.** Va al panel para que cada vivo
+            # deje dicho dónde escribió, y no haya que deducirlo del comando
+            # que lo lanzó (delamor/Opus, fix 2). El vivo 02 acumuló estado
+            # entre corridas y nadie lo declaraba.
+            "state_dir": str(self._state_dir),
         }
 
     def get_firma(self) -> dict | None:

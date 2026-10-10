@@ -14,13 +14,19 @@ from typing import Optional
 
 from fastmcp import FastMCP
 
+from iap_chatroom import arranque
 from iap_chatroom.channel import ChatChannel
-from iap_chatroom.ckm_monitor import CKMMonitor
 from iap_chatroom.device_manager import DeviceManager
 
 channel = ChatChannel()
 device_manager = DeviceManager()
-ckm_monitor = CKMMonitor()  # min_texts=3 (default actual del umbral rebuild(W))
+# min_texts=3 (default actual del umbral rebuild(W)).
+#
+# **El `state_dir` sale de `arranque`** y no de un `CKMMonitor()` pelado: éste
+# es el PRIMER `CKMMonitor()` del proceso —`server.py` importa este módulo
+# antes de construir el suyo—, así que es acá donde se fija el directorio. Sin
+# `--state-dir`, `arranque` devuelve `None` y queda el default de siempre.
+ckm_monitor = arranque.monitor()
 
 mcp = FastMCP("iap-chatroom")
 

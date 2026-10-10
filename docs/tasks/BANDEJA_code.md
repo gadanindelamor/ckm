@@ -4782,3 +4782,98 @@ sostiene es el comando, que esta escrito en la nota para que cualquiera lo
 repita. **Declarado, no omitido** (regla de completitud).
 
 **ALTO.**
+
+---
+
+## REPORTE FIX 2 — F3a desde el server — 2026-10-10 01:03 UTC
+
+**Suite: 451 passed** (eran 438). Archivos nuevos:
+`iap_chatroom/arranque.py`, `tests/test_state_dir_desde_el_server.py` (13).
+Tocados: `server.py`, `mcp_server.py`, `ckm_monitor.py` (una linea del panel).
+
+### El argumento
+
+`python server.py --state-dir RUTA` (o `--state-dir=RUTA`). **Sin argumento, el
+default de siempre.** Explicito y **no variable de entorno**: una variable no
+queda en el comando, y entonces el log de un vivo no alcanza para saber donde
+escribio.
+
+### Lo que hace que el fix sea el fix: el orden de dos lineas
+
+El singleton se arma **al importar**. El primer `CKMMonitor()` del proceso esta
+dentro de `mcp_server`, que `server.py` importa. Cuando corre
+`if __name__ == "__main__"` la instancia ya existe y su directorio ya esta fijado
+(`__init__` corta con `if self._initialized: return`).
+
+Asi que `arranque.leer_de_argv(sys.argv)` va **antes** de
+`from iap_chatroom.mcp_server import mcp`. Si quedara despues, **el argumento no
+haria nada y no habria forma de notarlo**: el server arrancaria, escribiria en el
+default, y el panel diria el default sin que nadie lo pidiera.
+
+Por eso hay un test estructural sobre el orden de esas dos lineas
+(`test_server_lee_el_argumento_antes_de_importar_mcp_server`). Un test sobre el
+orden de dos imports parece fragil; es lo contrario: es lo unico que se rompe si
+alguien los ordena sin saber por que estaban asi.
+
+### Lo que el server declara
+
+Al arrancar imprime `[server] state_dir = ... (pedido por --state-dir | default)`,
+y si lo pedido no coincide con lo efectivo, **avisa**. El panel de Monitor
+(`get_state()`) lleva `state_dir`: cada vivo deja dicho donde escribio, sin que
+haya que deducirlo del comando.
+
+`declarar()` separa tres cosas que se confundirian en una:
+
+| campo | que dice |
+|---|---|
+| `state_dir` | el **efectivo**, leido de la instancia |
+| `state_dir_pedido` | lo que se pidio, o `None` si nadie pidio |
+| `fue_pedido` | distingue *"pidieron el default"* de *"nadie dijo nada"* |
+| `coincide` | `None` sin pedido —no hay con que comparar—, no `False` |
+
+El `coincide` existe por el caso del launcher del vivo 03: si otro construyo el
+monitor primero, el efectivo es el suyo, y **el panel dice el real y no el que yo
+pedi**.
+
+### El launcher del vivo 03 queda
+
+No se borra (orden de delamor). Y sigue funcionando: `arranque.monitor()`
+devuelve el singleton, asi que sus dos `assert` —que `server.ckm_monitor` y
+`mcp_server.ckm_monitor` sean la misma instancia— se siguen cumpliendo.
+
+### Las tres inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | `monitor()` ignora el argumento (`CKMMonitor()`) | 3: `..._monitor_escribe_ahi`, `..._panel_lleva_el_state_dir`, `..._declarar_dice_el_efectivo_y_el_pedido` | 451 |
+| B | la lectura del argumento **despues** del import | `test_server_lee_el_argumento_antes_de_importar_mcp_server` (`assert 44 < 41`) | 451 |
+| C | `mcp_server` vuelve al `CKMMonitor()` pelado | `test_ningun_entry_point_construye_un_CKMMonitor_pelado` | 451 |
+
+### Lo que las inversiones dejaron ver, y no era el fix
+
+**1. La inversion A pudo haber escrito en la traza de agosto.** Con el argumento
+ignorado, `test_con_argumento_el_monitor_escribe_ahi` cae al default **y ese test
+ingesta textos**. Verificado por mtime: **no escribio**
+(`corpus_state.json` sigue en 2026-10-09 04:18, los otros dos en 2026-08-01).
+
+La razon es que el `assert cm.state_dir == destino` esta **antes** del ingest y
+corto ahi. **Eso fue suerte, no diseno.** Lo deje deliberado: la asercion ahora
+dice que es una guarda y por que.
+
+**2. Un test mio miro el texto y no el codigo.**
+`test_ningun_entry_point_construye_un_CKMMonitor_pelado` fallaba contra el
+**comentario que explica por que no hay que escribir `CKMMonitor()`**. Un test
+que no distingue el codigo de lo que se dice sobre el no mide el codigo.
+Corregido: ahora saca los comentarios antes de buscar.
+
+**3. `iap_chatroom/_state/` no estaba trackeado** y esta en `.gitignore:39`, con
+la razon escrita al lado: *"generado en runtime (**regenerable**)"*. **No es
+regenerable.** Va aparte, por pedido de delamor en este mismo turno.
+
+### Sin test
+
+El `print` del arranque no esta testeado: se verifica a mano al levantar el
+server. **Declarado, no omitido.** Lo que si esta cubierto es `declarar()`, que
+es de donde sale el texto.
+
+**ALTO.**

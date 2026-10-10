@@ -2,7 +2,8 @@
 
 *v15 changes from v14 — BORRADOR de Opus (10 oct 2026). Cada cambio es propuesta: entra cuando delamor lo confirma.*
 *— Primera línea: decía "v13 — Sep" en un archivo v14. Autoría: + Claude Opus 5.5 (Cowork) — a confirmar por delamor.*
-*— §4.1 W: nota nueva — con presencia sola W ≥ 0 y T(W) = 0 por teorema (XᵀX es semidefinida positiva: no hay triángulos frustrados posibles). La no-co-ocurrencia no está representada: un par que nunca co-ocurre vale 0, igual que "sin información". El signo negativo sólo lo pone el marcador léxico, por texto entero.*
+*— §4.1 W: nota nueva — W de presencia no tiene entradas negativas; para balance y frustración en grafos con signo, sólo la referencia (Harary 1953; Toulouse 1977). La no-co-ocurrencia no está representada. El signo negativo sólo lo pone el marcador léxico, por texto entero.*
+*— Criterio de delamor (10 oct) aplicado a todo lo v15: lo que tiene demostración en la ciencia o en citas se expone sólo como referencia; nada insinúa corroboración propia ni "no puede testearse". El intento es desde la humildad.*
 *— §4.6: cuarta propiedad de la rama de extracción — origen del signo (abierta). Dos casos medidos de tensión fabricada por el marcador: substring ("distri**but**ion") y sintaxis narrativa ("but" en un cuento colaborativo).*
 *— §5.1: W_ckm_corpus_v2.json — origen UNKNOWN (delamor). Se retira "extracted from". Todo lo medido sobre ella lleva esa marca.*
 *— §5.2: nota de divergencia — `process/experiments/REG_p1p4_ckm_v25_corpus.json` (corpus CKM_v2-v25, N=32, 3 pares negativos, seed 42) da P2 y P4 NO_CONFIRMADA; la tabla dice Verified. A resolver antes de la versión final.*
@@ -823,19 +824,17 @@ unmarked, negative when the containing text carries an explicit opposition
 marker [*defined in corpus_service.py: `_OPPOSITION_MARKERS`*].
 
 *[v15 — Presence and the origin of sign.* Co-occurrence as counted here is
-presence: a pair contributes when both nodes appear in the same unit. A
-presence matrix is of the form XᵀX and is positive semidefinite with
-non-negative entries, so no triangle of W can carry a negative sign product:
-**with presence alone, structural tension T(W) is zero by construction**
-(T as fraction of coupling energy in negative pairs,
-REG_hipotesis_distancia_contextual_v1). Non-co-occurrence is not
-represented: a pair that never co-occurs and a pair about which the corpus
-says nothing both take W_ij = 0. Every negative entry in W therefore comes
-from the opposition-marker routing, which assigns the sign of a whole text to
-all of its pairs. Whether absence relative to expectation (φ, PMI) should
-enter W as a second representation is open (§9.5). The double meaning of
-0 — absence, or cancellation of both signs — is recorded in DEFS v15 §1.1 e;
-the theorem and the sign origin in DEFS v16 §1.1 g–h.*]
+presence: a pair contributes when both nodes appear in the same unit. A W
+built from presence alone has no negative entries; on balance and
+frustration in signed graphs see Harary (1953) and Toulouse (1977). For
+such a W the tension fraction T(W) of REG_hipotesis_distancia_contextual_v1
+(share of coupling energy in negative pairs) is zero by its definition.
+Non-co-occurrence is not represented: a pair that never co-occurs and a pair
+about which the corpus says nothing both take W_ij = 0 (DEFS v15 §1.1 e).
+Negative entries come only from the opposition-marker routing, which assigns
+the sign of a whole text to all of its pairs (§4.6). Whether absence relative
+to expectation should enter W as a second representation is left to future
+work (§9.5).*]
 
 Within a validation experiment, W is a static snapshot — P1-P7 operate on
 a fixed W built from a complete corpus dump (fourforums, CreateDebate).
@@ -1091,8 +1090,8 @@ collaborative story in which narrative connectors ("not the garden, **but**
 the absence", "a trade gone **wrong**") sent 8 of 24 texts to negative. In a
 third trace the only text with markers was the one stating that no tension
 existed yet ("a claim **against** observable reality", "a
-**disagree**ment"). The precondition already stated in §3 (markers assume
-adversarial positions by design) is not met in IAP channels. *[Measured on
+**disagree**ment"). In these traces the precondition already stated in §3 (markers
+assume adversarial positions by design) did not hold. *[Measured on
 local traces, 10 oct 2026; instrument tests in TASK_tests_instrumento_v1.]*
 
 **COCO — implementation scope:** The thermal regulation service is
@@ -2051,15 +2050,16 @@ the same traces with a convergent estimator.
 precede any further field claim: substring markers, SYSTEM messages outside
 the corpus, the presence theorem (T = 0), stability under a neutral ingest,
 declaration of each W (extractor, unit, normalization — no inherited labels),
-and a planted field. In the planted field the true sign is known by
-construction and the field is fixed, so every jump is instrumental; it is the
-known-answer pattern against which absence (φ, PMI) is tested as a second
-representation of W. A first toy run (12 nodes, document-frequency
-selection, not the repository extractor) found that absence produces negative
-weights from the corpus itself and places them **below chance frustration**
-(permutation null ≈ fair coin, 3p(1−p)² + p³): on the working-reports corpus
-PMI z = −2.53, φ z = −1.08; on two IAP traces z between −2.3 and −3.4. This
-is not a result until measured with the repository extractor. Fourforums,
+and a planted field. In the planted field the sign is set when the corpus is generated and the
+field does not change while it is ingested, so a jump between two W belongs
+to the instrument; it serves as a known-answer pattern for absence (φ, PMI)
+as a second representation of W. An exploratory run outside the repository extractor (12 nodes by document
+frequency) built absence-based W with φ and PMI on the working-reports corpus
+and on two IAP traces, and compared their fraction of frustrated triangles
+with a permutation null; the observed fractions lay below the null in the
+three corpora (working reports: PMI z = −2.53, φ z = −1.08; IAP traces: z
+between −2.3 and −3.4). It is reported as exploration, to be repeated with
+the repository extractor. Fourforums,
 with annotated stance and MTurk disagreement (60 opposition pairs, all
 crossing stance), is the external known-answer corpus for the same test.
 *[TASK_tests_instrumento_v1; DECISIONES_opus 10 oct 2026.]*
@@ -2163,6 +2163,12 @@ percolation on complex networks. *Physical Review E*, 73(5), 056101. ✅
 
 Bak, P., Tang, C., & Wiesenfeld, K. (1987). Self-organized criticality.
 *Physical Review Letters*, 59(4), 381–384. ✅
+
+Harary, F. (1953). On the notion of balance of a signed graph. *Michigan
+Mathematical Journal*, 2(2), 143–146. [VERIFY]
+
+Toulouse, G. (1977). Theory of the frustration effect in spin glasses: I.
+*Communications on Physics*, 2, 115–119. [VERIFY]
 
 [PENDING — §2.5]: Extended criticality in neuronal networks.
 

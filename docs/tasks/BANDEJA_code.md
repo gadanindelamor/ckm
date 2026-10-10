@@ -5043,3 +5043,167 @@ rompa **no se arregla**.
 el "no rompio" tiene que valer para el caso entero, va sin tope y son 888-1776.
 
 **ALTO.**
+
+---
+
+## CP0 — mapa de quien juzga contra W — 2026-10-10 01:22 UTC
+
+*Orden de delamor: **vision global sostenida**, el cambio sobre el mapa y no
+como parche local (DECISIONES `9e46d5e`). **Sin codigo.** Suite: 451, intacta.*
+
+**El fix 3 sigue abierto**, esperando tu decision sobre correr el smoke y con
+que tope. Hago el CP0 porque no depende de eso.
+
+Desde donde mire: `services/`, `iap_chatroom/`, `tests/`, `experiments/` y
+`process/` cuando hizo falta. Lo que digo que "no existe" es sobre esos.
+
+---
+
+### 1. Todos los que juzgan o miden contra W
+
+**El mecanismo de fondo, antes de la tabla:** `corpus_service.get_W()` devuelve
+**`self._W.copy()`**. Cada lector se queda con **una foto**. No es un defecto de
+ningun componente: **por construccion, nadie que tenga W sabe cuando envejecio**,
+salvo que pregunte por su cuenta.
+
+| quien | de donde saca W | que version conoce | donde puede pasar una vieja |
+|---|---|---|---|
+| **`gatekeeper_c1.c1`** (`services/`) | **la recibe como argumento** | **ninguna** | **no puede preguntar**: es funcion pura, no tiene corpus. Y **no tiene un solo llamador vivo** — solo `tests/test_gatekeeper_c1.py` |
+| **`core.py:gatekeeper()`** (`process/initial_static_model/`) | `self.W = W.copy()` (L89) | ninguna | **guarda su copia y la muta**: `self.W += (lr/N)·outer(p,p)` (L358, Hebbian). Esta en la **capa raiz, que no esta en uso**, y la llama `mcp_adapter.py`, tambien de esa capa |
+| **`MonitorService.evaluate`** | `self.corpus.get_W()` **fresca en cada evaluacion** (L217) | **si**: guarda `self._w_sha` y lo compara con `corpus.w_sha()` en `_invalidar_si_W_cambio` (L419-429) | el unico que ya pregunta. Su panel tiene `"gatekeeper_c1": None` (L331): casillero declarado y vacio |
+| **COCO** | `self.W = W` **al nacer** (L199); mide `A0` sobre `self.W` sola y `W_eff = self.W + self._Delta` | **ninguna** — cero menciones de `w_sha`/`w_version` en `coco.py` | **nunca la re-lee.** Su frescura depende enteramente de que **otro lo haga renacer** (`_renacer_coco`, atado al `w_version_id` del ciclo). COCO **no puede fechar sus propias mediciones** |
+| **`FirmaService.firmar`** | `corpus.w_sha()` primero (L108); `corpus.get_W()` **solo si la trayectoria esta vacia** (L118) | **la sella**: `w_sha` es campo de la Firma | **aca esta el caso mas filoso.** Ver abajo |
+| **`CKMlandscapeConfig` / `Ciclo`** | no lee W: recibe el sha | **si**: `w_version_id` = sha256(W); el `medido` cambia si y solo si cambia (L326, L342) | — |
+
+#### El caso de la Firma, verificado
+
+```python
+w_sha = corpus.w_sha()            # el sha de AHORA
+...
+traj = monitor.trajectory()
+if traj:
+    d_ckm = traj[-1]["panel"]["D_ckm"]    # medido contra la W de ENTONCES
+```
+
+**La Firma sella el sha actual y reporta un `D_ckm` medido contra otra W**, si W
+cambio despues de ese punto de la trayectoria. Nada lo declara.
+
+Y lo que lo vuelve preciso: **el dato para detectarlo ya esta en el mismo dict.**
+`monitor_service.py:291` pone en cada panel
+`"condicion_W": self._condicion_W(W, nodes)`, cuyo docstring dice *"Bajo que W y
+con que muestreo se midio este panel"* y cuyo primer campo es **`w_sha`**
+(L702). Se persiste con el panel (`_persist`, L790-795).
+
+Asi que **`traj[-1]["panel"]["condicion_W"]["w_sha"]` esta ahi y `firmar` no lo
+mira.** No falta la informacion: falta la comparacion.
+
+*(En la traza de agosto —`monitor_trajectory.jsonl`, 4 registros— el panel **no**
+tiene `condicion_W`: es anterior. Asi que la discrepancia es detectable de aca en
+adelante y **no** retroactivamente.)*
+
+#### La consulta que existe y nadie usa
+
+D7 esta implementado: `corpus_service.w_changed_since(sha)` (L136) y
+`w_change_since(sha, nodes)` (L140), cuyo docstring dice **"Notifica, no
+invalida"**.
+
+**Consumidores fuera de `corpus_service` y sus tests: ninguno.** La unica llamada
+viva esta **dentro del propio `corpus_service`**, L154, armando el dict que
+`w_change_since` devuelve. **La consulta esta construida y no tiene quien
+pregunte.**
+
+#### Dos nombres para lo mismo
+
+`w_sha` (Firma, panel, Monitor) y `w_version_id` (Config, Ciclo) son **el mismo
+sha256(W)** (`ckm_landscape_config.py:22`). No es un hallazgo, es algo a tener
+presente si se unifica la pregunta: hoy el mismo valor viaja con dos nombres
+segun quien lo mire.
+
+---
+
+### 2. Donde se decide hoy el rebuild, nombrado
+
+**Un solo punto, y esta adentro de `ingest`** (`corpus_service.py:101-104`):
+
+```python
+if len(self._texts) >= self.min_texts:
+    if not (self._rebuild_suspendido and self._W is not None):
+        self._rebuild()
+```
+
+Los criterios, nombrados como lo que son:
+
+| criterio | que es | regimen que produce |
+|---|---|---|
+| `len(self._texts) >= self.min_texts` | **un umbral de cuenta de textos** | ninguna W hasta cruzarlo |
+| `rebuild_suspendido = False` (**default**) | **la ausencia de criterio** | **rebuild en CADA ingest** una vez cruzado el umbral |
+| `rebuild_suspendido = True` (**canal vivo**, `ckm_monitor.py:82`) | **un interruptor** | rebuild **exactamente una vez** —la primera, con `_W is None`— y **nunca mas** |
+
+**Los dos extremos y nada en medio.** No hay un criterio que decida *cuando*
+salta: hay un umbral para el primer salto y un booleano que elige entre "siempre"
+y "nunca". **La ingesta decide el salto**, que es lo que delamor dice que no
+deberia.
+
+#### La señal que existe y no dispara
+
+`iap_chatroom/ckm_monitor.py:190-194` calcula:
+
+```python
+self._last_rebuild_signal = (
+    self._corpus.should_rebuild(self._d_ckm_history, n=3)
+    or len(self._corpus._texts) >= self._corpus.min_texts * 2
+    or self._ciclos_sin_rebuild >= MAX_CICLOS
+)
+```
+
+con el comentario de al lado diciendolo: *"Señal observable — **no fuerza el
+rebuild todavia** (eso sigue gobernado por el chequeo de volumen interno de
+`ingest()`)"*.
+
+Asi que `should_rebuild` **existe, se llama en el canal vivo, y su resultado no
+llega al punto de decision.** Y hay **tres** criterios ahi (gradiente de D_ckm,
+volumen al doble, ciclos sin rebuild) que **ninguno** gobierna nada.
+
+`landscape_signal` entra a `ingest` y **solo se guarda** en
+`_last_landscape_signal` (L100-101): no participa de la condicion.
+
+---
+
+### 3. Que cambiaria si cada uno preguntara y declarara su W
+
+**No propongo criterio de `should_rebuild`** — es conceptual y lo ve delamor.
+Esto es lo que se mueve, componente por componente:
+
+1. **La Firma.** Es el cambio mas chico y el de mayor alcance: comparar
+   `traj[-1]["panel"]["condicion_W"]["w_sha"]` con `corpus.w_sha()` y **declarar
+   la discrepancia en la Firma**. No necesita un dato nuevo. Hoy una Firma puede
+   certificar un `D_ckm` de otra W **y verse identica** a una que no.
+2. **COCO.** Es el que **no puede** declarar: no tiene ninguna nocion de version.
+   Darsela significa que sus mediciones se puedan fechar — y entonces
+   `_renacer_coco` dejaria de ser el unico que sabe si COCO esta al dia.
+3. **El Gatekeeper.** *"Que el Gatekeeper pregunte"* no tiene hoy un lugar donde
+   hacerse: `c1` es funcion pura **sin un solo llamador vivo**, y el que juzga
+   con `.c1` esta en la capa raiz que no esta en uso. Asi que son **dos cosas**:
+   (a) que la sentencia declare contra que W juzgo —y eso solo lo puede hacer
+   quien le pasa W, porque `c1` no tiene corpus—; (b) que exista un llamador
+   vivo. Hoy el panel tiene el casillero (`"gatekeeper_c1": None`) y nada lo
+   llena.
+4. **Monitor.** Ya pregunta. Lo que le falta es que **lo que emite** lleve la
+   respuesta hacia afuera: su panel ya declara `condicion_W`, y quien lo consume
+   —la Firma— no la lee.
+5. **Lo que no cambia.** `get_W()` seguiria entregando copias. Preguntar no quita
+   la foto: la fecha. La unica forma de que nadie tenga una copia vieja es que
+   nadie guarde copia, y eso es otra discusion.
+
+#### La asimetria que el mapa deja a la vista
+
+**Lo que existe no es el problema.** Estan: la consulta (D7), la version
+(`w_sha`/`w_version_id`), la declaracion por panel (`condicion_W`), la señal
+(`should_rebuild`) y el casillero del Gatekeeper.
+
+**Lo que no existe es un solo consumidor de ninguna de esas cosas.** Cinco
+mecanismos construidos y declarados, y la cadena cortada en el ultimo paso cada
+vez. Eso **no se arregla con un criterio nuevo**: con un criterio nuevo seria el
+sexto mecanismo sin consumidor.
+
+**ALTO.**

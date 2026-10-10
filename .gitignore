@@ -35,8 +35,20 @@ tmp_*.json
 tmp_*.py
 GPT53_REG_hat_feedbak.md
 
-# IAP Chatroom — corpus/monitor state generado en runtime (regenerable)
-iap_chatroom/_state/
+# IAP Chatroom — el estado del canal.
+#
+# **Se trackea** (delamor, 2026-10-10: "bueno trackealo"). Antes decía
+# "generado en runtime (regenerable)" y estaba ignorado por esa razón.
+# **La razón era falsa:** no es regenerable. Es el estado acumulado de la serie
+# de agosto (8 textos) más los 4 joins de los vivos 01 y 02 — y 8 de esos 12
+# textos son joins. No hay comando que lo vuelva a producir.
+#
+# Se puede trackear ahora sin que cada corrida ensucie el repo porque desde el
+# fix 2 los vivos escriben en su propio directorio
+# (`server.py --state-dir`), así que este no debería volver a moverse. Si se
+# mueve, es que alguien corrió sin el argumento, y eso es un dato.
+#
+# iap_chatroom/_state/   <- regla retirada
 
 # stochastic_attractor_eval.py — locks de coordinación efímera, no evidencia
 process/experiments/stochastic_eval/*.lock

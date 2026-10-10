@@ -4877,3 +4877,71 @@ server. **Declarado, no omitido.** Lo que si esta cubierto es `declarar()`, que
 es de donde sale el texto.
 
 **ALTO.**
+
+---
+
+## REPORTE — `iap_chatroom/_state/` trackeado — 2026-10-10 01:04 UTC
+
+*delamor, en este turno: **"bueno trackealo"**. Sale de que en el fix 2 reporte
+que la traza de agosto no estaba bajo control de versiones.*
+
+### Que estaba, y por que no estaba
+
+`.gitignore:38-39`, con la razon escrita al lado:
+
+```
+# IAP Chatroom — corpus/monitor state generado en runtime (regenerable)
+iap_chatroom/_state/
+```
+
+**La razon era falsa: no es regenerable.** No hay comando que lo vuelva a
+producir — es el estado que quedo de correr la serie.
+
+### Que se trackea, medido
+
+`corpus_state.json` tiene **12 textos**, no 8. Comparado con la copia del freeze
+(`process/iap_series_freeze_20261008/_state/`, del 8 oct):
+
+| archivo | vs el freeze |
+|---|---|
+| `corpus_state.json` | **DIFERENTE** — 12 textos contra 8 |
+| `corpus_G_state.json` | igual |
+| `monitor_trajectory.jsonl` | igual |
+
+Los **4 de diferencia** son exactamente los joins de los dos vivos:
+`GroqLlama8B_1/2` (vivo 01) y `GroqGptOss20B_1/2` (vivo 02). Son los que
+entraban al corpus **antes de F3b**.
+
+Asi que lo que queda fijado es **el estado al 2026-10-09 04:18**, no el de
+agosto. Y de sus 12 textos, **8 son joins** — la condicion en que corrio la
+serie congelada.
+
+El archivo vivo tiene tambien dos claves que el del freeze no:
+`forced_w_pos` y `registro_borde`. Son del trabajo de la Config v3: el estado
+arrastra cambios de esquema, no solo textos.
+
+### Por que se puede trackear ahora y antes no
+
+Con la regla retirada, cualquier escritura en ese directorio aparece en
+`git status`. **Antes eso habria ensuciado el repo en cada corrida.** Desde el
+**fix 2** los vivos escriben en su propio directorio (`--state-dir`), asi que
+este no deberia volver a moverse.
+
+**Y si se mueve, es que alguien corrio sin el argumento** — que es justamente lo
+que no se podia ver hasta hoy, y ahora lo dice `git status`.
+
+### No use `git add -f`
+
+Habria trackeado los archivos dejando el `.gitignore` diciendo que estan
+ignorados: **el texto afirmando una cosa y el comportamiento otra**, que es lo
+que se corrigio hoy en `piso_vueltas` (el docstring decia "no opcional" y el
+constructor dejaba apagarlo). La regla se retira en el archivo, con la razon
+vieja citada y por que era falsa.
+
+### Sin test
+
+No hay comportamiento: es el estado del repositorio. Lo que lo sostiene es
+`git ls-files iap_chatroom/_state/`, que ahora devuelve tres archivos y antes
+devolvia vacio. **Declarado, no omitido.**
+
+**ALTO.**

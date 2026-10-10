@@ -5876,3 +5876,141 @@ CP3) y la historia acumulada del CP2b (fallo en el CP4).
 El punto de `calibrate` existe, esta declarado en el panel y **no hace nada**.
 
 **ALTO.**
+
+---
+
+## REPORTE CP1 (calibrate) — el mecanismo, y los tres estados — 2026-10-10 21:58 UTC
+
+*`TASK_calibrate_mecanismo_v1`, CP1. Leida entera. Ningun vivo.*
+
+**Suite: 508 passed** (eran 490), **18 tests nuevos**. Archivos nuevos:
+`services/calibrate.py`, `tests/test_calibrate_mecanismo.py`.
+
+### Docstring por archivo tocado
+
+| archivo | docstring |
+|---|---|
+| `services/calibrate.py` | **Nuevo, con docstring completo**: el concepto, el patron sin magnitud propia, los tres estados con sus nombres **declarados provisionales**, el cuarto no implementado, y los recursos. |
+| `tests/test_calibrate_mecanismo.py` | **Nuevo, con docstring**: los tres estados y por que `n_runs` va chico. |
+
+**Ningun otro `.py` tocado.** Pero la regla pide mas que eso, y eso dio el
+hallazgo de abajo.
+
+### La divergencia que la regla rindio, y es mia
+
+Mi docstring decia que los umbrales de COCO estaban *"con la marca
+`calibrado=False` al lado"*. **Falso**: `grep "calibrado" services/coco.py` da
+**vacio**. Esas marcas estan en `UmbralesCriterioLocal` y
+`ckm_landscape_config`.
+
+Y leyendo el docstring de `coco.py` —que la regla obliga a leer junto al
+codigo— aparecio **algo mas fuerte que lo que yo habia escrito** (L17-18):
+
+> *"Los umbrales D_CKM_THRESHOLD y FRAC_REC_MIN **se calibraron sobre la forma
+> lineal por conteo** (REG_destruccion_recuperacion_v1) y **NO se
+> recalibraron**."*
+
+**Se calibraron contra una cantidad que ya no es la que se compara.** La forma
+lineal por conteo es `deprecated_d_ckm` **desde el 5 oct 2026**; lo que hoy
+entra al umbral es `d_ckm`, logaritmica por masa de cuenca.
+
+**No esta escondido: esta declarado en el docstring.** Y el codigo solo no lo
+decia —el comentario de L92 dice "derivados del sweep", que no dice contra que
+forma—. **Leer el docstring dio mas que leer el codigo**, que es exactamente
+para lo que la regla existe. Corregido en mi modulo, y de ahi sale una
+consecuencia: **el `0.40` no es comparable con lo que sale de este mecanismo.**
+
+### El patron no tiene magnitud propia
+
+Si el patron trajera escala, habria que calibrar el patron. Asi que:
+
+- **colapso**: `W'` con todos los acoplamientos positivos e iguales a
+  **`max|W|` de la misma W**;
+- **expansion**: el signo invertido en una **fraccion** de los pares, con
+  semilla —sin ella, dos calibraciones de la misma W darian extremos distintos
+  y el margen no seria comparable entre mesetas—;
+- **interpolacion**: `W_λ = (1 − λ)·W + λ·W_extremo`, sin dimension.
+
+`calibrate` busca el umbral que separa λ=0 de λ=1, y el umbral es el **punto
+medio** del salto con el **margen** declarado: un margen chico dice que el
+umbral se apoya en poco, y eso viaja **en el registro** en vez de quedar afuera.
+
+### La W vigente no se toca nunca
+
+Todo corre sobre `W.copy()`, con un `assert` al final de la funcion y un test
+que compara **bit a bit** la W que entro con la que salio. Es la condicion para
+que calibrar en la meseta no sea medir la meseta que se esta midiendo.
+
+### Los tres estados (nombres provisionales, los decide delamor)
+
+| estado | que dice | `valores` |
+|---|---|---|
+| `calibrado` | se ejecuto y **separa** | el umbral |
+| `no_calibrado` | **se ejecuto y no separa**, con la causa (`sin_separacion`, `W_sin_escala`, `d_ckm_no_medible`) | **vacio** |
+| `nulo_calibrado` | **no hubo calibracion**: no se ejecuto o no hay registro | **vacio** |
+
+Un test por estado, y uno que exige que **`nulo_calibrado` nunca se confunda con
+`no_calibrado`**: los dos dejan `valores` vacio y son distintos — *"mire y no
+encontre"* contra *"no mire"*. Es el mismo criterio que separo `OP_SILENCE` de
+`UNKNOWN` de `SKIP`, y un archivo roto de un estado de otra meseta: **el mismo
+efecto por dos causas distintas no es un estado.**
+
+`registro_nulo()` existe como funcion para que *"no se calibro"* tenga **la
+misma forma** que *"se calibro"*. Si el no-registro fuera `None`, quien lo
+consuma tendria que inventar la diferencia.
+
+**El cuarto estado no esta implementado** y hay un test que **afirma que hoy no
+existe**, para que si aparece sea por una decision y no de costado. Cuando
+delamor lo confirme, ese test tiene que fallar.
+
+### Lo que medi y no esperaba: la curva no es monotona
+
+Con una W sintetica de N=12, `D_ckm` a lo largo de la grilla da:
+
+| λ | 0.0 | 0.25 | 0.5 | 0.75 | 1.0 |
+|---|---|---|---|---|---|
+| `N_eff` | 21.46 | 2.16 | 2.19 | 3.35 | 3.40 |
+| `D_ckm` | 0.000 | **0.749** | 0.745 | 0.606 | 0.601 |
+
+**El extremo de colapso NO es el punto de mayor deformacion.** λ intermedios dan
+**menos** `N_eff` que λ=1.
+
+**No cambie la definicion del patron por mi cuenta** —el colapso es λ=1 **por
+construccion**, y el patron es de delamor—. Lo que hice fue **declararlo en el
+registro**: `d_max`, `lambda_de_d_max`, `curva_monotona` y
+`colapso_es_el_maximo`. Asi un margen chico por no-monotonia **no se lee como
+poca separacion**.
+
+Queda como pregunta, de ustedes: **si el patron tiene que usar λ=1 o el maximo
+de la grilla.** Con esta W el margen declarado es 0.601 y el disponible 0.749.
+
+### Un valor que sale en UNKNOWN y no inventado
+
+Si `D_ckm` separa y `frac_rec` no, el registro sale **`calibrado` con un valor
+y el otro en `"UNKNOWN"`**, con `frac_rec_no_separa: true` — no con los dos
+inventados.
+
+### Las cuatro inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | **inventa** `0.40`/`0.60` cuando no separa | 2, entre ellos `test_estado_no_calibrado_cuando_no_hay_separacion` | **508** |
+| B | `nulo_calibrado` **colapsa** en `no_calibrado` | `test_nulo_calibrado_NUNCA_se_confunde_con_no_calibrado` | 508 |
+| C | el patron trae **magnitud propia** (1.0 fijo) | `test_la_escala_sale_de_la_misma_W` | 508 |
+| D | `calibrate` **toca** la W que recibe | `test_la_W_que_entra_sale_igual_bit_a_bit` | 508 |
+
+### Lo que el CP1 NO afirma, declarado
+
+- **Que el umbral sea el correcto.** El mecanismo devuelve un numero propio; que
+  ese numero sirva necesita el **campo plantado**
+  (`TASK_tests_instrumento_v1` CP6), que no esta en este CP. El test lo dice en
+  su docstring: *"que se parezca al 0.40 no valida nada"*.
+- **Nada de persistencia** (CP2), **nada de aplicacion en el salto** (CP3),
+  **nada de la traza de W_{i−1}** (CP4) ni **sombra** (CP5). `escala_desde_traza`
+  entra como dato declarado y hoy **no se usa para nada mas**.
+- **Recursos declarados**: cada punto de la grilla es un `count_attractors`, y
+  el costo crece con N y `n_runs`. Va en `condiciones.n_runs` y
+  `condiciones.n_evaluaciones`. Los tests usan `n_runs=120` y N=12 **a
+  proposito**, y lo declaran.
+
+**ALTO.**

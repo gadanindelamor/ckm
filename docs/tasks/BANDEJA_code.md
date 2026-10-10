@@ -5338,3 +5338,118 @@ la suite: 451 -> 455.
 `causal_event`). **Ahi empieza el codigo.**
 
 **ALTO.**
+
+---
+
+## REPORTE CP2 — cada criterio dispara y deja su causal_event — 2026-10-10 19:43 UTC
+
+*`TASK_should_rebuild_conectado_v1`, CP2 de 5. **Acá empezo el codigo.***
+
+**Suite: 467 passed** (eran 455), **12 tests nuevos** en
+`tests/test_should_rebuild_conectado.py`. Tocados:
+`services/corpus_service.py`, `iap_chatroom/ckm_monitor.py`.
+**No se toco `MonitorService`, la Config ni COCO. No se renombro nada.**
+
+### Lo implementado
+
+**`CorpusService.rebuild_por_decision(causa)`** — metodo publico nuevo, nada
+renombrado. `causa` es **obligatoria y sin default**: un rebuild sin causa
+declarada no es una decision, y su `causal_event` mentiria. Misma forma que
+`n_agentes` esta mañana.
+
+**`_rebuild(causa=None)`** — el parametro es opcional **para que el rebuild por
+ingesta no cambie de marca**: sin causa, el `causal_event` es el de siempre.
+
+**`rebuild_suspendido` no bloquea la decision** (TASK punto 1). Sigue impidiendo
+el rebuild automatico por ingesta, que es lo que delamor descarto.
+
+**`CKMMonitor`**: la señal ahora dice **cual** criterio. `_last_rebuild_signal`
+**sigue siendo el bool y no se renombro**; al lado va `_last_rebuild_causa`, con
+la jerarquia **estructural > volumen > tiempo** en el orden de evaluacion. Y la
+señal **manda el rebuild**: dejo de ser uno de los cinco mecanismos sin
+consumidor que encontro el CP0.
+
+**El panel** (`get_state()`) lleva `rebuild_senal`, `rebuild_causa`,
+`ultimo_rebuild_por_decision` y `punto_calibrate`. Va al panel **del canal** y no
+al de `MonitorService`: tocar Monitor pide parar y reportar.
+
+**El punto de `calibrate`** queda marcado despues del salto, con
+`implementado: False` y el nombre de su TASK. Sin la marca, mañana el lugar se
+busca de nuevo.
+
+### Dos cosas que encontre implementando, y no eran el CP2
+
+**1. `register` deduplica por sha, asi que un rebuild por decision que no cambia
+W no deja `causal_event`.** `w_version.py:79-84`: *"Si W es identica, no crea
+marca duplicada"*.
+
+Mi primer test de `force_w_pos` reconstruia **los mismos textos**: W salia
+identica, no se registraba marca, y lo que leia era el `causal_event` **de la
+ingesta** — y el test fallaba acusando al codigo nuevo.
+
+**No lo cambio.** `w_version` registra **versiones de W**, no decisiones: si no
+hubo salto, no hay version que marcar. La decision **si** queda, en el panel
+(`ultimo_rebuild_por_decision`). Lo reporto porque la consecuencia no es obvia:
+**una decision de rebuild que no mueve W es invisible en `w_version`.**
+
+**2. La entrada "conocida" del estructural no lo era.** Puse
+`_d_ckm_history = [0.10, 0.20, 0.30, 0.40]` y la causa salio `None`. Medido:
+**el canal agrega un punto de `D_ckm` real despues** —0.0 en este corpus—, asi
+que la serie queda `[..., 0.40, 0.0]` y el ultimo gradiente es **negativo**.
+
+El arreglo no fue elegir otros numeros: la historia se construye **por debajo del
+valor que el canal agrega** (`[-0.4, -0.3, -0.2, -0.1]`), y el test **declara de
+que depende** con `assert d_del_canal == 0.0`. Si ese valor cambia, el test falla
+**diciendo que hay que rearmar la historia**, en vez de pasar por otro motivo.
+
+### Los tests, criterio por criterio
+
+| criterio | entrada | que verifica |
+|---|---|---|
+| **estructural** | historia a mano, **n+1 = 4 puntos** ascendentes | dispara, `causal_event` = `rebuild_por_decision:estructural`, y W cambia |
+| **estructural (no llega a n)** | **3 puntos** | `False` — y con el 4º el mismo gradiente **si** dispara: lo que faltaba era el punto |
+| **estructural (no monotono)** | 4 puntos con un gradiente negativo en medio | `False`: no es sostenido |
+| **volumen** | el 6º texto (`min_texts*2`) | dispara, `causal_event` = `...:volumen` |
+| **tiempo** | `_ciclos_sin_rebuild = MAX_CICLOS`, con 4 textos | dispara, `causal_event` = `...:tiempo` |
+| **jerarquia** | los tres en True a la vez | la causa es `estructural` |
+
+**Sobre el de tiempo, declarado:** es el unico que **no se puede producir con
+textos** sin que el volumen gane primero —el volumen dispara en el texto 6 y el
+tiempo necesita 10 mensajes sin rebuild—. La entrada se arma a mano y queda
+dicho.
+
+**Sobre el estructural, declarado:** con entrada conocida se prueba el
+**criterio**. Que el canal produzca esa historia es otra cosa: la medicion del
+28 sep dice que en vivo *"el estructural no emitia con D_ckm cuantizado"*, y
+**este CP2 no lo contradice** — en el corpus del test el canal da `D_ckm = 0.0`
+constante, que es exactamente el sintoma.
+
+**La jerarquia tiene su propio test** porque sin el estaria solo en un
+comentario: el `elif` se podria reordenar y nada lo diria. La inversion B lo
+confirma.
+
+### Las cuatro inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | la señal **no manda** el rebuild (el estado que encontro el CP0) | **7 tests** | 467 |
+| B | **jerarquia invertida** (volumen antes que estructural) | `test_cp2_la_jerarquia_se_respeta` | 467 |
+| C | el `causal_event` **pierde la causa** (vuelve a `"rebuild"`) | **5 tests** | 467 |
+| D | la causa **con default** y sin `ValueError` | `test_cp2_una_causa_vacia_no_es_una_decision` | 467 |
+
+### Lo que el CP2 NO hizo
+
+- **El volumen sigue contando el total del corpus**, asi que despues de
+  `2*min_texts` queda en True y **dispara un rebuild por mensaje**. Eso es el
+  **CP3** (punto 3 de la TASK), y hasta entonces el rebuild por decision es tan
+  continuo como el de la ingesta. **Lo digo porque el CP2 solo no mejora nada en
+  ese regimen: lo mueve de lugar.**
+- **La historia de `D_ckm` no se reinicia** en el salto: es el **CP4**.
+- Los umbrales (`n=3`, `2*min_texts`, `MAX_CICLOS=10`) **no se tocaron**: su
+  valor es calibracion.
+- `test_cp1_la_ventana_sin_senal_se_cierra_en_2x_min_texts` **sigue pasando**.
+  En el CP3 va a fallar, y entonces **se convierte en la afirmacion del
+  comportamiento nuevo con la traza de por que fallaba** (instruccion de Opus),
+  no se borra.
+
+**ALTO.**

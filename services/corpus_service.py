@@ -218,9 +218,48 @@ class CorpusService:
         except ValueError:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
-    def _rebuild(self) -> None:
+    def rebuild_por_decision(self, causa: str) -> dict:
+        """
+        Rebuild **por decisión**, no por ingesta. Devuelve `status()`.
+
+        `causa` es **obligatoria y sin default** (misma forma que `n_agentes`
+        esta mañana): un rebuild sin causa declarada no es una decisión, es un
+        rebuild sin nombre. Queda en `causal_event` de `w_version`.
+
+        **`rebuild_suspendido` no lo bloquea** (TASK, punto 1): ese flag impide
+        el rebuild **automático por ingesta**, que es lo que delamor descartó
+        —*"la ingesta no debe implicar rebuilds continuos"*—. El rebuild por
+        decisión es lo contrario de eso: es el salto entre mesetas.
+
+        Con el corpus en acumulación **no reconstruye y lo dice**: la primera W
+        se construye al cruzar `min_texts`, como hoy. Devolver un status normal
+        acá haría que un rebuild que no ocurrió se viera igual que uno que sí.
+        """
+        if not causa:
+            raise ValueError(
+                "rebuild_por_decision necesita una causa declarada: un rebuild "
+                "sin causa no es una decisión"
+            )
+        if len(self._texts) < self.min_texts:
+            st = self.status()
+            st["rebuild"] = False
+            st["motivo_no_rebuild"] = "corpus_en_acumulacion"
+            st["causa_pedida"] = causa
+            return st
+        self._rebuild(causa=causa)
+        self.save()
+        st = self.status()
+        st["rebuild"] = True
+        st["causa"] = causa
+        return st
+
+    def _rebuild(self, causa: Optional[str] = None) -> None:
         """
         Reconstruye nodos y W desde todos los textos acumulados.
+
+        `causa` llega sólo desde `rebuild_por_decision`. Sin ella el
+        `causal_event` es el de siempre, así que el rebuild por ingesta no
+        cambia de marca.
 
         Ruteo por texto:
           - sin marcador → pares suman a pos_counts
@@ -274,10 +313,22 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         self._nodes = nodes
         self._W     = W
-        self._w_versions.register(
-            W, len(self._texts),
-            causal_event="rebuild_debug_force_w_pos" if self._force_w_pos else "rebuild",
-        )
+        # El `causal_event`, con la causa de la decisión si hubo.
+        #
+        # El marcador `force_w_pos` **no se pierde** cuando hay causa: lo usan
+        # dos tests como traza de que esa W fue forzada
+        # (`test_wmixta_forzado_paso3`, `test_armstrong_wmixta_forced_wpos`), y
+        # borrarlo al agregar la causa haría que una W forzada por decisión se
+        # viera como una W normal.
+        if causa:
+            evento = f"rebuild_por_decision:{causa}"
+            if self._force_w_pos:
+                evento += "+debug_force_w_pos"
+        else:
+            evento = (
+                "rebuild_debug_force_w_pos" if self._force_w_pos else "rebuild"
+            )
+        self._w_versions.register(W, len(self._texts), causal_event=evento)
 
         # CorpusService ya no crea COCO (CP4 de TASK_monitor_coco_ciclo_orbita_v2;
         # delamor: "Que deje en paz a COCO. COCO es con Monitor").

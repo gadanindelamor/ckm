@@ -40,6 +40,13 @@ _STATE_DIR.mkdir(exist_ok=True)
 # no especificado por la task, ajustable sin cambiar la jerarquía.
 MAX_CICLOS = 10
 
+# Las tres causas del rebuild por decisión, con la jerarquía en el orden en que
+# se evalúan. Escritas acá para que no haya dos spellings sueltos: el mismo
+# string va al `causal_event` de `w_version` y al panel.
+CAUSA_ESTRUCTURAL = "estructural"
+CAUSA_VOLUMEN = "volumen"
+CAUSA_TIEMPO = "tiempo"
+
 
 class CKMMonitor:
     _instance: "CKMMonitor | None" = None
@@ -121,6 +128,13 @@ class CKMMonitor:
         self._d_ckm_history: list[float] = []
         self._ciclos_sin_rebuild = 0
         self._last_rebuild_signal = False
+        # Cuál de los tres criterios levantó la señal. `None` es "ninguno", y
+        # se distingue de `False`: el bool dice si hubo señal, esto dice de qué.
+        self._last_rebuild_causa: "str | None" = None
+        # El último rebuild por decisión, o None si no hubo ninguno todavía.
+        self._ultimo_rebuild: "dict | None" = None
+        # El lugar donde va `calibrate`. Existe y no hace nada: declarado.
+        self._punto_calibrate: "dict | None" = None
 
     @property
     def state_dir(self) -> Path:
@@ -184,14 +198,57 @@ class CKMMonitor:
             if d_ckm is not None:
                 self._d_ckm_history.append(d_ckm)
 
-        # Jerarquía: estructural (gradiente D_ckm) > volumen > tiempo.
-        # Señal observable — no fuerza el rebuild todavía (eso sigue
-        # gobernado por el chequeo de volumen interno de ingest()).
-        self._last_rebuild_signal = (
-            self._corpus.should_rebuild(self._d_ckm_history, n=3)
-            or len(self._corpus._texts) >= self._corpus.min_texts * 2
-            or self._ciclos_sin_rebuild >= MAX_CICLOS
-        )
+        # ── la señal, y ahora CUÁL criterio ───────────────────────────────
+        # Jerarquía declarada: estructural (gradiente D_ckm) > volumen >
+        # tiempo. Antes la señal era un `bool` y el comentario decía "no fuerza
+        # el rebuild todavía": se calculaba y su resultado no llegaba al punto
+        # de decisión, que estaba adentro de `ingest()`. El CP0 lo nombró como
+        # uno de los cinco mecanismos construidos sin consumidor.
+        #
+        # **`_last_rebuild_signal` sigue siendo el bool y no se renombra**
+        # (TASK: no se renombra nada). La causa va al lado, porque un bool no
+        # puede decir cuál de los tres disparó, y eso es lo que tiene que
+        # quedar en `causal_event`.
+        if self._corpus.should_rebuild(self._d_ckm_history, n=3):
+            self._last_rebuild_causa = CAUSA_ESTRUCTURAL
+        elif len(self._corpus._texts) >= self._corpus.min_texts * 2:
+            self._last_rebuild_causa = CAUSA_VOLUMEN
+        elif self._ciclos_sin_rebuild >= MAX_CICLOS:
+            self._last_rebuild_causa = CAUSA_TIEMPO
+        else:
+            self._last_rebuild_causa = None
+
+        self._last_rebuild_signal = self._last_rebuild_causa is not None
+
+        # ── la decisión manda el rebuild (TASK, punto 1) ──────────────────
+        # `rebuild_suspendido=True` sigue impidiendo el rebuild automático por
+        # ingesta; este no pasa por ahí.
+        if self._last_rebuild_signal:
+            st = self._corpus.rebuild_por_decision(self._last_rebuild_causa)
+            self._ultimo_rebuild = {
+                "causa": self._last_rebuild_causa,
+                "causal_event": (
+                    f"rebuild_por_decision:{self._last_rebuild_causa}"
+                    if st.get("rebuild") else None
+                ),
+                "ocurrio": bool(st.get("rebuild")),
+                "motivo_no_rebuild": st.get("motivo_no_rebuild"),
+                "w_sha": self._corpus.w_sha(),
+            }
+            if st.get("rebuild"):
+                # El contador de ciclos arranca de nuevo en el salto: lo que
+                # cuenta es cuántos ciclos van SIN rebuild.
+                self._ciclos_sin_rebuild = 0
+                # **Acá va `calibrate`** (`TASK_calibrate_mecanismo_v1`,
+                # confirmado). El punto existe y **no hace nada todavía**, y se
+                # declara así: dejarlo sin marca haría que mañana el lugar se
+                # buscara de nuevo.
+                self._punto_calibrate = {
+                    "existe": True,
+                    "implementado": False,
+                    "task": "TASK_calibrate_mecanismo_v1",
+                    "w_sha": self._corpus.w_sha(),
+                }
 
     def get_state(self) -> dict:
         status = self._corpus.status()
@@ -221,6 +278,18 @@ class CKMMonitor:
             # que lo lanzó (delamor/Opus, fix 2). El vivo 02 acumuló estado
             # entre corridas y nadie lo declaraba.
             "state_dir": str(self._state_dir),
+            # ── el rebuild por decisión, en el panel (TASK, punto 2) ───────
+            #
+            # `None` en `rebuild_causa` es **"no hubo rebuild por decisión"**,
+            # y no "no sé": si hubo, el campo trae cuál de los tres criterios
+            # disparó. Va acá —el panel que el canal expone— y no en el panel
+            # de `MonitorService`: tocar Monitor pide parar y reportar.
+            "rebuild_senal": self._last_rebuild_signal,
+            "rebuild_causa": self._last_rebuild_causa,
+            "ultimo_rebuild_por_decision": self._ultimo_rebuild,
+            # El punto donde va `calibrate`: existe y no hace nada. Declarado
+            # en el panel para que no haya que buscarlo de nuevo.
+            "punto_calibrate": self._punto_calibrate,
         }
 
     def get_firma(self) -> dict | None:

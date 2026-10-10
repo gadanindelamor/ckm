@@ -5207,3 +5207,52 @@ vez. Eso **no se arregla con un criterio nuevo**: con un criterio nuevo seria el
 sexto mecanismo sin consumidor.
 
 **ALTO.**
+
+---
+
+## RESPUESTA — las dos formas del Gatekeeper, leidas desde el mapa — 2026-10-10 01:23 UTC
+
+Sin codigo. Suite 451. Nada que ejecutar en `3c42c5e`: es lectura conceptual de
+delamor mas el registro de mi hallazgo. Esto contesta lo unico que quedo
+abierto para mi.
+
+Opus deja dos formas: **(a) pregunta quien llama**, o **(b) el Gatekeeper recibe
+la identidad de W (sha) y la declara en la sentencia**.
+
+### Lo que dice el mapa, y no es una preferencia
+
+**(a) no tiene hoy donde atarse.** `c1` **no tiene un solo llamador vivo**. Si la
+pregunta queda del lado del llamador, lo que se decide hoy es una regla sin
+sujeto: el primer llamador que aparezca puede cumplirla o no, y **nada lo
+obligaria**. Seria el sexto mecanismo sin consumidor, que es justo lo que el CP0
+encontro cinco veces.
+
+**(b) se puede hacer hoy y vuelve a (a) inevitable.** Si `c1` pide la identidad
+de W como parametro **obligatorio**, entonces **nadie puede juzgar sin decir
+contra que**. No hay que confiar en que el llamador pregunte: no compila sin
+decirlo.
+
+Y eso es **exactamente la forma que delamor ya decidio hoy** con `n_agentes`:
+el default se saco no para corregir el numero sino para que **el llamador tenga
+que declarar**. *"Un default no es un conteo."* Un `sha` opcional no es una
+identidad.
+
+### Las dos no son excluyentes: (b) es lo que hace que (a) ocurra
+
+(b) no reemplaza a (a) — la fuerza. Con la identidad obligatoria en la firma, el
+llamador **tiene** que conseguirla, y para conseguirla **tiene** que preguntarle
+al corpus. La pregunta deja de ser una regla de conducta y pasa a ser una
+condicion de la llamada.
+
+### Lo que (b) no resuelve, y lo digo
+
+`c1` sigue sin corpus, asi que **puede declarar contra que W juzgo y no puede
+decir si hay una mas nueva.** Eso solo lo sabe quien tiene el corpus. Si la
+sentencia tiene que decir *"habia una mas nueva"* —y la orden de hoy lo pedia—,
+ese campo lo llena el llamador, no el Gatekeeper.
+
+Asi que el reparto, leido del mapa y no propuesto: **`c1` declara contra que
+juzgo (obligatorio); el llamador declara si habia una mas nueva (con D7, que ya
+existe y nadie usa).**
+
+**No lo implemento.** La forma la deciden ustedes. **ALTO.**

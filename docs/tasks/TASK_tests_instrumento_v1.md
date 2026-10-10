@@ -75,6 +75,12 @@ No es unitario: es el **patrón de respuesta conocida**.
 
 **Decisiones abiertas de delamor que este CP no toma:** φ o PMI y contra qué nulo; W separadas o combinadas; sobre cuál juzga el Gatekeeper.
 
+### CP7 — Regla de disparo de COCO · `tests/test_coco_regla_disparo.py`
+
+*(agregado 10 oct, delamor: "COCO dispara sobre un umbral, y es verificable".)*
+- Barrido con k valores de `D_CKM_THRESHOLD` y de `FRAC_REC_MIN` contra entradas de D_ckm (forma masa log) **conocidas**: para cada par (umbral, D_ckm) el test confirma `stop_applied` de un lado del umbral y no del otro, y que `zone` corresponde.
+- Es mecanismo, no valor: **qué umbral es el adecuado es calibración** (TASK aparte).
+
 ## Fuera de este TASK
 
 Arreglar marcadores, normalizaciones o extracción; conectar `should_rebuild`; calibrar. Todo eso viene después, con delamor, sobre lo que estos tests muestren.

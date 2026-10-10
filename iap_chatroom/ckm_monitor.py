@@ -16,6 +16,7 @@ Nota de integración con services/:
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -78,6 +79,15 @@ class CKMMonitor:
         state.mkdir(parents=True, exist_ok=True)
         self._state_dir = state
         _monitor_jsonl_path = str(state / "monitor_trajectory.jsonl")
+        # ── CP2b: la decisión de rebuild, persistida ───────────────────────
+        # **Dos archivos y dos mecanismos, los mismos que ya usa este
+        # directorio** (criterio de congruencia de delamor):
+        #   - JSONL append-only para **eventos en el tiempo**, como
+        #     `monitor_trajectory.jsonl`;
+        #   - JSON snapshot para **estado**, como `corpus_state.json`.
+        # Una decisión de rebuild es un evento; los contadores son estado.
+        self._decisiones_path = state / "rebuild_decisions.jsonl"
+        self._rebuild_state_path = state / "rebuild_state.json"
 
         self._extractor = NodeExtractorService(top_k=32)
         self._corpus = CorpusService(
@@ -128,6 +138,18 @@ class CKMMonitor:
         self._d_ckm_history: list[float] = []
         self._ciclos_sin_rebuild = 0
         self._last_rebuild_signal = False
+        # **Textos desde el último rebuild** (CP3, TASK punto 3). El criterio de
+        # volumen contaba el total del corpus, y pasado `2*min_texts` quedaba en
+        # `True` **para siempre**: con el CP2 eso dispara un rebuild por
+        # mensaje, que es el rebuild continuo que delamor descartó
+        # —*"la ingesta no debe implicar rebuilds continuos"*—.
+        #
+        # Arranca en 0 y cuenta hacia arriba; se reinicia en cada rebuild real,
+        # detectado por sha como el contador de ciclos.
+        self._textos_desde_rebuild = 0
+        # Lo persistido manda sobre los defaults de arriba.
+        self._n_decisiones = len(self.decisiones_de_rebuild())
+        self._cargar_rebuild_state()
         # Cuál de los tres criterios levantó la señal. `None` es "ninguno", y
         # se distingue de `False`: el bool dice si hubo señal, esto dice de qué.
         self._last_rebuild_causa: "str | None" = None
@@ -185,8 +207,16 @@ class CKMMonitor:
 
         # rebuild real (_rebuild() corrió y cambió W) detectado por sha,
         # no un flag que ingest() no expone — reset del contador de ciclos.
+        # Un texto más desde el último rebuild. Va **antes** del chequeo de
+        # sha: el texto de esta ingesta cuenta para el ciclo en curso, y si el
+        # rebuild ocurre en esta misma vuelta el reset de abajo lo lleva a 0.
+        self._textos_desde_rebuild += 1
+
         if sha_after != sha_before:
             self._ciclos_sin_rebuild = 0
+            # rebuild por ingesta (la primera W, o el régimen no suspendido):
+            # el ciclo nuevo arranca con su cuenta en cero
+            self._textos_desde_rebuild = 0
         else:
             self._ciclos_sin_rebuild += 1
 
@@ -211,7 +241,10 @@ class CKMMonitor:
         # quedar en `causal_event`.
         if self._corpus.should_rebuild(self._d_ckm_history, n=3):
             self._last_rebuild_causa = CAUSA_ESTRUCTURAL
-        elif len(self._corpus._texts) >= self._corpus.min_texts * 2:
+        elif self._textos_desde_rebuild >= self._corpus.min_texts * 2:
+            # **Por ciclo, no el total** (CP3). El umbral `2*min_texts` no se
+            # toca: su valor es calibración. Lo que cambia es **sobre qué se
+            # cuenta**.
             self._last_rebuild_causa = CAUSA_VOLUMEN
         elif self._ciclos_sin_rebuild >= MAX_CICLOS:
             self._last_rebuild_causa = CAUSA_TIEMPO
@@ -224,6 +257,7 @@ class CKMMonitor:
         # `rebuild_suspendido=True` sigue impidiendo el rebuild automático por
         # ingesta; este no pasa por ahí.
         if self._last_rebuild_signal:
+            sha_antes = self._corpus.w_sha()
             st = self._corpus.rebuild_por_decision(self._last_rebuild_causa)
             self._ultimo_rebuild = {
                 "causa": self._last_rebuild_causa,
@@ -239,6 +273,10 @@ class CKMMonitor:
                 # El contador de ciclos arranca de nuevo en el salto: lo que
                 # cuenta es cuántos ciclos van SIN rebuild.
                 self._ciclos_sin_rebuild = 0
+                # Y la cuenta de volumen del ciclo nuevo (CP3). Sin esto, el
+                # volumen quedaría en `True` desde el primer mensaje posterior
+                # al salto y el rebuild volvería a ser continuo.
+                self._textos_desde_rebuild = 0
                 # **Acá va `calibrate`** (`TASK_calibrate_mecanismo_v1`,
                 # confirmado). El punto existe y **no hace nada todavía**, y se
                 # declara así: dejarlo sin marca haría que mañana el lugar se
@@ -249,6 +287,130 @@ class CKMMonitor:
                     "task": "TASK_calibrate_mecanismo_v1",
                     "w_sha": self._corpus.w_sha(),
                 }
+            # La decisión queda en el jsonl **haya movido W o no** (CP2b): el
+            # caso que no la mueve es justamente el que `w_version` no registra.
+            self._ultimo_rebuild["registro"] = self._registrar_decision(
+                self._last_rebuild_causa, st, sha_antes, clock
+            )
+
+        # El estado de la decisión, en cada mensaje: mismo mecanismo que el
+        # `save()` de CorpusService, que también guarda en cada ingesta.
+        self._guardar_rebuild_state()
+
+    def _cargar_rebuild_state(self) -> None:
+        """
+        Restaura los contadores de la decisión desde el `state_dir`.
+
+        **Esto cambia el comportamiento** (declarado): hasta el CP2b
+        `_ciclos_sin_rebuild` vivía sólo en memoria, así que **el criterio de
+        tiempo arrancaba de cero en cada reinicio del server** — con
+        `MAX_CICLOS = 10`, un canal que se reiniciaba cada menos de 10 mensajes
+        no disparaba por tiempo nunca, y nada lo decía. Ahora el tiempo
+        sobrevive al reinicio.
+
+        Un archivo ilegible **no se tapa con los defaults en silencio**: se
+        deja el aviso en `_rebuild_state_error` y los contadores arrancan de
+        cero, que es lo mismo que pasaba antes del CP2b.
+        """
+        self._rebuild_state_error = None
+        # **Se distingue del error**: un estado descartado no es un archivo
+        # roto. Las dos cosas dejan los contadores en cero y son distintas, así
+        # que no se colapsan en un campo.
+        self._rebuild_state_descartado = None
+        if not self._rebuild_state_path.exists():
+            return
+        try:
+            d = json.loads(self._rebuild_state_path.read_text())
+            sha_guardado = d.get("w_sha")
+            sha_actual = self._corpus.w_sha()
+            if sha_guardado != sha_actual:
+                # **Los contadores de una meseta no pasan a otra** (delamor).
+                # Se descartan y la causa queda escrita: restaurarlos acá haría
+                # que el volumen y el tiempo del ciclo anterior corrieran contra
+                # la W nueva, y el panel diría una cuenta que no es de esta
+                # meseta.
+                self._rebuild_state_descartado = {
+                    "causa": "w_sha_distinto",
+                    "w_sha_guardado": sha_guardado,
+                    "w_sha_del_corpus": sha_actual,
+                    "descartados": ["ciclos_sin_rebuild",
+                                    "textos_desde_rebuild", "d_ckm_history"],
+                }
+                return
+            self._ciclos_sin_rebuild = int(d["ciclos_sin_rebuild"])
+            self._textos_desde_rebuild = int(d["textos_desde_rebuild"])
+            self._d_ckm_history = [float(x) for x in d["d_ckm_history"]]
+        except (ValueError, KeyError, TypeError, OSError) as e:
+            self._rebuild_state_error = f"{type(e).__name__}: {e}"
+
+    def _guardar_rebuild_state(self) -> None:
+        """
+        El estado de la decisión, con el mismo mecanismo que
+        `corpus_state.json`: un JSON que se sobreescribe.
+
+        `d_ckm_history` se guarda **como está hoy**, que es acumulada y no por
+        ciclo: reiniciarla en el salto es el **CP4**. Persistirla ahora **no la
+        vuelve por ciclo**, y decirlo acá evita que el archivo se lea como si
+        ya lo fuera.
+        """
+        self._rebuild_state_path.write_text(json.dumps({
+            # **El w_sha del ciclo al que pertenecen estos contadores.**
+            # Sin esto, los contadores de una meseta se restauran sobre otra
+            # meseta y nadie lo dice: es la misma forma que el CP0 encontró en
+            # la Firma —un número de un ciclo sellado con la identidad de otro—.
+            "w_sha": self._corpus.w_sha(),
+            "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
+            "textos_desde_rebuild": self._textos_desde_rebuild,
+            "d_ckm_history": [float(x) for x in self._d_ckm_history],
+            "d_ckm_history_es_por_ciclo": False,
+            "nota": "d_ckm_history acumulada; por ciclo es el CP4",
+        }, ensure_ascii=False))
+
+    def _registrar_decision(self, causa: str, st: dict,
+                            sha_antes: "str | None", clock: dict) -> dict:
+        """
+        Una línea en `rebuild_decisions.jsonl` por **decisión tomada**.
+
+        El núcleo es el par `w_sha_antes` / `w_sha_despues` con `w_cambio`
+        explícito: `w_version` **deduplica por sha**, así que una decisión que
+        no mueve W **no deja versión**, y sin esta línea no quedaría en ningún
+        lado. Con `w_cambio` se distingue de un salto.
+
+        `reloj` viene del **mismo reloj del canal** que sella los mensajes
+        (`ChatChannel.get_clock()`), no de un `time.time()` aparte.
+
+        Las vueltas **sin** señal no se registran (acordado): una línea por
+        mensaje sería el ruido que el filtro del CP2b del canal existe para
+        evitar.
+        """
+        sha_despues = self._corpus.w_sha()
+        reg = {
+            "t": self._n_decisiones,
+            "ts": clock.get("t"),
+            "tick": clock.get("tick"),
+            "reloj": clock.get("reloj", "desconocido"),
+            "causa": causa,
+            "ocurrio": bool(st.get("rebuild")),
+            "motivo_no_rebuild": st.get("motivo_no_rebuild"),
+            "w_sha_antes": sha_antes,
+            "w_sha_despues": sha_despues,
+            "w_cambio": sha_antes != sha_despues,
+            "corpus_size": len(self._corpus._texts),
+            "message_count": self._message_count,
+            "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
+            "n_puntos_d_ckm": len(self._d_ckm_history),
+        }
+        with open(self._decisiones_path, "a") as f:
+            f.write(json.dumps(reg, ensure_ascii=False, default=str) + "\n")
+        self._n_decisiones += 1
+        return reg
+
+    def decisiones_de_rebuild(self) -> list:
+        """Las decisiones registradas, leídas del `state_dir`."""
+        if not self._decisiones_path.exists():
+            return []
+        return [json.loads(l) for l in
+                self._decisiones_path.read_text().splitlines() if l.strip()]
 
     def get_state(self) -> dict:
         status = self._corpus.status()
@@ -290,6 +452,16 @@ class CKMMonitor:
             # El punto donde va `calibrate`: existe y no hace nada. Declarado
             # en el panel para que no haya que buscarlo de nuevo.
             "punto_calibrate": self._punto_calibrate,
+            # ── CP2b: dónde quedó la decisión, y qué se restauró ──────────
+            "rebuild_decisions_path": str(self._decisiones_path),
+            "n_decisiones_registradas": self._n_decisiones,
+            "textos_desde_rebuild": self._textos_desde_rebuild,
+            "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
+            # `None` es "se leyó bien o no había nada"; un string es el error.
+            # Un estado ilegible no se tapa con los defaults en silencio.
+            "rebuild_state_error": self._rebuild_state_error,
+            # `None` es "no se descartó nada"; un dict dice qué y por qué.
+            "rebuild_state_descartado": self._rebuild_state_descartado,
         }
 
     def get_firma(self) -> dict | None:

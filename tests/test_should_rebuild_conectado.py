@@ -47,6 +47,18 @@ TEXTOS = [
 ]
 
 
+# Con el volumen por ciclo (CP3) hacen falta `min_texts*2` textos **después**
+# del primer rebuild, y el primero ocurre al cruzar `min_texts`. Con
+# `min_texts=3`: W en el texto 3, y el volumen dispara en el **9**.
+TEXTOS_EXTRA = [
+    "policy debates about firearms lack shared evidence",
+    "analysts dispute the weapons statistics",
+    "the evidence base on guns is contested by both sides",
+    "regulation of weapons divides the available data",
+]
+TODOS = TEXTOS + TEXTOS_EXTRA           # 9 textos
+
+
 class _Msg:
     """Un mensaje del canal, con lo que `on_message` lee."""
 
@@ -103,28 +115,40 @@ def test_cp1_sin_senal_W_no_cambia(monitor) -> None:
     )
 
 
-def test_cp1_la_ventana_sin_senal_se_cierra_en_2x_min_texts(monitor) -> None:
+def test_cp3_la_ventana_sin_senal_llega_hasta_2x_min_texts_POR_CICLO(monitor) -> None:
     """
-    **Lo que el CP1 no puede cubrir hoy, medido y declarado.**
+    **Este test estaba escrito al revés, y es el mismo test.**
 
-    El criterio de volumen es `len(_texts) >= min_texts * 2` sobre el **total
-    del corpus**, así que a partir del texto 6 la señal queda en True **para
-    siempre** y la ventana de "sin señal" se cierra.
+    En el CP1 decía: *"el criterio de volumen es `len(_texts) >= min_texts*2`
+    sobre el **total del corpus**, así que a partir del texto 6 la señal queda
+    en True para siempre y la ventana de 'sin señal' se cierra"*, y afirmaba
+    justamente eso — con la nota de que **cuando el volumen contara por ciclo
+    tenía que fallar, y que alguien viniera a leerlo**.
 
-    Este test afirma ese límite en vez de taparlo: es el punto 3 de la TASK.
-    Cuando el volumen cuente desde el último rebuild, **este test tiene que
-    fallar** y alguien tiene que venir a leer esto.
+    Falló en el CP3, como estaba anunciado. **No se borra** (instrucción de
+    Opus): se convierte en la afirmación del comportamiento nuevo, con la traza
+    de por qué fallaba arriba.
+
+    Lo que afirma ahora: el volumen cuenta **desde el último rebuild**, así que
+    la ventana no se cierra en el texto 6 sino en el **9** — `min_texts=3`, W en
+    el 3, y `min_texts*2 = 6` textos más.
     """
     cm = monitor
-    for t in TEXTOS:
-        cm.on_message(_Msg(t))
-    assert cm._last_rebuild_signal is False, "la ventana se cerró antes de 6"
+    for i, txt in enumerate(TODOS[:8], start=1):
+        cm.on_message(_Msg(txt))
+        assert cm._last_rebuild_signal is False, (
+            f"la señal se levantó en el texto {i} con "
+            f"{cm._textos_desde_rebuild} desde el rebuild"
+        )
 
-    cm.on_message(_Msg("weapons policy and evidence are contested"))   # el 6º
-    assert len(cm._corpus._texts) >= cm._corpus.min_texts * 2
-    assert cm._last_rebuild_signal is True, (
-        "el volumen no levantó la señal en 2*min_texts: revisar la cuenta"
-    )
+    # el texto 9: seis desde el rebuild del texto 3
+    cm.on_message(_Msg(TODOS[8]))
+    assert cm._textos_desde_rebuild == 0, "el salto no reinició la cuenta"
+    assert cm._last_rebuild_causa == "volumen"
+
+    # **Y el total ya había pasado 2*min_texts hace rato**: eso es lo que antes
+    # disparaba y ahora no.
+    assert len(cm._corpus._texts) > cm._corpus.min_texts * 2
 
 
 def test_cp1_el_criterio_de_tiempo_no_participa_en_la_ventana(monitor) -> None:
@@ -248,12 +272,12 @@ def test_cp2_volumen_dispara_y_deja_su_causal_event(monitor) -> None:
     `min_texts * 2` sin que el estructural ni el tiempo participen.
     """
     cm = monitor
-    for t in TEXTOS:                           # 5 textos: todavía sin señal
+    for t in TODOS[:8]:                        # ocho: todavía sin señal
         cm.on_message(_Msg(t))
     assert cm._last_rebuild_causa is None
     sha_antes = cm._corpus.w_sha()
 
-    cm.on_message(_Msg("weapons policy and evidence are contested"))   # el 6º
+    cm.on_message(_Msg(TODOS[8]))              # el 9º: seis desde el rebuild
 
     assert cm._last_rebuild_causa == "volumen"
     assert cm._ultimo_rebuild["ocurrio"] is True
@@ -296,7 +320,7 @@ def test_cp2_la_jerarquia_se_respeta(monitor) -> None:
     reordenarse y nada lo diría.
     """
     cm = monitor
-    for t in TEXTOS:
+    for t in TODOS[:8]:
         cm.on_message(_Msg(t))                 # volumen quedará en True
     cm._d_ckm_history = [-0.4, -0.3, -0.2, -0.1]   # estructural (ver el test
     #                                        de arriba: el canal agrega 0.0)
@@ -314,10 +338,10 @@ def test_cp2_rebuild_suspendido_no_bloquea_la_decision(monitor) -> None:
     """
     cm = monitor
     assert cm._corpus._rebuild_suspendido is True, "el canal vivo va suspendido"
-    for t in TEXTOS:
+    for t in TODOS[:8]:
         cm.on_message(_Msg(t))
     sha_antes = cm._corpus.w_sha()
-    cm.on_message(_Msg("weapons policy and evidence are contested"))
+    cm.on_message(_Msg(TODOS[8]))
     assert cm._corpus.w_sha() != sha_antes, (
         "rebuild_suspendido bloqueó un rebuild por decisión"
     )
@@ -354,14 +378,14 @@ def test_cp2_en_acumulacion_no_reconstruye_y_lo_dice(monitor) -> None:
 def test_cp2_el_panel_lleva_la_causa(monitor) -> None:
     """El `causal_event` en el panel (TASK, punto 2)."""
     cm = monitor
-    for t in TEXTOS:
+    for t in TODOS[:8]:
         cm.on_message(_Msg(t))
     panel = cm.get_state()
     assert panel["rebuild_senal"] is False
     assert panel["rebuild_causa"] is None, "None es 'no hubo', no 'no sé'"
     assert panel["ultimo_rebuild_por_decision"] is None
 
-    cm.on_message(_Msg("weapons policy and evidence are contested"))
+    cm.on_message(_Msg(TODOS[8]))
     panel = cm.get_state()
     assert panel["rebuild_senal"] is True
     assert panel["rebuild_causa"] == "volumen"
@@ -375,11 +399,11 @@ def test_cp2_el_punto_de_calibrate_existe_y_no_hace_nada(monitor) -> None:
     como no implementado. Sin la marca, mañana habría que buscarlo de nuevo.
     """
     cm = monitor
-    for t in TEXTOS:
+    for t in TODOS[:8]:
         cm.on_message(_Msg(t))
     assert cm.get_state()["punto_calibrate"] is None, "no hubo salto todavía"
 
-    cm.on_message(_Msg("weapons policy and evidence are contested"))
+    cm.on_message(_Msg(TODOS[8]))
     pc = cm.get_state()["punto_calibrate"]
     assert pc["existe"] is True
     assert pc["implementado"] is False
@@ -412,3 +436,343 @@ def test_cp2_el_marcador_force_w_pos_no_se_pierde_con_la_causa(tmp_path) -> None
 
     ev = c._w_versions.history()[-1].causal_event
     assert ev == "rebuild_por_decision:volumen+debug_force_w_pos", ev
+
+
+# ── CP3: el volumen cuenta desde el último rebuild ─────────────────────────
+
+def test_cp3_no_dispara_en_el_mensaje_siguiente_al_rebuild(monitor) -> None:
+    """
+    **CP3, el test que pide la TASK.** Con el volumen sobre el total, después de
+    `2*min_texts` la señal quedaba en `True` **para siempre**: con el CP2 eso
+    dispara **un rebuild por mensaje**, que es el rebuild continuo que delamor
+    descartó. El CP2 solo no lo arreglaba — lo movía de lugar.
+    """
+    cm = monitor
+    for t in TODOS:                            # llega al salto por volumen
+        cm.on_message(_Msg(t))
+    assert cm._last_rebuild_causa == "volumen"
+    assert cm._textos_desde_rebuild == 0
+
+    # el mensaje siguiente al salto: NO dispara
+    cm.on_message(_Msg("more contested claims about weapons and evidence"))
+    assert cm._textos_desde_rebuild == 1
+    assert cm._last_rebuild_causa is None, (
+        "disparó en el mensaje siguiente al rebuild: el volumen sigue contando "
+        "el total"
+    )
+    assert cm._last_rebuild_signal is False
+
+
+def test_cp3_el_volumen_vuelve_a_disparar_al_completar_el_ciclo(monitor) -> None:
+    """
+    No dispara al siguiente **y sí vuelve a disparar** cuando el ciclo nuevo
+    junta sus `2*min_texts`. Sin esto, "no dispara" podría ser "no dispara
+    nunca más", que sería la otra forma de romperlo.
+    """
+    cm = monitor
+    for t in TODOS:
+        cm.on_message(_Msg(t))
+    assert cm._last_rebuild_causa == "volumen"          # primer salto
+
+    vueltas = []
+    for i in range(1, 7):                               # seis más
+        cm.on_message(_Msg(f"contested evidence number {i} about weapons"))
+        vueltas.append((i, cm._textos_desde_rebuild, cm._last_rebuild_causa))
+
+    causas = [c for _, _, c in vueltas]
+    assert causas[:5] == [None] * 5, f"disparó antes de completar: {vueltas}"
+    assert causas[5] == "volumen", f"no volvió a disparar: {vueltas}"
+
+
+def test_cp3_la_cuenta_se_reinicia_tambien_en_el_rebuild_por_ingesta(monitor) -> None:
+    """
+    El reset está atado al **sha**, no a la vía: la primera W la construye la
+    ingesta, y el ciclo que nace ahí arranca su cuenta en cero igual.
+
+    Si el reset estuviera sólo en el camino de la decisión, el primer ciclo
+    contaría los textos de la acumulación y dispararía antes de tiempo.
+    """
+    cm = monitor
+    cm.on_message(_Msg(TODOS[0]))
+    assert cm._textos_desde_rebuild == 1
+    cm.on_message(_Msg(TODOS[1]))
+    assert cm._textos_desde_rebuild == 2
+    cm.on_message(_Msg(TODOS[2]))              # acá nace W
+    assert cm._corpus.w_sha() is not None
+    assert cm._textos_desde_rebuild == 0, (
+        "el ciclo que nace con la primera W arrancó con la cuenta de la "
+        "acumulación"
+    )
+
+
+def test_cp3_el_umbral_no_se_toco(monitor) -> None:
+    """
+    **Lo que el CP3 cambió es sobre qué se cuenta, no el umbral.** `2*min_texts`
+    sigue siendo el valor de antes: su calibración no es de este TASK.
+    """
+    cm = monitor
+    for t in TODOS[:8]:
+        cm.on_message(_Msg(t))
+    assert cm._textos_desde_rebuild == cm._corpus.min_texts * 2 - 1
+    assert cm._last_rebuild_causa is None
+    cm.on_message(_Msg(TODOS[8]))
+    assert cm._last_rebuild_causa == "volumen"
+
+
+# ── CP2b: la decisión se persiste en el state_dir ──────────────────────────
+
+def test_cp2b_una_decision_sin_cambio_de_W_queda_en_el_jsonl(monitor) -> None:
+    """
+    **El caso que no dejaba traza en ningún lado.** `w_version` deduplica por
+    sha (*"si W es idéntica, no crea marca duplicada"*), así que una decisión
+    que no mueve W **no deja versión**. Y antes del CP2b tampoco dejaba nada en
+    disco: vivía en `get_state()` y se iba con el proceso.
+
+    Acá se fuerza: dos rebuild por decisión seguidos sobre los mismos textos.
+    El segundo produce la misma W.
+    """
+    cm = monitor
+    for t in TODOS[:8]:
+        cm.on_message(_Msg(t))
+    sha = cm._corpus.w_sha()
+
+    # **Dos rebuild seguidos, sin textos nuevos en medio.** Mi primera versión
+    # hacía uno solo y suponía que daba la misma W: era falso, porque el último
+    # rebuild había sido con 3 textos y ahora hay 8, así que W cambia. La misma
+    # W aparece recién al reconstruir **lo mismo dos veces**.
+    cm._corpus.rebuild_por_decision("volumen")           # esta sí mueve W
+    sha = cm._corpus.w_sha()
+    st = cm._corpus.rebuild_por_decision("volumen")      # esta no
+    assert st["rebuild"] is True
+    assert cm._corpus.w_sha() == sha, "el test necesita que W no se mueva"
+    n_versiones_antes = len(cm._corpus._w_versions.history())
+
+    # el registro lo escribe el camino del monitor, así que se invoca derecho
+    reg = cm._registrar_decision("volumen", st, sha, {"t": 1.0, "tick": 7,
+                                                      "reloj": "canal"})
+    assert reg["w_cambio"] is False, "no se declaró que W no se movió"
+    assert reg["w_sha_antes"] == reg["w_sha_despues"] == sha
+    assert reg["ocurrio"] is True, "la decisión sí se tomó"
+    assert reg["reloj"] == "canal", "el reloj tiene que ser el del canal"
+
+    # y `w_version` no registró nada nuevo: por eso hace falta el jsonl
+    assert len(cm._corpus._w_versions.history()) == n_versiones_antes
+
+    en_disco = cm.decisiones_de_rebuild()
+    assert en_disco[-1]["w_cambio"] is False
+    assert cm._decisiones_path.exists()
+
+
+def test_cp2b_la_decision_con_salto_queda_con_w_cambio_true(monitor) -> None:
+    """El otro lado: cuando W se mueve, la misma línea lo dice."""
+    cm = monitor
+    for t in TODOS:
+        cm.on_message(_Msg(t))
+    assert cm._last_rebuild_causa == "volumen"
+
+    d = cm.decisiones_de_rebuild()
+    assert d, "no se registró ninguna decisión"
+    assert d[-1]["causa"] == "volumen"
+    assert d[-1]["w_cambio"] is True
+    assert d[-1]["w_sha_antes"] != d[-1]["w_sha_despues"]
+    assert d[-1]["reloj"] == "canal", "no se usó el reloj del canal"
+    assert d[-1]["n_puntos_d_ckm"] is not None
+
+
+def test_cp2b_las_vueltas_sin_senal_no_se_registran(monitor) -> None:
+    """
+    Acordado: **una línea por mensaje sería el ruido** que el filtro del canal
+    existe para evitar. Que la señal nunca se levantó se lee de que el archivo
+    esté vacío, más el panel.
+    """
+    cm = monitor
+    for t in TODOS[:8]:                        # ninguna señal
+        cm.on_message(_Msg(t))
+    assert cm.decisiones_de_rebuild() == []
+    assert cm.get_state()["n_decisiones_registradas"] == 0
+
+
+def test_cp2b_un_reinicio_a_mitad_de_meseta_no_reinicia_los_contadores(
+    tmp_path, monkeypatch
+) -> None:
+    """
+    **El cambio de comportamiento, declarado.** Hasta el CP2b
+    `_ciclos_sin_rebuild` vivía en memoria, así que **el criterio de tiempo
+    arrancaba de cero en cada reinicio**: con `MAX_CICLOS = 10`, un canal que
+    se reiniciaba cada menos de 10 mensajes **no disparaba por tiempo nunca**, y
+    nada lo decía.
+
+    Acá se simula el reinicio: se tira la instancia y se construye otra sobre
+    el mismo `state_dir`.
+    """
+    state = tmp_path / "_state"
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    for t in TODOS[:7]:
+        cm1.on_message(_Msg(t))
+    textos_antes = cm1._textos_desde_rebuild
+    ciclos_antes = cm1._ciclos_sin_rebuild
+    hist_antes = list(cm1._d_ckm_history)
+    assert textos_antes > 0, "el test necesita estar a mitad de meseta"
+
+    # ── el reinicio ──
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+
+    assert cm2._textos_desde_rebuild == textos_antes, (
+        f"la cuenta de volumen se reinició: {cm2._textos_desde_rebuild} "
+        f"contra {textos_antes}"
+    )
+    assert cm2._ciclos_sin_rebuild == ciclos_antes, (
+        "el criterio de tiempo volvió a arrancar de cero"
+    )
+    assert cm2._d_ckm_history == hist_antes
+    assert cm2._rebuild_state_error is None
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp2b_el_jsonl_sobrevive_al_reinicio_y_la_cuenta_sigue(
+    tmp_path, monkeypatch
+) -> None:
+    """Append-only: el reinicio no pisa lo registrado, y `t` sigue de donde iba."""
+    state = tmp_path / "_state"
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    for t in TODOS:
+        cm1.on_message(_Msg(t))
+    assert len(cm1.decisiones_de_rebuild()) == 1
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+    assert len(cm2.decisiones_de_rebuild()) == 1, "el reinicio pisó el jsonl"
+    assert cm2._n_decisiones == 1, "el índice `t` no siguió de donde iba"
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp2b_un_estado_ilegible_no_se_tapa_con_los_defaults(
+    tmp_path, monkeypatch
+) -> None:
+    """
+    Un archivo roto **no se lee como "arrancá de cero"**: los contadores
+    arrancan de cero —que es lo de antes del CP2b— y el panel **lo dice**.
+    Taparlo haría que un estado perdido se viera igual que un canal nuevo.
+    """
+    state = tmp_path / "_state"
+    state.mkdir(parents=True)
+    (state / "rebuild_state.json").write_text("{esto no es json")
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=state)
+    assert cm._ciclos_sin_rebuild == 0
+    assert cm._rebuild_state_error is not None
+    # el nombre de la excepción, cualquiera sea: lo que importa es que quede
+    assert cm._rebuild_state_error.split(":")[0] in (
+        "JSONDecodeError", "ValueError", "TypeError", "KeyError", "OSError"
+    ), cm._rebuild_state_error
+    assert cm.get_state()["rebuild_state_error"] is not None
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp2b_los_dos_archivos_van_en_el_mismo_state_dir(monitor, tmp_path) -> None:
+    """
+    Criterio de congruencia de delamor: **mismo `state_dir`, mismos
+    mecanismos** — JSONL para eventos, JSON para estado.
+    """
+    cm = monitor
+    for t in TODOS:
+        cm.on_message(_Msg(t))
+    nombres = {f.name for f in cm.state_dir.iterdir()}
+    assert "rebuild_decisions.jsonl" in nombres
+    assert "rebuild_state.json" in nombres
+    assert "corpus_state.json" in nombres          # los de siempre siguen
+    assert "monitor_trajectory.jsonl" in nombres
+
+
+def test_cp2b_la_historia_de_d_ckm_se_persiste_y_NO_es_por_ciclo(monitor) -> None:
+    """
+    Se persiste **como está hoy: acumulada**. Reiniciarla en el salto es el
+    **CP4**, y el archivo lo declara para que no se lea como si ya lo fuera.
+    """
+    import json as _json
+    cm = monitor
+    for t in TODOS:
+        cm.on_message(_Msg(t))
+    d = _json.loads((cm.state_dir / "rebuild_state.json").read_text())
+    assert "d_ckm_history" in d
+    assert d["d_ckm_history_es_por_ciclo"] is False
+
+
+def test_cp2b_los_contadores_de_una_meseta_no_pasan_a_otra(
+    tmp_path, monkeypatch
+) -> None:
+    """
+    **Pedido de delamor.** El JSON de estado guarda el `w_sha` del ciclo, y al
+    arrancar, si no coincide con la W del corpus, **los contadores se descartan
+    y queda escrita la causa**.
+
+    Es la misma forma que el CP0 encontró en la Firma: un número de un ciclo
+    sellado con la identidad de otro. Restaurar acá haría que el volumen y el
+    tiempo de la meseta anterior corrieran contra la W nueva, y el panel diría
+    una cuenta que no es de esta meseta.
+
+    Se simula: se guarda el estado, se mueve W por otro camino (sin que el
+    estado se actualice) y se reinicia.
+    """
+    import json as _json
+    state = tmp_path / "_state"
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    for t in TODOS[:7]:
+        cm1.on_message(_Msg(t))
+    assert cm1._textos_desde_rebuild > 0
+
+    d = _json.loads((state / "rebuild_state.json").read_text())
+    assert d["w_sha"] == cm1._corpus.w_sha(), "el estado no guarda su w_sha"
+
+    # W se mueve y el estado queda con el sha viejo
+    cm1._corpus.rebuild_por_decision("volumen")
+    assert cm1._corpus.w_sha() != d["w_sha"]
+    cm1._corpus.save()
+
+    # ── el reinicio ──
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+
+    assert cm2._textos_desde_rebuild == 0, "se arrastró la cuenta de otra meseta"
+    assert cm2._ciclos_sin_rebuild == 0
+    assert cm2._d_ckm_history == []
+
+    desc = cm2._rebuild_state_descartado
+    assert desc is not None, "se descartó en silencio"
+    assert desc["causa"] == "w_sha_distinto"
+    assert desc["w_sha_guardado"] == d["w_sha"]
+    assert desc["w_sha_del_corpus"] == cm2._corpus.w_sha()
+    assert set(desc["descartados"]) == {
+        "ciclos_sin_rebuild", "textos_desde_rebuild", "d_ckm_history"
+    }
+    assert cm2.get_state()["rebuild_state_descartado"]["causa"] == "w_sha_distinto"
+    # y no es un error: son dos cosas distintas con la misma consecuencia
+    assert cm2._rebuild_state_error is None
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp2b_descartado_y_error_no_se_colapsan(tmp_path, monkeypatch) -> None:
+    """
+    Un archivo roto y un estado de otra meseta **dejan los contadores en cero
+    igual**, y son distintos. Si fueran un solo campo, no se podría saber si el
+    estado se perdió o si cambió la meseta.
+    """
+    state = tmp_path / "_state"
+    state.mkdir(parents=True)
+    (state / "rebuild_state.json").write_text("{roto")
+
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=state)
+    assert cm._rebuild_state_error is not None
+    assert cm._rebuild_state_descartado is None, (
+        "un archivo roto se reportó como un descarte por meseta"
+    )
+    monkeypatch.setattr(CKMMonitor, "_instance", None)

@@ -5538,3 +5538,151 @@ no tiene el canal, asi que seria `time.time()` y no el `_ahora()` del
   el archivo este vacio, mas el panel.
 
 **No lo implemento sin el OK.** Sigo con el CP3.
+
+---
+
+## REPORTE CP2b y CP3 — la decision persistida, y el volumen por ciclo — 2026-10-10 20:04 UTC
+
+**Suite: 481 passed** (eran 467). `tests/test_should_rebuild_conectado.py`: **30
+tests**. Tocados: `iap_chatroom/ckm_monitor.py` (CP2b y CP3),
+`services/corpus_service.py` (del CP2).
+
+### Primero: los hice en orden invertido, y lo digo
+
+**El CP3 estaba implementado y verificado cuando llego la orden del CP2b.** El
+mensaje entro mientras corria las inversiones del CP3. **No revertí codigo
+verificado para cumplir una secuencia**: hice el CP2b encima. Los dos van
+reportados acá, cada uno con sus inversiones. Si el orden importaba por algo que
+no veo, se revierte.
+
+---
+
+## CP2b — la decision persistida
+
+### Dos archivos y dos mecanismos, los que ya estaban
+
+Criterio de congruencia de delamor: **mismo `state_dir`, mismos mecanismos**. Ese
+directorio ya usaba dos, y una decision de rebuild es un evento mientras los
+contadores son estado:
+
+| archivo | mecanismo | que guarda |
+|---|---|---|
+| `rebuild_decisions.jsonl` | **JSONL append-only**, como `monitor_trajectory.jsonl` | una linea por **decision tomada** |
+| `rebuild_state.json` | **JSON snapshot**, como `corpus_state.json` | los contadores, y se restauran al arrancar |
+
+**No va dentro de `monitor_trajectory.jsonl`**: ese lo escribe `MonitorService` y
+tocar Monitor pide parar y reportar.
+
+### El reloj: el del canal, no uno aparte
+
+`on_message` **ya llamaba** a `ChatChannel().get_clock()`, asi que la linea sella
+con **el mismo reloj que sella los mensajes** (`reloj: "canal"`). No hizo falta
+el `time.time()` que habia propuesto como alternativa.
+
+### El nucleo: `w_cambio`
+
+`w_version` **deduplica por sha**, asi que una decision que no mueve W **no deja
+version**. La linea lleva `w_sha_antes`, `w_sha_despues` y **`w_cambio`
+explicito**: con eso una decision sin salto se distingue de un salto, y antes del
+CP2b no quedaba en ningun lado.
+
+### El cambio de comportamiento, declarado
+
+**El criterio de tiempo sobrevive al reinicio.** Hasta hoy `_ciclos_sin_rebuild`
+vivia en memoria: con `MAX_CICLOS = 10`, **un canal que se reiniciaba cada menos
+de 10 mensajes no disparaba por tiempo nunca, y nada lo decia.** Ahora si.
+
+### Los contadores de una meseta no pasan a otra (pedido de delamor)
+
+El estado guarda el **`w_sha` del ciclo**. Al arrancar, si no coincide con la W
+del corpus, **los contadores se descartan y la causa queda escrita**
+(`rebuild_state_descartado`, con los dos shas y la lista de lo descartado).
+
+Es la misma forma que el CP0 encontro en la Firma: **un numero de un ciclo
+sellado con la identidad de otro.** Restaurarlos haria que el volumen y el tiempo
+de la meseta anterior corrieran contra la W nueva.
+
+**Y no se colapsa con el error.** Un archivo roto y un estado de otra meseta
+dejan los contadores en cero **igual**, y son distintos: con un solo campo no se
+podria saber si el estado se perdio o si cambio la meseta. Dos campos, y un test
+que lo afirma.
+
+### Lo que NO hace, declarado
+
+- `d_ckm_history` se persiste **como esta hoy: acumulada.** Reiniciarla en el
+  salto es el **CP4**. El archivo lleva `d_ckm_history_es_por_ciclo: false` para
+  que no se lea como si ya lo fuera.
+- **No persiste para retomar la decision**: registra lo que paso.
+- **Las vueltas sin señal no se registran** (acordado).
+
+### Inversiones del CP2b
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | no se guarda el estado | 3, entre ellos `..._los_contadores_de_una_meseta_no_pasan_a_otra` | **481** |
+| B | no se carga el estado | 3, entre ellos `..._un_estado_ilegible_no_se_tapa_con_los_defaults` | 481 |
+| C | el jsonl no se escribe | 3, entre ellos `..._la_decision_con_salto_queda_con_w_cambio_true` | 481 |
+| D | los contadores de otra meseta **se restauran igual** | `..._los_contadores_de_una_meseta_no_pasan_a_otra`: **restauro 4 textos donde tiene que haber 0** | 481 |
+
+### Dos premisas mias que eran falsas
+
+**1. "Dos rebuild dan la misma W".** Mi test del caso sin salto hacia **un**
+rebuild y suponia que no movia W. Era falso: el ultimo rebuild habia sido con 3
+textos y habia 8. La misma W aparece **reconstruyendo lo mismo dos veces
+seguidas**. Corregido, y queda escrito en el test.
+
+**2. Un `replace` pego en dos lugares.** `self._textos_desde_rebuild = 0`
+aparecia tres veces, y mi reemplazo metio la carga del estado **adentro de un
+`if/else`**: `SyntaxError`. Lo arregle mirando la region en vez de reemplazar a
+ciegas. **El string no era unico y no lo verifique antes** — es la tercera vez hoy
+que un cambio textual pega donde no miraba.
+
+---
+
+## CP3 — el volumen cuenta por ciclo
+
+### Lo que cambio, y lo que no
+
+**Cambio sobre que se cuenta, no el umbral.** `2*min_texts` es el mismo valor:
+su calibracion no es de este TASK. Lo que pasa a contar es
+`_textos_desde_rebuild` en vez de `len(_texts)`.
+
+El reset esta atado al **sha**, no a la via: tanto el rebuild por ingesta —la
+primera W— como el rebuild por decision arrancan el ciclo nuevo en cero.
+
+### Por que hacia falta, medido
+
+Con el volumen sobre el total, pasado `2*min_texts` la señal quedaba en `True`
+**para siempre**. Con el CP2 conectado eso **dispara un rebuild por mensaje**:
+el rebuild continuo que delamor descarto. **El CP2 solo no lo arreglaba — lo
+movia de lugar**, y lo reporte asi al cerrarlo.
+
+Medido ahora: con `min_texts=3`, el volumen dispara en el texto **9** (W en el 3,
+mas 6), y el mensaje siguiente al salto **no dispara**. Y vuelve a disparar
+cuando el ciclo nuevo junta sus 6, que es la otra forma de romperlo —"no dispara
+nunca mas"— y tiene su test.
+
+### El test del CP1 convertido, no borrado
+
+`test_cp1_la_ventana_sin_senal_se_cierra_en_2x_min_texts` **fallo en el CP3, como
+estaba anunciado en su propio docstring**. Siguiendo la instruccion de Opus, **no
+se borro**: ahora es
+`test_cp3_la_ventana_sin_senal_llega_hasta_2x_min_texts_POR_CICLO`, y su docstring
+abre con **lo que el test decia antes y por que fallo**. La ventana ya no se
+cierra en el texto 6: llega hasta el 9.
+
+### Inversiones del CP3
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | el volumen vuelve a contar el **total** | **7 tests** | 481 |
+| B | no se reinicia la cuenta en el salto por decision | 3, entre ellos `..._el_volumen_vuelve_a_disparar_al_completar_el_ciclo` | 481 |
+
+### Lo que queda
+
+**CP4**: la historia de `D_ckm` se reinicia en el rebuild, y Monitor invalida
+Δ_r como ya hace (D2). **CP5**: regresion con `rebuild_suspendido=False`.
+
+**Hasta el CP3 no se corre ningun vivo** (orden de Opus). **No corri ninguno.**
+
+**ALTO.**

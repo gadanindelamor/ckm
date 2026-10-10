@@ -8,7 +8,7 @@ El único FabricationService que existe es `experiments/fabrication_service_dev.
 
 ## Qué se hace
 
-1. **`services/fabrication_service.py` nuevo, desde cero**, con lo que hoy se usa y nada más: el fabrication index (σ_prompt, σ_relajado) → valor, con su borde declarado (0 declarados → hoy devuelve 0.0; decidir con delamor si ese borde es UNKNOWN, como en el resto del instrumento).
+1. **`services/fabrication_service.py` nuevo, desde cero**, con lo que hoy se usa y nada más: el fabrication index (σ_prompt, σ_relajado) → valor, con su borde declarado (0 declarados → hoy devuelve 0.0; **delamor, 10 oct: respeta las reglas del resto de los módulos → UNKNOWN**, no un valor de la escala).
 2. **Monitor delega en el servicio** y sigue dando el mismo número: test de regresión que compara, sobre trazas preservadas, el valor de antes y el de después (deben ser idénticos).
 3. **Tests propios** del servicio: casos de respuesta conocida (ninguno rechazado → 0; todos → 1; mixto → fracción), el borde de 0 declarados, y entradas de forma inválida.
 4. **`experiments/fabrication_service_dev.py` queda como traza**, sin tocar (no se renombra ni se borra).

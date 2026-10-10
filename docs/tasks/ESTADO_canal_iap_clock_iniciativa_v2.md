@@ -11,7 +11,18 @@
 
 ## Último CP cerrado
 
-**CP0 — mapa de quién juzga contra W.** Cerrado el 2026-10-10 (`8f97a54`), sin código.
+**TASK_should_rebuild_conectado_v1: CERRADA, CP1 a CP5.** 2026-10-10. Suite **490**
+(era 451), 39 tests, **15 inversiones y las 15 rompen**. `should_rebuild` dejó de ser uno de los
+cinco mecanismos sin consumidor del CP0: la señal **manda** el rebuild, con su causa en el
+`causal_event`. El volumen cuenta **por ciclo** y la historia de `D_ckm` también. La decisión se
+**persiste** en el `state_dir` (`rebuild_decisions.jsonl` + `rebuild_state.json`), con el `w_sha`
+del ciclo: los contadores de una meseta no pasan a otra. **Cambio de comportamiento declarado:**
+el criterio de tiempo sobrevive al reinicio. Regresión verificada: con `rebuild_suspendido=False`
+el régimen viejo queda intacto y el camino nuevo **inerte** (0 decisiones en 9 mensajes, medido).
+Los umbrales no se tocaron: son Calibración, en pausa. El punto de `calibrate` existe, declarado,
+y no hace nada.
+
+Antes: **CP0 — mapa de quién juzga contra W.** Cerrado el 2026-10-10 (`8f97a54`), sin código.
 Suite **451**. `get_W()` devuelve una copia, así que por construcción nadie sabe cuándo
 envejeció. Monitor es el único que pregunta; COCO no tiene noción de versión y no puede fechar
 sus mediciones; `gatekeeper_c1.c1` es función pura **sin un solo llamador vivo**; la Firma sella

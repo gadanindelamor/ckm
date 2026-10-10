@@ -882,3 +882,117 @@ def test_cp4_el_estado_persistido_guarda_la_historia_del_ciclo(monitor) -> None:
     d = _json.loads((cm.state_dir / "rebuild_state.json").read_text())
     assert d["d_ckm_history"] == [float(x) for x in cm._d_ckm_history]
     assert d["d_ckm_history_es_por_ciclo"] is True
+
+
+# ── CP5: regresión con rebuild_suspendido=False ────────────────────────────
+
+def test_cp5_el_rebuild_por_ingesta_sigue_marcando_igual(tmp_path) -> None:
+    """
+    **CP5.** Con `rebuild_suspendido=False` —el régimen de los tests y drivers
+    que ya existían— el rebuild por ingesta tiene que ser **idéntico al de
+    antes de esta TASK**.
+
+    Lo que podía haberlo cambiado: `_rebuild` ganó un parámetro `causa`. Es
+    opcional **para esto**: sin causa, el `causal_event` es el de siempre.
+    """
+    from corpus_service import CorpusService
+
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3,
+                      top_k=8)
+    assert c._rebuild_suspendido is False, "el default tiene que seguir en False"
+
+    for t in TODOS:
+        c.ingest([t])
+
+    eventos = [p.causal_event for p in c._w_versions.history()]
+    assert eventos, "no se registró ninguna versión"
+    assert all(e == "rebuild" for e in eventos), (
+        f"el rebuild por ingesta cambió de marca: {set(eventos)}"
+    )
+    assert not any("rebuild_por_decision" in e for e in eventos)
+
+
+def test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False(
+    tmp_path, monkeypatch
+) -> None:
+    """
+    **Medido antes de afirmarlo: 0 decisiones en 9 mensajes.**
+
+    El mecanismo: los tres contadores se reinician **cuando cambia el sha**, y
+    en este régimen la ingesta reconstruye W en cada mensaje. Así que ninguno
+    de los tres llega a su umbral y la señal no se levanta nunca.
+
+    Es lo que hace que el CP5 sea una regresión real y no una coincidencia: en
+    este régimen el camino nuevo **no participa**, no es que participe y dé lo
+    mismo.
+    """
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state")
+    # el régimen se arma acá porque `CKMMonitor` construye su corpus con
+    # `rebuild_suspendido=True`: no lo expone, y este test necesita el otro.
+    cm._corpus._rebuild_suspendido = False
+
+    for t in TODOS:
+        cm.on_message(_Msg(t))
+
+    assert cm._last_rebuild_causa is None
+    assert cm._last_rebuild_signal is False
+    assert cm.decisiones_de_rebuild() == [], (
+        f"hubo decisiones en un régimen donde no debería haberlas: "
+        f"{cm.decisiones_de_rebuild()}"
+    )
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp5_el_reset_sigue_al_sha_y_no_al_mensaje(tmp_path, monkeypatch) -> None:
+    """
+    **El detalle que la medición dejó ver, y que "se reinicia en cada mensaje"
+    tapaba.**
+
+    Los contadores se reinician cuando **cambia el sha**, no en cada ingesta.
+    En el régimen `False` midiendo nueve mensajes, **en el sexto los contadores
+    avanzaron**: la ingesta reconstruyó y W salió **idéntica**, así que el sha
+    no cambió.
+
+    Importa porque un reset atado al mensaje y uno atado al sha se ven iguales
+    casi siempre, y son distintos justo donde el rebuild no mueve nada — que es
+    el caso que `w_version` tampoco registra.
+    """
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state")
+    cm._corpus._rebuild_suspendido = False
+
+    observado = []
+    for t in TODOS:
+        sha_antes = cm._corpus.w_sha()
+        cm.on_message(_Msg(t))
+        observado.append((sha_antes != cm._corpus.w_sha(),
+                          cm._textos_desde_rebuild))
+
+    # en las vueltas donde W cambió, el contador quedó en 0; donde no cambió,
+    # avanzó. Esa es la propiedad, no el número de ninguna vuelta en particular.
+    for cambio, cuenta in observado:
+        if cambio:
+            assert cuenta == 0, "W cambió y el contador no se reinició"
+        else:
+            assert cuenta > 0, "W no cambió y el contador se reinició igual"
+
+    # y hubo al menos una de cada clase, o el test no mide las dos ramas
+    assert any(c for c, _ in observado), "W nunca cambió"
+    assert any(not c for c, _ in observado), (
+        "W cambió en todas: este test necesita una vuelta sin cambio de sha"
+    )
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_cp5_un_rebuild_sin_causa_no_lleva_marca_de_decision(tmp_path) -> None:
+    """`_rebuild()` sin causa deja exactamente el `causal_event` de antes."""
+    from corpus_service import CorpusService
+
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3,
+                      top_k=8, rebuild_suspendido=True)
+    c.ingest(TODOS[:3])
+    assert c._w_versions.history()[-1].causal_event == "rebuild"
+    c.ingest(TODOS[3:6])
+    c._rebuild()                               # sin causa, a mano
+    assert c._w_versions.history()[-1].causal_event == "rebuild"

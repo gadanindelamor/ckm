@@ -5783,3 +5783,96 @@ sobrevivia al salto. **Ahora afirma que no**, con la linea anterior citada.
 `rebuild_suspendido=False`.
 
 **ALTO.**
+
+---
+
+## REPORTE CP5 — regresion con `rebuild_suspendido=False` — 2026-10-10 20:35 UTC
+
+**Suite: 490 passed** (eran 486), **39 tests** en el archivo. **Con esto la TASK
+queda cerrada del CP1 al CP5.** Ningun vivo corrido.
+
+*Nada para ejecutar en `4d61f14`: son definiciones conceptuales de delamor con
+TASKs pendientes (W separadas, Δ_r sin reescalar en la meseta, FabricationService
+a UNKNOWN, φ o PMI abierto).*
+
+### Docstring por archivo tocado
+
+| archivo | docstring |
+|---|---|
+| `services/corpus_service.py` | **Sin cambio de comportamiento en el CP5, docstring igual** — ya se actualizo en el CP4 y los tres regimenes que declara son exactamente los que el CP5 verifica. |
+| `iap_chatroom/ckm_monitor.py` | **Sin cambio de comportamiento, docstring igual.** El CP5 no toco codigo: son tests. |
+| `tests/test_should_rebuild_conectado.py` | Actualizado: cuatro tests nuevos con su docstring. |
+
+**Ninguna divergencia nueva** entre docstring y codigo en estos dos. Las tres
+que encontre estan en el REPORTE del CP4 y quedaron corregidas ahi.
+
+### Lo que el CP5 verifica
+
+**El rebuild por ingesta no cambio de marca.** Con `rebuild_suspendido=False`
+—el default, y el regimen de los tests y drivers que ya existian— los nueve
+rebuilds dejan `causal_event = "rebuild"` y **ninguno** lleva
+`rebuild_por_decision`. Lo que podia haberlo cambiado era el parametro `causa`
+que `_rebuild` gano en el CP2: es **opcional para exactamente esto**.
+
+### Lo que medi antes de afirmarlo: el camino nuevo queda INERTE
+
+**0 decisiones en 9 mensajes.** No es que la decision participe y de lo mismo:
+**no participa.**
+
+El mecanismo: los tres contadores se reinician **cuando cambia el sha**, y en
+ese regimen la ingesta reconstruye W casi en cada mensaje. Asi que ninguno de
+los tres llega a su umbral y la señal no se levanta nunca.
+
+Eso es lo que hace que el CP5 sea una regresion y no una coincidencia.
+
+### El detalle que la medicion dejo ver, y que "se reinicia en cada mensaje" tapaba
+
+En la corrida de nueve mensajes, **en el sexto los contadores AVANZARON** en vez
+de reiniciarse:
+
+```
+5: textos_desde_rebuild=0  ciclos=0
+6: textos_desde_rebuild=1  ciclos=1   <-- aca
+7: textos_desde_rebuild=0  ciclos=0
+```
+
+**La ingesta reconstruyo y W salio identica**, asi que el sha no cambio.
+
+Importa porque un reset atado **al mensaje** y uno atado **al sha** se ven
+iguales casi siempre, y son distintos justo donde el rebuild **no mueve nada** —
+que es el mismo caso que `w_version` tampoco registra y que el `w_cambio` del
+CP2b existe para hacer visible. **Tres piezas de esta TASK apuntan al mismo
+punto ciego**, y no lo habia visto hasta medir esto.
+
+Tiene su test, y el test exige **las dos ramas**: que haya al menos una vuelta
+con cambio de sha y al menos una sin, o no mide nada.
+
+### Las dos inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | el rebuild por ingesta **cambia de marca** | 3: `test_cp5_el_rebuild_por_ingesta_sigue_marcando_igual`, `..._un_rebuild_sin_causa_no_lleva_marca_de_decision`, y el del `force_w_pos` del CP2 | **490** |
+| B | el reset atado **al mensaje** en vez del sha | 4: `test_cp5_el_reset_sigue_al_sha_y_no_al_mensaje`, `..._los_contadores_de_una_meseta_no_pasan_a_otra`, y dos del CP4 | 490 |
+
+### La TASK, de punta a punta
+
+| CP | que quedo | inversiones |
+|---|---|---|
+| CP1 | el invariante escrito **antes** del cambio: sin señal, W no cambia | 1 |
+| CP2 | la señal **manda** el rebuild; cada criterio deja su `causal_event` | 4 |
+| CP2b | la decision **persistida**; los contadores no cruzan de meseta | 4 |
+| CP3 | el volumen cuenta **por ciclo** | 2 |
+| CP4 | la historia de `D_ckm` **por ciclo**; docstrings al dia | 2 |
+| CP5 | regresion: el regimen viejo **intacto**, el camino nuevo **inerte** | 2 |
+
+**15 inversiones, las 15 rompen.** Suite 451 -> **490**.
+
+**Dos tests se convirtieron en vez de borrarse**, los dos porque habian sido
+escritos **anunciando su propia caducidad**: la ventana del CP1 (fallo en el
+CP3) y la historia acumulada del CP2b (fallo en el CP4).
+
+**Lo que la TASK no hizo:** los umbrales (`n=3`, `2*min_texts`,
+`MAX_CICLOS=10`) **no se tocaron** — su valor es Calibracion, que esta en pausa.
+El punto de `calibrate` existe, esta declarado en el panel y **no hace nada**.
+
+**ALTO.**

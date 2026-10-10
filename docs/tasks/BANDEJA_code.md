@@ -4945,3 +4945,101 @@ No hay comportamiento: es el estado del repositorio. Lo que lo sostiene es
 devolvia vacio. **Declarado, no omitido.**
 
 **ALTO.**
+
+---
+
+## FIX 3 — driver armado, costo reportado, SIN CORRER — 2026-10-10 01:14 UTC
+
+*Orden de delamor, opcion (a) (DECISIONES `0e63e50`). La orden pide el costo
+estimado **antes** de correr; la decision en pie dice que **lo decide delamor**
+(*"antes de la corrida viva se reporta el costo estimado y lo decide delamor"*).
+Asi que el driver queda listo y **no corri nada**.*
+
+**Suite: 451 passed** (el driver no toca codigo vivo).
+Archivo nuevo: `experiments/fix3_smoke_casos_groq.py`.
+
+### El costo
+
+| | llamadas piso | techo | segundos |
+|---|---|---|---|
+| **sin tope** (como los escribio cada caso) | **888** | **1776** | **750** |
+| **con `--tope 20`** | **162** | **324** | **140** |
+
+Sin tope son **40 a 80 veces el vivo 03** (9 llamadas). El piso es 1 llamada al
+gate por vuelta; el techo, 2, si el device actua en todas. No incluye los
+arranques de los siete servers ni las busquedas de `ddgs` del caso 12, que no
+son llamadas al LLM.
+
+Detalle con tope 20: los casos 09, 09_PREGENERADO y 12 son **2 devices** y 18
+llamadas de piso cada uno; 13, 14, 14_run2 y 15 son **3 devices** y 27 cada uno.
+
+### El tope es una decision mia y va declarada
+
+`--tope N` limita lo que corre cada device, envolviendo `AutonomousDevice.run`.
+El smoke mide **si el camino rompe**, y eso rompe en las primeras vueltas, no a
+los 120 s.
+
+**Y tiene un precio que digo ahora:** con tope, **un caso que no rompe no dice
+que el caso ande** — dice que no rompio en las vueltas que corrio. Sin tope, el
+"no rompio" es mas fuerte y cuesta 5,5 veces mas.
+
+El driver sin `--confirmar` **no corre**: imprime el costo y sale.
+
+### Lo que medi antes de armar nada
+
+**1. Ninguno de los 21 usa solo Groq.** Los siete que usan Groq instancian
+tambien `AnthropicProvider`. Medido con `grep -c "GroqProvider(" / "AnthropicProvider("`
+sobre `iap_chatroom/tests/test_caso_*.py` — **instanciaciones, no menciones**: la
+cuenta de menciones daba otra cosa y no servia.
+
+**2. `ANTHROPIC_API_KEY` esta AUSENTE** del entorno (`GROQ_API_KEY` presente,
+len 56). Y **hay cero `skipif` en los 21**: ninguno salta por falta de clave, asi
+que con la clave ausente fallarian por eso y no por el ODA. Esa es la razon de
+sustituir los providers: separar *"lo rompio el ODA continuo"* de *"falta una
+clave"*. Es el par vivo 01 / vivo 02 otra vez.
+
+**3. Los 21 no son tests de pytest.** `grep -c "def test_"` da **0**, y
+`pytest --collect-only` sobre ellos recoge **0 items**. Son scripts con
+`if __name__ == "__main__"`. **Eso explica el "punto ciego de los 21"**: no es
+que esten excluidos de la suite, es que no hay nada que la suite pueda recoger.
+
+**4. Un modulo roto aborta la coleccion de toda la carpeta.**
+`pytest iap_chatroom/tests/ --collect-only` muere en
+`test_armstrong_via_corpus_v3.py:34` (`corpus.coco es None`, roto por el CP4 a
+sabiendas) y recoge **0 items en total**, incluidos los 21. Un solo archivo que
+falla al importar tapa el resto de la carpeta.
+
+**5. `ddgs` esta instalado** (9.14.4), asi que el caso 12 tiene su dependencia de
+busqueda. **No es un recurso ausente.** Lo que si es UNKNOWN es si la red del
+Codespace deja salir las busquedas; eso se vera al correr.
+
+### Como corre cada caso sin modificar su archivo
+
+1. **`runpy.run_path(..., run_name="__main__")`**: importarlos no alcanza, el
+   trabajo esta dentro del `if __name__`.
+2. Los providers se parchan **en su modulo de origen, antes de que el caso lo
+   importe**, asi el `from ... import` del caso queda ligado al objeto parchado.
+   Cada sustitucion queda registrada con los argumentos que el caso pedia.
+3. `AutonomousDevice.__init__` se envuelve para **registrar cada instancia**: los
+   devices se crean adentro del caso, y sin esto no habria de donde sacar su
+   `costo()`.
+4. **Un subprocess por caso.** Los singletons (`ChatChannel`, `CKMMonitor`) y el
+   loop de asyncio no se limpian de forma confiable entre casos: dos casos en el
+   mismo proceso se contaminarian y el smoke mediria eso.
+5. **Un server por caso**, con su `--state-dir` aislado — que existe por el
+   **fix 2**. Sin el fix 2 los siete escribirian en el mismo corpus y cada uno
+   arrancaria sobre lo que dejo el anterior.
+
+### Lo que el reporte va a decir, pase lo que pase
+
+**Es un smoke del camino del codigo, no una replica de los casos.** Todos los
+providers son el mismo Groq, asi que los numeros **no son comparables** con los
+REG de 09 a 15, y **nada de lo que digan los modelos se interpreta**. Lo que
+rompa **no se arregla**.
+
+### Lo que espera
+
+**Si corro, con que tope.** Mi recomendacion: `--tope 20` (162-324 llamadas). Si
+el "no rompio" tiene que valer para el caso entero, va sin tope y son 888-1776.
+
+**ALTO.**

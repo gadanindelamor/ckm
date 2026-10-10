@@ -3,7 +3,7 @@
 > **v28 BORRADOR — Opus 5.5 (Cowork), 10 oct 2026, sobre v27 (7 oct). Este bloque se retira antes de publicar.**
 > Cada cambio está marcado *[v28]* y es propuesta: entra cuando delamor lo confirma. Criterios de delamor (10 oct): (1) lo que tiene demostración, en citas o en la ciencia, se expone sólo como referencia; nada insinúa corroboración propia; el intento es desde la humildad. (2) Son aportes a la ciencia: lo que no aporta ni da sentido a lo que aporta, sale; sin aportes no se publica.
 > Cambios: §4.1.1 (no-co-ocurrencia y origen del signo); §4.2 (el campo es continuo; el corpus es instrumento; los saltos son de la representación); §5.1 (de dónde viene el signo de fourforums; IAP y W_pos contra las trazas); §5.2 P1/P3 (referencias en lugar de exposición); §6.2 (condiciones del instrumento en la serie); §8.5 (ausencia como segunda representación; tests del instrumento); §9 (tres referencias [VERIFY]). Abstract: una propuesta mínima, marcada.
-> Conteos de tests retirados del cuerpo; nueva sección Code Availability: el resultado de la suite se verifica y se anota al congelar el release (delamor, 10 oct).
+> §3.8: práctica de verificación (rojo declarado, UNKNOWN, respuesta conocida, tests que no pueden fallar). Conteos de tests retirados del cuerpo; nueva sección Code Availability: el resultado de la suite se verifica y se anota al congelar el release (delamor, 10 oct).
 > No se tocó lo demás.
 
 **Pablo E. Gadano**  
@@ -148,6 +148,8 @@ Throughout this paper:
 - **uncertain** — known to be problematic; pending resolution
 - **admissible** — neither verifiable nor discardable; an unnamed space
 - **[AUTO]** — marks moments where automatism was noticed and resisted during writing (collected in Appendix A)
+
+*[v28 — Verification practice.]* What is verified in this project is verified against the instrument before it is read as the field. Four conventions follow from that. A test is written to fail where the instrument fails, and a known failure is kept visible as a declared failure rather than removed. Absence of measurement is reported as UNKNOWN, never filled with a value of the scale: defaults that read as "no change" or "stable" where nothing was measured were found and replaced. Scenarios with a known answer — a planted field, a threshold sweep — are preferred to cases that pass regardless. And a test that cannot fail is identified as such and not counted as evidence. The suite is described in the release notes by the scenarios it covers and the failures it declares, not by a count.
 
 ---
 

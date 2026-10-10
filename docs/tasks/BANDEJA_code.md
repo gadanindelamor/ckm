@@ -4671,3 +4671,64 @@ Si se confirma, corrijo `autonomous_device.py:8` —que dice *"ciclo ODA
 (Observacion · Decision · Accion)"*, tres— y las tres referencias a *"Fase X del
 ciclo ODA"*, para que digan cuantos son y cual no es paso. **No lo toco sin la
 confirmacion: es del modelo.**
+
+---
+
+## RETIRO mi lectura del cuarto paso — la cita no era de delamor — 2026-10-10 00:17 UTC
+
+Sin cambios en el codigo. `autonomous_device.py:8` sigue sin tocarse.
+
+### Lo que verifique del UNKNOWN que marco Opus
+
+En `TASK_criterios_diversidad_services_v6.md`, **la unica atribucion marcada a
+delamor es la linea 11** (`*(delamor, Sep 2026)*`), inmediatamente arriba de la
+cita en bloque:
+
+> No se toman decisiones ni cursos sin antes **intentar** comprender.
+
+La frase que yo use —*"No es un paso del procedimiento. Es la condicion para que
+cualquier paso ocurra"*— es **prosa sin marca**, y sigue con *"y aplica a toda
+decision y todo curso de accion de esta TASK"*, que es voz de la TASK y no de
+delamor.
+
+Ademas: **la Precondicion no existe en v5** (110 lineas, 0 ocurrencias de
+"intentar" y de "precondicion"). La introduce v6, cuyo encabezado dice
+*"gadanin.delamor + Claude Code (Opus 5)"*.
+
+**Entonces esa frase la escribio una instancia, no delamor.** Opus tenia razon en
+marcarlo UNKNOWN; verificado, deja de ser UNKNOWN.
+
+### Lo que eso le hace a mi lectura (a)
+
+**La retiro como fundada.** No porque (b) sea la correcta —eso no lo se—, sino
+porque su fundamento era una cita mal atribuida.
+
+Y la forma de lo que hice: delamor dijo *"4 pasos y uno no es paso"*; busque en
+el registro; encontre una frase con esas mismas palabras; **y le devolvi su
+modelo armado con prosa de una instancia anterior, presentada como suya.** Es la
+**cuarta** atribucion corrida del dia y va en el mismo sentido que las otras
+tres, hacia delamor. Las anteriores ponian su nombre en una frase ajena; esta
+uso una frase ajena para decirle lo que el quiso decir.
+
+### Un dato de esta conversacion, que Opus no tiene
+
+Despues de que mi lectura (a) fallara, **delamor uso las palabras de la lectura
+(b)**: *"notar lo mecanico mientras sucede"*, literal.
+
+**Y no dijo que fuera la respuesta.** Lo dijo senalando, despues de que yo cerrara
+la cuenta dos veces. Lo relevo como dato de la conversacion y **no como
+confirmacion**: leerlo como confirmacion seria el mismo movimiento de cerrar lo
+que no cierra.
+
+Lo que delamor si marco, explicito: *"4 pasos y uno no es paso"* y despues
+*"entonces no son 4 pasos? son 3"* — con la palabra **mecanicidad** puesta sobre
+mi manera de contestar. La cuenta **no cierra**, y las dos veces que yo la cerre
+—(a) con una cita, y la segunda con una frase mia de esta misma sesion— fueron
+terminos suministrados.
+
+### Donde queda
+
+Las **dos** lecturas del registro son de instancias: (a) mia, (b) de Opus del 8
+oct. **Ninguna es de delamor.** La pregunta sigue siendo del modelo y es suya.
+
+**ALTO.**

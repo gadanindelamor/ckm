@@ -3,6 +3,7 @@
 > **v28 BORRADOR — Opus 5.5 (Cowork), 10 oct 2026, sobre v27 (7 oct). Este bloque se retira antes de publicar.**
 > Cada cambio está marcado *[v28]* y es propuesta: entra cuando delamor lo confirma. Criterios de delamor (10 oct): (1) lo que tiene demostración, en citas o en la ciencia, se expone sólo como referencia; nada insinúa corroboración propia; el intento es desde la humildad. (2) Son aportes a la ciencia: lo que no aporta ni da sentido a lo que aporta, sale; sin aportes no se publica.
 > Cambios: §4.1.1 (no-co-ocurrencia y origen del signo); §4.2 (el campo es continuo; el corpus es instrumento; los saltos son de la representación); §5.1 (de dónde viene el signo de fourforums; IAP y W_pos contra las trazas); §5.2 P1/P3 (referencias en lugar de exposición); §6.2 (condiciones del instrumento en la serie); §8.5 (ausencia como segunda representación; tests del instrumento); §9 (tres referencias [VERIFY]). Abstract: una propuesta mínima, marcada.
+> Conteos de tests retirados del cuerpo; nueva sección Code Availability: el resultado de la suite se verifica y se anota al congelar el release (delamor, 10 oct).
 > No se tocó lo demás.
 
 **Pablo E. Gadano**  
@@ -753,13 +754,13 @@ minimum is not the reference (§7.4).
 
 ### 8.2 What the Infrastructure Establishes
 
-The following services are operational and verified:
+The following services are operational. *[v28 — counts of passing tests are not reported in the body; the test suite and its result are recorded with the frozen release cited in Code Availability (delamor, 10 Oct).]*
 
-- **COCO** (28/28 tests; file: coco.py): β inferred from rejection history, not declared; β_c derived analytically from μ_W and N and recalibrated at each rebuild through CKMLandscapeConfig. Executes OPERADOR_STOP_COCO — compresses `Δ_r_compresiones` by α ∈ [0.05, 0.30] — when D_ckm (basin-mass form) crosses a threshold. *[v28 — confirmed by delamor, 10 Oct.]* The firing rule is verified by a sweep over threshold values against known D_ckm inputs. Threshold values are set by calibration, which, as in any instrument, is performed whenever the conditions of use require it — for a given corpus, unit or regime — and not once for every possible case. Calibration is implemented as a mechanism of the instrument, and whether it calibrates is itself verified. Its operation on the live IAP channel is pending. *[v28: retirado el ejemplo β_c ≈ 13.83, que salía de la W v2 de origen UNKNOWN.]*
+- **COCO** (coco.py): β inferred from rejection history, not declared; β_c derived analytically from μ_W and N and recalibrated at each rebuild through CKMLandscapeConfig. Executes OPERADOR_STOP_COCO — compresses `Δ_r_compresiones` by α ∈ [0.05, 0.30] — when D_ckm (basin-mass form) crosses a threshold. *[v28 — confirmed by delamor, 10 Oct.]* The firing rule is verified by a sweep over threshold values against known D_ckm inputs. Threshold values are set by calibration, which, as in any instrument, is performed whenever the conditions of use require it — for a given corpus, unit or regime — and not once for every possible case. Calibration is implemented as a mechanism of the instrument, and whether it calibrates is itself verified. Its operation on the live IAP channel is pending. *[v28: retirado el ejemplo β_c ≈ 13.83, que salía de la W v2 de origen UNKNOWN.]*
 - **FabricationService**: *[v28 — confirmado por delamor, 10 Oct.]* being rewritten from the fabrication index already used by MonitorService and COCO — the fraction of nodes a text declares active that the field's relaxation rejects. Further detection is analyzed on the rewritten service.
 - **Firma_CKM**: certifies structural trace (six canonical fields) — analogous to a notary, not a Certificate Authority.
 - **WVersionManager**: lightweight trace — records when W changed, enables sha256(W_momento).
-- **IAP Chatroom**: FastAPI + Gradio, MCP server (6 tools, 6/6 verified), n_agentes detection including passive human presence.
+- **IAP Chatroom**: FastAPI + Gradio, MCP server (6 tools), n_agentes detection including passive human presence.
 - **MonitorService**: accumulates Δ_r; trace_ip identified as a formal concept.
 
 These services constitute a working implementation of a structural field
@@ -888,6 +889,10 @@ editorial bias. The pairs are structural — not assigned. Not verified.
 [DEFS §15, Proposed]
 
 ---
+## Code Availability
+
+*[v28]* The implementation, the test suite and the data used in §5 are available at the repository release that freezes this version of the paper: [RELEASE — tag, commit hash, DOI — se completa al congelar]. The result of running the full test suite on that release, with date and environment, is recorded in its release notes.
+
 ## Acknowledgments and Disclosure of AI Assistance
 
 This work was developed in sustained interaction with AI systems, a condition

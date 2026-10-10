@@ -4732,3 +4732,53 @@ Las **dos** lecturas del registro son de instancias: (a) mia, (b) de Opus del 8
 oct. **Ninguna es de delamor.** La pregunta sigue siendo del modelo y es suya.
 
 **ALTO.**
+
+---
+
+## REPORTE FIX 1 — el README del freeze — 2026-10-10 00:52 UTC
+
+*Orden de delamor (DECISIONES `7cd48d3`), fix 1 de 4. Calibracion en PAUSA: no
+habia arrancado el CP0, asi que no hubo nada que parar (verificado: `pgrep` sin
+servers).*
+
+### Lo que decia y lo que mide
+
+`process/iap_series_freeze_20261008/README.md`, L41:
+**"67 archivos, 620 KB"**.
+
+| | decia | mide |
+|---|---|---|
+| archivos | 67 | **62** (61 copiados + el README) |
+| tamano | 620 KB | **441 kB** (430 KiB, 440 696 bytes) |
+
+**La orden nombro uno de los dos.** El otro esta en la misma oracion y es la
+misma afirmacion, asi que lo corregi tambien y lo declaro. Si se queria solo el
+primero, se revierte el segundo.
+
+### El mecanismo, porque los dos estaban altos
+
+No fue que se borraran archivos despues:
+
+- `git log --diff-filter=D` sobre la carpeta: **vacio**;
+- el commit que creo el freeze, `db4c147`: **"62 files changed"**.
+
+**Asi que 67 no fue cierto en ningun momento.** Los dos numeros no salieron de
+medir la carpeta: se escribieron al lado de ella. Lo busque porque dos numeros
+altos en el mismo sentido no son dos errores independientes.
+
+### Como quedo
+
+La linea corregida, y **debajo una nota declarada** con lo que decia, como se
+midio ahora, y la verificacion de que no hubo borrados. **El resto del README no
+se reescribe**: es la traza de lo que se escribio al congelar, con su fecha.
+
+Y **el conteo sigue dando 62** despues de la edicion: se edito el README, no se
+agrego ningun archivo. La correccion no se invalida a si misma.
+
+### Sin test
+
+No hay comportamiento que testear: es una afirmacion en un documento. Lo que la
+sostiene es el comando, que esta escrito en la nota para que cualquiera lo
+repita. **Declarado, no omitido** (regla de completitud).
+
+**ALTO.**

@@ -38,7 +38,18 @@ las condiciones y queda afuera.** Lo único que queda guardado son sus identific
 | raíz de esta carpeta | los módulos del canal (`channel.py`, `autonomous_device.py`, `mcp_server.py`, `server.py`, `ckm_monitor.py`, `agent_device_skin.py`, …) y `providers/` | `iap_chatroom/` |
 | `entorno/` | `commit.txt`, `pip_freeze.txt`, `python.txt`, `modelos_por_caso.txt` | medido al hacer el freeze |
 
-**67 archivos, 620 KB.**
+**62 archivos, 441 kB** (430 KiB). De los 62, **61 son lo copiado y el 62º es este README**.
+
+> **Corrección, 2026-10-10 00:51 UTC — Claude Opus 5 (Code).** Esta línea decía
+> *"67 archivos, 620 KB"*. **Los dos números estaban mal y los dos para arriba.** Medido ahora:
+> `find . -type f | wc -l` da **62**, y la suma de tamaños **440 696 bytes**.
+>
+> **No es que se hayan borrado archivos después:** `git log --diff-filter=D` sobre esta carpeta
+> no devuelve nada, y el commit que creó el freeze (`db4c147`) dice *"62 files changed"*. Así que
+> **67 no fue cierto en ningún momento**: los dos números no salieron de medir la carpeta.
+>
+> Sólo se corrige esta línea. **El resto del README no se reescribe**: es la traza de lo que se
+> escribió al congelar, con su fecha, y cambiarlo sería borrar la condición en que se escribió.
 
 ## Lo que no se pudo congelar, y se declara
 

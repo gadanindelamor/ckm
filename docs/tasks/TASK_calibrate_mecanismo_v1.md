@@ -1,4 +1,4 @@
-# TASK_calibrate_mecanismo_v1 — PROPUESTA (a confirmar por delamor)
+# TASK_calibrate_mecanismo_v1 — CONFIRMADO por delamor (10 oct)
 
 *10 oct 2026 — Opus (Cowork), desde la sugerencia de delamor.*
 
@@ -12,6 +12,12 @@
 2. **Cuándo:** cada vez que hace falta. Como mínimo, en cada salto (`rebuild_calibrate`, diagrama de delamor: el salto es rebuild y calibrate juntos).
 3. **Verificar que calibra:** con el campo plantado (`TASK_tests_instrumento_v1` CP6) como patrón, `calibrate` tiene que devolver umbrales con los que COCO dispara en los casos degradados conocidos y no dispara en los estables. Si no los encuentra, lo dice (estado no calibrado), no inventa un valor.
 
-## No decide
+## Dónde se guarda (delamor, 10 oct)
 
-Qué patrón se usa para el canal vivo; dónde se guardan los umbrales calibrados (Config, leída al inicio del launch — delamor, 10 oct, en la rama pausada); los nombres de los estados. Todo eso, con delamor, antes de implementar.
+> El criterio de dónde se guarda el JSON es **el mismo que para el resto de los datos que se guardan**. Congruencia conceptual y consistencia en la implementación del criterio.
+
+La calibración se persiste como JSON en el mismo `state_dir` que `corpus_state.json`, `corpus_G_state.json` y la trayectoria (`CKMMonitor(state_dir=...)`, fix 2, `9140de5`), con el mismo mecanismo de escritura y lectura. Ningún lugar propio, ningún camino aparte.
+
+## Sigue abierto
+
+Qué patrón se usa para el canal vivo; los nombres de los estados de la calibración. Con delamor, antes de implementar esas partes.

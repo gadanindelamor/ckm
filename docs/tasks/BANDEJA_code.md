@@ -5256,3 +5256,85 @@ juzgo (obligatorio); el llamador declara si habia una mas nueva (con D7, que ya
 existe y nadie usa).**
 
 **No lo implemento.** La forma la deciden ustedes. **ALTO.**
+
+---
+
+## REPORTE CP1 — sin señal, W no cambia — 2026-10-10 19:30 UTC
+
+*`TASK_should_rebuild_conectado_v1`, CP1 de 5. **Sin cambios en el codigo:** el
+CP1 es un invariante que ya vale, y tiene que seguir valiendo despues de que la
+señal mande el rebuild.*
+
+**Suite: 455 passed** (eran 451). Archivo nuevo:
+`tests/test_should_rebuild_conectado.py`, **4 tests**.
+
+### El invariante, y por que afirma el sha y no el flag
+
+**Ingesta en el canal vivo sin señal -> el sha de W queda igual desde que W
+existe.**
+
+El test verifica el **sha** y la **señal**, no `rebuild_suspendido`. El flag es
+el mecanismo de hoy; cuando la decision mande el rebuild, el mecanismo cambia y
+el invariante no. **Un test que pasa antes y despues del cambio solo sirve si lo
+que afirma es el invariante y no el mecanismo** — si afirmara el flag, pasaria
+mañana sin medir nada.
+
+Y afirma las dos cosas juntas a proposito: W podria no cambiar **por
+casualidad**. El test exige que la señal haya estado en `False` en las cinco
+ingestas, asi que el "no cambio" queda atribuido.
+
+### La ventana en la que "sin señal" existe hoy, medida
+
+La señal es `estructural or volumen or tiempo`. Con `min_texts = 3`:
+
+| criterio | umbral | en la ventana |
+|---|---|---|
+| volumen | `len(_texts) >= min_texts*2` = **6** | False con 5 textos |
+| tiempo | `_ciclos_sin_rebuild >= MAX_CICLOS` = **10** | llego a 4: **sobran 6** |
+| estructural | gradiente de `D_ckm` > 0 en 3 pasos | no emitio |
+
+**Asi que "sin señal" solo existe con menos de 6 textos.** Eso no es una
+limitacion del test: **es el punto 3 de la TASK** —el volumen tiene que contar
+desde el ultimo rebuild—. A partir del texto 6 la señal queda en `True` **para
+siempre**.
+
+Hay un test que **afirma ese limite en vez de taparlo**
+(`test_cp1_la_ventana_sin_senal_se_cierra_en_2x_min_texts`): mete el sexto texto
+y exige que la señal se levante. **Cuando el volumen pase a contar por ciclo,
+ese test tiene que fallar** y alguien tiene que venir a leer por que estaba.
+
+### Dos cosas que el CP1 NO prueba, declaradas
+
+**1. El criterio de tiempo no esta al borde.** Agregue un test que lo mide:
+`_ciclos_sin_rebuild` llega a 4 contra `MAX_CICLOS = 10`. Sin eso, el CP1 podria
+estar pasando por un margen de uno y nadie lo veria.
+
+**2. El estructural no emitio, y eso no dice que funcione.** La medicion previa
+(28 sep, citada en la TASK) dice que en vivo *"el estructural no emitia con
+D_ckm cuantizado"*. Un `False` aca prueba que **no emitio con estas cinco
+entradas**, no que el criterio ande. El test tambien verifica cuantos puntos de
+`D_ckm` hubo (`<= 3`): con menos de `n=3` el criterio **no pudo evaluarse**, y
+eso es distinto de haberse evaluado y dado False. Que emita cuando debe es el
+**CP2**, con entrada conocida.
+
+### La inversion
+
+| Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|
+| `ckm_monitor.py:82` -> `rebuild_suspendido=False` (vuelve el rebuild por ingesta) | `test_cp1_sin_senal_W_no_cambia`: **3 shas distintos donde tiene que haber 1** | **455** |
+
+Los otros tres tests del archivo **siguen pasando** bajo la inversion, y es
+correcto: miden la señal y los umbrales, que no cambian porque W se reconstruya.
+**Solo el invariante rompe**, que es el que el CP1 afirma.
+
+### Sin cambios en el codigo, declarado
+
+El CP1 no toca nada: la regla de completitud pide que un cambio de
+comportamiento mueva un test o un docstring, y **aca no hay cambio de
+comportamiento** — hay una guarda escrita antes del cambio. Lo que se mueve es
+la suite: 451 -> 455.
+
+**Lo que sigue:** CP2 (cada criterio dispara con entrada conocida y queda su
+`causal_event`). **Ahi empieza el codigo.**
+
+**ALTO.**

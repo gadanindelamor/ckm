@@ -8,6 +8,7 @@
 *— §5.2: nota de divergencia — `process/experiments/REG_p1p4_ckm_v25_corpus.json` (corpus CKM_v2-v25, N=32, 3 pares negativos, seed 42) da P2 y P4 NO_CONFIRMADA; la tabla dice Verified. A resolver antes de la versión final.*
 *— §8.4: "Instrument" — nueva condición (delamor, 10 oct): el campo es continuo; el corpus ya es instrumento; las W son representaciones; los saltos son del instrumento. Panorama de las discontinuidades y su alineación en el salto.*
 *— §9.5: tests del instrumento (TASK_tests_instrumento_v1) y patrón de respuesta conocida (campo plantado; fourforums con postura anotada).*
+*— Segunda tanda (10 oct): §4.1 inconsistencia de corpus; §5.1 fourforums (asimetría de citas, reglas v8h, embudo v7, nodos = autores); §5.2 rama DOWN plana en P1 y N=64 no reproducible; §5.3 pregunta de categoría (pares de autores sobre W de conceptos); §6.2 condiciones del instrumento en la serie IAP; §8.3 panel desacoplado (Armstrong) y fi saturado con W ≥ 0; §8.4 extracción remite a DEFS v16 §1.1 a–h; §9.5 dos representaciones del agente y el IAP como generador de corpus. DEFS v16 borrador acompaña.*
 *— Abstract: NO se tocó. Afirma "Six (P1–P6) are verified" y "0.78 to 0.02 on the CKM corpus (N=32)"; las dos dependen de la divergencia de §5.2 y de la W de origen UNKNOWN de §5.1. Decisión de delamor.*
 *— §9.5 (texto como unidad): se marca que la saturación de pares distintos — cuántos pares posibles nunca ocurren — ya es la no-co-ocurrencia como cantidad que ordena el colapso.*
 
@@ -832,10 +833,15 @@ represented: a pair that never co-occurs and a pair about which the corpus
 says nothing both take W_ij = 0. Every negative entry in W therefore comes
 from the opposition-marker routing, which assigns the sign of a whole text to
 all of its pairs. Whether absence relative to expectation (φ, PMI) should
-enter W as a second representation is open (§9.5).*]
+enter W as a second representation is open (§9.5). The double meaning of
+0 — absence, or cancellation of both signs — is recorded in DEFS v15 §1.1 e;
+the theorem and the sign origin in DEFS v16 §1.1 g–h.*]
 
 Within a validation experiment, W is a static snapshot — P1-P7 operate on
-a fixed W built from a complete corpus dump (fourforums, CreateDebate). In
+a fixed W built from a complete corpus dump (fourforums, CreateDebate).
+*[v15 — inconsistent with §5.1, where P1–P4 are run on the internal
+W_ckm_corpus_v2 (provenance UNKNOWN). Which W each prediction rests on is
+traced in §5.2 before this sentence is kept.]* In
 live IAP operation, CorpusService reconstructs W continuously as new texts
 arrive; WVersionManager traces each reconstruction; Firma_CKM certifies each
 state. The snapshot is a frame in a streaming field — static by experimental
@@ -1153,6 +1159,23 @@ in fourforums, not globally unique. Fix required composite key
 (discussion_id, post_id) — without it, identified posts drop from 35,966
 to 468 (8 pipeline versions to resolve).*
 
+*[v15 — What the signed fourforums W is.* Its nodes are **authors**, not
+terms. The sign comes from MTurk disagree/agree annotation of quote–response
+pairs (`mturk_2010_qr_task1_worker_response`, scale −5…+5), chained to the
+quoted and quoting authors and to their stance (pipeline v8h, 7,876 resolved
+votes, 513 author pairs with N ≥ 2). Rules: negative if mean_da ≤ −1.0 with
+n ≥ 5; positive if mean_da ≥ 0.3 with n ≥ 5; weight = 0.02·mean_da. Result:
+60 negative directed pairs (46 undirected), **all 60 crossing stance**, and 7
+positive pairs, all inside T1. No positive pair inside T0 is not an error of
+the pipeline: in this forum quoting is mostly disagreement even within the
+same stance (T0 quotes T0: n = 543, mean_da = −1.035, 57.3% disagree; T1
+quotes T1: n = 1,577, mean_da = −0.339). An earlier pipeline (v7, May) selected
+tension pairs structurally from the citation network — disagreement in the
+thread, interaction beyond the pair, **a third author who quotes both without
+reconciling them** (a triangle), asymmetry A→B ≠ B→A, more than one
+interaction — reducing 905 discussions to 262 threads, 169, 137 and 36 final
+pairs. *[Read in the pipeline files and logs, 10 oct 2026.]*]
+
 **Internal CKM corpus (W_ckm_corpus_v2.json):** 32 nodes, declared source
 CKM working reports v2–v25, μ_W = 0.004519. Used for P1–P4 verification.
 *[v15 — Provenance UNKNOWN.* Who produced this matrix, and how, is not
@@ -1176,6 +1199,19 @@ figure, μ_W and θ_W calibrations — carries this mark.*]
 | P7 | Every system with genuine structural tension contains a type-965 node | Verified in two corpora; open in other domains | — | See 5.5 |
 | H_STOP | D_ckm monotonically tracks STOP application | Falsified | — | Reformulated as f(A_pre) |
 | H1/H2/H3 | μ_W bimodal A/B structure | Closed analytically | — | |
+
+*[v15 — P1 under W ≥ 0 (reading, to verify).* In the August figure of the
+field instruments (ckm_viz_v1, N = 32), the removal branch of the P1 loop is
+flat across ρ (c(S) ≈ 0.0045). With W ≥ 0, removing nodes relaxes back to
+the fully active state, so the removal branch cannot descend; part or all of
+the loop area may then be the ferromagnetism of a W without tension rather
+than hysteresis of the field. *[To verify on the run behind the row.]*
+
+*[v15 — N = 64 not reproducible from the repository.* The builder
+`experiments/build_W_base_N64.py` reads from `docs/`, while the reports live
+in `docs/work_reports/` since `c6488c2`; its output `W_base_N64.json` is not
+in the repository or its history. The N = 64 rows rest on a matrix that
+cannot be rebuilt today as written.*]
 
 *[v15 — Divergence to resolve.* `process/experiments/REG_p1p4_ckm_v25_corpus.json`
 (corpus CKM_v2-v25, N=32, 3 negative pairs, seed 42) records P1 CONFIRMADA
@@ -1219,6 +1255,12 @@ The fourforums gun control corpus produces 60 verified opposition pairs
 confirmed-advantage zone. The sweep uses synthetic W; real corpus W may
 shift k* marginally, but the margin (60 > 54) and monotonic behavior above
 k* make this qualification stable.]*
+
+*[v15 — Category question.* The 60 fourforums pairs (§5.1) join **authors**;
+the N = 64 W_base joins **terms** from the working reports. Whether the
+sweep's synthetic dense W, the N = 64 concept W, or an author graph carries
+the k* = 54 comparison must be stated: "60 > 54" compares counts across two
+different node types unless they share the graph.*]
 
 **Stated finding:** P4 is verified at N=32. At N=64, the W_mixta advantage
 requires a minimum negative pair density of k* = 54 pairs (ratio ≈ 0.027).
@@ -1382,6 +1424,18 @@ one**, which relaxes through `relax_orbit`. Statements about "what
 `_count_attractors` measures" therefore have to name the version and the date.
 Nothing in this section should be read as a property of the current
 instrument.
+
+*[v15 — Conditions of the instrument during the series.* Read on preserved
+traces (10 oct 2026): (1) SYSTEM join messages ("X joined the channel")
+entered the corpus as texts and became nodes (`joined`, `joined channel`);
+the Monitor evaluated them (fabrication_index = 1.0 at t = 0). (2) W was
+rebuilt at **every ingest** — one W sha per text — so D_ckm moved with the
+instrument while the channel was still empty (0 → 0.09 → 0.45 → 0.27 in four
+texts). (3) Before `7bf485b`, σ was built by substring (`her` active in "I'm
+**her**e"). (4) In replayed runs each message was counted as a distinct
+device (`n_devices` grows per text), so per-device β measured messages. (5)
+Device names and formatting bigrams entered as nodes. These are conditions of
+the instrument under which every observation in §6.4 was taken.*]
 
 ### 6.3 Case Series Summary
 
@@ -1723,6 +1777,15 @@ showed.
 The naming carries a bias. Recognizing that bias is part of reading the
 instrument correctly.
 
+*[v15 — A panel decoupled from what it reads.* In the August Armstrong
+trajectory (ckm_viz_v1), Δ_r decays geometrically (α ≈ 0.288 per step) over
+nine orders of magnitude while D_ckm stays at 0.70 from t = 1 to t = 19 and
+the fabrication index is 0 from t = 2. The May service record already noted
+the complementary saturation: with W homogeneous and positive,
+fabrication_index = 1.000 at every step — "not signal, saturation"
+(REG_monitor_ckm_v1). Both are conditions of the instrument on a W without
+tension of its own.*]
+
 ### 8.4 Current Conditions
 
 **Scale:** the predictions P1–P7 were verified at N = 32 — the verification
@@ -1744,7 +1807,10 @@ series was run. Basin masses do converge, and N_eff is stable at n_runs ≥
 **Extraction:** what exists in W is decided before any measurement, by node
 selection and pair construction. Two conditions of that branch were corrected
 in September 2026 and one remains open (§4.6). All results in this paper
-were produced before those corrections and hold in that frame.
+were produced before those corrections and hold in that frame. *[v15 — the
+open conditions are now listed in DEFS v16 §1.1: stopwords and language (d),
+the criterion leaves no trace (f, f.1), the origin of sign (g) and the
+presence theorem (h).]*
 
 **Instrument (v15):** the field is continuous; what moves in steps is its
 representation. The corpus already belongs to the instrument — it samples the
@@ -1997,6 +2063,21 @@ is not a result until measured with the repository extractor. Fourforums,
 with annotated stance and MTurk disagreement (60 opposition pairs, all
 crossing stance), is the external known-answer corpus for the same test.
 *[TASK_tests_instrumento_v1; DECISIONES_opus 10 oct 2026.]*
+
+**Two representations of the same work (v15).** The research device of
+Case 0.12 publishes a natural-language summary to the channel and exports
+its full log (plan, iterations, raw search results) separately
+(`process/iap/agent_runs/`). The summary and the raw log are two
+representations of the same activity; comparing the W of each is a
+measurement of what the channel's own representation keeps and loses.
+
+**The IAP as corpus generator (v15).** A channel whose devices produce the
+corpus while it is measured is the object of the project — and the hardest
+to read, because the corpus is then instrument and the devices respond to
+the field it builds. A first, low-cost step: devices on one provider with
+opposed fixed goals, with known opposition by design; the bias to watch is
+the single generator's vocabulary, which puts presence where there is no
+relation.
 
 **Text unit as a calibration parameter.** CKM defines co-occurrence within
 the same text, so the unit decides what co-occurring means and therefore

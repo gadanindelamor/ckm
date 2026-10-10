@@ -19,6 +19,26 @@
 3. **Calibrar en paralelo durante la meseta, para la siguiente:** sobre una W candidata en sombra (sin tocar la vigente). **Se aplica sólo en el salto** (nada reescala dentro de la meseta) y **atada al sha**: si la W del rebuild coincide, se usa; si no, se recalibra en el salto y se declara.
 4. **Nada es expulsado** (delamor, 10 oct): una calibración cuyo sha no coincide **no se descarta**: queda como traza, con su sha y sus condiciones (puede servir si esa W vuelve, o para comparar). *"Intuyo que va a emerger en el proceso algo más."*
 
+## Lo que devuelve (delamor: "brillante y elegante", 10 oct — confirmado)
+
+Un **registro**, no sólo valores: *se declaran las condiciones en las que se calibró*. Un umbral sin sus condiciones es una etiqueta sin origen.
+
+```json
+{
+  "valores":     {"D_CKM_THRESHOLD": "...", "FRAC_REC_MIN": "..."},
+  "estado":      "calibrado | no calibrado (nombres: delamor)",
+  "condiciones": {
+    "w_sha": "...", "representacion": "presencia | ausencia | marcadores",
+    "patron": "extremos + λ", "grilla_lambda": ["..."],
+    "escala_desde_traza": "sha de W_{i-1} | ninguna (primer ciclo)",
+    "margen_separacion": "...", "n_runs": "...", "reloj": "canal", "t": "..."
+  }
+}
+```
+
+- `valores`: lo que usa COCO. Si no calibró, vacío/UNKNOWN y `condiciones` dice por qué (p. ej. ningún umbral separaba).
+- `condiciones`: contra qué W, con qué patrón, con qué margen — lo que permite guardarlo como traza y comparar mesetas.
+
 ## Dónde se guarda (delamor, 10 oct)
 
 > El criterio de dónde se guarda el JSON es **el mismo que para el resto de los datos que se guardan**. Congruencia conceptual y consistencia en la implementación del criterio.

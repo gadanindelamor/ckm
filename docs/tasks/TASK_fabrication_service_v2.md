@@ -24,3 +24,7 @@ El paper (§6.3, §6.4) dice que FabricationService se disparó en el Caso 0.11.
 ## Reglas
 
 No se toca el gate. No se renombra nada. Archivos nombrados al commitear. Un REPORTE por CP: CP1 servicio + tests propios; CP2 delegación + regresión.
+
+## Recursos (criterio de delamor, 10 oct)
+
+Cada test se verifica con los recursos al alcance del proyecto (local, Codespace, Groq). Lo que necesite un recurso fuera de alcance se implementa igual y queda **declarado** en el REPORTE con el recurso que falta; no se verifica hasta tenerlo.

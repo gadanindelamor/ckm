@@ -34,3 +34,7 @@ Los tests y drivers que usan `rebuild_suspendido=False` (rebuild por ingesta) si
 ## Para leer en el REPORTE
 
 Medición previa (memoria 28 sep): en vivo, volumen y tiempo no se apagaban y el estructural no emitía con D_ckm cuantizado. Con el volumen por ciclo, decir con qué frecuencia dispara cada criterio en un smoke con Groq (opcional, al final).
+
+## Recursos (criterio de delamor, 10 oct)
+
+Cada test se verifica con los recursos al alcance del proyecto (local, Codespace, Groq). Lo que necesite un recurso fuera de alcance se implementa igual y queda **declarado** en el REPORTE con el recurso que falta; no se verifica hasta tenerlo.

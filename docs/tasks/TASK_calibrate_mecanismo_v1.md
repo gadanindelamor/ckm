@@ -21,3 +21,7 @@ La calibración se persiste como JSON en el mismo `state_dir` que `corpus_state.
 ## Sigue abierto
 
 Qué patrón se usa para el canal vivo; los nombres de los estados de la calibración. Con delamor, antes de implementar esas partes.
+
+## Recursos (criterio de delamor, 10 oct)
+
+Cada test se verifica con los recursos al alcance del proyecto (local, Codespace, Groq). Lo que necesite un recurso fuera de alcance se implementa igual y queda **declarado** en el REPORTE con el recurso que falta; no se verifica hasta tenerlo.

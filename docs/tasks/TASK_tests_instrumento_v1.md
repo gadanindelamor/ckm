@@ -84,3 +84,7 @@ No es unitario: es el **patrón de respuesta conocida**.
 ## Fuera de este TASK
 
 Arreglar marcadores, normalizaciones o extracción; conectar `should_rebuild`; calibrar. Todo eso viene después, con delamor, sobre lo que estos tests muestren.
+
+## Recursos (criterio de delamor, 10 oct)
+
+Cada test se verifica con los recursos al alcance del proyecto (local, Codespace, Groq). Lo que necesite un recurso fuera de alcance se implementa igual y queda **declarado** en el REPORTE con el recurso que falta; no se verifica hasta tenerlo.

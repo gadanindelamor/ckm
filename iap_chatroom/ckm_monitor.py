@@ -1,9 +1,70 @@
 """
 ckm_monitor.py — CKMMonitor
 
-Observador CKM de la chatroom. Se registra como callback en ChatChannel
-y acumula cada mensaje en el corpus; W emerge de la interacción, no se
-precarga. No participa en el chat — solo observa.
+Observador CKM de la chatroom. Se registra como callback en ChatChannel;
+W emerge de la interacción, no se precarga. No participa en el chat — solo
+observa.
+
+**Qué entra al corpus.** No todos los mensajes: **en las condiciones
+actuales**, los de `device_type == "SYSTEM"` (joins, leaves) **quedan afuera**
+(F3b, 9 oct 2026). Tampoco cuentan como agentes (F4).
+
+Lo que lo motivó, medido en los vivos 01 y 02: **8 de los 12 textos del corpus
+eran "X joined the channel"** — dos tercios de lo que construía W.
+
+**No es una regla permanente, y la diferencia importa.** delamor lo precisó al
+día siguiente: *"los mensajes de SYSTEM son campo, y debemos estudiar con calma
+y atención cómo tratarlos. Mi decisión 'no, nunca' corresponde a las
+circunstancias en las que decidí"* — se lee **"no, nunca en estas
+condiciones"**. Su propósito fue cortar de cuajo un análisis que pedía otras
+condiciones para existir, en medio de una implementación con tiempo acotado.
+**Cómo tratar SYSTEM como campo queda abierto, sin apuro.**
+
+Y hay dos lugares distintos: SYSTEM sale del **corpus** —lo que construye W— y
+**sigue en la observación** del device (`n_nuevos`, `history`).
+
+Este docstring decía *"acumula cada mensaje en el corpus"* y quedó
+desactualizado el mismo día de F3b; se corrige acá.
+
+**Dónde escribe.** `state_dir` es parámetro (F3a), con el default de siempre
+(`iap_chatroom/_state/`). El server lo recibe como `--state-dir`
+(`arranque.py`), así que cada vivo puede arrancar de un estado conocido y el
+panel declara dónde escribió.
+
+**El rebuild lo decide esta clase, no la ingesta** (TASK_should_rebuild_
+conectado_v1):
+  - la señal se calcula con la jerarquía **estructural > volumen > tiempo**,
+    y `_last_rebuild_causa` dice **cuál** de los tres disparó (CP2);
+  - cuando hay señal, se llama a `CorpusService.rebuild_por_decision(causa)`,
+    que **no** está bloqueado por `rebuild_suspendido` —ese flag impide el
+    rebuild automático **por ingesta**— y deja la causa en el `causal_event`
+    de `w_version`;
+  - el **volumen cuenta desde el último rebuild**, no el total del corpus
+    (CP3): sobre el total quedaba en True para siempre y el rebuild volvía a
+    ser continuo;
+  - la **historia de `D_ckm` es por ciclo** y se reinicia en cada rebuild
+    (CP4): `D_ckm` se mide contra el baseline de su ciclo, así que un
+    gradiente que cruza un salto compara dos cosas medidas contra baselines
+    distintos.
+
+**Qué se persiste** (CP2b), en el mismo `state_dir` y con los mecanismos que
+ese directorio ya usaba:
+  - `rebuild_decisions.jsonl` — **append-only**, una línea por decisión
+    tomada, con `w_sha_antes` / `w_sha_despues` / `w_cambio`. Ese par es el
+    núcleo: `w_version` deduplica por sha, así que una decisión que no mueve W
+    **no deja versión** y sin esta línea no quedaría en ningún lado. Las
+    vueltas **sin** señal no se registran.
+  - `rebuild_state.json` — los contadores, restaurados al arrancar. **Esto
+    cambia el comportamiento**: el criterio de tiempo sobrevive al reinicio
+    (antes `_ciclos_sin_rebuild` vivía en memoria). El archivo guarda el
+    `w_sha` del ciclo, y si al arrancar no coincide con la W del corpus **los
+    contadores se descartan y la causa queda escrita**: los de una meseta no
+    pasan a otra.
+
+**Lo que esta clase NO hace:** no toca `MonitorService`, la Config ni COCO.
+La invalidación de Δ_r en el cambio de W sigue siendo de Monitor (D2), y se
+lee en `panel["Delta_r_reset"]`. El punto donde iría `calibrate` existe,
+está marcado en el panel y **no hace nada** (`TASK_calibrate_mecanismo_v1`).
 
 Nota de integración con services/:
   - CorpusService.ingest(texts) es el método real de acumulación (no
@@ -11,7 +72,8 @@ Nota de integración con services/:
   - MonitorService.evaluate(text, device_id=None) requiere el texto de
     cada evaluación — no es un evaluate() sin argumentos.
   - FirmaService.firmar(corpus, monitor, n_agentes) es stateless; no
-    guarda referencia a corpus/monitor por sí sola.
+    guarda referencia a corpus/monitor por sí sola. `n_agentes` es
+    **obligatorio y sin default** desde el 9 oct: un default no es un conteo.
 """
 
 from __future__ import annotations
@@ -217,6 +279,16 @@ class CKMMonitor:
             # rebuild por ingesta (la primera W, o el régimen no suspendido):
             # el ciclo nuevo arranca con su cuenta en cero
             self._textos_desde_rebuild = 0
+            # **Y con su historia de D_ckm vacía** (CP4). Va acá, antes de que
+            # `evaluate` agregue el punto de este mensaje: ese punto es el
+            # primero del ciclo nuevo, medido contra la W nueva.
+            #
+            # Por qué por ciclo: `D_ckm` se mide **contra el baseline de su
+            # ciclo** (`N_eff0` se fija al nacer), así que un gradiente que
+            # cruza un salto compara dos cosas medidas contra baselines
+            # distintos. El criterio estructural leería una pendiente que no
+            # existe en ninguna de las dos mesetas.
+            self._d_ckm_history = []
         else:
             self._ciclos_sin_rebuild += 1
 
@@ -277,6 +349,11 @@ class CKMMonitor:
                 # volumen quedaría en `True` desde el primer mensaje posterior
                 # al salto y el rebuild volvería a ser continuo.
                 self._textos_desde_rebuild = 0
+                # La historia de D_ckm, por ciclo (CP4). Acá el reset va
+                # **después** de que `evaluate` corrió: el punto de este
+                # mensaje se midió contra la W **anterior** al salto, así que
+                # pertenece a la meseta que se cierra y no a la que nace.
+                self._d_ckm_history = []
                 # **Acá va `calibrate`** (`TASK_calibrate_mecanismo_v1`,
                 # confirmado). El punto existe y **no hace nada todavía**, y se
                 # declara así: dejarlo sin marca haría que mañana el lugar se
@@ -362,8 +439,10 @@ class CKMMonitor:
             "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
             "textos_desde_rebuild": self._textos_desde_rebuild,
             "d_ckm_history": [float(x) for x in self._d_ckm_history],
-            "d_ckm_history_es_por_ciclo": False,
-            "nota": "d_ckm_history acumulada; por ciclo es el CP4",
+            # **Por ciclo desde el CP4.** Hasta el CP2b se persistía acumulada
+            # y el archivo lo declaraba así; ahora se reinicia en cada rebuild.
+            "d_ckm_history_es_por_ciclo": True,
+            "nota": "d_ckm_history del ciclo vigente; se reinicia en el rebuild",
         }, ensure_ascii=False))
 
     def _registrar_decision(self, causa: str, st: dict,

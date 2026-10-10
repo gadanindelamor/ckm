@@ -5686,3 +5686,100 @@ cierra en el texto 6: llega hasta el 9.
 **Hasta el CP3 no se corre ningun vivo** (orden de Opus). **No corri ninguno.**
 
 **ALTO.**
+
+---
+
+## REPORTE CP4 — la historia de D_ckm, por ciclo — 2026-10-10 20:20 UTC
+
+**Suite: 486 passed** (eran 481), **35 tests** en el archivo.
+*Primera aplicacion de la regla del docstring (DECISIONES `73b367b`).*
+
+### Docstring por archivo tocado
+
+| archivo | docstring |
+|---|---|
+| `iap_chatroom/ckm_monitor.py` | **Actualizado.** Reescrito casi entero: que entra al corpus, el `state_dir`, quien decide el rebuild, los tres criterios, el volumen por ciclo, la historia por ciclo, los dos archivos persistidos, y lo que esta clase **no** hace. |
+| `services/corpus_service.py` | **Actualizado.** Lo toque en el **CP2**, antes de que la regla existiera; lo reviso igual. |
+| `tests/test_should_rebuild_conectado.py` | Actualizado: dos docstrings de test **convertidos** con la traza de por que fallaban. |
+
+### Las divergencias que encontre leyendo codigo y docstring juntos
+
+**1. `ckm_monitor.py` decia *"acumula cada mensaje en el corpus"*.** Falso desde
+**F3b, que hice yo esta mañana** (`6151120`): los SYSTEM no entran. **Cambie el
+codigo y no el docstring, el mismo dia.** Es exactamente el caso para el que la
+regla existe, y el primero que encuentra es mio.
+
+**2. Y al corregirlo volvi a la lectura fuerte.** Escribi *"quedan afuera
+(delamor: 'no, nunca')"*, plano. delamor lo habia precisado al dia siguiente:
+*"los mensajes de SYSTEM son campo... mi decision 'no, nunca' corresponde a las
+circunstancias en las que decidi"* — se lee **"no, nunca en estas
+condiciones"**. Corregido con la precision de Opus: **en las condiciones
+actuales**, SYSTEM **es campo**, como tratarlo **queda abierto**, y SYSTEM sale
+del **corpus** pero **sigue en la observacion** del device. Son dos lugares
+distintos.
+
+**3. `corpus_service.py` decia *"transicion automatica acumulacion ->
+evaluacion"* y no decia lo que pasa despues de la primera W.** Con el default
+reconstruye en **cada ingesta**; con `rebuild_suspendido=True`, **nunca** mas.
+El docstring no distinguia los dos, y el primero es **justo el que delamor
+descarto**. Ahora los declara, mas el tercero —por decision— y la nota de que
+`register` deduplica por sha.
+
+### Lo implementado
+
+**La historia de `D_ckm` se reinicia en cada rebuild.** Por que: `D_ckm` se mide
+contra el baseline de **su** ciclo (`N_eff0` se fija al nacer), asi que un
+gradiente que cruza un salto **compara dos cosas medidas contra baselines
+distintos** — el estructural leeria una pendiente que no existe en ninguna de
+las dos mesetas.
+
+**Y se persiste por ciclo**: `rebuild_state.json` pasa
+`d_ckm_history_es_por_ciclo` a `true`.
+
+### Dos ordenes distintos, a proposito
+
+| camino | el reset va | por que |
+|---|---|---|
+| **por ingesta** (rama del sha) | **antes** de `evaluate` | W ya cambio cuando el punto se mide: ese punto es el **primero del ciclo nuevo** |
+| **por decision** | **despues** de `evaluate` | el punto se midio contra la W **anterior** al salto: pertenece a la meseta que **se cierra** |
+
+No es simetria rota: es de que W se midio cada punto. Tiene su test.
+
+### Una consecuencia, declarada
+
+**El CP4 endurece el estructural.** Despues de un salto no puede disparar hasta
+que el ciclo nuevo junte sus `n+1 = 4` puntos. Eso es lo que se queria —un
+gradiente repartido entre dos mesetas no es una pendiente— y **hace al criterio
+mas dificil de emitir**, sobre una medicion (28 sep) que ya decia que en vivo
+casi no emitia. Tiene su test.
+
+### Δ_r: D2 no se toco
+
+La invalidacion de Δ_r en el cambio de W **sigue siendo de `MonitorService`**, y
+se lee en `panel["Delta_r_reset"]`. Hay un test que verifica que el campo sigue
+en el panel: **tocar Monitor pide parar y reportar, y este CP4 no lo toco.**
+
+### Un test convertido, no borrado
+
+`test_cp2b_la_historia_de_d_ckm_se_persiste_y_NO_es_por_ciclo` fallo en el CP4
+**como estaba anunciado en su propio docstring**. Es el mismo test, ahora
+`test_cp4_la_historia_de_d_ckm_se_persiste_POR_CICLO`, con la traza arriba.
+**Segunda vez que esto pasa en esta TASK** —la primera fue la ventana del CP1 en
+el CP3— y las dos veces el test **se habia escrito anunciando su propia
+caducidad**.
+
+Y uno mas que cambio de aserto por la misma razon:
+`test_cp2_estructural_dispara_con_gradiente_positivo` afirmaba que la serie
+sobrevivia al salto. **Ahora afirma que no**, con la linea anterior citada.
+
+### Las dos inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | la historia **cruza** el salto | **4 tests**, entre ellos `test_cp4_el_salto_reinicia_la_historia` | **486** |
+| B | el archivo vuelve a declararla acumulada | `..._se_persiste_POR_CICLO`, `..._el_estado_persistido_guarda_la_historia_del_ciclo` | 486 |
+
+**Ningun vivo corrido.** Sigue el **CP5**: regresion con
+`rebuild_suspendido=False`.
+
+**ALTO.**

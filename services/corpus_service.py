@@ -2,7 +2,33 @@
 corpus_service.py — CorpusService  v2
 
 Stateful. Acumula prompts, construye W desde co-activaciones.
-Transición automática acumulación → evaluación cuando hay suficientes datos.
+Transición automática acumulación → evaluación al cruzar `min_texts`.
+
+**Cuándo se reconstruye W, los tres regímenes.** El docstring decía sólo
+"transición automática" y no decía lo que pasa **después** de la primera W; se
+completa acá (regla del 10 oct: el docstring se actualiza con el código).
+
+  1. `rebuild_suspendido=False` (**default**): `ingest` reconstruye W en **cada
+     ingesta** una vez cruzado `min_texts`. delamor: *"la ingesta no debe
+     implicar rebuilds continuos"* — este régimen es el que esa frase descarta,
+     y queda como el de los tests y drivers que ya lo usaban.
+  2. `rebuild_suspendido=True` (**el canal vivo**): W se construye **una vez** y
+     la ingesta no la reconstruye más.
+  3. **Por decisión**: `rebuild_por_decision(causa)`, con la `causa`
+     **obligatoria y sin default** — un rebuild sin causa declarada no es una
+     decisión. **`rebuild_suspendido` no lo bloquea**: ese flag impide el
+     rebuild automático por ingesta, no el salto decidido. La causa queda en el
+     `causal_event` de `w_version`, y con el corpus en acumulación **no
+     reconstruye y lo dice** (`rebuild: False`, `motivo_no_rebuild`).
+
+Quién decide el salto no vive acá: lo decide `CKMMonitor` con la jerarquía
+estructural > volumen > tiempo (`TASK_should_rebuild_conectado_v1`). `_rebuild`
+acepta `causa=None` para que el rebuild por ingesta **no cambie de marca**.
+
+**Nota sobre la traza:** `w_version.register` **deduplica por sha** ("si W es
+idéntica, no crea marca duplicada"), así que un rebuild por decisión que no
+mueve W **no deja versión**. Esa decisión queda en el `rebuild_decisions.jsonl`
+de `CKMMonitor`, no acá.
 
 v2: W mixta — pesos negativos por marcadores de oposición (elicitación sin sesgo).
   - Si un texto contiene un marcador de oposición → co-ocurrencias contribuyen

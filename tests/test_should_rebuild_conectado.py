@@ -230,8 +230,14 @@ def test_cp2_estructural_dispara_con_gradiente_positivo(monitor) -> None:
 
     sha_antes = cm._corpus.w_sha()
     cm.on_message(_Msg("evidence about weapons is disputed by analysts"))
-    # con el punto del canal (0.0) la serie sigue ascendiendo
-    assert cm._d_ckm_history[-5:] == [-0.4, -0.3, -0.2, -0.1, 0.0]
+    # **La serie que disparó ya no está** (CP4): el salto reinicia la historia,
+    # así que el ciclo nuevo arranca sin la pendiente de la meseta anterior.
+    # Antes del CP4 esta línea afirmaba
+    # `cm._d_ckm_history[-5:] == [-0.4, -0.3, -0.2, -0.1, 0.0]` —la serie
+    # sobrevivía al salto— y falló en el CP4, como correspondía.
+    assert cm._d_ckm_history == [], (
+        f"la historia sobrevivió al salto: {cm._d_ckm_history}"
+    )
 
     assert cm._last_rebuild_causa == "estructural", (
         f"disparó otro criterio: {cm._last_rebuild_causa}"
@@ -690,10 +696,17 @@ def test_cp2b_los_dos_archivos_van_en_el_mismo_state_dir(monitor, tmp_path) -> N
     assert "monitor_trajectory.jsonl" in nombres
 
 
-def test_cp2b_la_historia_de_d_ckm_se_persiste_y_NO_es_por_ciclo(monitor) -> None:
+def test_cp4_la_historia_de_d_ckm_se_persiste_POR_CICLO(monitor) -> None:
     """
-    Se persiste **como está hoy: acumulada**. Reiniciarla en el salto es el
-    **CP4**, y el archivo lo declara para que no se lea como si ya lo fuera.
+    **Este test estaba escrito al revés, y es el mismo test.**
+
+    En el CP2b decía: *"se persiste como está hoy: acumulada. Reiniciarla en el
+    salto es el CP4, y el archivo lo declara para que no se lea como si ya lo
+    fuera"*, y afirmaba `d_ckm_history_es_por_ciclo is False`.
+
+    Falló en el CP4, como estaba anunciado. **No se borra**: se convierte en la
+    afirmación del comportamiento nuevo, con la traza arriba — igual que el test
+    de la ventana del CP1 en el CP3.
     """
     import json as _json
     cm = monitor
@@ -701,7 +714,9 @@ def test_cp2b_la_historia_de_d_ckm_se_persiste_y_NO_es_por_ciclo(monitor) -> Non
         cm.on_message(_Msg(t))
     d = _json.loads((cm.state_dir / "rebuild_state.json").read_text())
     assert "d_ckm_history" in d
-    assert d["d_ckm_history_es_por_ciclo"] is False
+    assert d["d_ckm_history_es_por_ciclo"] is True
+    # y lo persistido es la del ciclo vigente: el salto la dejó vacía
+    assert d["d_ckm_history"] == []
 
 
 def test_cp2b_los_contadores_de_una_meseta_no_pasan_a_otra(
@@ -776,3 +791,94 @@ def test_cp2b_descartado_y_error_no_se_colapsan(tmp_path, monkeypatch) -> None:
         "un archivo roto se reportó como un descarte por meseta"
     )
     monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+# ── CP4: la historia de D_ckm es por ciclo ─────────────────────────────────
+
+def test_cp4_el_salto_reinicia_la_historia(monitor) -> None:
+    """
+    **CP4.** `D_ckm` se mide contra el baseline de **su** ciclo (`N_eff0` se
+    fija al nacer), así que un gradiente que cruza un salto compara dos cosas
+    medidas contra baselines distintos: el criterio estructural leería una
+    pendiente que no existe en ninguna de las dos mesetas.
+    """
+    cm = monitor
+    for t in TODOS[:8]:
+        cm.on_message(_Msg(t))
+    assert cm._d_ckm_history, "el test necesita historia antes del salto"
+
+    cm.on_message(_Msg(TODOS[8]))              # salto por volumen
+    assert cm._last_rebuild_causa == "volumen"
+    assert cm._d_ckm_history == [], (
+        f"la historia cruzó el salto: {cm._d_ckm_history}"
+    )
+
+
+def test_cp4_el_punto_del_mensaje_del_salto_queda_en_la_meseta_que_cierra(
+    monitor
+) -> None:
+    """
+    El orden importa y se declara: en el camino **por decisión** el reset va
+    **después** de que `evaluate` corrió, así que el punto de ese mensaje —que
+    se midió contra la W **anterior** al salto— pertenece a la meseta que se
+    cierra, no a la que nace.
+
+    En el camino **por ingesta** el reset va **antes** de `evaluate`, porque
+    ahí W ya cambió cuando el punto se mide: ese punto es el primero del ciclo
+    nuevo. **Son dos órdenes distintos a propósito.**
+    """
+    cm = monitor
+    cm.on_message(_Msg(TODOS[0]))
+    cm.on_message(_Msg(TODOS[1]))
+    cm.on_message(_Msg(TODOS[2]))              # acá nace W, por ingesta
+    # el punto de este mensaje se midió con la W nueva: arranca el ciclo
+    assert len(cm._d_ckm_history) <= 1, (
+        f"el ciclo nuevo arrancó con puntos de la acumulación: "
+        f"{cm._d_ckm_history}"
+    )
+
+
+def test_cp4_el_estructural_necesita_sus_n_mas_1_puntos_dentro_del_ciclo(
+    monitor
+) -> None:
+    """
+    Consecuencia de la historia por ciclo, declarada: después de un salto el
+    estructural **no puede disparar** hasta que el ciclo nuevo junte sus `n+1`
+    puntos. Eso **endurece** el criterio, y es lo que se quería: un gradiente
+    de cuatro puntos repartidos entre dos mesetas no es una pendiente.
+    """
+    cm = monitor
+    for t in TODOS:
+        cm.on_message(_Msg(t))                 # salto
+    assert cm._d_ckm_history == []
+    assert cm._corpus.should_rebuild(cm._d_ckm_history, n=3) is False, (
+        "el estructural disparó con la historia vacía"
+    )
+
+
+def test_cp4_monitor_sigue_invalidando_delta_r(monitor) -> None:
+    """
+    **D2 no se toca.** La invalidación de Δ_r en el cambio de W es de
+    `MonitorService` y sigue como hoy: se lee en `panel["Delta_r_reset"]`.
+
+    Se verifica que el campo **existe en el panel** y que el canal no lo
+    reemplazó: tocar Monitor pide parar y reportar, y este CP4 no lo tocó.
+    """
+    cm = monitor
+    for t in TODOS[:4]:
+        cm.on_message(_Msg(t))
+    assert cm._last_panel is not None
+    assert "Delta_r_reset" in cm._last_panel, (
+        "el panel de Monitor dejó de declarar la invalidación de Δ_r"
+    )
+
+
+def test_cp4_el_estado_persistido_guarda_la_historia_del_ciclo(monitor) -> None:
+    """La historia que se persiste es la del ciclo vigente, no la acumulada."""
+    import json as _json
+    cm = monitor
+    for t in TODOS[:8]:
+        cm.on_message(_Msg(t))
+    d = _json.loads((cm.state_dir / "rebuild_state.json").read_text())
+    assert d["d_ckm_history"] == [float(x) for x in cm._d_ckm_history]
+    assert d["d_ckm_history_es_por_ciclo"] is True

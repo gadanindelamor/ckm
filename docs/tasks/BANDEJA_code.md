@@ -5453,3 +5453,88 @@ confirma.
   no se borra.
 
 **ALTO.**
+
+---
+
+## RESPUESTA — la decision de rebuild no se persiste; forma minima propuesta — 2026-10-10 19:47 UTC
+
+*Pregunta de Opus antes del CP3. **Sin codigo.** Suite 467.*
+
+### Verificado, y es mas que "solo en `get_state()`"
+
+**`CKMMonitor` no escribe nada.** `grep "def save|open(|\.write|json.dump"` sobre
+`iap_chatroom/ckm_monitor.py`: **vacio**. Lo que hace es **cablear rutas**
+(L80-118) y los tres dueños escriben lo suyo:
+
+| archivo | quien lo escribe |
+|---|---|
+| `corpus_state.json` | `CorpusService.save()` |
+| `corpus_G_state.json` | `BehaviorGraph` |
+| `monitor_trajectory.jsonl` | `MonitorService._persist` |
+
+Asi que `rebuild_senal`, `rebuild_causa` y `ultimo_rebuild_por_decision`
+**viven solo en memoria**. La sospecha de Opus se confirma: **un rebuild que no
+cambia W no deja traza en ningun lado** — ni en `w_version` (deduplica por sha)
+ni en disco.
+
+### Una segunda consecuencia, que no estaba en la pregunta
+
+`_ciclos_sin_rebuild`, `_d_ckm_history` y `_message_count` **tambien son de
+memoria**. Entonces:
+
+**El criterio de tiempo arranca de cero en cada reinicio del server.** Con
+`MAX_CICLOS = 10`, un canal que se reinicia cada menos de 10 mensajes **nunca
+dispara por tiempo**, y nada lo dice. No es parte de la pregunta y **no lo
+propongo como parte del minimo**: es estado, no evento, y persistirlo **cambia
+el comportamiento**. Queda como decision aparte.
+
+### La forma minima propuesta
+
+**Un `rebuild_decisions.jsonl` en el mismo `state_dir`, append-only, escrito por
+`CKMMonitor`.**
+
+Por que esa forma y no otra: los datos del proyecto ya usan **dos** mecanismos en
+ese directorio — **snapshot JSON** para estado (`corpus_state.json`) y **JSONL
+append-only** para eventos en el tiempo (`monitor_trajectory.jsonl`). Una
+decision de rebuild **es un evento en el tiempo**, asi que va en el segundo. No
+inventa mecanismo: usa el que ya esta, en el directorio que ya esta.
+
+**No va dentro de `monitor_trajectory.jsonl`**: ese lo escribe
+`MonitorService._persist` y su `panel` es de Monitor. Tocar Monitor pide parar y
+reportar.
+
+Una linea por **decision tomada** (señal en True), con el minimo que hace visible
+el caso invisible:
+
+```json
+{"t": 0, "ts": 1760000000.0, "reloj": "time.time",
+ "causa": "volumen", "ocurrio": true, "motivo_no_rebuild": null,
+ "w_sha_antes": "ce43...", "w_sha_despues": "11c2...",
+ "w_cambio": true,
+ "corpus_size": 6, "message_count": 6,
+ "ciclos_sin_rebuild": 0, "n_puntos_d_ckm": 4}
+```
+
+**El par `w_sha_antes` / `w_sha_despues` es el nucleo de la propuesta.** Una
+decision con `ocurrio: true` y **los dos shas iguales** es exactamente el caso
+que no deja version: hoy se ve igual que un salto y con esto se distingue. Por
+eso `w_cambio` va explicito y no se deja deducir.
+
+`n_puntos_d_ckm` esta para que se pueda saber si el estructural **pudo
+evaluarse**: con menos de `n+1` no se evaluo, y eso no es lo mismo que haberse
+evaluado y dado False.
+
+`reloj` declara de que reloj salio `ts`, como en el CLOCK del canal: `CKMMonitor`
+no tiene el canal, asi que seria `time.time()` y no el `_ahora()` del
+`ChatChannel`. **Declarado, no mezclado.**
+
+### Lo que esta forma NO resuelve, y lo digo
+
+- **No persiste el estado de la decision** (`_ciclos_sin_rebuild`,
+  `_d_ckm_history`): registra lo que paso, no permite retomarlo. El criterio de
+  tiempo sigue arrancando de cero al reiniciar.
+- **No registra las vueltas sin señal.** Una linea por mensaje seria el ruido que
+  el filtro del CP2b existe para evitar. "La señal nunca se levanto" se lee de que
+  el archivo este vacio, mas el panel.
+
+**No lo implemento sin el OK.** Sigo con el CP3.

@@ -1,5 +1,7 @@
 # BORRADOR_REG_p1_p4_no_testeables_en_w_snapshot_v1
 
+*→ Pasó a `registers/REG_p1_p4_no_testeables_en_w_snapshot_v1.md` con el OK de delamor, 11 oct 2026. Este archivo queda como traza: lo citan DEFS v15/v16, el PAPER v28 y P1P4.*
+
 **Clase R — BORRADOR. Fuera de `registers/`.** Entra a `registers/` sólo con el OK de delamor.
 *5 oct 2026 — gadanin.delamor + Claude Opus 5, Codespace `ckm` @ `f8e0783`.*
 

@@ -77,6 +77,8 @@ delamor: *"el campo continuo no salta; salta la medición; el instrumento NO sal
 | valores sin origen | `min_texts=0` leído como valor → `2·0 = 0` → volumen siempre verdadero | I2: el nulo escrito como 0 | DECISIONES 11 oct |
 | **cascada** | estructural > volumen > tiempo en `elif`: el criterio con valor sin origen tapa a los otros | orden de los pasos no es de la regla | `ckm_monitor.py:314-321` |
 
+**Traza previa (delamor, 11 oct):** la revisión ya había empezado. `REG_regla_ckm_trust_v1` §4 (4 oct) es una tabla de los sitios donde la regla ya opera, verificada leyendo. Ahí están `_seleccionar`, el bootstrap, el `NOMINAL` por defecto (paso 4 subrepticio), la cancelación de α, el bootstrap = 12 (sesgo de destino) y los casos de Salamanca. Su §7 dejó para Code un CP1, el inventario de sitios de decisión en `services/` e `iap_chatroom/`, que **nunca se ejecutó** (no aparece en la BANDEJA). El CP0 de este TASK parte de esa tabla y retoma ese inventario: es paso 2, decide la traza. El REG está en la carpeta de delamor (`antropic/trust___project/structure_topology/`), no en el repo. Subirlo es decisión de delamor.
+
 **La PoC del volumen** (la orden de delamor del 11 oct) todavía no está en `origin/main`. Cuando Code la suba, sus hallazgos entran a esta tabla.
 
 ## Reglas del TASK

@@ -6014,3 +6014,104 @@ inventados.
   proposito**, y lo declaran.
 
 **ALTO.**
+
+---
+
+## VERIFICACION del inventario del `−` — 2026-10-11 01:58 UTC
+
+*Sin codigo. Suite 508. **No hay orden para ejecutar** en `20247ee` ni en
+`4a3bb6b`: el `−` esta **observado y no decidido**, y el gate dice que no se
+toca codigo hasta que delamor diga.*
+
+Lo que hago es lo unico que es mio y no toca nada: **verificar el inventario que
+Opus leyo**, con codigo y docstring juntos, que es lo que la regla del 10 oct
+pide **antes** de que alguien actue sobre eso. Desde donde mire: `services/`.
+
+### Confirmado tal cual
+
+| afirmacion de Opus | verificado |
+|---|---|
+| `_combine_W_Delta` -> `return W + Delta_norm` | **si** (`monitor_service.py:651`) |
+| `coco.observe` -> `W_eff = self.W + self._Delta` | **si** (`coco.py:280`) |
+| "y otra vez despues de comprimir" | **si** (`coco.py:337`) — **con una precision:** esta dentro de `if self._track_landscape:`, asi que **en el camino por default hay dos sitios y ejecuta uno** |
+| `W / max_abs` en CorpusService | **si** (`corpus_service.py:332-335`) |
+| `scale = mean(W>0)` | **si** (`monitor_service.py:647-648`) |
+| `μ_W = mean(W_eff>0)` en `beta_c_landscape` | **si** (`landscape_engine.py:194`) |
+| `mu_W_nonzero` / `mu_W_global` en la config | **si** (`ckm_landscape_config.py:90-91`) |
+
+### Donde el docstring dice MAS que lo reportado
+
+Opus: *"Ningun REG argumenta el +"*. Cierto, y el **docstring de
+`_combine_W_Delta` va mas lejos**:
+
+> *"La escala usa solo W>0 — no |W| ni todos los no-cero. Data de cuando W era
+> positiva y `W_nonzero` y `W>0` eran el mismo conjunto. **Se mantiene el
+> comportamiento; queda dicho que es una eleccion, no una consecuencia del
+> rango de W.**"*
+
+**No argumenta el `+`, pero marca la eleccion como sin argumento.** No esta
+escondido: esta declarado. Otra vez el docstring rinde mas que el codigo.
+
+### Las medias: no son una convencion, son TRES
+
+*"Varias de esas medias suponen W ≥ 0"* es mas grueso que lo que el codigo
+hace. Medido, sitio por sitio:
+
+| sitio | la media va sobre | con W mixta |
+|---|---|---|
+| `_combine_W_Delta` (monitor:647) | **`W > 0`** | ignora los negativos; fallback `1.0` si no hay positivos |
+| `beta_c_landscape` (engine:194) | **`W_eff > 0`** | ignora los negativos |
+| `coco._beta_c` (coco:449) | **todos los pares** del triangulo, ceros incluidos | **incluye** los negativos |
+| config `mu_W_nonzero` (90-91) | **`!= 0`** | **incluye** los negativos |
+| config `mu_W_global` (90) | **todos** | **incluye** los negativos |
+
+**Tres convenciones coexisten**: sobre los positivos, sobre los no-nulos, y
+sobre todos. Eso es exactamente *"alinear las reglas"* — y no hace falta decidir
+el `−` para que esten desalineadas: ya lo estan.
+
+### HALLAZGO — el mismo caso degenerado, dos convenciones
+
+Los dos β_c tratan **la misma situacion** de dos maneras distintas:
+
+| | media sobre | si la media es <= 0 |
+|---|---|---|
+| `beta_c_landscape` (engine) | `W_eff > 0` | **`None`** — y el docstring lo declara: *"None si W_eff no tiene pesos positivos; el llamador cae a uniforme"* |
+| `coco._beta_c` (beta_c_corpus) | todos los pares | **`float("inf")`** (`coco.py:450-451`) |
+
+**El `inf` es un valor de la escala puesto donde hay una ausencia.** Es el mismo
+patron que cerramos ayer y anteayer: el `1` de `n_agentes`, el `0.0` del Δt no
+medido, el `-1` de "nunca llamo". Un β_c infinito **afirma** que el campo no
+alcanza la criticidad; lo que pasa es que **la media global no es positiva**.
+
+Y el docstring de COCO justifica la media global como *"conservador, menos
+sensible"* — con **W positiva** eso era cierto. Con W mixta la misma eleccion
+produce `inf`, que no es conservador: es una afirmacion.
+
+**El engine declara la diferencia entre los dos numeros** (*"NO es el mismo
+numero que COCO.beta_c_corpus()"*, con las dos mediciones: 13.83 y 10.46). Lo
+que **no** esta declarado en ninguno de los dos es que sus convenciones de *"no
+medible"* divergen.
+
+**No lo toco** (gate). Y **no afirmo la consecuencia aguas abajo**: que hace un
+β_c infinito en TEMP_SIGNAL no lo medi, asi que es UNKNOWN de mi parte.
+
+### Lo que esto le aporta al `−`, sin decidirlo
+
+Si el `−` entra, **`_combine_W_Delta` y `beta_c_landscape` dejan de tener media
+de W**: su media es sobre los positivos, y con `W − Δ` los negativos son parte
+de lo que hay que medir. Los otros tres sitios **ya** la toman sobre todos o
+sobre los no-nulos, asi que **el `−` no los rompe igual**. Eso no decide qué
+media va —delamor lo dejo abierto—: dice **cuales dos sitios son los que el `−`
+toca y cuales tres no.**
+
+### Lo de `min_texts = 0`, anotado
+
+No es una orden y no tiene pregunta asignada. Lo unico que agrego, verificado:
+toca **tres** umbrales derivados, no uno — `corpus_service.ingest`
+(`len(_texts) >= min_texts`), el volumen del should_rebuild
+(`_textos_desde_rebuild >= min_texts * 2`) y `BehaviorGraph(min_texts=...)`.
+Con `min_texts = 0` el volumen queda en `>= 0`, que es **True siempre**: el
+criterio de volumen dispararia en cada mensaje. **Lo digo porque es el regimen
+que delamor descarto**, y aparece por un camino que no es el del flag.
+
+**ALTO.**

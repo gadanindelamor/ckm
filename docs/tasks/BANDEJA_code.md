@@ -6115,3 +6115,84 @@ criterio de volumen dispararia en cada mensaje. **Lo digo porque es el regimen
 que delamor descarto**, y aparece por un camino que no es el del flag.
 
 **ALTO.**
+
+---
+
+## Los `min_texts`: defaults, hardcodeado, y el freeze — 2026-10-11 02:19 UTC
+
+*Pregunta de delamor. **Sin codigo.** Suite 508. Anotado para `min_texts = 0`
+(`4a3bb6b`), que sigue sin pregunta asignada.*
+
+Desde donde mire: todo el arbol, `process/` incluido, mas la historia de git.
+
+### Los defaults
+
+| servicio | default | donde |
+|---|---|---|
+| `CorpusService` | **3** | `services/corpus_service.py:77` |
+| `CKMMonitor` | **3** | `iap_chatroom/ckm_monitor.py:123` |
+| `BehaviorGraph` | **5** | `services/behavior_graph.py:97` |
+| `CorpusService`, **el original** | **10** | `6d563fd`, 2026-05-28 |
+
+**delamor intuyo el 2, el 3 y el 5.** El **3** y el **5** son defaults. **El 2
+no**: aparece solo en dos tests (`test_invalidacion_delta_r.py:69`,
+`test_rebuild_consulta_w_version.py:62`). Y falta el **10**.
+
+Reparto de los valores en el codigo vivo, por cuantas veces aparece cada uno:
+**3** (40), **5** (34), **15** (7, los `armstrong`), **10** (3), **1** (3),
+**2** (2), **100** (1, "umbral inalcanzable"), **10\*\*9** (1, "congelar W").
+
+### El hardcodeado
+
+Antes de `2a33894` (**17 jul 2026**, *"umbral min_texts configurable"*),
+`ckm_monitor.py` tenia **3 literal en dos lugares**:
+
+```python
+-        min_texts=3,  # minimo para pasar a modo evaluacion
+-        if self._message_count >= 3:
+```
+
+Ese commit los paso a parametro. **`corpus_service.ingest` nunca tuvo literal**:
+siempre fue `self.min_texts`; lo que cambio fue el **default, 10 -> 3**, en el
+mismo commit. Desde entonces **el default es 3 en los 12 commits que revise**.
+
+### En el IAP congelado
+
+El freeze son **11 `.py` de `iap_chatroom/`**: `behavior_graph.py` **no esta**,
+se importa de `services/`. Defaults numericos del freeze, completos:
+
+`min_texts=3` · `n=3` (el `n` del gradiente) · `top_k=32` ·
+`poll_interval=2.0` · `duration=60.0` · `MAX_CICLOS=10` · `search_results=3`
+
+### HALLAZGO — el 5 de `BehaviorGraph` nunca se aplico en la serie
+
+`CKMMonitor` pasa **su** `min_texts` a los dos
+(`ckm_monitor.py:84` y `:172`; en el freeze, `:61` y `:76`):
+
+```python
+self._corpus = CorpusService(..., min_texts=min_texts)          # 3
+self._behavior_graph = BehaviorGraph(..., min_texts=min_texts)  # tambien 3
+```
+
+Asi que **G corrio con 3 y no con su 5** en toda la serie congelada (0.4–0.15).
+Verificado que al 8 oct, fecha del freeze, `BehaviorGraph` ya tenia default 5.
+
+**El 5 es el default de quien lo construye directo** —tests y su propio
+`__main__`—, no del canal. Dos servicios con el mismo nombre de umbral y
+**defaults distintos**, y el canal sobreescribe uno con el otro **sin
+declararlo**: ni el docstring de `CKMMonitor` ni el de `BehaviorGraph` dicen que
+el del canal gana.
+
+### Lo que esto le hace a `min_texts = 0`
+
+**El 2 que importa no es un default: es el multiplicador** del criterio de
+volumen, `min_texts * 2`. Con `min_texts = 0` eso da **0**, y el volumen queda
+en `>= 0` — **True siempre**: dispararia un rebuild por decision **en cada
+mensaje**, que es el regimen que delamor descarto, por un camino que no es el
+del flag.
+
+Y el mismo `0` **se propaga a `BehaviorGraph`**, porque el canal le pasa el
+suyo. Asi que `min_texts = 0` toca **tres** umbrales, no uno: el de
+`CorpusService.ingest`, el del volumen (`* 2`) y el de G.
+
+**ALTO.**

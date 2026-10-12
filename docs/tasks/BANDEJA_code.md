@@ -7720,3 +7720,133 @@ entran desde quien instancia. `criterio_local.py` no se tocó — eso es el CP2 
 instancia, **en un test**) y el CP3.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0 (sesión CP2) — el mapeo evaluado contra el log — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1` CP2, paso previo. **Sin código.** Entrada:
+`experiments/vivo_03_criterio_local_log.json`. `criterio_local.py` **no se tocó**.*
+
+**Nota de estado:** los tres arreglos pedidos después del CP1 (NaN, ε negativa,
+la traza que no entra en los lugares libres) están **en el working tree, sin
+commitear**: 44 tests pasan, pero quedaron sin correr las inversiones y la suite
+completa. No están cerrados, y nada de este CP0 depende de ellos.
+
+### Lo que el log tiene, verificado
+
+**24 registros, 2 devices, `piso_vueltas = 6`** — confirmado. Umbrales:
+`dt_minimo_s=5.0`, `piso_vueltas=6`, `tasa_auditoria=0.1`,
+`tasa_auditoria_pase=0.1`, `calibrado: false`.
+
+| motivo | n | llamar |
+|---|---|---|
+| `sin_cambio` | **17** | no |
+| `primera_vuelta` | 2 | sí |
+| `mensajes_nuevos` | 2 | sí |
+| `piso` | 2 | sí |
+| `auditoria` | 1 | sí |
+
+### El mapeo, evaluado — y un punto que lo invierte
+
+El mapeo propuesto se sostiene, **con una corrección que no es menor**:
+
+**`capacity` tiene que ser `None`, no 1.** Con `capacity=1` el empate exacto de
+`sin_cambio` tiene **1 lugar libre** y cae en la exención del paso 1 —*"si E cabe
+en los lugares libres, no hay empate que decidir"*—, así que entraría como
+`FIELD` y daría **llamar**. Invertiría **17 de 24** registros. Con `capacity=None`
+—"no hay lugares que contar"— la exención **no aplica**, el empate va al paso 2 y
+la traza conserva el silencio. Es exactamente el caso que T12 nombró
+(*"una sola decisión: `criterio_local`, `should_rebuild`"*), y acá se ve por qué.
+
+**El resto del mapeo, verificado contra el código y el log:**
+
+- **f = `n_nuevos + nombrado`, κ = 0** es fiel: `f > 0 ⟺ nombrado or n_nuevos > 0`,
+  que es lo que hacen `criterio_local.py:271-274`. **κ = 0 es `DECLARED` por el
+  mapeo**, no por `criterio_local`: el 0 sale de leer `if n_nuevos > 0`, y eso va
+  en `source`.
+- **ε = `None` declarado** funciona, y el mapeo **se apoya en la derivación del
+  CP1**: `f = 0 = κ` es empate exacto, y la igualdad exacta es empate **bajo
+  cualquier ε ≥ 0**. En este corpus ε=`None` y ε=0 dan **las mismas decisiones** y
+  difieren sólo en el marcador — que es justo lo que afirma el test del CP1.
+- **T = el silencio** = `frozenset()`: conserva la **no** pertenencia. El mapeo
+  hace visible F1 — el silencio absorbe — y el piso es lo único que lo rompe.
+- **`trace_streak` = `deltas.vueltas_sin_llamar`** es el valor **previo** a la
+  decisión (`evaluar` arma `deltas` antes de `registro()`, que lo actualiza
+  después). Verificado en el dato: vuelta 3 → 0, vuelta 4 → 1, y los dos `piso`
+  → 6 con `piso_vueltas = 6`.
+- **↑k = el LLM**, y el mapeo de `ESCALATED` → **llamar** es literal: llamar al
+  modelo **es** escalar. `llamar = (value is None) or ("llamar" in value)`.
+
+### Una diferencia más, que el mapeo propuesto no tenía
+
+**`primera_vuelta` no cae en el paso 3 en estos dos registros: cae en el paso 1.**
+Los dos tienen `n_nuevos=2` y `nombrado=True`, así que **f = 3 > κ**: no hay
+empate, y el paso 2 y el 3 **no se alcanzan**. El módulo los decide por `FIELD`.
+
+`llamar` coincide (sí en los dos), **el origen no**. El módulo **no tiene el
+concepto "primera vuelta"**: lo que `criterio_local` codifica como *"nunca llamé"*
+es, en la forma, *"no hay traza"* — y con señal de campo, la ausencia de traza es
+irrelevante. "primera_vuelta → paso 3" vale **sólo si f = κ**, y acá no lo es.
+
+### Y el orden difiere en **tres** ramas, no en una
+
+El mapeo nombra el piso. En el código son tres las que `criterio_local` evalúa
+**antes** que el campo (`:254-274`): `tick is None` (a), `primera_vuelta` (b) y el
+piso (c). El módulo evalúa **el campo primero**, siempre. Mismo `llamar` cuando
+coinciden; distinto motivo y distinto origen.
+
+### Dos diferencias declaradas que **este corpus no puede medir**
+
+Esto es lo que más importa del CP0, porque sin decirlo el test parecería
+confirmarlas:
+
+1. **`tick=None` no aparece: 0 de 24.** La diferencia es real en el código
+   —`criterio_local` **llama** (*"no se arroga el silencio"*, 9 oct) y el módulo con
+   `trace_streak=None` deja decidir a la traza— pero **el log no tiene nada que
+   decir al respecto**. Queda como diferencia **declarada**, no medida. Y es
+   decisión de delamor.
+2. **No hay ninguna colisión piso-vs-campo.** Los dos registros de `piso` tienen
+   `n_nuevos=0` y `nombrado=False`, así que ahí **f = 0**. La diferencia de orden
+   es real y **en este corpus no produce ninguna divergencia**: cuando el piso
+   disparó, el campo no decía nada.
+
+**Y una tercera, del mismo tipo:** `motivo = nombrado` **nunca aparece** (0 de 24),
+aunque `nombrado=True` en 2 registros — son los dos `primera_vuelta`, que va antes
+en el orden. Así que **f como suma pierde cuál de los dos disparó** (`criterio_local`
+distingue `nombrado` de `mensajes_nuevos`), y **el log no puede medir esa pérdida**.
+
+### La auditoría: no entra en la forma, y se reproduce
+
+El único registro de `auditoria` (device 0, vuelta 5, `vueltas_sin_llamar=2`,
+`n_nuevos=0`) es un `skip` que el sorteo convirtió en llamada. **No resuelve un
+empate: mide la regla**, así que no es un casillero. Se aplica **como overlay
+leído del registro** (`via == "auditoria"`), **sin re-sortear**: re-sortear haría
+que el test midiera el RNG y no el mapeo.
+
+### `dt_minimo_s`
+
+**No se aplica en ninguno de los dos**, confirmado en el REPORTE CP0 del 12 oct:
+viaja en el registro (`criterio_local.py:231`) y **no aparece en ninguna
+comparación** de `evaluar`. Sin diferencia que medir.
+
+### La predicción, escrita antes de correr el test
+
+Con `capacity=None`, `trace=None` en la primera vuelta y `frozenset()` después:
+
+| motivo | n | la forma da | `llamar` |
+|---|---|---|---|
+| `sin_cambio` | 17 | `TRACE` (la traza conserva el silencio) | no ✓ |
+| `primera_vuelta` | 2 | **`FIELD`** (f = 3 > κ), no `ESCALATED` | sí ✓ |
+| `mensajes_nuevos` | 2 | `FIELD` | sí ✓ |
+| `piso` | 2 | `ESCALATED` por `floor_reached` | sí ✓ |
+| `auditoria` | 1 | la regla dice **skip**; el overlay lo da vuelta | sí ✓ |
+
+**Predicción: 24 de 24 bit a bit en `llamar`/`no llamar`**, con la auditoría
+aplicada como overlay. **Sin el overlay, 1 diferencia** — y esa diferencia **es** la
+auditoría, que por construcción no es de la regla. Las diferencias quedan en el
+**origen y el motivo**, no en la decisión.
+
+El test lo verifica o lo refuta; no lo descubre.
+
+**ALTO.**

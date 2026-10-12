@@ -6577,6 +6577,27 @@ el primer paso, como `MonitorService._D_ckm`.
 | 0 | 0.0, −0.528, −0.535, −0.539, **−0.6618 y constante los 26 pasos siguientes** |
 | 0.1 | 0.0, +0.229, **+0.379**, +0.193, +0.116, +0.044, +0.007, −0.088, … −0.306, **−0.318 constante del 26 al 30** |
 
+**Con E al lado, el salto se lee.** Con `epsilon = 0` el **soporte está cerrado
+desde el paso 1** (N = 18, y no se mueve más), así que nada de lo que sigue es
+cambio de soporte:
+
+| paso | N | E | triáng. | D_ckm | N_eff exacto |
+|---|---|---|---|---|---|
+| 1 | 18 | **41** | 46 | +0.0000 | 12.584 |
+| 2 | 18 | **45** | 60 | −0.5281 | 47.936 |
+| 3 | 18 | 45 | 60 | −0.5354 | 48.830 |
+| 4 | 18 | 45 | 60 | −0.5386 | 49.224 |
+| 5 | 18 | 45 | 60 | **−0.6618** | **67.252** |
+| 30 | 18 | 45 | 60 | −0.6618 | 67.252 |
+
+**`A0` se tomó sobre una W con los cliques incompletos:** E = 41 de las 45
+aristas de los tres cliques, 4 pares de dentro de grupo todavía sin registrar. El
+paso 2 cierra el soporte de aristas (E = 45) y ahí está el grueso del salto de
+`D_ckm` (−0.53). **Pero no alcanza con que E se cierre:** con E = 45 fijo,
+`N_eff` sigue moviéndose tres pasos más (47.94, 48.83, 49.22) y llega a 67.252
+recién en el paso 5. Lo que faltaba no eran aristas: eran los **pesos** de las
+aristas que ya estaban. Desde el paso 5 no se mueve más (ver §6).
+
 **Se mueve**, y eso responde al punto 3 del CP: en el campo plantado `D_ckm` no
 es `0.0` constante como en el corpus chico de la PoC del volumen. Con
 `epsilon = 0.1` **cambia de signo** entre el paso 7 y el 8.
@@ -6607,14 +6628,50 @@ bug). Resultado de los cuatro chequeos:
   toda trayectoria coincide. El paisaje es idéntico **de verdad**.
 - **Empates: 0.** `min |h|` bajo W(eps=0) = **0.263**, nunca exactamente 0. Las
   aristas del ruido **no están resolviendo empates**: no hay empates.
-- **`N_eff` no es 8.** La predicción de 8 = 2³ supone cliques **uniformes**; la W
-  plantada tiene **20 pesos distintos** dentro de grupo (0.579 a 1.0), así que un
-  clique de 6 no cae a consenso desde todo estado: 5328 órbitas, `N_eff` 67.252.
+- **`N_eff` no es 8, y es 67.25195093210192 por forma cerrada.**
 
-**Y el mecanismo, medido:** un clique **uniforme** (W = 1 dentro, 0 entre) da
-**las mismas 5328 órbitas y el mismo `N_eff` = 67.252**. Acá `N_eff` es función de
-la **partición** —3 cliques de 6— y es ciego a los 20 pesos de dentro y a las 71
-aristas del ruido.
+**El mecanismo: la respuesta conocida, verificada por la enumeración.** Para 3
+cliques **uniformes** de 6 con actualización síncrona, el valor se deriva y
+coincide con lo enumerado hasta el último dígito.
+
+Por clique de 6: el campo de un nodo es `h_i = S − s_i` con `S = 2k − 6`, donde
+`k` es la cantidad de nodos en +1.
+- **`k ≠ 3`** -> consenso. Con `k > 3`, `h > 0` en todos los nodos y el clique
+  cae a todo +; con `k < 3`, a todo −. Son **22 estados a cada consenso**
+  (`C(6,4)+C(6,5)+C(6,6) = 22`).
+- **`k = 3`** -> `S = 0`, así que un nodo en + tiene `h = −1` y uno en − tiene
+  `h = +1`: **todos dan vuelta a la vez**. Los `C(6,3) = 20` estados son **10
+  ciclos de período 2**. No es un empate: `h` nunca es 0, es ±1.
+
+Producto de los tres cliques, por cantidad `j` de cliques en órbita cíclica
+(los cíclicos dan vuelta sincronizados, así que `2^j` fases colapsan en
+`2^(j−1)` órbitas): `8 + 120 + 1200 + 4000` = **5328 órbitas**, de las cuales 8
+son puntos fijos. El conjunto invariante tiene `8 + 2·5320 = 10648 = 22³`
+estados. Masas de cuenca: `8·10648 + 120·968 + 1200·44 + 4000·2 = 2^18`.
+
+Con `F = 968` y `C = 40` (en /4096):
+
+    Σ m² = F³ + 3F²C + (3/2)FC² + C³/4 = 1 021 821 312 / 4096³
+    N_eff = 1 / Σ m² = 67.25195093210192
+
+que es **exactamente** lo que devolvió la enumeración de los 2^18 estados. La
+forma cerrada se verifica en una línea; el número ya estaba medido.
+
+*Goles y Hill, sólo como referencia, para la dinámica síncrona y sus órbitas de
+período 2. No se expone más que la referencia.*
+
+**Corrección de algo que afirmé antes en este mismo reporte:** atribuí el fallo
+de la predicción `N_eff = 8` a los **20 pesos distintos** de dentro de grupo. Es
+incorrecto. El clique **uniforme** también da 67.252: el 8 falla por los estados
+`k = 3`, que son **ciclos de período 2** y no consenso, y eso no tiene nada que
+ver con la heterogeneidad de los pesos.
+
+**Los 20 pesos, como hecho medido:** la W final de `epsilon = 0` (20 pesos
+distintos, de 0.579 a 1.0) tiene **el mismo mapa sucesor que el clique uniforme
+en los 2^18 estados: 0 difieren**. Así que desde el paso 5 los pesos no cambian el
+mapa. **Antes del paso 5 sí lo cambian**, y eso también está medido: con E ya en
+45 desde el paso 2, `N_eff` vale 47.94, 48.83 y 49.22 en los pasos 2, 3 y 4, y no
+67.252 (§5). El mapa converge al del clique uniforme; no nace ahí.
 
 **No es que el instrumento descarte los pesos chicos.** La dinámica recibe W
 **cruda** (`h = s @ W`, `sign` sin umbral ni cuantización), y la perturbación
@@ -6649,8 +6706,9 @@ primeros pasos mueven W un tercio de su norma con el campo quieto.
   resultado. La que lo cambia es **la convención para la co-ocurrencia 0**.
 - El **nulo de la W del repo tiene sd = 0**: cualquier reporte de "p" sobre
   frustración de una W ≥ 0 no es un contraste.
-- `N_eff` fue **función de la partición y no de los pesos** en este campo. Si eso
-  vale más allá del campo plantado, no se midió.
+- `N_eff` fue **función de la partición y no de los pesos** en este campo —desde
+  el paso 5, no antes—, y su valor tiene **forma cerrada** para 3 cliques
+  uniformes de 6. Si eso vale más allá del campo plantado, no se midió.
 - Los **216 triángulos** plantados como frustrados **no entran al denominador** de
   la convención vigente (`orbit_analytics`). Qué denominador va es decisión.
 

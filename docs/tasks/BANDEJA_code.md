@@ -7912,3 +7912,99 @@ arrogarse el silencio sobre lo que no observó—. Queda **declarada como alinea
 y **no medible en `vivo_03`** (0 de 24 registros con `tick=None`).
 
 **ALTO.**
+
+---
+
+## REPORTE CP2 — `criterio_local` como instancia · 24/24 — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1` CP2. Archivo:
+`tests/test_criterio_local_como_instancia.py` (9 tests). **`criterio_local.py` NO
+se tocó.** Entrada: `experiments/vivo_03_criterio_local_log.json`, 24 registros, 2
+devices, `piso_vueltas = 6`, `calibrado: false`. **Suite: 569 passed, 5 xfailed.***
+
+### El resultado: **24 de 24 bit a bit**
+
+La predicción escrita en `c620d70` **antes** de correr se cumplió **entera**, fila
+por fila:
+
+| motivo de `criterio_local` | n | la forma: origen · motivo | `llamar` |
+|---|---|---|---|
+| `sin_cambio` | **17** | `TRACE` · `trace_conserves` | no ✓ |
+| `primera_vuelta` | 2 | **`FIELD`** · `field_decided` | sí ✓ |
+| `mensajes_nuevos` | 2 | `FIELD` · `field_decided` | sí ✓ |
+| `piso` | 2 | `ESCALATED` · `floor_reached` | sí ✓ |
+| `auditoria` | 1 | `TRACE` · `trace_conserves` → **overlay** | sí ✓ |
+
+**Sin el overlay de la auditoría queda exactamente UNA diferencia, y es la
+auditoría.** Está medido en un test aparte: la auditoría **no resuelve un empate,
+mide la regla**, así que no es un casillero de la forma. Se aplica leyéndola del
+registro (`via == "auditoria"`), **sin re-sortear** — re-sortear mediría el RNG y
+no el mapeo.
+
+**Las diferencias quedaron donde la predicción decía: en el origen y el motivo, no
+en la decisión.**
+
+### Lo que la forma ve y `criterio_local` nombra distinto
+
+- **`primera_vuelta` cae por `FIELD`, no por falta de traza.** Los dos registros
+  tienen `n_nuevos=2` y `nombrado=True`, o sea **f = 3 > κ = 0**: no hay empate y el
+  paso 2 ni se alcanza. El módulo **no tiene el concepto "primera vuelta"** — lo
+  que `criterio_local` codifica como *"nunca llamé"* es, en la forma, *"no hay
+  traza"*, y con señal de campo la ausencia de traza es irrelevante. `criterio_local`
+  también lo marca `via = "criterio"`, así que **los dos lo llaman campo**; lo que
+  difiere es **por qué**.
+- **El `piso` sale como `ESCALATED`**, y eso es literal: llamar al modelo **es**
+  escalar. `criterio_local` lo nombra `via = "piso"`; la forma lo nombra "la duda
+  subió a b1 porque el piso se cumplió". Mismo acto, dos nombres, y el de la forma
+  dice **a quién**.
+- **La auditoría es `TRACE` en la regla y `LLAMAR` en el registro.** La regla dice
+  skip; el sorteo lo da vuelta. Eso **no es la regla fallando**: es la auditoría
+  haciendo su trabajo, que es medir cuánto cuesta el sesgo del filtro.
+
+### `field_inputs`: R conserva lo que `f` pierde
+
+`f` es la **suma** `n_nuevos + nombrado`, así que pierde **cuál** de los dos
+disparó. `field_inputs` lo guarda **por separado** en el registro de cada decisión,
+y hay un test que lo verifica registro por registro. Los dos únicos registros con
+`nombrado=True` son los dos `primera_vuelta` — por eso `motivo = nombrado` **nunca
+aparece** en el log.
+
+### La decisión 5 no movió ninguna fila, y se verificó
+
+La predicción se escribió **antes** de la decisión 5 (el piso no evaluable sube la
+duda), así que correspondía chequearlo y no arrastrarlo. **Sigue en pie:** el piso
+es **siempre evaluable** acá —`piso_vueltas` declarado y `vueltas_sin_llamar`
+presente en los 24—, así que **ninguna fila cae en `floor_missing`**. Hay un test
+que lo afirma: **un `FLOOR_UNKNOWN` acá sería divergencia, no ajuste.**
+
+Y la diferencia **`tick=None`** del CP0 **dejó de ser diferencia**: con la decisión
+5 el módulo hace lo mismo que `criterio_local` —no arrogarse el silencio sobre lo
+que no observó—. Queda **alineada**, y **no medible** en `vivo_03`: 0 de 24.
+
+### El contrafáctico de `capacity`, medido
+
+El CP0 encontró que con `capacity=1` el empate exacto de `sin_cambio` caería en la
+exención del paso 1 y daría **llamar**. **No quedó como hipótesis: está medido.**
+Con `capacity=1` se invierten **17 de 24**, todos `sin_cambio`, todos como
+`FIELD · tie_fits_free_slots`. Por eso `capacity=None` — "no hay lugares que
+contar" — que es el caso de una sola decisión.
+
+### Lo que este corpus **no** puede medir (y el 24/24 no confirma)
+
+Con un test que lo afirma, para que el resultado no se lea como más de lo que es:
+
+1. **`tick=None`: 0 de 24.**
+2. **Ninguna colisión piso-vs-campo**: los dos `piso` tienen `f = 0`, así que la
+   diferencia de orden —`criterio_local` evalúa `tick`, `primera_vuelta` **y** el
+   piso antes que el campo— **no produce divergencia acá**.
+3. **`motivo = nombrado`: 0 de 24**, así que la pérdida de información de `f` como
+   suma no se puede medir con este log.
+
+### Lo que NO se hizo
+
+**`iap_chatroom/criterio_local.py` no se tocó** — eso es el CP3, y pide orden de
+delamor. No se eligió ningún valor: κ, ε y P entran desde el mapeo o desde el
+propio registro, cada uno con su `source`. El módulo sigue sin que nadie lo llame
+en el código vivo (gate `f96c234`).
+
+**ALTO.**

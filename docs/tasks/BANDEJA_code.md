@@ -6812,3 +6812,126 @@ finales de línea en el mismo archivo habría roto la verificación. Esta BANDEJ
 estaba en LF desde `22c1afb`, así que no se vuelve a convertir.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0a — los órdenes de escala — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1`, CP0a. **Sin código.** Repo en `3d210ea`, gate
+`f96c234`. Criterio propuesto por Opus: un orden es **lo que queda fijo mientras
+el de abajo varía**.*
+
+### El criterio ya está en el repo, con otro nombre
+
+`services/ckm_landscape_config.py:10-20` lo tiene escrito y aplicado:
+
+> *"Cada campo se ubica según **qué lo hace cambiar**. Dos campos con causas de
+> cambio distintas no comparten objeto inmutable: `medido` cambia si y sólo si
+> cambia `w_version_id`; `declarado` cambia si alguien lo declara; `identidad` se
+> fija al crear la instancia."*
+
+"Qué lo hace cambiar" y "qué queda fijo mientras lo de abajo varía" son **la
+misma pregunta por los dos lados**. Así que el criterio de Opus no es nuevo: está
+instanciado desde el 8 oct en la Config, y ahí ya separa **tres** órdenes
+(`medido` / `declarado` / `identidad`). Lo que sigue extiende esa separación al
+resto, y lo que aporto es dónde **no** cierra.
+
+### Escalera A — la medición del campo
+
+| orden | qué varía | qué queda fijo | la decisión, y dónde | ↑k |
+|---|---|---|---|---|
+| **k0** · el nodo en la vuelta síncrona | `s_i` | σ (el resto del paso) y W | `h_i` contra 0; si `h_i = 0` **conserva `s_i`** — `landscape_engine.py:74` | k1 |
+| **k1** · σ sobre W fija | σ₀ y su trayectoria | W, `n_runs`, `seed`, `sampling_mode` | a qué órbita cae — `relax_orbit`, `landscape_engine.py:37` | k2 |
+| **k2** · W / la meseta | W (el rebuild) | el ciclo de la Config; el conjunto de nodos | **cuándo saltar** — `corpus_service.should_rebuild:191` + la cascada de `ckm_monitor.py:362-375` | k3 |
+| **k3** · el ciclo de calibración | κ, ε, P del orden de abajo | el patrón (`extremos + λ`) y la grilla | `calibrate:190` -> `CALIBRADO` / `NO_CALIBRADO` / `NULO_CALIBRADO` (`:98-102`) | k4 |
+| **k4** · la instancia del instrumento | las W y los ciclos | `config_id`, `sampling_mode`, `n_runs`, `seed` (la `identidad`) | quién crea la instancia | **no hay** |
+
+k1 es el `medido` del `Ciclo`; k2 es el `w_version_id` que lo indexa; k3 es el
+`declarado`; k4 es la `identidad`. **Los cuatro bordes de la escalera A son los
+tres de la Config más uno abajo** (k0, que la Config no mira porque no es campo
+de la Config: es de la dinámica).
+
+### Escalera B — la decisión del device
+
+| orden | qué varía | qué queda fijo | la decisión, y dónde | ↑k |
+|---|---|---|---|---|
+| **b0** · la vuelta del device | `tick`, `n_nuevos`, los Δt | `UmbralesCriterioLocal` (`dt_minimo_s`, `piso_vueltas`, las dos tasas), con `calibrado=False` | llamar o `SKIP` — `criterio_local.evaluar:182`, el piso en `:267` | b1 |
+| **b1** · el LLM | la respuesta | el prompt y el device | la decisión del modelo | b2 |
+| **b2** · Opus / delamor | — | — | — | delamor |
+
+**El criterio local es el único sitio del repo donde el escalón está escrito como
+escalón:** `evaluar` no decide el contenido, decide **si se escala** a b1. Y tiene
+el piso (`piso_vueltas`, con `ValueError` si es ≤ 0) que impide que el paso 2 se
+vuelva absorbente — es el único orden con el piso implementado.
+
+### Escalera C — el trabajo
+
+Code → **ALTO** → Opus → delamor. Lo que queda fijo en el orden de Code es el
+TASK; lo que varía son los checkpoints. El ALTO **es** el escalón: es el paso 3
+mecánico (detenerse, no resolver, I5). delamor lo nombró como instancia el 11
+oct; acá queda anotado que **es la única escalera de las tres donde el escalón no
+tiene código**, y no hace falta que lo tenga.
+
+### Dónde no pude decir
+
+**1. `NodeExtractor._seleccionar` no se ubica.** Por el criterio es **k2**: el
+conjunto de nodos queda fijo mientras σ varía y cambia cuando W se reconstruye.
+Pero en k2 habría entonces **dos `f` distintas** —el gradiente de D_ckm, que
+decide *cuándo* saltar, y el TF-IDF del top_k, que decide *con qué nodos*— y la
+regla tiene una `f` por orden. O son dos órdenes que el criterio no separa
+(porque las dos cambian con el mismo evento), o la forma necesita más de una `f`
+por orden. **No lo decido.** `_seleccionar` está en `node_extractor.py:256`,
+`TOL_EMPATE` en `:177`.
+
+**2. A y B no están anidadas: están acopladas en un lazo.** El ↑ de b0 es el LLM
+(b1), y la salida de b1 **entra como texto al corpus**, o sea como insumo de k2.
+Así que B no está arriba ni abajo de A: la escalera de la decisión alimenta por
+abajo a la escalera de la medición, que a su vez le fija el estado que b0 mira.
+Con el criterio "qué queda fijo mientras lo de abajo varía" **no puedo ordenar A
+contra B**. Lo nombro como borde, no lo resuelvo.
+
+**3. Z₂ — un `g` que ningún ↑k puede volver campo.** La dinámica no tiene campo
+externo: `h = s @ W` y nada más (`landscape_engine.py:74`). Entonces `W` y la
+dinámica son **invariantes bajo dar vuelta todos los signos a la vez**, y el
+**signo** del consenso de cada componente no lo decide el campo **en ningún
+orden**: lo decide σ₀, o sea `seed`. Es contexto (`g`) estructural, no por
+omisión. Medido en CP6: los 8 puntos fijos del campo plantado son exactamente
+`2³`, un signo libre por clique. **O es un agujero en la escalera, o Z₂ es un
+orden propio cuyo ↑k no existe en el modelo.** No lo decido.
+
+**4. k4 no tiene ↑k dentro del modelo.** Su `g` es "quien creó la instancia". Por
+la forma del TASK eso es el **caso base** (el orden sin ↑k decide con `g`
+declarado), así que no es una falla — pero entonces el caso base del modelo es
+una decisión de sesión, y conviene que esté dicho.
+
+### Dos bordes que CP0a deja medidos y van al CP0b
+
+**ε en k0 es 0, y no está declarado.** `np.where(h > 0, 1., np.where(h < 0, -1.,
+s))` no tiene tolerancia: el empate es `h` **exactamente** 0. Es I2 —la ausencia
+de ε escrita como 0— en el orden más bajo de todos, y es el único sitio donde el
+paso 2 (conservar la traza) está implementado de forma impecable y con ε nulo a
+la vez. En CP6 medí `min |h| = 0.263` sobre los 2^18 × 18 campos del campo
+plantado: con ε declarada por encima de 0.263, **toda** decisión de k0 pasaría de
+FIELD a TRACE. El valor de ε en k0 no es un detalle numérico: mueve el origen de
+la decisión.
+
+**El piso de la paridad de N en k3.** El patrón de `calibrate` supone que el
+extremo de colapso colapsa. Con W' de acoplamientos positivos iguales: los
+estados con `k ≠ N/2` caen a consenso, y con **N par** los `C(N, N/2)` estados de
+`k = N/2` dan `S = 0`, así que `h_i = −c·s_i` y **todos dan vuelta a la vez** —
+órbitas de período 2. Con **N impar** esos estados no existen y el colapso da
+exactamente **2 órbitas** (las dos de Z₂), nunca 1. Así que `N_eff` del extremo de
+colapso vale **2 con N impar y más de 2 con N par**, y `D_ckm = 1 − ln N_eff /
+ln N_eff0` **nunca llega a 1**. Se deriva en una línea y es consistente con lo
+enumerado en CP6 (3 cliques de 6, N par: 8 puntos fijos + 5320 ciclos de período
+2, `N_eff` = 67.252). El patrón de k3 depende de la paridad de N, que es del
+orden k2.
+
+### Lo que NO se hizo
+
+Sin código. No se modificó `services/`. No se fijó ningún valor, ni ε, ni el
+bootstrap. No se decidió cuál de los dos bordes del punto 1 es, ni el orden de A
+contra B, ni si Z₂ es un orden. Las cuatro cosas van como entrada al CP0b y
+vuelven al CP0a, como pide el TASK.
+
+**ALTO.**

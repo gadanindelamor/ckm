@@ -6723,3 +6723,92 @@ signo de Δ.
 commitear**: es dato de corrida, y no se commitea sin que delamor lo pida.
 
 **ALTO.**
+
+---
+
+## REPORTE — higiene de finales de línea — 2026-10-12
+
+*Sin cambios de contenido. Dos commits separados más este reporte.*
+
+### Por qué
+
+`22c1afb` convirtió `docs/tasks/BANDEJA_code.md` de CRLF a LF entero: **12698
+líneas de diff por 78 reales**. El repo **no tenía `.gitattributes`**, y
+`core.autocrlf` y `core.eol` están **sin setear**: hasta hoy la normalización no
+la decidía nada — la decidía el editor que había guardado cada archivo.
+
+### Estado medido (CP0, `git ls-files --eol`, 821 trackeados)
+
+| eol en el índice | cuántos |
+|---|---|
+| `i/lf` | 792 |
+| `i/-text` (binarios: 15 png, 3 npy, 1 pdf, 1 log) | 20 |
+| `i/crlf` | 4 |
+| `i/mixed` | 2 |
+| `i/none` (archivos de 0 bytes) | 3 |
+
+Coincide exactamente con el inventario que delamor midió desde la PC. Los 3
+`i/none` son de **0 bytes**: no tienen finales de línea, y la renormalización no
+los toca.
+
+### `.gitattributes` — `5868adc`
+
+    * text=auto eol=lf
+    *.png binary
+    *.pdf binary
+    *.npy binary
+    *.ps1 text eol=crlf
+
+Dos decisiones declaradas, con su razón:
+
+- **`*.jsonl` NO va como binary**, aunque se había propuesto. Hay **52 `.jsonl`
+  trackeados**, hoy todos `i/lf` y autodetectados como texto. Marcarlos `binary`
+  no cambiaría sus finales de línea —ya son LF— pero **git dejaría de mostrar su
+  diff**, y son traza. `text=auto` ya los maneja.
+- **`*.png`, `*.pdf`, `*.npy` van explícitos** aunque `text=auto` ya los detecta:
+  es declarar lo que hoy depende de una heurística. **`*.ps1` en `crlf`** va
+  aunque no haya ninguno trackeado: `tools/sync_main.ps1` vive en la PC de
+  delamor, y la regla lo espera.
+
+**Consecuencia declarada antes de hacerla:** `eol=lf` normaliza **también el
+working tree**, así que en el próximo checkout esos archivos llegan con LF al
+lado Windows. Es lo que corta el vaivén —si el editor los vuelve a guardar con
+CRLF, git los renormaliza al agregar y el índice sigue en LF—, y queda dicho.
+
+### La renormalización — `61714d9`
+
+Corrida **en seco primero**, sobre una copia descartable de `.git/index` con
+`core.attributesFile` apuntando al `.gitattributes` propuesto: el índice real
+quedó intacto, verificado después. El seco y el real tocaron **los mismos 6
+archivos y ninguno más**:
+
+    docs/BRIEF_TRUST_para_Code_v1.md            (i/crlf)
+    docs/CKM_Modelo_Hibrido.md                  (i/crlf)
+    docs/tasks/DECISIONES_opus.md               (i/mixed)
+    readme/METODOLOGY_v3.MD                     (i/mixed)
+    registers/REG_d_ckm_formula_canonica_v1.md  (i/crlf)
+    registers/REG_salamanca_s1_v1.md            (i/crlf)
+
+**Verificación, antes de commitear:** `git diff --cached --ignore-cr-at-eol
+--stat` da **vacío**. Y el diffstat da **1087 insertions por 1087 deletions**, la
+misma cantidad: ninguna línea entra ni sale, todas cambian de final.
+
+**Clase R, declarado:** `registers/REG_d_ckm_formula_canonica_v1.md` y
+`registers/REG_salamanca_s1_v1.md` son Clase R. Code **paró y preguntó** —
+`CLAUDE.md` dice *"`registers/` — Clase R. No se toca"*, y no estaba dicho si eso
+cubría un cambio que no toca una letra—, y **no armó un workaround**: un
+`.gitattributes` con excepción para `registers/` habría tapado la decisión en vez
+de tomarla. **delamor decidió: entran los 6, los dos REG declarados** (DECISIONES,
+12 oct). Sólo finales de línea; contenido idéntico.
+
+### Estado final
+
+`git ls-files --eol`: **0 `i/crlf`, 0 `i/mixed`.** Quedan los 792 + 6 en `i/lf`,
+los 20 binarios en `-text` y los 3 archivos de 0 bytes en `i/none`.
+
+La línea de DECISIONES y este reporte van en un commit **aparte** del `61714d9`:
+`DECISIONES_opus.md` es uno de los 6 renormalizados, y mezclar contenido con
+finales de línea en el mismo archivo habría roto la verificación. Esta BANDEJA ya
+estaba en LF desde `22c1afb`, así que no se vuelve a convertir.
+
+**ALTO.**

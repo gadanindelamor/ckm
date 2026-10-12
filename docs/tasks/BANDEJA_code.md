@@ -6309,3 +6309,123 @@ Dos cosas que la PoC ya aporta ahi:
    barrido lo verifica o lo refuta, no lo descubre.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0 — TASK_tests_instrumento_v1 CP6 leido contra el repo — 2026-10-12
+
+*Traza: la linea de autorizacion de delamor ya esta en `DECISIONES_opus.md` (12 oct):
+commitear la PoC del volumen (`d1cd59c`, `d511aeb`) y avanzar desde el ALTO; eso
+**levanta la pausa de `443a219`**. Default sin cambio, gate `f96c234` intacto.*
+
+CP0 es sin codigo: lo que sigue se verifico leyendo codigo, no de memoria.
+
+### Lo que CP6 afirma y es exacto
+
+- `build_complex` (`ckm_topology_module.py:57`) filtra con `W[i,j] > theta` -> los
+  negativos no entran.
+- el BFS saltea toda arista con `len(tris) != 2` (`:242`).
+- `check_orientability(edges, triangles)` **no recibe W**: el signo no llega a la
+  funcion. Mide orientabilidad simplicial, no balance de grafo con signo.
+- `_combine_W_Delta` devuelve `W` sin tocar cuando `Delta.max() == 0`: sin
+  rechazos `W_eff == W`, asi que `D_ckm` se puede calcular en el script con
+  `landscape_engine`, **sin tocar `services/`**.
+- ya existe frustracion en el repo: `orbit_analytics.py:406` (`seccion_F.frustracion`),
+  funcion anidada y no importable. Se reimplementa identica en el script y se
+  declara, en vez de tocar `orbit_analytics`.
+
+### Tensiones
+
+1. **CP6 se corre antes de CP1-CP5, que no existen.** Ninguno de los seis
+   archivos de test del TASK esta en `tests/`. El campo plantado va a *mostrar*
+   cosas (marcador por substring, teorema de presencia, estabilidad) cuyo CP
+   propio no se escribio: mostradas, no cubiertas.
+2. **`T` no esta definido donde el TASK lo cita.** El TASK dice *"T = 0 por
+   teorema (T de `REG_hipotesis_distancia_contextual_v1`, mayo)"*. Los cuatro REG
+   de esa serie **no definen `T`**: v1 define `D_contextual` (entropia de
+   trayectorias) y no menciona tension ni frustracion. Y hay colision de letra:
+   en `topological_profile` el campo `T` es el **numero de triangulos**, que con
+   W >= 0 no es 0 sino maximo. Lo que es 0 por teorema bajo W >= 0 es el **indice
+   de frustracion**. Dos cantidades, una letra: **no se usa `T`**.
+3. **"0 por teorema" es verdad por dos razones y el CP nombra una.** Con la W del
+   repo: (a) W >= 0 sin marcadores, el producto de signos nunca es negativo; (b)
+   los pares entre grupos valen **exactamente 0** -nunca co-ocurren, y el 0 es
+   "sin informacion", no "se evitan". Con la convencion del repo (el triangulo se
+   saltea si algun signo es 0) los triangulos A-B-C **no se cuentan**: el
+   denominador los pierde. El resultado no es "0 frustrados de todos" sino "0
+   frustrados, y los plantados como frustrados no entraron al conteo". Se reporta
+   con los dos denominadores.
+4. **El nodo no es el termino.** La verdad plantada es entre *terminos*; W es
+   entre *nodos extraidos*. Tres bordes rompen la identidad: `ngram_max=2` por
+   default (los bigramas compiten por el top_k), `token_pattern =
+   [a-za...n_]{3,}` que **excluye digitos** (un termino `grupo_a_1` no tokeniza),
+   y stopwords + pool `top_k*3`. Sin identidad termino->nodo, "signo verdadero
+   recuperado" no esta definido.
+5. **El vocabulario plantado puede disparar los marcadores por substring.**
+   `_OPPOSITION_MARKERS` trae `but`, `pero`, `false`, `wrong`, `against`,
+   `unlike`, `however`. Un termino inventado que contenga alguno manda **el texto
+   entero** a `neg_counts` y la W del repo deja de ser >= 0 -y no por el teorema,
+   sino por el instrumento.
+6. **PMI con co-ocurrencia 0 es `log 0`.** Los pares entre grupos son justo los
+   de co-ocurrencia 0: el caso que interesa es el que diverge. Toda convencion
+   (suavizar, clampear, descartar) **convierte la ausencia en un valor** — I2. No
+   es detalle de implementacion: es donde la decision abierta de delamor (phi o
+   PMI) tiene consecuencia medible.
+7. **El xfail del punto 2 no tiene donde vivir.** CP6 es un script en
+   `experiments/`, no un test; `xfail(strict=True)` necesita pytest. "xfail
+   declarado" en un script es una frase en un REPORTE, no el rojo estricto que
+   busca la regla 1 del TASK.
+8. **||DW|| entre pasos con N variable.** Si el conjunto de nodos cambia entre
+   pasos, las dos W no tienen la misma forma. Sin alinear por nombre, la norma no
+   esta definida; alineando, parte del salto es cambio de **soporte** y no de
+   **peso**. Son dos magnitudes y el CP pide una.
+
+### Lo que faltaba en el CP
+
+El tamano del campo, el ruido (sin ruido phi recupera todo **desde el primer
+paso** y "desde que tamano" se responde trivialmente), y que se permuta en el
+nulo.
+
+### Decisiones de instrumento — aceptadas por delamor el 12 oct
+
+Nada de esto toca lo abierto para delamor (phi o PMI, W separadas o combinadas,
+sobre que W juzga el Gatekeeper, el signo de Delta).
+
+- **`ngram_max=1`** en el `CorpusService` del script, para que termino->nodo sea
+  la identidad. El default vivo (2) no se toca; se mide aparte **que fraccion de
+  nodos son bigramas con `ngram_max=2`** y se reporta como contaminacion del
+  soporte, sin atribuirle signo plantado.
+- vocabulario **solo letras y `_`, >= 3 caracteres, no stopword**, y
+  **verificacion programatica** de que ningun marcador de `_OPPOSITION_MARKERS`
+  es substring de ningun texto generado. Si aparece, se reporta.
+- **indice de frustracion con los dos denominadores** (todos los triangulos, y
+  solo los de signo no nulo). **Sin usar `T`.**
+- **PMI en dos variantes declaradas**: sin suavizar (con el conteo de pares que
+  dan `-inf`) y con Laplace alpha = 0.5. phi sin suavizado, y el par con phi = 0
+  exacto se cuenta aparte, sin adjudicarle signo.
+- **||DW|| en dos numeros**: la norma sobre los nodos comunes a los dos pasos, y
+  aparte los nodos que entraron y salieron. Mas N por paso.
+- **epsilon en {0, 0.1}**: el limite limpio y el regimen donde "desde que tamano"
+  se puede medir.
+- el xfail del punto 2 como test: **`tests/test_orientability_no_mide_balance.py`**
+  con `xfail(strict=True)` y su caso real (regla 5: nombrado antes de commitear).
+  El script, ademas, corre `check_orientability` y reporta que dijo.
+
+### Tamano del campo — decision de Opus, 12 oct
+
+- **3 grupos x 6 terminos -> N = 18**
+- cada texto: **3 a 5 terminos de un solo grupo**, mas, con probabilidad
+  epsilon, uno ajeno
+- **de a 10 textos por paso, 30 pasos (300 textos)**, seed fija
+- **D_ckm por enumeracion exacta (2^18)**, no por `n_runs`: N <= 20 lo permite y
+  queda en el regimen de la validacion del paper. Si por costo no entra en cada
+  paso, exacta **cada 5 pasos**, declarado.
+- **nulo: el del juguete del 10 oct, R = 1000**
+
+### Referencias (no corroboracion propia)
+
+Harary (1953) / Zaslavsky y Toulouse (1977) van **solo como referencia** en el
+REPORTE de CP6, por el criterio de delamor del 10 oct: lo que tiene demostracion
+en la ciencia no se expone mas que la referencia.
+
+**ALTO.**

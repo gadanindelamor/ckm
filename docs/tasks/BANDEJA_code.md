@@ -7850,3 +7850,65 @@ auditoría, que por construcción no es de la regla. Las diferencias quedan en e
 El test lo verifica o lo refuta; no lo descubre.
 
 **ALTO.**
+
+---
+
+## REPORTE — corte de sesión: qué quedó pusheado — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1`. Corte pedido por delamor. **Todo lo que había quedó
+cerrado y pusheado**: no quedó nada en el working tree.*
+
+### Pusheado
+
+| commit | qué |
+|---|---|
+| `77cb29c` | DECISIONES: **decisión 5** — piso no evaluable → la duda sube (opción b) |
+| `3cefe56` | `ckm_trust_rule.py` + sus tests: **los tres arreglos del CP1 más la decisión 5** |
+
+**Suite: 560 passed, 5 xfailed.** 45 tests en `test_ckm_trust_rule.py` (eran 37).
+
+Los cuatro arreglos van en **un solo commit** porque los cuatro tocan el mismo
+camino de `decide()`, y separarlos habría dejado dos commits con el módulo en un
+estado que ningún test describía.
+
+### Las cuatro inversiones
+
+| # | qué se invirtió | fallas | al restaurar |
+|---|---|---|---|
+| E | el NaN se descarta en silencio | 1 | 45 |
+| F | ε negativa se acepta | 1 | 45 |
+| G | la traza decide aunque no entre en los lugares libres | 1 | 45 |
+| H | con el piso no evaluable, la traza vuelve a decidir | **2** | 45 |
+
+El módulo quedó **idéntico byte a byte** después de cada una, verificado con
+`diff`.
+
+### Los tests del CP1 que cambiaron o se retiraron, nombrados
+
+- `test_trace_streak_None_marca_floor_unknown_y_no_es_cero` → **reescrito** como
+  `test_piso_no_evaluable_la_traza_NO_sigue_decidiendo`: afirmaba `origin ==
+  TRACE`, que es lo que la decisión 5 da vuelta.
+- `test_sin_piso_declarado_el_silencio_absorbe_y_queda_declarado` → **retirado**.
+  Su **nombre** afirmaba justo lo que la decisión 5 deja de hacer. Su caso
+  (`floor_absent`) vive ahora en
+  `test_los_tres_casos_de_piso_no_evaluable_suben_la_duda`.
+- **agregado** `test_el_piso_evaluable_y_sin_cumplir_deja_decidir_a_la_traza`,
+  como control: lo que cambió es el caso **no evaluable**, no el normal.
+
+### Qué NO está hecho
+
+- **El test del CP2** (`criterio_local` como instancia, con `field_inputs` =
+  `{n_nuevos, nombrado}` por separado). **No se empezó.** Su CP0 está cerrado y
+  pusheado en `c620d70`, con la predicción escrita antes de correr: 24/24 bit a
+  bit en `llamar`/`no llamar` con la auditoría como overlay.
+- **`criterio_local.py` sigue sin tocarse** (eso es el CP3, y pide orden de
+  delamor).
+
+### Lo que la decisión 5 cambia para el CP2, y hay que anotar
+
+La diferencia **`tick=None`** que el CP0 del CP2 había listado **deja de ser una
+diferencia**: con la decisión 5 el módulo hace lo mismo que `criterio_local` —no
+arrogarse el silencio sobre lo que no observó—. Queda **declarada como alineada**,
+y **no medible en `vivo_03`** (0 de 24 registros con `tick=None`).
+
+**ALTO.**

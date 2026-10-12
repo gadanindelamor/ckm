@@ -35,6 +35,14 @@ panel declara dónde escribió.
 conectado_v1):
   - la señal se calcula con la jerarquía **estructural > volumen > tiempo**,
     y `_last_rebuild_causa` dice **cuál** de los tres disparó (CP2);
+  - **cuáles votan** lo decide `criterios_rebuild`. El default son los tres, o
+    sea el comportamiento de siempre. Existe por la PoC que pidió delamor
+    (*"que no sea criterio min_texts… nulo"*), y **"peso nulo" se implementa
+    sacando al criterio de la votación, no bajándole el umbral**: con
+    `min_texts = 0` el volumen queda en `>= 0` —verdadero siempre— y como está
+    antes del tiempo en la jerarquía **los otros dos no llegan a operar**. Un
+    umbral 0 no quita el criterio: lo vuelve dominante, y además convierte la
+    ausencia en un valor (I2);
   - cuando hay señal, se llama a `CorpusService.rebuild_por_decision(causa)`,
     que **no** está bloqueado por `rebuild_suspendido` —ese flag impide el
     rebuild automático **por ingesta**— y deja la causa en el `causal_event`
@@ -60,6 +68,14 @@ ese directorio ya usaba:
     `w_sha` del ciclo, y si al arrancar no coincide con la W del corpus **los
     contadores se descartan y la causa queda escrita**: los de una meseta no
     pasan a otra.
+
+**Lo medido en la PoC (11 oct), con 30 mensajes de un corpus chico:** con los
+tres criterios dispara **sólo el volumen**, cada `min_texts*2 = 6` mensajes; sin
+el volumen gobierna el **tiempo**, cada `MAX_CICLOS = 10`. **El estructural no
+dispara en ninguno de los dos**: `D_ckm` sale `0.0` constante, así que el
+gradiente es 0 y `should_rebuild` pide `> 0`. Coincide con la medición del 28
+sep. Así que hoy el volumen **no es un criterio que pesa demasiado: es el único
+que vota.**
 
 **Lo que esta clase NO hace:** no toca `MonitorService`, la Config ni COCO.
 La invalidación de Δ_r en el cambio de W sigue siendo de Monitor (D2), y se
@@ -110,6 +126,21 @@ CAUSA_ESTRUCTURAL = "estructural"
 CAUSA_VOLUMEN = "volumen"
 CAUSA_TIEMPO = "tiempo"
 
+# **Qué criterios VOTAN.** El default son los tres, que es el comportamiento de
+# hoy: el `criterios_rebuild` del constructor no cambia nada si no se pasa.
+#
+# Existe porque delamor pidió una PoC: *"que should_rebuild no sea dominado por
+# min_texts… el peso que tiene min_texts en el criterio está sumando demasiado.
+# Por eso digo cero… que no sea criterio min_texts… nulo"*.
+#
+# **Cero quiere decir peso nulo, no umbral 0.** Con `min_texts = 0` el criterio
+# de volumen queda en `>= 0` —verdadero siempre— y como está antes del tiempo en
+# la jerarquía, los otros dos **no llegan a operar**: un umbral 0 no quita el
+# criterio, lo vuelve dominante. Eso además convierte la ausencia en un valor
+# (I2). Así que "peso nulo" se implementa **sacando al criterio de la votación**,
+# no bajándole el umbral.
+CRITERIOS_POR_DEFAULT = (CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN, CAUSA_TIEMPO)
+
 
 class CKMMonitor:
     _instance: "CKMMonitor | None" = None
@@ -120,7 +151,8 @@ class CKMMonitor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, min_texts: int = 3, state_dir: "str | Path | None" = None) -> None:
+    def __init__(self, min_texts: int = 3, state_dir: "str | Path | None" = None,
+                 criterios_rebuild: "tuple | None" = None) -> None:
         """
         `state_dir`: dónde viven `corpus_state.json`, `corpus_G_state.json` y
         `monitor_trajectory.jsonl`. **Default: el de siempre**
@@ -199,6 +231,19 @@ class CKMMonitor:
         self._last_panel: dict | None = None
         self._d_ckm_history: list[float] = []
         self._ciclos_sin_rebuild = 0
+        # Los criterios que votan. `None` es "los de siempre" y **no** es lo
+        # mismo que `()`, que es "ninguno vota": el primero es el default, el
+        # segundo es una decisión.
+        self._criterios_rebuild = (
+            tuple(CRITERIOS_POR_DEFAULT) if criterios_rebuild is None
+            else tuple(criterios_rebuild)
+        )
+        desconocidos = set(self._criterios_rebuild) - set(CRITERIOS_POR_DEFAULT)
+        if desconocidos:
+            raise ValueError(
+                f"criterios_rebuild desconocidos: {sorted(desconocidos)}. "
+                f"Los que hay: {CRITERIOS_POR_DEFAULT}"
+            )
         self._last_rebuild_signal = False
         # **Textos desde el último rebuild** (CP3, TASK punto 3). El criterio de
         # volumen contaba el total del corpus, y pasado `2*min_texts` quedaba en
@@ -311,14 +356,20 @@ class CKMMonitor:
         # (TASK: no se renombra nada). La causa va al lado, porque un bool no
         # puede decir cuál de los tres disparó, y eso es lo que tiene que
         # quedar en `causal_event`.
-        if self._corpus.should_rebuild(self._d_ckm_history, n=3):
+        # Cada criterio vota **sólo si está en `_criterios_rebuild`**. La
+        # jerarquía no cambia: el orden de los `elif` es el mismo.
+        vota = self._criterios_rebuild
+        if (CAUSA_ESTRUCTURAL in vota
+                and self._corpus.should_rebuild(self._d_ckm_history, n=3)):
             self._last_rebuild_causa = CAUSA_ESTRUCTURAL
-        elif self._textos_desde_rebuild >= self._corpus.min_texts * 2:
+        elif (CAUSA_VOLUMEN in vota
+                and self._textos_desde_rebuild >= self._corpus.min_texts * 2):
             # **Por ciclo, no el total** (CP3). El umbral `2*min_texts` no se
             # toca: su valor es calibración. Lo que cambia es **sobre qué se
             # cuenta**.
             self._last_rebuild_causa = CAUSA_VOLUMEN
-        elif self._ciclos_sin_rebuild >= MAX_CICLOS:
+        elif (CAUSA_TIEMPO in vota
+                and self._ciclos_sin_rebuild >= MAX_CICLOS):
             self._last_rebuild_causa = CAUSA_TIEMPO
         else:
             self._last_rebuild_causa = None
@@ -525,6 +576,12 @@ class CKMMonitor:
             # y no "no sé": si hubo, el campo trae cuál de los tres criterios
             # disparó. Va acá —el panel que el canal expone— y no en el panel
             # de `MonitorService`: tocar Monitor pide parar y reportar.
+            # **Quiénes votaron.** Sin esto, una corrida con el volumen fuera
+            # se vería igual que una donde el volumen no llegó a su umbral.
+            "criterios_rebuild": list(self._criterios_rebuild),
+            "criterios_por_default": (
+                tuple(self._criterios_rebuild) == CRITERIOS_POR_DEFAULT
+            ),
             "rebuild_senal": self._last_rebuild_signal,
             "rebuild_causa": self._last_rebuild_causa,
             "ultimo_rebuild_por_decision": self._ultimo_rebuild,

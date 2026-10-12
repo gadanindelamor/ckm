@@ -996,3 +996,142 @@ def test_cp5_un_rebuild_sin_causa_no_lleva_marca_de_decision(tmp_path) -> None:
     c.ingest(TODOS[3:6])
     c._rebuild()                               # sin causa, a mano
     assert c._w_versions.history()[-1].causal_event == "rebuild"
+
+
+# ── PoC de delamor: el volumen no vota ─────────────────────────────────────
+
+TX_LARGO = [f"contested evidence about weapons number {i} with disputed data"
+            for i in range(1, 31)]
+
+
+def _disparos(cm) -> list:
+    """(mensaje, causa) de cada vuelta en que la señal se levantó."""
+    out = []
+    for i, txt in enumerate(TX_LARGO, start=1):
+        cm.on_message(_Msg(txt))
+        if cm._last_rebuild_causa:
+            out.append((i, cm._last_rebuild_causa))
+    return out
+
+
+def test_poc_el_default_no_cambio(monitor) -> None:
+    """
+    **La PoC no cambia el default del código vivo** (gate). Sin pasar
+    `criterios_rebuild`, votan los tres, como hasta hoy.
+    """
+    cm = monitor
+    assert cm._criterios_rebuild == ("estructural", "volumen", "tiempo")
+    assert cm.get_state()["criterios_por_default"] is True
+
+    d = _disparos(cm)
+    assert d, "no disparó nada con los tres criterios"
+    assert {c for _, c in d} == {"volumen"}, (
+        f"con los tres criterios disparó algo que no es volumen: {d}"
+    )
+    # período 6 = min_texts*2, desde el mensaje 3 donde nace W
+    assert [i for i, _ in d] == [9, 15, 21, 27], d
+
+
+def test_poc_sin_volumen_gobierna_el_tiempo(tmp_path, monkeypatch) -> None:
+    """
+    **La PoC.** delamor: *"que no sea criterio min_texts… déjalo que operen los
+    otros criterios"*.
+
+    Derivado **antes** de correr: con el volumen fuera, el estructural necesita
+    `n+1 = 4` puntos de `D_ckm` con gradiente **positivo** dentro del ciclo, y
+    en un corpus chico `D_ckm` es `0.0` constante → gradiente 0, que no es > 0.
+    Así que queda el tiempo, con período `MAX_CICLOS`.
+
+    Medido: dispara en 13 y 23. El 13 es `3 + 10` — W nace en el mensaje 3 y
+    resetea el contador.
+    """
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state",
+                    criterios_rebuild=("estructural", "tiempo"))
+    assert cm.get_state()["criterios_por_default"] is False
+
+    d = _disparos(cm)
+    assert {c for _, c in d} == {"tiempo"}, f"disparó otra cosa: {d}"
+    assert [i for i, _ in d] == [13, 23], d
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_poc_el_estructural_es_INERTE_en_los_dos_regimenes(tmp_path, monkeypatch) -> None:
+    """
+    **Lo que la PoC dejó a la vista y no era lo que se buscaba.**
+
+    El estructural **no dispara ni con el volumen puesto ni sin él**: todos los
+    puntos de `D_ckm` son `0.0`, así que el gradiente es 0 y `should_rebuild`
+    pide `> 0`.
+
+    Coincide con la medición del 28 sep que cita la TASK (*"el estructural no
+    emitía con D_ckm cuantizado"*). **Así que hoy el volumen no es un criterio
+    que pesa demasiado: es el único que vota.**
+    """
+    for crit in (None, ("estructural", "tiempo")):
+        monkeypatch.setattr(CKMMonitor, "_instance", None)
+        cm = CKMMonitor(min_texts=3, state_dir=tmp_path / f"_s{crit}",
+                        criterios_rebuild=crit)
+        d = _disparos(cm)
+        assert "estructural" not in {c for _, c in d}, f"con {crit}: {d}"
+        assert set(cm._d_ckm_history) == {0.0}, (
+            f"D_ckm dejó de ser constante: {cm._d_ckm_history}"
+        )
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_poc_umbral_0_NO_es_peso_nulo(tmp_path, monkeypatch) -> None:
+    """
+    **La distinción de delamor, hecha test.** *"Cero quiere decir peso nulo y no
+    umbral 0."*
+
+    Con `min_texts = 0` el criterio de volumen queda en `>= 0`, **verdadero
+    siempre**, y como está antes del tiempo en la jerarquía **los otros dos no
+    llegan a operar**: un umbral 0 no quita el criterio, **lo vuelve
+    dominante**. Y convierte la ausencia en un valor (I2).
+
+    Por eso "peso nulo" se implementa **sacando al criterio de la votación**.
+    """
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=0, state_dir=tmp_path / "_cero")
+    d = _disparos(cm)
+
+    assert {c for _, c in d} == {"volumen"}, (
+        f"con min_texts=0 votó algo que no es volumen: {d}"
+    )
+    # dispara en TODOS los mensajes desde que W existe: eso es dominancia
+    assert len(d) >= len(TX_LARGO) - 3, (
+        f"con umbral 0 el volumen no dominó: {len(d)} disparos"
+    )
+
+    # y el camino correcto da lo contrario: el volumen desaparece
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm2 = CKMMonitor(min_texts=3, state_dir=tmp_path / "_nulo",
+                     criterios_rebuild=("estructural", "tiempo"))
+    d2 = _disparos(cm2)
+    assert "volumen" not in {c for _, c in d2}
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_poc_ningun_criterio_no_es_lo_mismo_que_el_default(tmp_path, monkeypatch) -> None:
+    """
+    `None` es *"los de siempre"*; `()` es *"ninguno vota"*. Los dos son
+    ausencias de argumento distintas y **no se colapsan**.
+    """
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_nadie",
+                    criterios_rebuild=())
+    d = _disparos(cm)
+    assert d == [], f"con ningún criterio votando disparó algo: {d}"
+    assert cm.get_state()["criterios_rebuild"] == []
+    assert cm.get_state()["criterios_por_default"] is False
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+
+
+def test_poc_un_criterio_desconocido_levanta(tmp_path, monkeypatch) -> None:
+    """Un nombre mal escrito dejaría un criterio fuera **en silencio**."""
+    monkeypatch.setattr(CKMMonitor, "_instance", None)
+    with pytest.raises(ValueError, match="criterios_rebuild"):
+        CKMMonitor(min_texts=3, state_dir=tmp_path / "_mal",
+                   criterios_rebuild=("volumen", "estrutural"))
+    monkeypatch.setattr(CKMMonitor, "_instance", None)

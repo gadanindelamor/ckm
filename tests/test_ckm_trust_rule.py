@@ -16,8 +16,10 @@ import pytest
 
 from services.ckm_trust_rule import (
     CONTEXT, CUT_UNKNOWN, DECLARED, ESCALATED, FIELD, FLOOR_UNKNOWN, MEASURED,
-    NO_TRACE, ORIGINS, REASON_CONTEXT, REASON_FIELD, REASON_FIELD_NOT_APPLIED,
-    REASON_FLOOR_REACHED, REASON_TIE_FITS, REASON_TRACE, TOLERANCE_UNKNOWN,
+    FIELD_VALUE_UNKNOWN, NO_TRACE, ORIGINS, REASON_CONTEXT, REASON_FIELD,
+    REASON_FIELD_NOT_APPLIED, REASON_FIELD_VALUE_UNKNOWN, REASON_FLOOR_REACHED,
+    REASON_FLOOR_UNKNOWN,
+    REASON_TIE_FITS, REASON_TRACE, REASON_TRACE_SHORT, TOLERANCE_UNKNOWN,
     TRACE, CkmTrustRule, ContextRule, Decision, RuleParams, Threshold,
 )
 
@@ -151,24 +153,51 @@ def test_el_piso_lleva_del_paso_2_al_3() -> None:
     assert cumplido.record["floor_reached"] is True
 
 
-def test_trace_streak_None_marca_floor_unknown_y_no_es_cero() -> None:
-    """T4 (I2). El módulo es puro: el contador lo pasa quien llama. Sin contador,
-    el piso **no se puede evaluar** y la decisión lo declara — no se asume 0."""
+def test_piso_no_evaluable_la_traza_NO_sigue_decidiendo() -> None:
+    """
+    **Decisión de delamor, 12 oct (opción b).** T4 (I2). El módulo es puro: el
+    contador lo pasa quien llama. Sin contador, el piso **no se puede evaluar**, y
+    entonces la traza **no decide**: la duda sube.
+
+    Dejarla decidir sin saber cuántas veces ya decidió **es** el silencio
+    absorbente de F1 — el paso 2 se vuelve absorbente justo donde no hay con qué
+    frenarlo. Mismo criterio que `criterio_local` con `tick=None` (9 oct): *"el
+    filtro no se arroga el silencio sobre una dimensión que no observó"*.
+
+    **Corrige lo que el CP1 había aprobado**, donde esto devolvía `TRACE`.
+    """
     d = _regla(cut=0.50, tolerance=0.01, floor=3).decide(
         ["a", "b", "c"], capacity=2, trace={"b"}, trace_streak=None)
-    assert d.origin == TRACE
+    assert d.origin == ESCALATED and d.reason == REASON_FLOOR_UNKNOWN
+    assert d.value is None
     assert FLOOR_UNKNOWN in d.markers
     assert d.record["floor_missing"] == "trace_streak_unknown"
 
 
-def test_sin_piso_declarado_el_silencio_absorbe_y_queda_declarado() -> None:
-    """F1: sin P, la traza gana siempre. El módulo **no lo arregla** —no es de este
-    CP— pero lo **declara**: `floor_absent`."""
-    d = _regla(cut=0.50, tolerance=0.01, floor=None).decide(
+def test_los_tres_casos_de_piso_no_evaluable_suben_la_duda() -> None:
+    """Los **tres** `floor_missing` llevan al paso 3, y el registro dice cuál fue:
+    el piso ausente, su valor desconocido, y el contador desconocido."""
+    sin_piso = _regla(cut=0.50, tolerance=0.01, floor=None).decide(
         ["a", "b", "c"], capacity=2, trace={"b"}, trace_streak=999)
-    assert d.origin == TRACE
-    assert FLOOR_UNKNOWN in d.markers
-    assert d.record["floor_missing"] == "floor_absent"
+    assert sin_piso.origin == ESCALATED
+    assert sin_piso.record["floor_missing"] == "floor_absent"
+
+    piso_desconocido = Threshold(value=None, produced_by_order="k3",
+                                 provenance=DECLARED, source="nadie lo calibró")
+    d2 = _regla(cut=0.50, tolerance=0.01, floor=piso_desconocido).decide(
+        ["a", "b", "c"], capacity=2, trace={"b"}, trace_streak=1)
+    assert d2.origin == ESCALATED
+    assert d2.record["floor_missing"] == "floor_value_unknown"
+
+    assert sin_piso.reason == d2.reason == REASON_FLOOR_UNKNOWN
+
+
+def test_el_piso_evaluable_y_sin_cumplir_deja_decidir_a_la_traza() -> None:
+    """El control: con piso y contador, el paso 2 decide como siempre. Lo que
+    cambió es qué pasa cuando **no se puede evaluar**, no el caso normal."""
+    d = _regla(cut=0.50, tolerance=0.01, floor=3).decide(
+        ["a", "b", "c"], capacity=2, trace={"b"}, trace_streak=1)
+    assert d.origin == TRACE and FLOOR_UNKNOWN not in d.markers
 
 
 def test_sin_traza_el_piso_no_se_evalua_ni_se_marca() -> None:
@@ -468,3 +497,91 @@ def test_el_engine_esta_excluido_a_proposito() -> None:
     corazón. Sin esta exclusión el test se delataría a sí mismo."""
     assert "empate" in (RAIZ / "services/ckm_trust_rule.py").read_text()
     assert "services/ckm_trust_rule.py" not in _barrido()
+
+
+# ── Los tres arreglos pedidos por delamor el 12 oct, después del CP1 ─────────
+
+def test_NaN_en_f_no_se_descarta_en_silencio() -> None:
+    """
+    **Arreglo 1.** Con `f(c) = NaN` todas las comparaciones contra el corte dan
+    `False`, así que el candidato no quedaba **ni arriba, ni abajo, ni empatado**:
+    se caía de la decisión **sin marca**. Eso es I2 por la puerta de atrás — una
+    ausencia con el valor "afuera".
+
+    Acá no se descarta nada: queda en el registro con `None` declarado, nombrado
+    en `field_value_unknown`, y la decisión **no puede ser FIELD** sobre un
+    conjunto que lo perdió.
+    """
+    f_rota = lambda c: float("nan") if c == "c" else PUNTAJES[c]   # noqa: E731
+    r = CkmTrustRule(order="k2",
+                     params=RuleParams(cut=_th(0.30), tolerance=_th(0.01)),
+                     field_criterion=f_rota,
+                     escalate_to="k3")
+    d = r.decide(["a", "b", "c"], capacity=3)
+
+    assert d.origin == ESCALATED and d.reason == REASON_FIELD_VALUE_UNKNOWN
+    assert d.value is None
+    assert FIELD_VALUE_UNKNOWN in d.markers
+    assert d.record["field_value_unknown"] == ["c"]
+
+    filas = {f["candidate"]: f for f in d.record["candidates"]}
+    assert set(filas) == {"a", "b", "c"}, "el candidato sin medir NO se descarta"
+    assert filas["c"]["field_value"] is None
+    assert filas["c"]["distance_to_cut"] is None
+    assert filas["a"]["field_value"] == 0.90      # los demás siguen con su valor
+
+
+def test_sin_NaN_no_se_marca_nada() -> None:
+    """El control del arreglo 1: sin NaN la decisión es la de siempre."""
+    d = _regla(cut=0.30, tolerance=0.01).decide(["a", "b", "c"], capacity=3)
+    assert d.origin == FIELD and FIELD_VALUE_UNKNOWN not in d.markers
+    assert "field_value_unknown" not in d.record
+
+
+def test_tolerance_negativa_levanta() -> None:
+    """
+    **Arreglo 2.** `|f − κ| ≤ ε` con ε < 0 queda **vacío siempre**: no es "una
+    tolerancia chica", es una tolerancia que no existe, con el casillero ocupado
+    sin estar puesto. Si no se sabe, va `value=None` DECLARED.
+    """
+    with pytest.raises(ValueError, match="no define empate"):
+        RuleParams(cut=_th(0.5), tolerance=_th(-0.01))
+
+
+def test_tolerance_cero_y_desconocida_siguen_siendo_validas() -> None:
+    """El control del arreglo 2: 0 es una ε legítima, y `None` declarada también.
+    Lo que se rechaza es el negativo, no el borde."""
+    assert RuleParams(cut=_th(0.5), tolerance=_th(0.0)).tolerance.value == 0.0
+    assert RuleParams(cut=_th(0.5), tolerance=_eps_desconocida()).tolerance.unknown
+
+
+def test_la_traza_que_no_entra_en_los_lugares_libres_no_decide() -> None:
+    """
+    **Arreglo 3.** Si lo que la traza conserva es más que los lugares libres, el
+    paso 2 **no alcanza**: elegir cuáles de los conservados entran sería **otro**
+    desempate, y ése no es de la traza. Va al paso 3, registrado.
+    """
+    r = _regla(cut=0.50, tolerance=0.01, floor=3, escalate_to="k3")
+    # above = {a}, empatados = {b, c}, capacity=2 → 1 lugar libre
+    d = r.decide(["a", "b", "c"], capacity=2, trace={"b", "c"}, trace_streak=0)
+
+    assert d.origin == ESCALATED and d.reason == REASON_TRACE_SHORT
+    assert d.value is None
+    assert d.record["trace_conserves"] == 2
+    assert d.record["free_slots"] == 1
+    assert d.record["floor_reached"] is False, "no es el piso: es la capacidad"
+
+
+def test_la_traza_que_si_entra_decide_como_siempre() -> None:
+    """El control del arreglo 3: con un solo conservado, cabe y la traza decide."""
+    r = _regla(cut=0.50, tolerance=0.01, floor=3)
+    d = r.decide(["a", "b", "c"], capacity=2, trace={"b"}, trace_streak=0)
+    assert d.origin == TRACE and d.record["trace_conserves"] == 1
+
+
+def test_sin_capacity_la_traza_nunca_se_queda_corta() -> None:
+    """`capacity=None` es "no hay lugares que contar", así que la traza conserva
+    todo lo que tenía: el arreglo 3 **no** aplica."""
+    r = _regla(cut=0.50, tolerance=0.01, floor=3)
+    d = r.decide(["a", "b", "c"], capacity=None, trace={"b", "c"}, trace_streak=0)
+    assert d.origin == TRACE and d.value == frozenset({"a", "b", "c"})

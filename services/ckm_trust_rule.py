@@ -41,20 +41,41 @@ conversación (condición de delamor).
 
 ## Los cuatro pasos
 
-    0. κ no se sabe → `f` no se puede aplicar: la duda SUBE.
+    0. κ no se sabe, o `f` no pudo medir a algún candidato (NaN):
+       `f` no se puede aplicar sobre ese conjunto: la duda SUBE.
                                                         origin = ESCALATED
     1. |f(c) − κ| > ε           → decide f              origin = FIELD
        · si el empate cabe en los lugares libres, entra  origin = FIELD
     2. empate y existe T        → decide T (conserva)   origin = TRACE
        · si el piso P se cumplió → 3
-    3. no hay T (o el piso se cumplió) → NO_TRACE: la duda SUBE.
-                                                        origin = ESCALATED
+       · si el piso **no se puede evaluar** → 3
+       · si lo que la traza conserva **no cabe** en los lugares libres → 3
+    3. no hay T (o el piso se cumplió, o no se pudo evaluar, o la traza no
+       alcanzó) → NO_TRACE: la duda SUBE.               origin = ESCALATED
     4. **sin ↑k** y con un g declarado de otro orden
                                 → decide g              origin = CONTEXT
 
 El paso 0 es la rama *"¿se aplicó f? no"* del paso 3, no un paso 1 que falla: sin
-corte no se inventa un corte. Y el paso 4 **no corre si hay ↑k**: mientras el
-orden de arriba no haya hablado, la duda está arriba y no en el `g`.
+corte no se inventa un corte, y sin poder medir a un candidato no se decide sobre
+un conjunto que lo perdió. Y el paso 4 **no corre si hay ↑k**: mientras el orden
+de arriba no haya hablado, la duda está arriba y no en el `g`.
+
+## `f` que no pudo medir — NaN no es "afuera"
+
+Si `f(c)` devuelve **NaN**, todas las comparaciones contra el corte dan `False`,
+así que el candidato **no queda ni arriba, ni abajo, ni empatado**: se cae de la
+decisión **sin marca**. Eso es I2 por la puerta de atrás — una ausencia con el
+valor "afuera".
+
+Acá no se descarta nada: el candidato queda en el registro, nombrado en
+`record["field_value_unknown"]`, con `field_value` y `distance_to_cut` en `None`
+declarado; la decisión lleva el marcador `FIELD_VALUE_UNKNOWN`; y **no puede ser
+`FIELD`**, porque sería campo sobre un conjunto que perdió un candidato. **La duda
+sube.**
+
+`f` tiene que devolver un `float`. Si devuelve `None`, `float(None)` levanta
+`TypeError` y **eso no está cubierto acá**: cuando `f` no puede medir a un
+candidato, devuelve NaN y el módulo lo declara.
 
 ## Las cuatro decisiones del 12 oct, y cómo están en el código
 
@@ -110,9 +131,21 @@ eso, con ε = 0 implícito.
 ## El piso pide un reloj, y el módulo no se lo inventa
 
 `P` cuenta repeticiones, y contar pide estado entre llamadas. El módulo es puro:
-el contador lo pasa **quien llama**, en `trace_streak`. Si no lo tiene, va `None`
-y la decisión viaja marcada `FLOOR_UNKNOWN`: el paso 2 decide y **no puede llevar
-al 3 por piso**. La ausencia del contador **no es 0**.
+el contador lo pasa **quien llama**, en `trace_streak`. La ausencia del contador
+**no es 0**.
+
+**Si el piso no se puede evaluar, la traza NO sigue decidiendo** (delamor, 12
+oct): el paso 2 **no aplica** y la duda **sube** — `ESCALATED`, con el marcador
+`FLOOR_UNKNOWN` y `record["floor_missing"]` diciendo cuál de los tres casos fue.
+
+El motivo es el mismo que `criterio_local` aplica con `tick=None` (9 oct): *"el
+filtro no se arroga el silencio sobre una dimensión que no observó"*. Dejar
+decidir a la traza cuando no se sabe cuántas veces ya decidió **es** el silencio
+absorbente de F1: el paso 2 se vuelve absorbente justo donde no hay con qué
+frenarlo. delamor: *"es exacto. la arrogancia de dictar… ESA es"*.
+
+**Esto corrige lo que el CP1 había aprobado**, donde la traza seguía decidiendo
+con `FLOOR_UNKNOWN` puesto.
 
 ## La capacidad
 
@@ -143,6 +176,7 @@ registro también trae. No hay un booleano `tie` por candidato.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field as _field
 from typing import Any, Callable, Optional
 
@@ -165,6 +199,7 @@ NO_TRACE          = "NO_TRACE"           # SIN_TRAZA en la forma escrita
 TOLERANCE_UNKNOWN = "tolerance_unknown"  # ε es None: no se sabe. Nunca 0 (I2)
 FLOOR_UNKNOWN     = "floor_unknown"      # el piso no se pudo evaluar (I2)
 CUT_UNKNOWN       = "cut_unknown"        # κ es None: `f` no se pudo aplicar
+FIELD_VALUE_UNKNOWN = "field_value_unknown"  # `f` devolvió NaN para algún candidato
 
 # ── Los motivos ───────────────────────────────────────────────────────────────
 REASON_FIELD            = "field_decided"            # paso 1, sin empate
@@ -173,6 +208,9 @@ REASON_TRACE            = "trace_conserves"          # paso 2
 REASON_FLOOR_REACHED    = "floor_reached"            # paso 2 → 3 por el piso
 REASON_NO_TRACE         = NO_TRACE                   # paso 3, sin traza
 REASON_FIELD_NOT_APPLIED = "field_criterion_not_applied"  # paso 3, no se aplicó f
+REASON_FIELD_VALUE_UNKNOWN = "field_value_unknown"   # paso 3, f no pudo medir (NaN)
+REASON_TRACE_SHORT      = "trace_exceeds_free_slots"  # paso 2 → 3, la traza no alcanza
+REASON_FLOOR_UNKNOWN    = "floor_not_evaluable"       # paso 2 → 3, el piso no se evalúa
 REASON_CONTEXT          = "context_declared_decides"  # paso 4
 
 
@@ -259,6 +297,18 @@ class RuleParams:
     cut       : Threshold              # κ — cut, el umbral de la decisión
     tolerance : Threshold              # ε — tolerance, de la REGLA
     floor     : Optional[Threshold] = None   # P — floor, el piso del paso 2
+
+    def __post_init__(self) -> None:
+        # ε negativa **no define empate**: `|f − κ| ≤ ε` con ε < 0 es vacío
+        # siempre, así que no es "una tolerancia chica", es una tolerancia que no
+        # existe — y entonces el casillero estaría ocupado sin estar puesto.
+        # Si no se sabe, va `value=None` DECLARED, nunca un número negativo.
+        if self.tolerance.value is not None and self.tolerance.value < 0:
+            raise ValueError(
+                f"tolerance.value tiene que ser >= 0, llegó {self.tolerance.value!r}: "
+                "una ε negativa no define empate (|f − κ| <= ε queda vacío siempre). "
+                "Si no se sabe, va un Threshold con value=None y DECLARED"
+            )
 
     @property
     def calibrated(self) -> bool:
@@ -421,9 +471,16 @@ class CkmTrustRule:
           que la exención del paso 1 **no** aplica.
         - `trace` — T, la selección anterior. Un contenedor con `in`.
         - `trace_streak` — cuántas veces decidió la traza sin que el campo
-          decidiera. `None` = no se sabe → `FLOOR_UNKNOWN`, **no 0**.
+          decidiera. `None` = no se sabe → `FLOOR_UNKNOWN`, **no 0**, y la traza
+          **no decide**: la duda sube (delamor, 12 oct).
         - `turn_ref` — la vuelta de la hélice. Se guarda sin interpretarse.
         - `field_inputs` — los insumos de `f`, para el registro.
+
+        Cuatro salidas que **no** son el paso 1: κ desconocida y `f` que
+        devuelve NaN suben la duda antes de empezar (paso 0); y en el paso 2 la
+        traza puede **no alcanzar** —si lo que conserva no entra en los lugares
+        libres, elegir cuáles entran sería otro desempate, y ése no es de la
+        traza— o **no poder decidir**, cuando el piso no se puede evaluar.
         """
         cands = list(candidates)
         cut = self.params.cut
@@ -463,6 +520,23 @@ class CkmTrustRule:
         # I3: se guardan el valor y la distancia EXACTOS. "Empate" se deriva al
         # leer, contra la `tolerance` que el registro también trae.
         valores = {c: float(self.field_criterion(c)) for c in cands}
+        # `f` no pudo medir: NaN no es "afuera". El candidato NO se descarta — va
+        # al registro con `None` declarado y nombrado, y la decisión no puede ser
+        # FIELD sobre un conjunto que lo perdió.
+        sin_medir = [c for c in cands if math.isnan(valores[c])]
+        if sin_medir:
+            markers.append(FIELD_VALUE_UNKNOWN)
+            base_record["field_value_unknown"] = list(sin_medir)
+            base_record["candidates"] = [
+                {"candidate": c,
+                 "field_value": None if math.isnan(valores[c]) else valores[c],
+                 "distance_to_cut": (None if math.isnan(valores[c])
+                                     else valores[c] - float(cut.value))}
+                for c in cands
+            ]
+            return Decision(value=None, origin=ESCALATED, record=base_record,
+                            reason=REASON_FIELD_VALUE_UNKNOWN)
+
         dist = {c: valores[c] - float(cut.value) for c in cands}
         base_record["candidates"] = [
             {"candidate": c, "field_value": valores[c], "distance_to_cut": dist[c]}
@@ -491,6 +565,7 @@ class CkmTrustRule:
 
         # "Si E cabe en los lugares libres, no hay empate que decidir."
         # Sin capacidad no hay lugares que contar: la exención no aplica.
+        free = None
         if capacity is not None:
             free = capacity - len(above)
             base_record["free_slots"] = free
@@ -503,30 +578,51 @@ class CkmTrustRule:
         # El piso se evalúa **sólo si hay traza**: sin T el paso 2 no aplica, y
         # marcar FLOOR_UNKNOWN ahí sería ruido sobre algo que no se iba a usar.
         floor_reached = False
+        floor_unknown = False
+        trace_short = False
         if trace is not None:
             floor = self.params.floor
             if floor is None:
-                markers.append(FLOOR_UNKNOWN)
-                base_record["floor_missing"] = "floor_absent"
-            elif floor.unknown or trace_streak is None:
-                markers.append(FLOOR_UNKNOWN)
-                base_record["floor_missing"] = (
-                    "floor_value_unknown" if floor.unknown else "trace_streak_unknown"
-                )
+                floor_unknown, falta = True, "floor_absent"
+            elif floor.unknown:
+                floor_unknown, falta = True, "floor_value_unknown"
+            elif trace_streak is None:
+                floor_unknown, falta = True, "trace_streak_unknown"
             else:
                 floor_reached = trace_streak >= float(floor.value)
+            if floor_unknown:
+                # La traza NO sigue decidiendo (delamor, 12 oct): sin saber
+                # cuántas veces ya decidió, dejarla decidir es arrogarse el
+                # silencio sobre lo que no se observó — el mismo criterio que
+                # `criterio_local` con `tick=None` (9 oct).
+                markers.append(FLOOR_UNKNOWN)
+                base_record["floor_missing"] = falta
             base_record["floor_reached"] = floor_reached
 
-            if not floor_reached:
+            if not floor_unknown and not floor_reached:
                 conserva = [c for c in tied if c in trace]
-                return Decision(value=frozenset(above) | frozenset(conserva),
-                                origin=TRACE, record=base_record,
-                                reason=REASON_TRACE)
+                base_record["trace_conserves"] = len(conserva)
+                # La traza puede no alcanzar: si lo que conserva no entra en los
+                # lugares libres, el paso 2 **no decide** —elegir cuáles de los
+                # conservados entran sería otro desempate, y no es de la traza—.
+                if free is not None and len(conserva) > free:
+                    trace_short = True
+                else:
+                    return Decision(value=frozenset(above) | frozenset(conserva),
+                                    origin=TRACE, record=base_record,
+                                    reason=REASON_TRACE)
 
         # ── Paso 3 — NO_TRACE: la duda sube. No resuelve (I5) ────────────────
         # Con ↑k puesto, el paso 4 NO corre: el orden de arriba todavía no habló.
         # "↑k no decide" se expresa volviendo a llamar sin `escalate_to`.
-        reason3 = REASON_FLOOR_REACHED if floor_reached else REASON_NO_TRACE
+        if floor_unknown:
+            reason3 = REASON_FLOOR_UNKNOWN
+        elif trace_short:
+            reason3 = REASON_TRACE_SHORT
+        elif floor_reached:
+            reason3 = REASON_FLOOR_REACHED
+        else:
+            reason3 = REASON_NO_TRACE
         if self.escalate_to is not None:
             return Decision(value=None, origin=ESCALATED, record=base_record,
                             reason=reason3)

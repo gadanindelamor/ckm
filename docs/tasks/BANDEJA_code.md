@@ -6935,3 +6935,214 @@ contra B, ni si Z₂ es un orden. Las cuatro cosas van como entrada al CP0b y
 vuelven al CP0a, como pide el TASK.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0b — dónde falla la regla — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1`, CP0b. **Sin código.** delamor: "falla" como **fisura**,
+no como error. **Seis fallas**, con su clasificación (forma / instancia) y el
+borde que cada una marca. No está vacío.*
+
+### F1 — El paso 2 sin piso vuelve absorbente al silencio · **instancia**
+
+Dos sitios, los dos sin `P`:
+
+- **`node_extractor._seleccionar:256`.** El empatado conserva su **pertenencia
+  anterior**, y eso incluye la **no** pertenencia: un término que quedó afuera
+  una vez queda afuera en todos los rebuilds siguientes mientras siga empatado.
+  No hay ningún contador de repeticiones del empate.
+- **`corpus_service._rebuild_suspendido:129`.** `if not (self._rebuild_suspendido
+  and self._W is not None)`: W se construye una vez y después los textos se
+  acumulan sin reconstruir. La traza gana **para siempre**, y nada cuenta cuántas
+  veces ganó.
+
+**Es falla de la instancia:** la forma **tiene** `P_k` (*"si 2 se repite P_k veces
+sin campo → 3"*) y estos dos no lo instancian. El único orden del repo que lo
+instancia es b0 (`piso_vueltas`, con `ValueError` si es ≤ 0).
+
+**Declarado: CP6 no probó esta falla.** Con `top_k = N = 18` se entra por
+`len(orden) <= self.top_k` y no hay corte, así que **no hubo ningún empate** en
+los 60 pasos. El campo plantado no tiene nada que decir sobre F1.
+
+**El borde:** `P` cuenta repeticiones, y para contarlas el orden necesita un
+**reloj propio**. k2 tiene el suyo (`_ciclos_sin_rebuild` contra `MAX_CICLOS`),
+pero el sub-orden que elige los nodos **no tiene ninguno**: `_seleccionar` no sabe
+cuántas veces fue llamado. `P` no es inexpresable ahí por olvido — es
+inexpresable porque falta el reloj. Vuelve al CP0a junto con F5.
+
+### F2 — Un orden sin ↑k recibe dos instrucciones incompatibles · **forma**
+
+Para un orden sin ↑k, la forma dice **las dos cosas**:
+
+- **I5:** *"el paso 3 no se automatiza. Su equivalente mecánico es **detenerse**
+  (`SIN_TRAZA`, checkpoint), **nunca resolver**."*
+- **Paso 4:** *"no hay ↑k, o ↑k no decide → `g_k` nombrado, origin = CONTEXT."*
+
+Una manda parar, la otra manda decidir, **para la misma situación**. Y no es un
+caso de borde: cae exactamente en el **caso base** que la forma declara (el orden
+sin ↑k), y en `_seleccionar`, cuyo ↑k sería quien calibre `top_k` — y `calibrate`
+no calibra `top_k`.
+
+**Es falla de la forma.** Y en el código el conflicto ya está resuelto en
+silencio, para el lado de decidir: con `anterior is None` el código hace
+`elegidos = arriba` —empatados afuera— sin nombrar el `g` y sin detenerse. El REG
+§4 lo había dejado como *"2 ó 4 — abierto"*; el código no está abierto, eligió.
+Eso es I1 (origen no declarado), no sólo I5.
+
+**El borde:** "órdenes sin ↑k". Son k4 (la instancia del instrumento) y el
+sub-orden de selección de nodos. La forma los nombra como caso base y después les
+prohíbe el caso base.
+
+### F3 — El paso 3 nombra tres salidas y no dice cómo elegir · **forma**
+
+El paso 3 ofrece **ampliar / acotar / separar**. En el juguete de Opus del 11 oct,
+restar **sólo la dirección** (los expulsados con un nodo caído) **no recuperó nada
+en 6 de 7 semillas**. Eso fue "acotar", y falló.
+
+La regla no dice que acotar fuera la salida equivocada, ni da criterio para elegir
+entre las tres, ni **etiqueta el origen de esa elección**. Las tres salidas tienen
+nombre y la elección entre ellas no tiene ni `f`, ni `κ`, ni origen.
+
+**Es falla de la forma.** **El borde:** si la elección entre las tres salidas es
+una decisión sin `f` en el orden k, entonces **es una decisión de ↑k**, y el paso 3
+no es un paso de la Regla_k: es el salto. Eso cambia la forma —el paso 3 sería el
+escalón y no un paso— y vuelve al CP0a.
+
+### F4 — La forma prohíbe el ciclo de largo 1 y no el de largo n · **forma**
+
+La forma dice *"escalar a una instancia del **mismo** orden no es escalar: ↑k tiene
+que ser otro orden"*: prohíbe el lazo de largo 1. Pero el lazo medido en CP0a es
+de largo 4:
+
+    b0 (la vuelta del device) → b1 (el LLM) → el texto → k2 (W) → el estado → b0
+
+`↑` no es acíclico, así que la recursión *"los parámetros de Regla_k son
+candidatos de Regla_{k+1}"* **no tiene caso base sobre ese ciclo**: no hay ningún
+orden del ciclo que decida con `g` y termine. La forma supone una jerarquía
+bien fundada y no lo dice.
+
+**Es falla de la forma, no de la instancia.** El lazo no es un error de cableado:
+el canal IAP es, por diseño, devices que hablan hacia el corpus que los mide.
+
+**El borde:** el lazo se cierra justo donde **el que mide es el que habla**. Es un
+borde entre órdenes para el que la forma no tiene nombre. Vuelve al CP0a como la
+pregunta de si A y B son dos escaleras o una sola con un ciclo.
+
+### F5 — k2 no es un borde: son cuatro tiempos · **instancia, y límite del criterio**
+
+Opus pidió evaluar si los tres tiempos de CP6 son evidencia de dos órdenes
+(soporte / pesos) que el criterio de la Config no separa. **Lo medí de nuevo, y
+son cuatro, no tres**, con el campo fijo y `epsilon = 0`:
+
+| paso | N | E | estados (de 2^18) con mapa ≠ clique uniforme | ‖W_p − W₃₀‖/‖W₃₀‖ |
+|---|---|---|---|---|
+| 1 | **18** | 41 | 198608 | 0.5216 |
+| 2 | 18 | **45** | 93944 | 0.4384 |
+| 3 | 18 | 45 | 39936 | 0.3207 |
+| 4 | 18 | 45 | **57344** | 0.2621 |
+| 5 | 18 | 45 | **0** | 0.2605 |
+| 30 | 18 | 45 | 0 | **0.0000** |
+
+- **el soporte de nodos** (N) cierra en el paso **1**;
+- **el soporte de aristas** (E) cierra en el paso **2**;
+- **el mapa** —lo que los pesos deciden— cierra en el paso **5**, y de ahí en más
+  coincide con el del clique uniforme en los 2^18 estados;
+- **los pesos no cierran nunca** dentro de la corrida: todavía están a 0.26 de su
+  valor del paso 30 cuando el mapa ya se cerró, y llegan a 0 sólo en el 30.
+
+**Precisión sobre la premisa:** lo que se estabiliza en el paso 5 **no son los
+pesos, es el mapa**. Los pesos siguen moviéndose 25 pasos más sin cambiar ninguna
+decisión. Son dos cantidades distintas y conviene no llamarlas igual.
+
+**Y el mapa no converge de forma monótona:** 39936 estados distintos en el paso 3
+y **57344 en el paso 4**. Con el campo quieto, la estructura de decisión del
+instrumento **empeora** un paso antes de cerrar. Un `P` sobre la estabilidad del
+mapa habría disparado mal en el paso 3.
+
+**La evaluación, que es lo que se pidió:** el criterio de la Config —*"cambia si y
+sólo si cambia `w_version_id`"*— **no puede separarlos**, porque los cuatro
+cambian en el **mismo evento**, el rebuild. Un criterio indexado por *qué lo hace
+**dejar** de cambiar* los separa en cuatro. Así que no es "una forma con dos `f`":
+es **un criterio indexado por el evento y no por la cantidad**. Y en el código son
+**un** orden: `_rebuild` escribe los cuatro en el mismo instante.
+
+**Es falla de la instancia** (un salto para cuatro cantidades) **más un límite del
+criterio** (indexado por el evento). Ahí es donde *"alinear las discontinuidades en
+el salto"* **todavía no está alineado**: en el instante del salto, N y E ya
+convergieron y el mapa y los pesos no.
+
+**Declarado:** es evidencia de **una** sola corrida, un campo plantado y dos ε. No
+es un teorema, y los tiempos dependen del generador (cada texto toma 3 a 5 de los
+6 términos de su grupo).
+
+**El borde:** k2 se abre en al menos cuatro — soporte de nodos, soporte de
+aristas, el mapa, los pesos. Si son órdenes o fases de un orden **no lo decido**.
+Vuelve al CP0a, y se lleva F1: el sub-orden de los nodos es el que no tiene reloj.
+
+### F6 — Z₂ · **corrección propia, y una instancia con κ de otra `f`**
+
+**Corrijo lo que afirmé en el CP0a.** Dije que el signo del consenso *"lo decide la
+seed"*, sin más. Es incorrecto como está dicho. La precisión de Opus es la
+correcta y la verifiqué con los números de CP6: en la **enumeración exacta** los
+dos signos **se cuentan** y las masas son **exactamente simétricas** — los 8 puntos
+fijos del campo plantado tienen masa `22³/2^18 = 0.040618896484375` **cada uno**, y
+son las 8 masas más grandes, todas iguales. Z₂ es `g` **sólo cuando se muestrea
+una trayectoria** (seed, estado inicial); sobre la medida enumerada no lo es.
+
+**Y la falla que queda, que no es la que yo había dicho.** El mapa σ ↦ −σ conmuta
+con la dinámica (no hay campo externo: `h = s @ W` y nada más,
+`landscape_engine.py:74`), así que permuta las órbitas y **conserva las masas**.
+Para el extremo de colapso de `calibrate` —acoplamientos positivos e iguales— los
+dos consensos son **puntos fijos distintos** y no conjugados, así que **`N_eff` ≥ 2
+ahí por construcción**. Entonces:
+
+- **`d_ckm` tiene una divergencia código / docstring, declarada y no corregida**
+  (CP0b es sin código): `landscape_engine.py:501` dice *"0 sin cambio, **1 en
+  colapso (N_eff → 1)**"*, y en el extremo de colapso de `calibrate` `N_eff → 1`
+  **no es alcanzable**.
+- El techo de `D_ckm` en ese extremo es `1 − ln 2 / ln N_eff0`, o sea **depende del
+  baseline**. Con los baselines medidos en CP6: **0.7263** (`N_eff0` = 12.58),
+  **0.7829** (24.36), **0.8353** (67.25). La paridad de N decide **cuánto más
+  falta**: con N impar el colapso da exactamente 2 órbitas y con N par más de 2,
+  porque los `C(N, N/2)` estados de `k = N/2` dan `S = 0` y dan vuelta todos a la
+  vez.
+- **No afirmo `N_eff ≥ 2` en general.** Hay un caso que se me escapa y lo dejo
+  dicho: una órbita de período 2 de la forma `{σ, −σ}` es **invariante** bajo Z₂, y
+  Z₂ no la desdobla. Son justamente las órbitas `k = N/2` de CP6. Si existe una W
+  cuyas órbitas sean **todas** autoconjugadas, Z₂ no acota nada. No lo decidí.
+
+**La falla es de la instancia:** `κ = D_CKM_THRESHOLD = 0.40` (`coco.py:94`) se
+compara contra una `f` cuyo rango **no es [0,1]**, y que además —está declarado en
+el docstring de `coco.py:17`— **se calibró contra la forma lineal por conteo, que
+ya no es la que entra al umbral**. `κ` y `f` viven en escalas distintas: el
+casillero roto es **`κ` no es del mismo campo que `f`**.
+
+**El borde:** el **rango** de `f_k` lo fija `N_eff0`, que **nace en el salto** — o
+sea en el orden de arriba. La forma tiene `κ_k` y `ε_k` por orden, y **no tiene
+dónde escribir "el rango de `f_k` lo decide ↑k"**. Vuelve al CP0a como un borde
+k2↔k3 que la forma no carga.
+
+### Resumen
+
+| # | falla | forma / instancia | borde que marca |
+|---|---|---|---|
+| F1 | paso 2 sin piso: el silencio absorbe | **instancia** | el sub-orden de los nodos no tiene reloj, así que `P` es inexpresable |
+| F2 | orden sin ↑k: I5 y paso 4 se contradicen | **forma** | "órdenes sin ↑k" — la forma les prohíbe su propio caso base |
+| F3 | el paso 3 nombra tres salidas, no cómo elegir | **forma** | el paso 3 sería el escalón, no un paso de Regla_k |
+| F4 | prohíbe el ciclo de largo 1, no el de largo n | **forma** | el lazo se cierra donde el que mide es el que habla |
+| F5 | k2 son cuatro tiempos y un solo salto | **instancia** + límite del criterio | k2 se abre en soporte de nodos / aristas / mapa / pesos |
+| F6 | `κ` comparada contra una `f` de otro rango y otra forma | **instancia** | el rango de `f_k` lo fija ↑k, y la forma no tiene dónde escribirlo |
+
+**Tres de la forma y tres de la instancia.** Las tres de la forma se concentran en
+el **paso 3 y el ↑k**: qué hace un orden que no puede escalar (F2), de quién es la
+elección cuando duda (F3), y qué pasa si escalar vuelve al punto de partida (F4).
+
+### Lo que NO se hizo
+
+Sin código. No se modificó `services/`, ni se corrigió el docstring de `d_ckm`, ni
+`κ`. No se decidió si F5 son cuatro órdenes o cuatro fases, ni si A y B son una
+escalera o dos, ni el caso de las órbitas autoconjugadas. Las seis fallas vuelven
+al CP0a como bordes, según el TASK.
+
+**ALTO.**

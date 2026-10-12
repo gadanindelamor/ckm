@@ -7387,3 +7387,206 @@ CP2 del §7 del REG), no se tocó el legado ni se investigó la procedencia más
 de lo que el archivo declara. La forma quedó como está: F2 y F4 son de delamor.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0 (sesión CP1) — el CP1 leído contra el repo, y la API propuesta — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1` CP1. **Sin código.** Repo en `6ebfd14`, gate `f96c234`.
+Leído: el CP1 del TASK más las cuatro decisiones del 12 oct (`70ade7f`,
+`6ebfd14`). **Nada escrito todavía.***
+
+### Doce tensiones
+
+**T1 · `RuleParams` del TASK no alcanza para la decisión 3.** El TASK define
+`RuleParams` con `cut`, `tolerance`, `floor`, `calibrated`. La decisión 3 exige
+que **cada umbral y cada tolerancia** lleven tres datos: qué orden lo produjo ·
+`MEASURED`/`DECLARED` · por quién o con qué registro. Entonces `cut` **no puede ser
+un `float`**: es un valor con procedencia. Y `calibrated: bool` queda **más débil
+que el campo nuevo** —un bool no dice quién— y además **derivable**. Propuesta:
+`cut` y `tolerance` son objetos con procedencia, y `calibrated` se conserva como
+**propiedad derivada** de `cut.provenance`, para no renombrar nada ni duplicar el
+dato.
+
+**T2 · El `floor` también es un umbral, y la decisión 3 nombra sólo `cut` y
+`tolerance`.** `piso_vueltas = 12` es un valor sin origen (DECISIONES `c2a0f1b`).
+Por la misma especie —es un umbral de repeticiones— **propongo que `floor` lleve
+procedencia igual que los otros dos**, y lo declaro: la decisión 3 no lo nombró.
+
+**T3 · Sin ε no está definido "cerca del corte".** La decisión 3 dice que `None` se
+registra *"en cada decisión cerca del corte"*, pero sin ε **"cerca" no tiene
+definición**. Lo único derivable sin inventar un número: `|f − κ| = 0` es empate
+**bajo cualquier ε ≥ 0**, así que la igualdad exacta es empate con ε desconocida; y
+toda decisión `FIELD` con ε `None` viaja marcada `tolerance_unknown`, porque no se
+puede saber si era empate. **No es lo mismo que ε = 0**: con ε = 0 nada se marca.
+En la igualdad exacta las dos coinciden, y **esa coincidencia queda declarada**.
+Precedente del propio repo: `landscape_engine.py:74` (`h = 0` conserva `s_i`) hace
+exactamente eso, y el CP0 lo clasificó como paso 2 con ε = 0 implícito.
+
+**T4 · El piso cuenta repeticiones y eso pide estado; el módulo es puro.** Un piso
+necesita un contador entre llamadas. Puro → **lo pasa quien llama**
+(`trace_streak`). Si no lo tiene, va `None` → el piso **no se puede evaluar** y la
+decisión viaja marcada `floor_unknown`: el paso 2 decide pero **no puede llevar al
+3 por piso**. La ausencia del contador no es 0 (I2). Es el mismo hallazgo de F1: el
+módulo **no se inventa un reloj**.
+
+**T5 · `escalate_to` no puede ser invocable.** Si el módulo llamara a ↑k,
+**resolvería** el paso 3 y eso viola I5 y la decisión 1. Así que `escalate_to` es
+**un nombre, no un colaborador**: el módulo lo registra y **nunca lo llama**. I5
+queda estructural y no por convención. Es una lectura del listado del TASU que
+declaro: el TASK lo nombra como atributo de `CkmTrustRule` junto a
+`field_criterion`, y los dos no son de la misma especie.
+
+**T6 · `context` sí es invocable, y es la asimetría con T5.** El paso 4 **decide**
+con `g`, así que el módulo lo aplica — eso es el paso 4, no una violación de I5,
+que es del paso 3. Pero sólo si **llegó declarado antes**, con quién lo declaró y
+de qué orden. Si no hay `g` declarado, **no hay paso 4**: queda `ESCALATED`
+(decisión 1). El módulo **nunca inventa un `g`**.
+
+**T7 · `Decision.value` cuando no hay decisión.** Con `ESCALATED` no hay valor. La
+convención del repo es `None` = UNKNOWN declarado (`coco.py:122-125`). Entonces
+`value=None` con `origin=ESCALATED` es "no se decidió", y **`value=None` con
+`origin=FIELD` es una contradicción que tiene que levantar**. Queda como invariante
+testeable.
+
+**T8 · El test de "un solo corazón" está rojo hoy, y el TASK exceptúa sólo
+`criterio_local`.** Del inventario del CP0, hay **al menos tres** sitios más que
+implementan empate, piso u origen:
+
+| sitio | qué reimplementa |
+|---|---|
+| `node_extractor._seleccionar:256-282` | empate (`TOL_EMPATE`), traza (`seleccion_anterior`), `g` (el orden alfabético) |
+| `ckm_monitor.py:362-375` | la cascada: `f` + piso + `g` en `elif` |
+| `landscape_engine.py:74` | empate con ε = 0 implícito y conservación de la traza |
+
+El gate prohíbe tocarlos. Así que el test **no puede** ser "ningún otro módulo lo
+implementa": propongo que sea **una lista congelada** de los corazones conocidos,
+cada uno con archivo y por qué, sacada del inventario del CP0, y que el test
+**falle cuando aparece uno fuera de la lista**. La lista **no es un aval**: es el
+inventario, y cada entrada es un alineamiento pendiente.
+
+**T9 · El test de "un solo corazón" es textual, y eso hay que declararlo.** Busca
+los nombres que el repo **ya usa** (`TOL_EMPATE`, `empate`, `seleccion_anterior`,
+`pertenencia_anterior`, `piso`, `vueltas_sin_llamar`, `_ciclos_sin_rebuild`,
+`via`, `motivo`, `origen`, `calibrado`). **Detecta una copia que use esos nombres y
+no ve una que los renombre.** Va dicho en el docstring del test: si no, el test
+afirma más de lo que verifica.
+
+**T10 · `NO_TRACE` no es un origen.** El TASK lista cuatro orígenes y aparte el
+estado `NO_TRACE` del paso 3. Propuesta: `NO_TRACE` es un **motivo** (`reason`),
+con `origin = ESCALATED`. El mapeo se declara.
+
+**T11 · La hélice: `w_version_id` es un ejemplo, no el nombre.** El módulo guarda
+**la referencia de la vuelta** que le pasa quien llama, sin interpretarla, así que
+el campo es genérico: `turn_ref`. Sin referencia va `None` declarado — "no se sabe
+en qué vuelta", no "vuelta 0".
+
+**T12 · El paso 1 necesita la capacidad, y el TASK no la nombra.** La forma dice
+*"si E cabe en los lugares libres, no hay empate que decidir"*: eso es
+**capacidad**, y sin ella esa exención del paso 1 no se puede expresar. Es la regla
+de `_seleccionar` (`libres = top_k − len(arriba)`). Propongo `capacity`, con `None`
+= "no es un problema de selección" (una sola decisión, como `should_rebuild` o
+`criterio_local`).
+
+### Una decisión de congruencia que tomo y declaro
+
+**`Origin` va como constantes `str` de módulo, no como `Enum`.** Verificado: **el
+repo no usa `Enum` en ningún módulo** de `services/`, `iap_chatroom/` ni
+`process/`. La convención vigente es constantes `str` más una tupla de válidos —
+`calibrate.py:98-102` (`CALIBRADO`/`NO_CALIBRADO`/`NULO_CALIBRADO` + `ESTADOS`) y
+`criterio_local.py:74-91` (`DECISION_SKIP`, `MOTIVO_*`, `VIA_*`). El TASK pide el
+**tipo** `Origin` con esos cuatro valores; lo instancio con la forma del repo.
+Python del repo: 3.12.1, `requires-python >= 3.10`, así que `dataclass(kw_only=True)`
+está disponible y con eso `tolerance` puede ir **sin default** en cualquier
+posición.
+
+### La API propuesta — nombres y firmas, antes de escribir
+
+Identificadores en inglés. **Cada letra de la forma con su nombre largo la primera
+vez** (condición de delamor), en el docstring del módulo y en el de cada tipo.
+
+    # services/ckm_trust_rule.py — nada del repo se importa acá: el módulo es puro.
+
+    # Los cuatro orígenes (I1 — toda decisión lleva su origen, nunca implícito)
+    FIELD     = "FIELD"       # f  — field criterion: lo decidió el campo
+    TRACE     = "TRACE"       # T  — trace: lo decidió la selección anterior
+    ESCALATED = "ESCALATED"   # ↑k — la duda subió al orden de arriba
+    CONTEXT   = "CONTEXT"     # g  — context rule declarada por otro orden
+    ORIGINS   = (FIELD, TRACE, ESCALATED, CONTEXT)
+
+    MEASURED = "MEASURED"     # el orden de arriba lo midió (calibrate)
+    DECLARED = "DECLARED"     # el orden de arriba lo declaró (alguien, una sesión)
+    PROVENANCES = (MEASURED, DECLARED)
+
+    NO_TRACE          = "NO_TRACE"           # el estado del paso 3 (SIN_TRAZA)
+    TOLERANCE_UNKNOWN = "tolerance_unknown"  # ε es None: no se sabe (nunca 0)
+    FLOOR_UNKNOWN     = "floor_unknown"      # el piso no se pudo evaluar
+
+    @dataclass(frozen=True, kw_only=True)
+    class Threshold:
+        """κ, ε o P con su origen (decisión 3: 'A ∪ B — el alguien que declaró
+        es la recursividad'). Un mismo umbral visto desde dos órdenes."""
+        value             : float | int | None
+        produced_by_order : str                 # qué orden lo produjo
+        provenance        : str | None           # MEASURED | DECLARED; None si value es None
+        record            : str | None = None    # por quién, o con qué registro
+
+    @dataclass(frozen=True, kw_only=True)
+    class RuleParams:
+        cut       : Threshold              # κ — cut, el umbral de la decisión
+        tolerance : Threshold              # ε — tolerance, de la REGLA. Obligatoria, sin default
+        floor     : Threshold | None = None # P — floor, vueltas sin decisión del campo
+        @property
+        def calibrated(self) -> bool: ...   # derivado de cut.provenance == MEASURED
+
+    @dataclass(frozen=True, kw_only=True)
+    class ContextRule:
+        """g — context: criterio que NO sale del campo. Llega declarado ANTES,
+        por otro orden (decisión 1). El módulo nunca inventa un g."""
+        select            : Callable
+        declared_by       : str
+        produced_by_order : str
+
+    @dataclass(frozen=True, kw_only=True)
+    class Decision:
+        value  : Any          # None con ESCALATED = no se decidió; None con FIELD levanta
+        origin : str          # uno de ORIGINS
+        record : dict         # R — el registro: f por candidato, distancia al corte, turn_ref…
+        reason : str
+
+    class CkmTrustRule:
+        def __init__(self, *, order: str, params: RuleParams,
+                     field_criterion: Callable,        # f — un solo criterio de campo (decisión 2)
+                     context: ContextRule | None = None,
+                     escalate_to: str | None = None):  # ↑k — un NOMBRE; nunca se llama (T5)
+            ...
+        def decide(self, candidates, *,
+                   capacity    : int | None = None,     # los lugares libres (T12)
+                   trace       : Any | None = None,      # T — la selección anterior
+                   trace_streak: int | None = None,      # cuántas veces decidió la traza (T4)
+                   turn_ref    : Any | None = None,      # la vuelta de la hélice (decisión 4)
+                   field_inputs: dict | None = None,     # los insumos de f, para R
+                   ) -> Decision: ...
+
+**Dos apartamientos del listado del TASK, declarados:** `trace` pasa de atributo de
+`CkmTrustRule` a parámetro de `decide` —cambia en cada vuelta, como
+`seleccion_anterior`—; y `escalate_to` es un `str` y no un colaborador (T5).
+
+### Lo que los tests van a cubrir
+
+Los cinco del TASK —los cuatro orígenes, el empate con ε, el piso que lleva del
+paso 2 al 3, `None` declarado, el paso 3 sin `escalate_to`— más, de las tensiones:
+ε `None` marca `tolerance_unknown` y **no** decide como 0 (T3); igualdad exacta es
+empate bajo ε desconocida (T3); `trace_streak=None` marca `floor_unknown` y no 0
+(T4); `escalate_to` **no se invoca** nunca (T5); sin `g` declarado **no hay paso 4**
+(T6); `value=None` con `FIELD` levanta (T7); `capacity` hace que el empate que cabe
+no sea empate (T12); y el estructural con su lista congelada y su límite declarado
+(T8, T9).
+
+### Lo que NO se hizo
+
+Sin código. No se escribió `services/ckm_trust_rule.py` ni
+`tests/test_ckm_trust_rule.py`. No se tocó nada de `services/` ni de
+`iap_chatroom/`. Nadie llama al módulo (no existe).
+
+**ALTO.** Espero el OK sobre la API antes de escribirla.

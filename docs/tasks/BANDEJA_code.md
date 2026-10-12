@@ -7146,3 +7146,244 @@ escalera o dos, ni el caso de las órbitas autoconjugadas. Las seis fallas vuelv
 al CP0a como bordes, según el TASK.
 
 **ALTO.**
+
+---
+
+## REPORTE CP0 — las instancias en la forma, y el inventario — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1`, CP0. **Sin código.** Retoma el CP1 del §7 de
+`REG_regla_ckm_trust_v1`, que nunca se ejecutó. **La forma no se modifica**: F2 y
+F4 del CP0b son de delamor. Casillero vacío = **vacío**; no se rellena.*
+
+Forma: `Regla_k = ⟨ C, f, R, κ, ε, T, P, g, ↑k ⟩`.
+
+### 1 · `criterio_local` — la instancia más entera (b0)
+
+| casillero | qué es, y dónde |
+|---|---|
+| **C** | las vueltas del device; una decisión por vuelta — `criterio_local.py:182` |
+| **f** | "lo que cambió": `nombrado` o `n_nuevos > 0` — `:271-274` |
+| **R** | el registro entero de la vuelta: `deltas`, `umbrales`, `umbrales_calibrados`, `tick`, `via`, `motivo` — `:221-248`. **El único R completo del repo** |
+| **κ** | `dt_minimo_s = 5.0` — `:131`. **Y no decide nada:** viaja en el registro (`:231`) y **no aparece en ninguna comparación de `evaluar`**. κ declarado, registrado y **no aplicado** |
+| **ε** | **vacío** |
+| **T** | `_tick_ultima_llamada`, `_vueltas_sin_llamar` — `:267` |
+| **P** | `piso_vueltas = 12` — `:135`, con `ValueError` si ≤ 0 — `:121-123`. **El único P del repo** |
+| **g** | la auditoría al azar, `tasa_auditoria` / `tasa_auditoria_pase` = 0.1 — `:144`, `:155`, **declaradas como no calibradas**. Es g bien hecho |
+| **↑k** | el LLM. Existe pero **no está nombrado en el código**: `evaluar` devuelve `llamar=True` y quien llama escala |
+
+**Lo que no esperaba:** un κ que viaja en el registro y no se aplica. No es un
+umbral mal calibrado: es un umbral que **no se usa**, y el registro lo muestra
+como si se hubiera usado.
+
+### 2 · `should_rebuild` — tres `f` donde la forma tiene una (k2)
+
+| casillero | qué es, y dónde |
+|---|---|
+| **C** | los momentos del ciclo: ¿rebuild o no? — `ckm_monitor.py:362-375` |
+| **f** | **tres, en cascada**: gradiente de D_ckm (`corpus_service.py:191`), volumen (`_textos_desde_rebuild >= min_texts*2`), tiempo (`_ciclos_sin_rebuild >= MAX_CICLOS`) |
+| **R** | `_last_rebuild_causa` + el panel, con `criterios_rebuild` y `criterios_por_default` desde `d1cd59c` |
+| **κ** | `min_texts*2` = 6, `n = 3`, `MAX_CICLOS = 10` — **los tres sin origen** (DECISIONES `c2a0f1b`); `MAX_CICLOS` dice "provisional" en `ckm_monitor.py:120` |
+| **ε** | **vacío.** El gradiente pide `> 0` **estricto**: un gradiente de 1e-18 cuenta y uno de −1e-18 no, y **el empate no existe** |
+| **T** | `_d_ckm_history` del ciclo, `_textos_desde_rebuild`, `_ciclos_sin_rebuild` |
+| **P** | **vacío.** Hay un contador (`_ciclos_sin_rebuild`) pero se usa como **`f`** (el criterio de tiempo), no como piso del paso 2 |
+| **g** | **el orden de los `elif`**, sin nombre; y `else: causa = None` |
+| **↑k** | **vacío.** Si no dispara, no dispara. `calibrate` existe y **nadie lo llama desde acá** |
+
+**No entra en la forma, y no lo fuerzo:** tres `f` en cascada no son una `f` con
+tres insumos — son tres criterios con tres `κ` distintos y un orden de prioridad
+que es `g`. O la forma admite varias `f` por orden con un `g` que las ordena, o
+esto es tres instancias de la regla puestas en serie. Es el mismo borde que F5.
+
+**Y el ε vacío tiene consecuencia medida:** en CP6 `D_ckm` quedó **exactamente
+plano** 26 pasos (`−0.6618` repetido). Gradiente exactamente 0 → no dispara. Con
+ε declarada, "exactamente plano" sería **empate**, y decidiría el paso 2 (la
+traza) en vez de caerse al `else`.
+
+### 3 · `calibrate` — κ como salida, y el paso 4 bien hecho (k3)
+
+| casillero | qué es, y dónde |
+|---|---|
+| **C** | la grilla de λ: `(0, .25, .5, .75, 1)` — `calibrate.py:107` |
+| **f** | `D_ckm` a lo largo de `W_λ` — `:248-253` |
+| **R** | `cond`: `w_sha`, `grilla_lambda`, `n_runs`, `seed`, `escala_de_W`, `reloj`, `estados_provisionales` — `:222-241` |
+| **κ** | **es la salida**, no la entrada: el punto medio del salto. Único sitio del repo donde κ se produce |
+| **ε** | **vacío.** Lo que hay es el **margen** (el tamaño del salto), que es `R` y no `ε`: mide sobre qué se apoya el umbral, no cuándo dos candidatos empatan |
+| **T** | `escala_desde_traza` (el sha de W_{i−1}) — **declarado y no usado**: *"hoy entra como dato declarado y este CP1 no la usa para nada más"* (`:216-219`). T **declarado vacío** |
+| **P** | **vacío** |
+| **g** | `NO_CALIBRADO` / `NULO_CALIBRADO` — `:98-100`. **No inventa un valor**: en vez de un `g`, declara que no hay decisión. Es el paso 4 bien hecho, y la distinción "corrió y no separó" vs "no corrió" es I2 bien hecho |
+| **↑k** | **vacío.** Nadie está arriba de `calibrate` (es k3 y su ↑ sería k4, la instancia) |
+
+### 4 · `NodeExtractor._seleccionar` — R impecable, ↑k ausente
+
+| casillero | qué es, y dónde |
+|---|---|
+| **C** | los términos del pool `top_k·3` — `node_extractor.py:218` |
+| **f** | TF-IDF medio dentro del pool — `:256`, criterio en `:187-193` |
+| **R** | `termino`, `score`, `distancia_al_corte`, `pertenencia_anterior` para **todos** los candidatos — `:285-293`. **I3 bien hecho**: guarda el valor continuo y la categoría "empate" se deriva al leer |
+| **κ** | `corte = scores[orden[top_k-1]]` — `:261`. **El corte sale del dato**; lo que es constante es `top_k` (default 20, `:146`; el canal usa 32) |
+| **ε** | `TOL_EMPATE = 1e-12` — `:177`. **Es tolerancia numérica, no de la regla** (el TASK lo dice). Así que el ε de la regla está **vacío**, y lo que ocupa su lugar es de otra especie |
+| **T** | `seleccion_anterior` — `:256` |
+| **P** | **vacío** (F1) |
+| **g** | dos: `anterior is None → elegidos = arriba` (empatados afuera), **sin nombrar** (F2); y `sorted(..., key=(-score, term))` — `:266`, el orden alfabético |
+| **↑k** | **vacío** (F2) |
+
+### 5 · El punto "a verificar" del §4 del REG — **resuelto: sí, algo depende del índice**
+
+El REG preguntaba: *"`sorted(..., key=(-score, term))` ordena empates por nombre
+de término. El empate se resuelve por pertenencia (conjunto), así que el orden
+alfabético sólo debería fijar el índice de cada nodo en σ. **Si algo aguas abajo
+depende de ese índice, es contexto decidiendo (I4)**."*
+
+**Medido.** Misma W, sólo permutados filas y columnas (o sea: el mismo campo, otro
+orden de nodos):
+
+| qué | con W | con W permutada | ¿depende del orden? |
+|---|---|---|---|
+| `w_sha = sha256(W.tobytes())` (`w_version.py:31-33`) | `fea41e5273301c70…` | `20ca5003469a7063…` | **sí** |
+| `N_eff`, `n_runs=50`, `seed=0` | 34.7222 | 29.0698 | **sí** (dif 5.65) |
+| `N_eff`, `n_runs=200`, `seed=0` | 66.6667 | 48.8998 | **sí** (dif **17.77**) |
+| `N_eff`, `n_runs=1000`, `seed=0` | 68.7853 | 60.6134 | **sí** (dif 8.17) |
+| el conjunto de masas, `n_runs=1000` | 344 órbitas | 330 órbitas | **sí** |
+
+**Dos cosas, y son distintas:**
+
+1. **La identidad de W depende del orden alfabético.** `w_sha` es el hash de los
+   bytes de la matriz, así que el mismo campo con otro orden de nodos **es otra W**
+   para toda la traza: `w_version`, `causal_event`, `w_changed_since`, el
+   `escala_desde_traza` de `calibrate` y la sentencia del Gatekeeper.
+2. **La estimación por muestreo depende del orden.** `sample_s0` elige **índices**
+   (`rng.choice(N, n_act, replace=False, p=probs)`, `landscape_engine.py:234-245`),
+   así que con la misma seed el conjunto de índices es el mismo y **el conjunto de
+   términos activados es otro**. La **medida** sí es invariante por permutación
+   —lo verifiqué en CP6: la enumeración exacta dio masas idénticas elemento a
+   elemento—, pero **la estimación a `n_runs` finito y seed fija no lo es**, y la
+   diferencia no baja monótona con `n_runs` (5.65 → 17.77 → 8.17): es ruido de
+   muestreo del mismo tamaño, no un sesgo.
+
+**La lectura, dicha con su tamaño:** el orden alfabético no cambia el campo. Lo
+que cambia es (a) el nombre del campo y (b) cuánto se parece una estimación a
+otra. O sea: **la seed no fija la medición si no se fija también el orden de los
+nodos** — y el orden lo fija el alfabeto. Es I4, confirmado y no sólo sospechado.
+*No propongo qué hacer: eso es CP2 del REG.*
+
+### 6 · Inventario de `services/` e `iap_chatroom/`
+
+Empates, `argsort`/`argmax`/`sorted`, defaults, umbrales, semillas.
+
+| sitio | paso de la regla | origen declarado |
+|---|---|---|
+| `node_extractor.py:266` `sorted(key=(-score, term))` | 2 → **4 encubierto** | **no** — y §5 muestra que decide |
+| `node_extractor.py:261` `corte = scores[orden[top_k-1]]` | 1 | **sí** (sale del dato) |
+| `node_extractor.py:177` `TOL_EMPATE = 1e-12` | 1/2 | **sí**, como tolerancia **numérica** |
+| `node_extractor.py:146` `top_k = 20`, `ngram_max = 2` | 4 (g) | **no** |
+| `node_extractor.py:243` `combinations(sorted(active), 2)` | — | **sí**: ordena para **canonizar la clave** del par, no para elegir. I4 bien hecho |
+| `corpus_service.py:191` `should_rebuild(n=3)`, `> 0` estricto | 1 | **no** (`n` sin origen; ε ausente) |
+| `corpus_service.py:230` `_has_opposition`: `any(m in t)` | 1 **aparente**, 4 real | **no** — g (substring + texto entero) presentado como f |
+| `corpus_service.py:269` `len(_texts) < min_texts → acumulación` | **3 bien hecho** | **sí** — no fuerza la decisión |
+| `corpus_service.py:129` `rebuild_suspendido` | **2 absorbente** (F1) | **sí** en el docstring; el **P** no existe |
+| `corpus_service.py:332-335` `W / max_abs` | escala, no decisión | **sí** en el docstring |
+| `monitor_service.py:676-696` `A0` se fija en la 1ª llamada | **4** | **sí** (*"acá vive lo que NO se unifica: de dónde sale A0"*) |
+| `monitor_service.py:627-651` `_combine_W_Delta`: `mean(W>0)` | escala | **sí**, declarado como elección *"de cuando W era positiva"* |
+| `monitor_service.py:80` `count_seed = 0` | 4 (g) | **sí** |
+| `monitor_service.py:317` `sorted(torsion)` | — | orden de reporte |
+| `coco.py:94-96` `D_CKM_THRESHOLD=0.40`, `ALPHA_STAR=0.10`, `FRAC_REC_MIN=0.60` | 1 con κ de otra `f` (F6) | **sí** en el docstring `:17` (*"no se recalibraron"*) |
+| `coco.py:294-298` `d_ckm(...)`, `frac_rec = None` sin baseline | 1, con I2 | **sí** |
+| `coco.py:118-128` `ThermostatState`: `D_ckm=None`, `frac_rec=None`, `zone=UNKNOWN` | **I2 bien hecho** | **sí** |
+| `coco.py:111` `ZONA_UNKNOWN`, `_classify_zone:600-618` | 3/4: *"no medible" no es "nada"* | **sí** |
+| `landscape_engine.py:74` `h = 0 → conserva s_i` | **2** | **no**: ε = 0 **implícito** |
+| `landscape_engine.py:32` `BETA_RHO_STAR = 0.5` con `relax(−σ) = −relax(σ)` | — | **sí**: **Z₂ ya está nombrada en el código** |
+| `landscape_engine.py:234-245` `sample_s0`: 30–70 % activos | 4 (g) | **no**: el rango 0.3–0.7 no tiene origen |
+| `landscape_engine.py:384` `sorted(masas, reverse=True)` | — | es lo que hace la **medida** invariante por permutación |
+| `landscape_engine.py:496-508` docstring *"1 en colapso (N_eff → 1)"* | — | **divergencia declarada** en CP0b, no corregida |
+| `analytics.py:167` `omega_idx = int(np.argmax(cs_means))` | 1, **empate no tratado** | **no**: `argmax` devuelve **el primero**; con dos ρ de igual c_S decide el índice |
+| `analytics.py:139` `seed = 42` | 4 (g) | default sin razón |
+| `analytics.py:94` `sorted(pairs, key=x[2])` | — | orden de reporte |
+| `calibrate.py:107,111,113,114` grilla, fracción 0.5, `n_runs=200`, `seed=0` | 4 (g) | **sí** como defaults; sin origen del valor |
+| `ckm_landscape_config.py:50,57,61` `RHO_STAR=0.5`, `N_RUNS_DEFAULT=1000`, `SEED_DEFAULT=0` | 4 (g) | **sí** como `declarado` |
+| `ckm_monitor.py:120` `MAX_CICLOS = 10` | 1 (κ) | **sí** que es *"provisional"*; sin origen |
+| `ckm_monitor.py:362-375` la cascada de `elif` | **el orden es g** | **no** |
+| `criterio_local.py:131` `dt_minimo_s = 5.0` | κ **no aplicado** | **sí** el valor; **no** que no se usa |
+| `criterio_local.py:135,144,155` `piso_vueltas=12`, dos tasas 0.1 | 2 (P) y 4 (g) | **sí**, con `calibrado=False` en el registro |
+| `gatekeeper_c1.py:37-39` `c1(...) >= theta_W` | 1 | **sí, y bien**: `theta_W` **obligatorio, sin default**, y el docstring dice *"sin fórmula"*. ε **vacío** |
+| `channel.py:35` `TICK_PERIODO_S = 1.0` | 4 (g) | **no** |
+| `behavior_graph.py:203,356` `sorted(pairs, reverse=True)[:8]` | — | top-8 de reporte |
+
+**Conteo:** de los 34 sitios, **9 no declaran su origen**. Los dos que más pesan
+son `node_extractor.py:266` (§5) y `landscape_engine.py:74` (ε = 0 implícito en el
+orden más bajo).
+
+### 7 · El legado `coco_thermostat` — clasificado, no tocado
+
+`process/experiments/coco_thermostat.py`:
+
+- `:32` `D_ckm: float = 0.0` y `:35` `frac_rec: float = 1.0` como **defaults del
+  dataclass**;
+- `:94-95` `D_ckm = (A0 − A)/A0 if A0 > 0 else 0.0` y `frac_rec = A/A0 if A0 > 0
+  else 1.0`.
+
+**Clasificación: paso 4 subrepticio, violación de I2.** Sin baseline, la ausencia
+sale con **un valor del dominio**: `frac_rec = 1.0` significa "no se perdió nada"
+y `D_ckm = 0.0` significa "no hubo cambio". Las dos son afirmaciones de campo
+puestas donde no hubo medición. Y `D_ckm` ahí es la **forma lineal por conteo**,
+`deprecated_d_ckm` desde el 5 oct.
+
+**El camino vivo ya está corregido:** `services/coco.py:118-128` tiene
+`D_ckm=None`, `frac_rec=None`, `zone=UNKNOWN`, y `:294-298` usa `d_ckm` canónica y
+deja `frac_rec = None` sin baseline.
+
+**Quién importa el legado:** `experiments/monitor_service.py:24`
+(`from coco_thermostat import COCOThermostat, ThermostatState`) — copia vieja,
+fuera del camino vivo. También lo citan `experiments/coco_lifetime_analytics.py:301`
+y `experiments/calibrate_W_mixta.py:7` como referencia de protocolo, y
+`tests/test_coco.py:5,328` como **ancla de simulación** (la figura
+`exp_coco_thermostat_v1.png`). **No se tocó nada.**
+
+### 8 · Procedencia de `REG_topology_ckm_corpus_v2_fixed.json` — declarada como dato
+
+| qué declara | qué no declara |
+|---|---|
+| `date = 2026-05-20`, `label = ckm_corpus_v2_fixed` | **versión del extractor** |
+| `N = 32`, la lista `nodes` completa (así que **el orden de los nodos sí quedó registrado**) | **`w_sha`** — no se puede atar a una W |
+| `thresholds` para 5 θ, con `N, E, T, H0, H1, H2, rank_B1, rank_B2, chi, orientable, n_mobius_loops` | **unidad de co-ocurrencia ni normalización** |
+| `baseline` en θ = 0.0002 | **el entorno donde corrió** |
+
+Commiteado en **`436331f`** (*"refactor: organize repo into experiments/ registers/
+docs/ logs/"*, 20 may 2026): el commit que lo trajo al repo **no es el que lo
+produjo**. Y `networkx` **nunca estuvo instalado en el Codespace hasta hoy**
+(REPORTE CP6), así que **corrió fuera del Codespace**, en un entorno no declarado.
+**Queda como dato, con esa marca. No investigo más** (orden de delamor).
+
+**Dos cosas que sí se leen de su contenido, sin investigar:**
+
+- Su campo **`T` es el número de triángulos** (1048 en el baseline), no una
+  tensión. Confirma la colisión de letra que el CP0 de CP6 nombró: el `T` que es 0
+  por teorema bajo W ≥ 0 es el **índice de frustración**, no éste.
+- **`orientable: True` en los 5 θ**, y `n_mobius_loops: 0`. Es la **misma única
+  respuesta** que `check_orientability` dio en los 60 pasos de CP6. En los dos
+  registros que existen, la función nunca devolvió otra cosa.
+
+### 9 · Lo que no entra en la forma — reportado, no forzado
+
+1. **`should_rebuild` tiene tres `f`.** O la forma admite varias `f` por orden con
+   un `g` que las ordena, o son tres instancias en serie. Mismo borde que F5.
+2. **`calibrate` produce κ en vez de consumirlo.** La forma tiene κ_k como
+   parámetro de Regla_k; acá κ es **la salida**. Encaja con la recursión del TASK
+   (*"los parámetros de Regla_k son candidatos de Regla_{k+1}"*), pero entonces
+   `calibrate` **no es una Regla con κ**: es la Regla de arriba **escribiendo** el
+   casillero de abajo. La forma no distingue "κ que entra" de "κ que sale".
+3. **El margen de `calibrate` no es ε.** Mide sobre qué se apoya el umbral, no
+   cuándo dos candidatos empatan. Son dos cantidades y comparten el lugar.
+4. **`TOL_EMPATE` ocupa el casillero de ε sin ser ε.** Lo dice el TASK; lo
+   confirmo en el casillero: el ε de la regla queda **vacío** y el lugar **ocupado**.
+5. **`analytics.py:167` no tiene casillero de empate.** `np.argmax` resuelve por
+   índice y no hay ni ε ni traza ni g nombrado. Es la instancia **más** desalineada
+   del inventario, y nadie la había nombrado.
+
+### Lo que NO se hizo
+
+Sin código. No se modificó `services/`, `iap_chatroom/`, `process/` ni el REG. No
+se rellenó ningún casillero vacío, no se propuso cómo marcar el origen (eso es el
+CP2 del §7 del REG), no se tocó el legado ni se investigó la procedencia más allá
+de lo que el archivo declara. La forma quedó como está: F2 y F4 son de delamor.
+
+**ALTO.**

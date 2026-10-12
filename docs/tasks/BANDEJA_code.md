@@ -6196,3 +6196,116 @@ suyo. Asi que `min_texts = 0` toca **tres** umbrales, no uno: el de
 `CorpusService.ingest`, el del volumen (`* 2`) y el de G.
 
 **ALTO.**
+
+---
+
+## REPORTE PoC — el volumen no vota — 2026-10-11 02:32 UTC
+
+*Orden de delamor (DECISIONES `c2a0f1b`): **prueba de concepto**, quitar el
+volumen como criterio y dejar operar al estructural y al tiempo. Alcance: solo
+el criterio de volumen. **La PoC no cambia el default del codigo vivo.** Sin
+Groq: la PoC corre con textos locales, **0 llamadas**.*
+
+**Suite: 514 passed** (eran 508), **6 tests nuevos**.
+
+### Docstring por archivo tocado
+
+| archivo | docstring |
+|---|---|
+| `iap_chatroom/ckm_monitor.py` | **Actualizado**: el parametro `criterios_rebuild`, por que "peso nulo" no es "umbral 0", y lo medido en la PoC. |
+| `tests/test_should_rebuild_conectado.py` | Actualizado: seis tests con su docstring. |
+
+**Ninguna divergencia nueva** entre docstring y codigo.
+
+### El teorema, escrito antes de correr
+
+Con el volumen fuera, el estructural pide `n+1 = 4` puntos de `D_ckm` con
+gradiente **positivo** dentro del ciclo; en un corpus chico `D_ckm` sale **`0.0`
+constante**, asi que el gradiente es 0 y `should_rebuild` pide `> 0`. **Queda el
+tiempo**, con periodo `MAX_CICLOS`.
+
+### Lo medido, 30 mensajes
+
+| regimen | disparos | cuales | periodo |
+|---|---|---|---|
+| **hoy** (los tres) | **4** | 9, 15, 21, 27 — **todos `volumen`** | **6** = `min_texts*2` |
+| **PoC** (sin volumen) | **2** | 13, 23 — **ambos `tiempo`** | **10** = `MAX_CICLOS` |
+
+El 13 es `3 + 10`: W nace en el mensaje 3 y el nacimiento resetea el contador.
+El 9 es `3 + 6`, por lo mismo. **Los periodos son exactamente los dos valores
+sin origen**, verificados sobre el camino real.
+
+### Lo que la PoC dejo a la vista, y no era lo que se buscaba
+
+**El estructural no dispara en NINGUNO de los dos regimenes.** Los puntos de
+`D_ckm` son todos `0.0`. Coincide con la medicion del 28 sep que cita la TASK.
+
+Entonces, precisando lo que delamor leyo: hoy **el volumen no es un criterio que
+pesa demasiado — es el unico que vota.** El estructural es inerte y el tiempo
+**nunca llega a disparar** porque el volumen, con periodo 6 contra 10, le gana
+siempre y le resetea el contador.
+
+Y eso cambia lo que la PoC muestra: sacar el volumen **no reparte el voto entre
+dos criterios**, lo pasa de uno a otro. De `volumen` cada 6 a `tiempo` cada 10.
+
+### "Peso nulo" no es "umbral 0", y es un test
+
+delamor: *"Cero quiere decir peso nulo y no umbral 0"*. Lo hice test
+(`test_poc_umbral_0_NO_es_peso_nulo`), medido:
+
+- con **`min_texts = 0`** el volumen dispara en **todos** los mensajes desde que
+  W existe: el umbral 0 **no quita el criterio, lo vuelve dominante**, y como
+  esta antes del tiempo en la jerarquia los otros dos **no llegan a operar**;
+- con el criterio **fuera de la votacion**, el volumen **desaparece** de los
+  disparos.
+
+Son resultados **opuestos** por el mismo "cero". Por eso el peso nulo se
+implementa **sacando al criterio de la votacion**.
+
+### Como quedo, sin cambiar el default
+
+`CKMMonitor(criterios_rebuild=None)` -> **los tres**, el comportamiento de
+siempre. La PoC pasa `("estructural", "tiempo")`.
+
+- **`None` no es `()`**: el primero es el default, el segundo es *"ninguno
+  vota"* —y con `()` no dispara nada—. No se colapsan, y hay un test.
+- Un nombre mal escrito **levanta `ValueError`**: dejaria un criterio fuera en
+  silencio.
+- El panel lleva `criterios_rebuild` y `criterios_por_default`: sin eso, una
+  corrida con el volumen fuera **se veria igual** que una donde el volumen no
+  llego a su umbral.
+- **La jerarquia no se toco**: el orden de los `elif` es el mismo.
+
+### Las dos inversiones
+
+| # | Que se invirtio | Que fallo | Suite al restaurar |
+|---|---|---|---|
+| A | el voto **no se respeta**: el volumen vota siempre | 3, entre ellos `test_poc_sin_volumen_gobierna_el_tiempo` | **514** |
+| B | `()` **se colapsa** con `None` | `test_poc_ningun_criterio_no_es_lo_mismo_que_el_default` | 514 |
+
+### Lo que NO se toco
+
+Los otros dos papeles de `min_texts` —la acumulacion
+(`_message_count >= min_texts`, y `rebuild_por_decision` en acumulacion) y
+**`BehaviorGraph`**— **quedan como estan**, que es el alcance que fijo Opus. Y
+los umbrales `3`, `2`, `n=3`, `MAX_CICLOS=10` **no se movieron**.
+
+### Lo que sigue, y una cosa que el barrido necesita saber
+
+El barrido sobre los valores sin origen (`min_texts`, el factor 2, `n`,
+`MAX_CICLOS`), con el hint de delamor: *"¿ponele 7? ¿ponele 9? ¿Por que es 2?"*
+
+Dos cosas que la PoC ya aporta ahi:
+
+1. **Barrer `n` o `MAX_CICLOS` sobre este corpus no mide nada del estructural**,
+   porque con `D_ckm` constante **ningun `n` lo hace disparar**. El barrido del
+   estructural necesita un corpus donde `D_ckm` se mueva, o es un barrido sobre
+   un criterio inerte.
+2. El periodo del volumen es `min_texts*2` y el del tiempo es `MAX_CICLOS`, los
+   dos **medidos**. Asi que el punto donde el gobierno **cambia de manos** es
+   `min_texts*2 = MAX_CICLOS`, o sea **`min_texts = 5`** con `MAX_CICLOS=10`.
+   Con `min_texts` de 1 a 4 gobierna el volumen; de 6 en adelante, el tiempo.
+   **Eso es un punto de inflexion derivable, y lo digo antes de barrer** — el
+   barrido lo verifica o lo refuta, no lo descubre.
+
+**ALTO.**

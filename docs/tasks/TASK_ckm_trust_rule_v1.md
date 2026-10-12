@@ -81,6 +81,24 @@ delamor: *"el campo continuo no salta; salta la medición; el instrumento NO sal
 
 **La PoC del volumen** (la orden de delamor del 11 oct) todavía no está en `origin/main`. Cuando Code la suba, sus hallazgos entran a esta tabla.
 
+## Un solo corazón (delamor, 11 oct)
+
+*"Que evite duplicar el corazón en cada aplicación de la regla, como `criterio_local.py`."*
+
+- El engine (pasos 1–4, empate con ε, piso, origen, registro) vive **una sola vez**, en `services/ckm_trust_rule.py`.
+- Cada aplicación es una **instancia**: le pasa al engine sus C, f, κ, ε, T, P, g y ↑k, y **no reimplementa ningún paso**.
+- `criterio_local.py` hoy tiene su propio corazón: es la traza de cómo era antes. No se toca hasta el CP3 (orden de delamor). Hasta entonces, el CP2 lo expresa como instancia en un test.
+- Test estructural (CP1): ningún otro módulo implementa la lógica de empate, piso u origen. Si aparece una segunda copia, el test falla.
+
+**Primera instancia real, CP1b:** la PoC de marcadores. delamor: *"PoC, y regla CKM, en un módulo"*.
+- **C:** hoy (substring sobre el texto entero), saneado (palabra entera) y separado (W de contexto propia, declarada).
+- **f:** falsos positivos contra los casos reales registrados (CP1 de `TASK_tests_instrumento`), con su registro.
+- **ε:** declarado, o `None` registrado.
+- **T:** la variante vigente.
+- **↑k:** delamor.
+- **g:** nombrado, si se llega al paso 4.
+- **Reporta:** la decisión con su origen. Es la decisión de "¿sanear o separar?" para la rama operativa (`paper`) frente a la rama `trust`, y no la toma Code: la toma la regla, o la escala.
+
 ## Reglas del TASK
 
 1. **Gate `f96c234`.** Ningún comportamiento vivo cambia. El módulo nuevo es puro y nadie lo llama hasta el CP3.

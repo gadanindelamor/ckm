@@ -6429,3 +6429,239 @@ REPORTE de CP6, por el criterio de delamor del 10 oct: lo que tiene demostracion
 en la ciencia no se expone mas que la referencia.
 
 **ALTO.**
+
+---
+
+## REPORTE CP6 — Campo plantado — 2026-10-12
+
+*CP6 de `TASK_tests_instrumento_v1`, con los agregados del 11-12 oct. Archivos:
+`experiments/sintetico_campo_plantado.py` y
+`tests/test_orientability_no_mide_balance.py`. Sin Groq: **0 llamadas**. Suite:
+**515 passed, 5 xfailed** (eran 514; el nuevo archivo suma 1 control que pasa y
+5 xfail estrictos).*
+
+**Recurso que faltaba, declarado:** `networkx` está en `pyproject.toml`
+(`>=3.0`) pero **no estaba instalado** en el Codespace. `ckm_topology_module`
+nunca había podido correr en este entorno. Se instaló (3.7). No es carencia del
+modelo: es que nadie lo había corrido acá.
+
+### El campo
+
+3 grupos x 6 términos (N = 18), 30 pasos de 10 textos = 300 textos, seed
+20261012, `epsilon in {0, 0.1}`. El campo está **fijo**: todo salto entre pasos
+es del instrumento, por construcción.
+
+**La verificación del vocabulario salió limpia en las dos corridas:** 0 términos
+que sean stopword, 0 términos inválidos para el `token_pattern`, todo el relleno
+es stopword, y **0 textos con un marcador de oposición como substring** (de 300).
+Así que lo que sigue sobre el signo de W es del teorema y no del marcador.
+
+**Contaminación del soporte con el default vivo (`ngram_max=2`): 0 bigramas, N =
+18 igual.** El relleno de stopwords no forma bigramas candidatos, así que acá la
+identidad término -> nodo se sostiene **también** con el default. La decisión de
+instrumento 1 era necesaria para garantizarla, no para conseguirla.
+
+### 1. La W del repo: lo que no recupera, y una razón más que la del teorema
+
+En los 60 pasos: **0 negativos, 0 triángulos frustrados.** Hasta acá el teorema.
+Lo que el conteo de los dos denominadores agrega:
+
+| eps | paso | E (de 153) | triáng. de signo no nulo | de todos | frustrados |
+|---|---|---|---|---|---|
+| 0 | 1 | 41 | 46 | 816 | 0 |
+| 0 | 30 | **45** | **60** | 816 | 0 |
+| 0.1 | 1 | 42 | 51 | 816 | 0 |
+| 0.1 | 30 | **116** | **385** | 816 | 0 |
+
+Con `epsilon = 0` el instrumento converge a **E = 45 = 3·C(6,2)** y **60 =
+3·C(6,3)**: exactamente las aristas y los triángulos **de dentro** de los grupos.
+Los **216 = 6³** triángulos con un nodo de cada grupo —los plantados como
+frustrados— **no entran al conteo**: sus tres pares valen exactamente 0. El
+"0 frustrados de 60" no dice "ninguno estaba frustrado": dice que los 216 que
+estaban frustrados por construcción quedaron fuera del denominador, y los 60 que
+quedaron adentro son los que no podían estarlo. **Sobre 816, el instrumento
+opina sobre el 7,4 %.**
+
+**Y el nulo tampoco puede testearlo.** Nulo por permutación de la W del repo,
+R = 1000: media 0.0, **sd 0.0**, z indefinido, p = 1.0. Permutar signos todos
+≥ 0 no puede producir frustración: el nulo hereda el mismo teorema que la
+medición. "0 frustrados, p = 1.0" **no es un contraste contra el azar** — es la
+misma afirmación dos veces.
+
+**Con ruido es peor, y en la dirección contraria a la esperada.** Con
+`epsilon = 0.1` el instrumento no registra el par entre grupos como negativo ni
+lo deja en 0: lo registra **positivo**. E pasa de 42 a 116 de 153, y los
+triángulos de signo no nulo de 51 a 385. El ruido del 10 % **no degrada el
+negativo plantado: lo invierte**, y queda como evidencia a favor del par. Los
+frustrados siguen en 0 porque todo lo que entra es positivo.
+
+### 2. φ y PMI: desde qué tamaño, y qué recuperan exactamente
+
+**φ recupera el campo plantado de forma exacta y completa.** En el paso 30 de
+las dos corridas: **108 negativos**, que son exactamente los
+`C(18,2) − 3·C(6,2) = 153 − 45 = 108` pares entre grupos, y **216/816
+frustrados**, que son exactamente los 6³ triángulos con un nodo de cada grupo.
+Índice `0.2647`. Ni un par de más ni uno de menos.
+
+Desde qué tamaño, primer paso con recuperación total = 1.0:
+
+| medida | eps = 0 | eps = 0.1 | en el paso 30 (eps = 0.1) |
+|---|---|---|---|
+| **φ** | paso 2 — **20 textos** | paso 4 — **40 textos** | 108 neg, 216/816, idx 0.2647 |
+| **PMI Laplace 0.5** | paso 2 — **20 textos** | paso 6 — **60 textos** | 108 neg, 216/816, idx 0.2647 |
+| **PMI sin suavizar** | **nunca** (ver abajo) | paso 4 — 40 textos, parcial | 71 neg, **37 pares −inf**, 58/385, idx 0.1506 |
+
+**PMI sin suavizar, con `epsilon = 0`, no recupera el signo de entre grupos en
+ningún paso.** No lo recupera mal: **no tiene valor**. Los 108 pares entre grupos
+dan `−inf`, y quedan los 45 usables, que son exactamente los 45 de dentro de
+grupo. Su "recuperación total = 1.0 desde el paso 1" es verdadera y **vacía**:
+recupera el 100 % de los pares que no son los que interesan. Es el punto 6 del
+CP0 medido: el único caso que importa es el que diverge.
+
+Con `epsilon = 0.1` el ruido le va dando valor a esos pares (indefinidos 111 ->
+37 entre el paso 1 y el 30) y recupera el signo de los que ya tienen valor, pero
+**el índice de frustración nunca llega al plantado**: 0.1506 contra 0.2647, con
+denominador 385 y no 816, porque 37 pares siguen sin valor.
+
+**φ y PMI Laplace 0.5 convergen al mismo número, hasta el último dígito**
+(108 negativos, 216/816, idx 0.2647, z −16.87). A este tamaño, **la decisión
+abierta "φ o PMI" no es la que cambia el resultado**: la que lo cambia es **qué
+se hace con la co-ocurrencia 0**. Entre PMI sin suavizar y PMI con Laplace 0.5
+hay 37 pares y 0.11 de índice; entre PMI con Laplace y φ no hay diferencia
+medible. Es observación, no decisión: la decisión sigue siendo de delamor.
+
+### 3. El nulo, y qué significa el z negativo
+
+Nulo del juguete del 10 oct (permutar el patrón de signos conservando la
+cantidad de negativos), R = 1000. En el paso 30, para φ y PMI Laplace:
+observado **0.2647**, media del nulo **0.5308**, **z = −16.87**, p(≤) = 0.0.
+
+El campo plantado está **muy por debajo del azar**. Y acá la respuesta se conoce:
+una estructura de 3 grupos limpios es lo que produce ese déficit, porque el único
+triángulo frustrado posible es el que toma un nodo de cada grupo, y hay 216 de
+816 mientras que el azar con la misma densidad de negativos daría 0.53.
+
+Eso le da lectura a lo que el juguete del 10 oct había medido sin poder
+interpretar: **z entre −2.3 y −3.4 en corpus reales**. Con la respuesta conocida,
+frustración **por debajo** del azar es la firma de una estructura de grupos, no de
+su ausencia. Dicho como lo que es: los dos signos coinciden y el orden de
+magnitud no (−16.9 en el campo plantado, −2.3 a −3.4 en los corpus). No se
+afirma más que eso.
+
+*Referencias, sin corroboración propia: Harary (1953) para el balance de grafos
+con signo; Zaslavsky y Toulouse (1977) para la frustración. No se expone más que
+la referencia (criterio de delamor, 10 oct).*
+
+### 4. `check_orientability`: xfail por concepto, corrido
+
+Corrido en los 60 pasos de las dos corridas, `theta = 0.0`. **Una sola
+respuesta, en todos:** `orientable: true`, `n_mobius_loops: 0`, *"cilindro —
+divergencia resoluble"*. Incluso en el paso 30 de `epsilon = 0.1`, con 116
+aristas y 385 triángulos.
+
+El rojo estricto vive en **`tests/test_orientability_no_mide_balance.py`**: 5
+xfail (barrido de `theta` en −1.0, −0.75, −0.25, 0.0, +0.25, por los dos lados
+del 0, para que no se lea como umbral mal elegido) más **un control que pasa** y
+sostiene el xfail: el índice de frustración **sí** distingue el campo frustrado
+(1.0) del balanceado (0.0). Sin el control, el xfail podría significar "los dos
+campos son iguales". **El módulo no se tocó.**
+
+### 5. D_ckm: se mueve — y el criterio estructural sigue sin disparar
+
+`D_ckm` por **enumeración exacta de los 2^18 estados** (media 7.3 s por paso),
+que es el límite del modo de muestreo natural, no otra cantidad. `A0` fijado en
+el primer paso, como `MonitorService._D_ckm`.
+
+| eps | serie de D_ckm |
+|---|---|
+| 0 | 0.0, −0.528, −0.535, −0.539, **−0.6618 y constante los 26 pasos siguientes** |
+| 0.1 | 0.0, +0.229, **+0.379**, +0.193, +0.116, +0.044, +0.007, −0.088, … −0.306, **−0.318 constante del 26 al 30** |
+
+**Se mueve**, y eso responde al punto 3 del CP: en el campo plantado `D_ckm` no
+es `0.0` constante como en el corpus chico de la PoC del volumen. Con
+`epsilon = 0.1` **cambia de signo** entre el paso 7 y el 8.
+
+**Y el criterio estructural daría `True` en 0 de los 60 pasos.** Calculado con la
+condición exacta del código (`corpus_service.should_rebuild`: gradiente > 0 en
+los `n = 3` tramos de los últimos 4 puntos) sobre la serie **observada**. Esto
+precisa lo que midió la PoC: la inercia del criterio estructural **no se debe
+solo a que `D_ckm` esté cuantizado en 0**. Con un `D_ckm` que se mueve, igual no
+dispara, por dos razones distintas: el movimiento es **hacia abajo** (el paisaje
+gana cuencas, `D_ckm` < 0) y después es **exactamente plano**. Un gradiente
+negativo y un gradiente nulo fallan los dos la condición `> 0`.
+
+*Sólo se observó. `should_rebuild` no se conectó.*
+
+### 6. Lo que no se buscaba: D_ckm no distinguió dos W que difieren en la mitad de los pares
+
+En el paso 30, las dos corridas dan **`N_eff` = 67.25195093210192, idéntico hasta
+el último dígito**, con W que no son la misma: `w_sha` distintos, 45 contra 116
+pares positivos, diferencia máxima 0.915, 71 pares de 153 cambiados. Se verificó
+antes de reportarlo, y con el aporte de Opus (tres lecturas: real / artefacto /
+bug). Resultado de los cuatro chequeos:
+
+- **`w_sha` difieren** (`7f94f20f…` vs `504d5c70…`): no es reuso de W, ni caché,
+  ni singleton, ni seed.
+- **El mapa sucesor coincide en los 2^18 estados: 0 difieren.** Se comparó el
+  mapa de un paso completo, no el atractor final: si coincide en todo estado,
+  toda trayectoria coincide. El paisaje es idéntico **de verdad**.
+- **Empates: 0.** `min |h|` bajo W(eps=0) = **0.263**, nunca exactamente 0. Las
+  aristas del ruido **no están resolviendo empates**: no hay empates.
+- **`N_eff` no es 8.** La predicción de 8 = 2³ supone cliques **uniformes**; la W
+  plantada tiene **20 pesos distintos** dentro de grupo (0.579 a 1.0), así que un
+  clique de 6 no cae a consenso desde todo estado: 5328 órbitas, `N_eff` 67.252.
+
+**Y el mecanismo, medido:** un clique **uniforme** (W = 1 dentro, 0 entre) da
+**las mismas 5328 órbitas y el mismo `N_eff` = 67.252**. Acá `N_eff` es función de
+la **partición** —3 cliques de 6— y es ciego a los 20 pesos de dentro y a las 71
+aristas del ruido.
+
+**No es que el instrumento descarte los pesos chicos.** La dinámica recibe W
+**cruda** (`h = s @ W`, `sign` sin umbral ni cuantización), y la perturbación
+cruzada llega a **0.390**, **mayor** que el margen mínimo de **0.263**: por
+magnitud podía cambiar un signo. Cambió **0** en 2^18 × 18 campos. No es un
+teorema de magnitud: es un hecho medido, y como tal vale para este campo y no
+en general.
+
+**Lo que sí difirió entre las dos corridas fue `A0`** (12.58 contra 24.36, el
+baseline del paso 1), y eso es **todo** lo que separa `D_ckm` = −0.6618 de
+−0.3180. Dos paisajes finales idénticos, dos `D_ckm` distintos, por la
+normalización que nace en el salto. Es el punto 4 de la lista de
+discontinuidades del 10 oct, medido con respuesta conocida.
+
+### 7. ‖ΔW‖ — el campo está fijo, así que esto es el instrumento
+
+En dos números, como se declaró. `dW_comunes` (Frobenius relativa sobre los
+nodos comunes) **decae de forma monótona en lo grueso**: eps = 0, de **0.336**
+(paso 2) a **0.021** (paso 30); eps = 0.1, de **0.354** a **0.024**. Cambio de
+soporte: con eps = 0 el soporte se cierra en N = 18 en el paso 1 y no se mueve
+más; con eps = 0.1 entra 1 nodo en el paso 2 y después tampoco.
+
+El campo no cambió en ningún paso. **Todo ese 0.34 -> 0.02 es del instrumento**, y
+su forma es la de `1/n`: el `max_abs` divide por un máximo que crece con la
+ingesta. Es el chequeo de estabilidad del instrumento que pedía CP4 —poca
+ingesta, poco ΔW— cumpliéndose **asintóticamente y no desde el principio**: los
+primeros pasos mueven W un tercio de su norma con el campo quieto.
+
+### 8. Lo que queda dicho, sin decidir
+
+- La decisión abierta **φ o PMI** no es, a este tamaño, la que cambia el
+  resultado. La que lo cambia es **la convención para la co-ocurrencia 0**.
+- El **nulo de la W del repo tiene sd = 0**: cualquier reporte de "p" sobre
+  frustración de una W ≥ 0 no es un contraste.
+- `N_eff` fue **función de la partición y no de los pesos** en este campo. Si eso
+  vale más allá del campo plantado, no se midió.
+- Los **216 triángulos** plantados como frustrados **no entran al denominador** de
+  la convención vigente (`orbit_analytics`). Qué denominador va es decisión.
+
+### Lo que NO se tocó
+
+`services/`, el extractor, `ckm_topology_module`, `orbit_analytics`, el gate
+(`f96c234`). No se arregló nada. No se conectó `should_rebuild`. No se decidió
+φ ni PMI, ni W separadas o combinadas, ni sobre qué W juzga el Gatekeeper, ni el
+signo de Δ.
+
+`experiments/sintetico_campo_plantado.json` (la salida de la corrida) **queda sin
+commitear**: es dato de corrida, y no se commitea sin que delamor lo pida.
+
+**ALTO.**

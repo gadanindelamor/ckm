@@ -7590,3 +7590,133 @@ Sin código. No se escribió `services/ckm_trust_rule.py` ni
 `iap_chatroom/`. Nadie llama al módulo (no existe).
 
 **ALTO.** Espero el OK sobre la API antes de escribirla.
+
+---
+
+## REPORTE CP1 — la regla como módulo · un solo corazón — 2026-10-12
+
+*`TASK_ckm_trust_rule_v1`, CP1. Archivos: `services/ckm_trust_rule.py` y
+`tests/test_ckm_trust_rule.py`. **Suite: 552 passed, 5 xfailed** (eran 515 + 37
+nuevos). Gate `f96c234`: **el módulo es puro y nadie lo llama** — no importa nada
+del repo, no escribe, no tiene estado entre llamadas.*
+
+### Las dos correcciones de delamor, aplicadas
+
+1. **`provenance` es obligatoria siempre.** `Threshold(value=None,
+   provenance=None)` **levanta**: un "no se sabe" también se declara, y la ausencia
+   conserva su origen (I1). Y dos más que se derivan de ahí y también levantan:
+   `value=None` con `MEASURED` (no se puede haber **medido** un desconocido) y
+   `value=None` sin `source` (un desconocido sin dueño no es un desconocido
+   declarado).
+2. **`Threshold.record` → `Threshold.source`.** `record` quedó **sólo** para
+   `Decision.record`, que es R. Un nombre, una cosa.
+
+### Lo que el módulo tiene, y la decisión que lo hace estructural
+
+**I5 no es una convención de uso: no hay cómo violarla.** `escalate_to` es un
+**`str`**, el **nombre** del orden de arriba, y pasarle un invocable **levanta**.
+Si el módulo pudiera llamar a ↑k, resolvería el paso 3 — que es justo lo que I5
+prohíbe. La asimetría con `context`, que **sí** es invocable, es la de F2: el paso
+4 **decide** con `g`, y eso no es I5, que es del paso 3.
+
+**El paso 4 no corre si hay ↑k.** Mientras el orden de arriba no haya hablado, la
+duda está arriba y no en el `g`. *"↑k no decide"* **no se puede representar en una
+llamada pura**, así que quien llama lo expresa **volviendo a llamar sin
+`escalate_to`**. Queda dicho en el docstring porque es la única forma de llegar al
+paso 4 teniendo ↑k.
+
+**Y el módulo nunca inventa un `g`:** sin `context` declarado, no hay paso 4 —
+queda `ESCALATED`.
+
+### Lo que se agregó porque la forma no alcanzaba (T1–T12, ya aprobadas)
+
+- **ε desconocida** marca `TOLERANCE_UNKNOWN` en **toda** decisión, y lo único que
+  se deriva sin inventar un número es que `|f − κ| = 0` **es empate bajo cualquier
+  ε ≥ 0**. **Con ε = 0 nada se marca**, y en la igualdad exacta las dos coinciden:
+  está declarado en el docstring y es un test. El precedente es del repo,
+  `landscape_engine.py:74`.
+- **El piso pide un reloj y el módulo no se lo inventa:** el contador lo pasa quien
+  llama (`trace_streak`). Sin contador → `FLOOR_UNKNOWN`, **no 0**. Y
+  `record["floor_missing"]` dice cuál de los **tres** casos fue: `floor_absent`,
+  `floor_value_unknown` o `trace_streak_unknown`.
+- **κ desconocida** → `ESCALATED` con `CUT_UNKNOWN`: es la rama *"¿se aplicó f?
+  no"* del paso 3, no un paso 1 que falla.
+- **La capacidad** expresa la exención del paso 1. `capacity=None` es **no hay
+  lugares que contar**, no "caben todos".
+- **La hélice:** `turn_ref` se guarda **sin interpretarse**; sin referencia va
+  `None` declarado, no "vuelta 0".
+- **I4:** `Decision.value` es un **`frozenset`**. El registro sí es lista, y su
+  orden es **el que entró**: no se ordena por puntaje, porque ordenar por puntaje
+  mete un desempate alfabético por la puerta de atrás — medido en el REPORTE CP0
+  (`w_sha` y las estimaciones por muestreo dependen de ese orden).
+- **I3:** el registro guarda `field_value` y `distance_to_cut` **exactos** y **no
+  hay un booleano `tie` por candidato**: la categoría se deriva al leer, contra la
+  `tolerance` que el registro también trae. Hay un test que la deriva.
+- **`calibrated` es derivado**, no campo, y mira **todos** los umbrales presentes.
+  Un `bool` no puede decir cuál se midió ni quién lo declaró; por eso el dato vive
+  en cada `Threshold`. El nombre del TASK se conserva como lectura.
+
+### El mapeo que se declara y no se reescribe
+
+`should_rebuild` **no tiene tres `f`** (delamor, 12 oct): estructural → `f`,
+tiempo → `P`, volumen → `g` declarado. **Eran tres casilleros, no tres criterios
+de campo.** El mapeo está en el docstring del módulo; **nada existente se
+renombró**.
+
+### El test estructural, con su límite y en dos partes
+
+**Es textual**, y lo dice: busca los nombres con los que el repo **ya** escribe
+empate, piso y origen, así que **ve una copia que use esos nombres y no ve una que
+los renombre**. La lista está **medida** corriendo el mismo barrido, no supuesta.
+
+**Corazones conocidos (5)** — reimplementan empate, piso u origen. Cada uno es un
+alineamiento **pendiente**, no un aval; el gate prohíbe tocarlos:
+`criterio_local.py` (exceptuado por el TASK), `node_extractor.py`,
+`corpus_service.py`, `ckm_monitor.py`, `landscape_engine.py`.
+
+**Coincidencias textuales sin corazón (1)** — sugerencia de delamor, para que el
+inventario no se infle: `autonomous_device.py`, que **sólo pasa `piso_vueltas`** a
+`CriterioLocal`. Es consumidor, no implementación, y **es la prueba del límite del
+test**: hay un test que verifica que entra al barrido **sólo** por ese nombre.
+
+El test falla en **las dos direcciones**: si aparece un corazón fuera de la lista,
+y también si uno **sale** —eso querría decir que alguien lo alineó, y entonces el
+inventario del CP0 hay que actualizarlo—. Las dos son información.
+
+Y el módulo nuevo **se excluye del barrido a propósito**: también usa la palabra
+"empate", y **es** el corazón. Sin esa exclusión el test se delataría a sí mismo;
+hay un test que lo verifica.
+
+### Las cuatro inversiones
+
+| # | qué se invirtió | qué falló | al restaurar |
+|---|---|---|---|
+| A | `escalate_to` acepta un invocable | `test_escalate_to_invocable_levanta_I5_es_estructural` | 37 |
+| B | `provenance=None` se acepta | `test_threshold_value_None_sin_provenance_levanta` | 37 |
+| C | ε `None` se decide como 0 (no se marca) | **dos**: el de `tolerance_unknown` y el de la igualdad exacta | 37 |
+| D | el piso no lleva al paso 3 | `test_el_piso_lleva_del_paso_2_al_3` | 37 |
+
+El módulo quedó **idéntico byte a byte** después de las cuatro, verificado con
+`diff`.
+
+### Docstrings — cuatro divergencias propias, encontradas releyendo y corregidas antes de commitear
+
+Las encontré yo, releyendo lo que había escrito, y las arreglé en el mismo commit:
+
+1. el resumen de los cuatro pasos **no decía** que ↑k bloquea el paso 4, ni tenía
+   la rama de κ desconocida. Ahora están los dos, como paso 0;
+2. el docstring de `RuleParams` decía *"los dos marcan `FLOOR_UNKNOWN`"* y **son
+   tres** casos;
+3. la property `Decision.escalate_to` decía *"a quién subió la duda"* y se devuelve
+   en **toda** decisión, no sólo en las que escalaron. Reescrita;
+4. el piso se evaluaba **sin traza**, y marcaba `FLOOR_UNKNOWN` sobre algo que no
+   se iba a usar: sin T el paso 2 no aplica. **Cambio de código**, con su test.
+
+### Lo que NO se hizo
+
+No se tocó ningún `services/` existente, ni `iap_chatroom/`, ni `process/`. **Nadie
+llama al módulo** (gate `f96c234`). No se eligió ningún valor de κ, ε ni P: todos
+entran desde quien instancia. `criterio_local.py` no se tocó — eso es el CP2 (como
+instancia, **en un test**) y el CP3.
+
+**ALTO.**

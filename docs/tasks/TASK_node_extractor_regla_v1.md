@@ -85,8 +85,10 @@ la forma** `⟨C, f, R, κ, ε, T, P, g, ↑k⟩`, con sus **casilleros vacíos*
 
 ### CP1 — Sin tocar `node_extractor.py`. `_seleccionar` como instancia, **en un test**
 
-Expresar `_seleccionar` —y el **pool**, si entra— como instancia de `CkmTrustRule`
-**en un test**. **Antes de correr, escribir la predicción en la BANDEJA.** Comparar
+Expresar `_seleccionar` **y el pool** como instancia de `CkmTrustRule` **en un
+test**. *delamor, 13 oct: el pool **decide**, así que **entra**. Si no entra en la
+forma, se reporta como **falla** —CP0b de `TASK_ckm_trust_rule_v1`—; **no se lo deja
+afuera como `C`**.* **Antes de correr, escribir la predicción en la BANDEJA.** Comparar
 contra el código de hoy:
 
 - sobre los **corpus registrados** que elijas (**declaralos**);

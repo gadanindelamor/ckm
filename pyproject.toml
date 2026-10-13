@@ -33,7 +33,11 @@ dependencies = [
     # los defaults de esta libreria -- lowercase, strip_accents, norm,
     # smooth_idf, use_idf, sublinear_tf, min_df/max_df -- y el desempate de
     # max_features tambien. Corre 1.9.0.
-    "scikit-learn>=1.9.0",
+    #
+    # ~= y no >= (decide Opus, 13 oct): ">=" registraba un piso, no la version,
+    # y lo medido vale para la linea 1.9.x. Una version nueva se adopta
+    # MIDIENDO DE NUEVO, no por defecto.
+    "scikit-learn~=1.9.0",
 ]
 
 [project.optional-dependencies]

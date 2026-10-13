@@ -10070,3 +10070,76 @@ todos igual.** El riesgo sigue existiendo y **se activa con S3**, no con S1.
 | los de A.3, relajación, CP1, monitor | **ninguno cambió**, porque S1 no mueve nada en esos corpus |
 
 **A1.PAUSA.** Después, según delamor: PAUSA y volver a evaluar el escenario.
+
+---
+## S0b — el inventario, y LA PREDICCIÓN — 2026-10-13 17:09 UTC
+
+*Claude Opus 5 (Code). **Esta entrada se commitea antes del cambio.** El inventario
+es **sólo lectura**.*
+
+### 1. Inventario: todo criterio que depende del idioma
+
+**En `services/node_extractor.py`** — los que S0b aísla:
+
+| criterio | dónde | qué asume |
+|---|---|---|
+| **alfabeto** del `token_pattern` | `:48` (`_TOKEN_PATTERN`) | que un término se escribe con **letras**. Desde S1 acepta cualquier letra Unicode; antes era ES+EN |
+| **largo mínimo = 3** | el `{2,}` del mismo patrón | que las palabras de **menos de 3 letras** no son nodos. En castellano e inglés casi siempre son función; **en otras lenguas no** |
+| **`lowercase`** | `analizar`, `.lower()` | que **plegar mayúsculas no pierde significado**. Hay escrituras **sin caja**, y el turco tiene la `i` con y sin punto |
+| **normalización NFC** | `analizar`, `unicodedata.normalize` | que la forma **precompuesta** es la canónica |
+| **stopwords (703)** | `_STOPWORDS` | **ES + EN**, declarado en `:25-33`: NLTK 3.10.3 es (313) + en (198), sklearn (318), 112 propias |
+| **qué separa palabras** | el patrón, **por omisión** | que las palabras van **separadas por espacios o puntuación**. **No está escrito en ningún lado**: es lo que el patrón *no* matchea. Chino, japonés y tailandés no separan |
+| **n-gramas sobre palabras separadas** | el bucle de `analizar` | lo mismo, un orden más arriba |
+
+**Fuera de `node_extractor` — se LISTAN y no se tocan acá:**
+
+| criterio | dónde | qué pasa con él |
+|---|---|---|
+| **`_OPPOSITION_MARKERS`** | `corpus_service.py:56-69` (ES+EN, 40 marcadores) y `:229` (`.lower()` + substring) | **CP1b**, no acá |
+| **`BEHAVIOR_TERMAP_V1` y `_detect`** | `behavior_graph.py:218-231` — `.lower()` + `\b…\b` sobre términos en inglés | **No estaba en la lista del pedido. Lo agrego**: el `\b` asume separación por espacios, igual que el patrón. **Se lista, no se toca** |
+
+### 2–4. Qué voy a hacer
+
+Un `PerfilDeIdioma` **inmutable** con esos siete criterios y su **alcance escrito**;
+`NodeExtractorService` lo recibe y `analizar` lo usa; **un test estructural** que
+verifique que ningún otro lugar de `services/` ni `iap_chatroom/` los escribe a mano,
+con la lista de los **dos conocidos** congelada y su razón, igual que
+`CORAZONES_CONOCIDOS`. El perfil **viaja en `accumulate`** y **se persiste en
+`save()`**. Y la tabla del CP0a suma **"depende del idioma"** en la especie.
+
+### LA PREDICCIÓN
+
+**1. Bit a bit, contra el analizador de ahora** (post-S1; ver la diferencia de relevo
+en `6547270`). Predigo **la misma lista, en el mismo orden**, en los 20 bordes, en
+los **83 textos reales** y con `ngram_max` 1, 2 y 3. **Cero divergencias.**
+
+**2. Pool y nodos idénticos** en ARM40, A, D y E: **60/19, 60/20, 60/20, 55/12**.
+
+**3. Tests que cambian de expectativa: los de `accumulate`, por la clave nueva.**
+
+| test | qué le pasa |
+|---|---|
+| `test_e_la_evidencia_del_contrato_partido` (CP0) | **falla.** Asserta los conjuntos de claves exactos. Con `perfil` pasan a **4** (corpus vacío) y **6** (normal) |
+| `test_e_accumulate_devuelve_el_mismo_contrato_siempre` (xfail strict) | **sigue en rojo-esperado**: el contrato sigue partido, 4 contra 6. **S4 no entra** |
+| `test_el_registro_no_gano_ni_perdio_claves` (CP3) | **no cambia**: es de `criterio_local`, que no toca `accumulate` |
+
+**Predigo que ningún otro test cambia**, porque nadie más compara el conjunto de
+claves de `accumulate`. **No lo verifiqué todavía**: lo digo como predicción y lo
+mido.
+
+**4. `save()`.** Predigo que agregar `perfil_extraccion` **no rompe `_load`** de
+estados viejos, porque voy a leerlo con `.get(...)` y **`None` declarado** —*"no se
+sabe bajo qué perfil se extrajo"*—, **nunca** el perfil actual por defecto: poner el
+de hoy en un estado de ayer sería afirmar una condición que nadie registró. **Es
+I2.**
+
+**5. Lo que NO predigo porque no lo sé:** cuántos sitios encuentra el barrido
+estructural. Veo **dos** leyendo (`corpus_service` y `behavior_graph`), y el barrido
+puede encontrar otros. **Reporto el número que salga, no el que dije.**
+
+**6. Lo que S0b NO hace, y conviene que quede dicho:** **no detecta el idioma, y no
+valida que el corpus esté dentro del alcance.** Un corpus en chino se va a extraer
+igual, con el perfil ES+EN declarado encima. **El perfil no protege: declara.** Que
+alguien compare el perfil contra el corpus es otro orden.
+
+**Esta entrada se commitea sola, antes del cambio.**

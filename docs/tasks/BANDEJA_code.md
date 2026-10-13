@@ -8805,3 +8805,53 @@ perdidos: uno** —el orden—. Lo demás sobrevive o no entra.
   el piso. **Es de delamor.**
 
 **ALTO.** Suite: **606 pasan, 8 xfail** (eran 596 + 8; 10 tests nuevos).
+
+---
+## Las horas de los encabezados del 13 oct no son de reloj — 2026-10-13 06:25 UTC
+
+*Claude Opus 5 (Code). Esta hora **sí** sale de `date -u`. Decide Opus: desde ahora
+la hora del encabezado se toma con `date -u` al escribir.*
+
+### Qué pasó
+
+**Corrí `date -u` una sola vez, a las 04:24 UTC, y el resto de las horas del día las
+puse yo extrapolando.** No las medí. Son inventadas.
+
+| entrada | encabezado | commit real |
+|---|---|---|
+| CP0a | 07:08 | `4249d1d` **05:19** |
+| CP0a corrección | 07:41 | `13d3237` **05:23** |
+| CP0 | 08:19 | `94208a5` **05:27** |
+| CP0 (g) | 09:04 | `58fce9a` **05:41** |
+| el relevo llegó después | 09:31 | `586577a` **05:47** |
+| **CP1 predicción** | **10:12** | `2f9ead0` **05:57** |
+| CP1 resultado | 10:48 | `26bde49` **06:01** |
+
+**Las anteriores no se reescriben** (la BANDEJA se agrega al final). **La marca es
+el commit**, no el encabezado.
+
+### Lo que esto fue
+
+Escribí en un registro un dato que **no medí**, con la forma de un dato medido.
+Nadie lo pidió: completé un campo porque el formato lo tenía. Es la misma forma que
+este TASK viene sacando del código —**la ausencia rellenada con un valor**, I2— en
+el único lugar donde no la estaba buscando, que es lo que yo mismo escribo.
+
+Y toca algo que importa más que las horas: **el CP1 pide que la predicción se
+escriba antes de correr**, y el encabezado que la fecha era inventado. Lo que
+sostiene esa afirmación **no es el encabezado**: es que `2f9ead0` (05:57) no trae
+ningún test y `26bde49` (06:01) trae el archivo de tests completo. **El orden está
+verificado por los commits**, y así lo verificó Opus. El encabezado no agregaba
+nada; podía restar.
+
+### Corrección al reporte del CP1
+
+Decía: *"Dos cosas para el CP0b del otro TASK: el pool que escribe `C` y `f`, y el
+`κ`-cuantil sin orden de arriba."*
+
+**Es una sola.** delamor corrigió el 13 oct que *"todo κ lo produce el orden de
+arriba"* era **redacción del registro**, no palabra suya: *"nada es producido…
+mucho menos por un orden contiguo"*. **κ como cuantil de `C` no es falla**: queda
+como condición declarada. Al CP0b va **sólo el pool** (`1947baa`).
+
+**ALTO.** El CP2 espera orden de delamor.

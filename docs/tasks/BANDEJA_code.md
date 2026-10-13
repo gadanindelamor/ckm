@@ -9132,3 +9132,104 @@ paso 1 deja decidir a la capacidad (`top_k`, declarado, n2) donde el campo calla
 afecta** (`capacity=None`). **Si se queda o se va es de delamor.**
 
 **ALTO.** Suite: **620 pasan, 8 xfail**.
+
+---
+## A.1 y A.2 — inventario de corpus del repo, y tensiones — 2026-10-13 15:37 UTC
+
+*Claude Opus 5 (Code). Pedido de delamor/Opus, parte **A**. **Sólo lectura.** Hora
+de `date -u`. **ALTO antes de A.3 y de B**: hay dos tensiones que cambian cómo se
+lee lo que medí hoy.*
+
+### A.1 — Agrupados por sha256 de la lista `texts`
+
+**48 archivos trackeados con lista `texts`. SEIS corpus distintos.**
+
+| | sha | n_textos | archivos | quiénes |
+|---|---|---|---|---|
+| **A** | `e96954367c18` | **24** | **24** | `wmixta_paso2_natural`, `wmixta_forzado_paso3`, y sus réplicas en `replica_orbitas/` y `replica_unificacion/` — las 4 variantes (`boltzmann`, `sin_thermostat`, `uniform`, `weighted`) × 6 carpetas |
+| **B** | `e69914362b86` | **20** | **19** | `boltzmann_comparison/` (4), `stochastic_eval/_smoke`, **`process/iap/armstrong_corpus_state.json`**, `armstrong_replica_seed123`, `armstrong_via_corpus_v3`, y `n_runs_sweep/` (11) |
+| **C** | `f59d301d8b26` | 4 | 2 | `iap_chatroom/_state/corpus_G_state.json` y su copia en el freeze |
+| **D** | `b6b95617dd0d` | 12 | 1 | `iap_chatroom/_state/corpus_state.json` |
+| **E** | `015eaf2db1b8` | 7 | 1 | `process/iap/corpus_state.json` |
+| **F** | `0038b896821f` | 8 | 1 | `process/iap_series_freeze_20261008/_state/corpus_state.json` |
+
+**`process/corpus_informes/`** no es `.json`: es texto. Dos archivos y por lo tanto
+**dos unidades**, y el README declara cuál es cuál — `corpus_informes.txt`
+(**párrafos únicos** de 27 informes, 870 líneas) y
+`corpus_informes_paginas300.txt` (otra unidad). **No lo conté como corpus todavía
+porque la unidad es la pregunta abierta del `REG_unidad_texto_saturacion_v1`**: si
+entra, hay que declarar con qué unidad, y eso cambia qué es un texto.
+
+### A.2 — Los seis ejercen las ramas del empate
+
+Todos tienen vocabulario **muy** por encima de `top_k = 20`, así que el pool corta y
+`_seleccionar` llega a su rama de empate. Estado final de cada uno:
+
+| corpus | n | vocab | pool | arriba | empate | libres | régimen |
+|---|---|---|---|---|---|---|---|
+| **A** | 24 | 1411 | 60 | 19 | **1** | 1 | **(b) cabe** |
+| **B** | 20 | 256 | 60 | 19 | 3 | 1 | (c/d) no cabe |
+| **C** | 4 | 224 | 60 | 19 | 6 | 1 | (c/d) no cabe |
+| **D** | 12 | 237 | 60 | 19 | **1** | 1 | **(b) cabe** |
+| **E** | 7 | 55 | **55** | 12 | 9 | 8 | (c/d) no cabe |
+| **F** | 8 | 233 | 60 | 17 | 4 | 3 | (c/d) no cabe |
+
+**Los seis ejercen las ramas. Cinco son distintos de armstrong.** Así que A.3 no es
+una medición más: son **cinco corpus**, cada uno con su predicción.
+
+**`E` es el único donde el pool no llena**: 55 términos para `max_features=60`, así
+que ahí el pool **no corta** y la vía (i) no actúa — sólo la (ii) no, tampoco:
+sin recorte no hay re-puntuación. **`E` aísla `_seleccionar` del pool.** Es el único
+que puede medir la regla sin el pool encima.
+
+### Tensión 1 — "armstrong" nombra **dos** snapshots, y medí el que no está trackeado
+
+| | n | trackeado |
+|---|---|---|
+| `process/iap/armstrong_*_state.json` | **20** | **sí** |
+| `process/experiments/armstrong_*_state.json` | **40** | **no** |
+
+**El trackeado (n=20) es exactamente el prefijo de los primeros 20 del untracked
+(n=40)** — verificado: `b[:20] == a`. No son dos corpus: es **el mismo corpus en dos
+momentos**, con el mismo nombre de archivo en dos carpetas.
+
+**Consecuencia para lo que reporté hoy:** las mediciones del CP0 (g), del CP1, de la
+relajación y de la exención usaron el de **n=40, sin trackear**. Donde escribí
+*"armstrong"* hay que leer **"armstrong n=40, untracked"**. Y la reconstrucción por
+prefijos que hice **pasa por el estado trackeado en el camino** (n=20 es uno de los
+38 prefijos).
+
+### Tensión 2 — la réplica de archivos es enorme, y no es réplica de corpus
+
+**24 archivos comparten un sha. 19 comparten otro.** Las cuatro variantes
+(`boltzmann`, `sin_thermostat`, `uniform`, `weighted`) de cada experimento tienen
+**los mismos textos**: lo que varía es el muestreo, no el corpus. Y `replica_orbitas`
+y `replica_unificacion` repiten los mismos 24.
+
+Eso está bien —son réplicas **del experimento**, con el corpus fijo a propósito—,
+pero **cualquier lectura que cuente archivos como corpus infla por 24**. Mi error de
+`dffdcf8` era un caso de esto con n=2; acá el factor es mucho mayor. **No afirmo que
+otro reporte lo haya cometido: digo desde dónde miré —el sha de `texts`— y que el
+riesgo está.**
+
+### Lo que NO entra, con su razón
+
+**`fourforums`:** delamor, 13 oct — *"no corre en el repo ckm, usa un pipeline de
+extracción sobre SQL"*. Verificado desde acá: `git ls-files | grep -i fourforums`
+no devuelve nada. **No está en el repo**, así que no hay qué inventariar.
+
+### ¿Cambia alguna tensión una premisa de B?
+
+**No.** Verifiqué las dos que importaban:
+
+- **`criterio_local` va con `capacity=None`** (`criterio_local.py:339`), así que la
+  exención no le aplica y la predicción de B.3 se sostiene;
+- **la superficie de `REASON_TIE_FITS`** son 4 archivos: el engine (2), sus tests
+  (2), `test_criterio_local_como_instancia` (2) y
+  `test_node_extractor_como_instancia` (3).
+
+**Paro acá igual**, porque A va antes que B y A.3 son **cinco** corpus con
+predicción propia — no es el apéndice que parecía—, y porque la tensión 1 cambia
+cómo se lee todo lo que medí hoy.
+
+**ALTO.**

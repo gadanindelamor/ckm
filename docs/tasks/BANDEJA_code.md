@@ -8855,3 +8855,76 @@ mucho menos por un orden contiguo"*. **κ como cuantil de `C` no es falla**: que
 como condición declarada. Al CP0b va **sólo el pool** (`1947baa`).
 
 **ALTO.** El CP2 espera orden de delamor.
+
+---
+## `_seleccionar` contra la relajación — LA PREDICCIÓN, antes de correr — 2026-10-13 14:57 UTC
+
+*Claude Opus 5 (Code). Pedido de delamor/Opus, previo al CP2 de
+`TASK_node_extractor_regla_v1`. **Sólo tests**, `node_extractor.py` no se toca.
+**Esta entrada se commitea antes de escribir el test.** La hora sale de `date -u`.*
+
+### La regla contra la que se compara
+
+`landscape_engine.py:74` — `s = np.where(h > 0, 1., np.where(h < 0, -1., s))`.
+**`h == 0` exacto → conserva `s`.** ε = 0 implícito.
+
+**Mapeo:** `s = +1` en la selección, `−1` afuera · `h` = distancia al corte.
+
+### Los cinco casos
+
+| | caso | predicción de Opus | la mía |
+|---|---|---|---|
+| **a** | arriba / abajo del corte | **coincide** (no es conservación) | **igual** |
+| **b** | empate que **cabe** en los libres | **NO conserva** — entran todos, aunque estuvieran afuera. Y es el **caso normal** | **igual** |
+| **c** | empate que **no cabe**, con `anterior` | **conserva** | **igual, y además conserva el `−1`** |
+| **d** | empate que **no cabe**, sin `anterior` | *"no hay estado que conservar; queda afuera (`g`, F2)"* | **acá difiero** — ver abajo |
+| **e** | ε | relajación `h == 0` exacto; `_seleccionar` `1e-12` | **igual** |
+
+### (c): conservar el `−1` también es conservar
+
+En los dos armstrong, `pertenencia_anterior` es **`False`** en los tres empatados, y
+`arriba + [i for i in empate if terms[i] in prev]` los deja **afuera**. Eso es
+conservar `s = −1`. Predigo que **(c) conserva en las dos direcciones**, no sólo
+cuando el término ya estaba adentro.
+
+### (d): donde difiero de la lectura de Opus
+
+El docstring de `accumulate` (`:192-193`) dice: *"sin ella (**bootstrap: el estado
+inicial es 'ningún nodo'**) los empatados quedan afuera"*. **El estado inicial está
+declarado**, y es `s = −1` para todos. Bajo esa lectura, quedar afuera **no es un
+`g`: es conservar el `s` declarado**, y (d) **sí** cumple la relajación.
+
+Las dos lecturas son consistentes con el código y dan **la misma salida**:
+
+- **`g` (Opus):** no hay traza, así que algo de contexto resuelve → quedar afuera;
+- **T declarada (mía):** la traza existe y vale `−1` para todos → conservar.
+
+**La diferencia no es medible por la salida.** Es la pregunta abierta del **arranque
+en frío** (`REG_regla_ckm_trust_v1` §4, 4 oct): *"ningún nodo"* ¿es **traza** o es
+**contexto**? **Es de delamor.** Predigo que el test **no puede distinguirlas**, y
+que lo único que puede hacer es exhibir que son dos descripciones de la misma
+salida.
+
+### (b): predigo que es el caso dominante, y por qué
+
+El término del corte tiene distancia **exactamente 0**, así que **siempre** está en
+`empate` (CP1). En el caso sin empate real: `len(empate) = 1`, `libres = 1`, cabe →
+**entra**. Si venía de estar afuera, **la relajación decía conservar el `−1` y
+`_seleccionar` lo mete**.
+
+**Predigo que la violación de la relajación es la norma y no la excepción.**
+
+### La medición de (b) frente a (c), con su límite declarado
+
+No tengo la **historia** de los rebuilds: los corpus registrados son un **snapshot
+final**. Voy a reconstruirla corriendo la selección sobre **prefijos crecientes** de
+`texts`, encadenando cada selección como `anterior` de la siguiente — que es lo que
+`_rebuild` hace—. **Es una reconstrucción, no la historia real**, y lo digo acá
+antes de que el número exista.
+
+**Predigo (b) muy por encima de (c):** (c) necesita `len(empate) > libres`, es decir
+un **empate real** de dos o más términos en el corte, y eso pide puntajes de TF-IDF
+medio **exactamente iguales**. Pongo el número: **(c) por debajo del 15 % de los
+rebuilds** en cada corpus.
+
+**Esta entrada se commitea sola, antes del test.**

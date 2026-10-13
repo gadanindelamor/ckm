@@ -9321,3 +9321,107 @@ propia: sus textos son **mensajes de canal en orden temporal**, así que el pref
 orden es el que puso el autor.
 
 **Esta entrada se commitea sola, antes del test.**
+
+---
+## A.3 — el resultado — 2026-10-13 15:53 UTC
+
+*Claude Opus 5 (Code). Predicción en `2396465`, **commiteada antes** del test.
+`tests/test_corpus_del_repo_A3.py`: **6 pasan**. `node_extractor.py` sin tocar.*
+
+**Primero, una hora mal puesta, otra vez.** El encabezado de la entrada anterior dice
+**15:48** y `date -u` dio **15:42**: lo escribí antes de ver la salida, en la misma
+entrada donde dejé dicho que eso no se hace. No se reescribe. **La marca es el
+commit: `2396465`.**
+
+### Los regímenes, en conteos
+
+| corpus | n | vocab | rebuilds | **(b)** cabe | (c) no cabe | (d) sin anterior |
+|---|---|---|---|---|---|---|
+| **A** | 24 | 1411 | 21 | **15** | 5 | 1 |
+| **D** | 12 | 237 | 9 | **1** | 7 | 1 |
+| **E** | 7 | 55 | 5 | **0** | 4 | 1 |
+
+### La predicción: acertó en A y en E, **falló en D**
+
+| | predicho | medido |
+|---|---|---|
+| A: (b) | **12 o más** | **15** ✓ |
+| D: (b) | **5 o más** | **1** ✗ |
+| E: (b) | **0 o 1** | **0** ✓ |
+
+**El mecanismo que puse a prueba se sostiene:** la meseta del corte aparece cuando el
+pool se llena de términos **indistinguibles**, y eso sigue al **vocabulario**. `A`
+tiene 1411 y desde `n = 10` su empate es **siempre 1**. `D` (237) y `E` (55) mantienen
+mesetas de **4 a 43**.
+
+**Y el error de `D` es mío contra mi propio mecanismo.** `D` tiene vocabulario **237**
+—casi el de ARM40, 256—, así que mi propio criterio predecía meseta. Le puse *"5 o
+más"* sin aplicarlo. **No falló el mecanismo: falló que no lo usé en la segunda fila
+de mi propia tabla.**
+
+### La exención, en los rebuilds (b)
+
+| corpus | (b) | empatados | de afuera | **cambian** |
+|---|---|---|---|---|
+| **A** | 15 | 15 | 4 | **4** |
+| **D** | 1 | 1 | 0 | **0** |
+| **E** | 0 | — | — | — |
+
+**4 de 16.** Predije *"aproximadamente la mitad"* (~8). **Tercera predicción del día
+que falla hacia arriba.** Las tres veces predije más cambio del que hubo.
+
+Y se mantiene la relación exacta del reporte anterior, en los 16:
+**`N_hoy − N_conservando = venían_de_afuera`**.
+
+### HALLAZGO: `_seleccionar` puede devolver MÁS de `top_k`
+
+**Medido: 26 nodos con `top_k = 20`.**
+
+| corpus | N máximo |
+|---|---|
+| E | **26** |
+| A | **21** |
+| D | 20 |
+
+Pasa en la rama de la traza: cuando lo conservado **no cabe** en los libres,
+`arriba + [empatados en prev]` **se suma igual**, sin mirar la capacidad. Verificado:
+**todos** los casos que se pasan son `no cabe` **con** `anterior`.
+
+**El engine no hace esto.** Tiene la guarda `len(conserva) > free → trace_short`, y
+entonces **escala** en vez de pasarse. Es otra cara de la divergencia del CP1, y
+agrega algo: donde el engine se frena por capacidad, `_seleccionar` **la ignora**.
+
+### Y el consumidor dice lo contrario
+
+- **`corpus_service.py:175`:** *"nodes_changed cubre conjunto u orden: **con N fijo
+  en top_k**, cada rebuild puede re-extraer otros nodos en las mismas posiciones."*
+- **Medido:** N llega a **26**.
+- **El productor lo dice bien:** `node_extractor.py:192`, *"N puede diferir de
+  top_k"*.
+
+**Regla del 10 oct:** si código y docstring difieren, se declara antes de afirmar.
+**Declarado. No se corrige: toca código vivo.** Y toca algo más que un comentario —
+`nodes_changed` razona *"otros nodos en las mismas posiciones"*, y con N variable las
+posiciones no se corresponden.
+
+### `E`: la única medida de `_seleccionar` sin el pool encima
+
+`E` tiene 55 términos para `max_features = 60`, así que **el pool no corta en ninguno
+de sus 5 rebuilds**: `C` es el vocabulario entero y no hay re-puntuación (CP0 g).
+
+**Y ahí la regla igual no se cumple:** en sus dos últimos rebuilds, `empate = 9`,
+`libres = 8`, **no cabe**, y `_seleccionar` conserva devolviendo **21** — más que
+`top_k`. **La divergencia no era un artefacto del pool.**
+
+### Lo que esto cambia de lo medido hoy
+
+**Todo lo del CP0 (g), CP1, relajación y exención se midió sobre ARM40, que es de
+autor único y escrito a mano** en `test_armstrong_stop_coco.py:35`. **No es un corpus
+de interacción.** Con los tres de acá:
+
+- el **mecanismo** (meseta ↔ vocabulario) **se replica** en corpus de interacción;
+- el **número** no: `A`, con vocabulario grande, tiene 15 de 21 en régimen (b),
+  mientras ARM40 tenía 8 de 38. **El régimen dominante depende del corpus**, y lo que
+  escribí el 13 oct —*"(c) es el 76 %"*— vale para ARM40 y **no** en general.
+
+**Sigo con B.**

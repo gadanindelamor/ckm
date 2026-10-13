@@ -8630,3 +8630,96 @@ Esto **es** lo que la decisión 1c nombra: los dos registros difieren, y la
 diferencia es **la marca de un relevo**. Queda declarada acá.
 
 **ALTO.** Nada pendiente de los cuatro ítems. Listo para el CP1.
+
+---
+## CP1 — LA PREDICCIÓN, escrita antes de correr — 2026-10-13 10:12 UTC
+
+*Claude Opus 5 (Code). `TASK_node_extractor_regla_v1`, CP1. **Esto se commitea antes
+de escribir el test.** Lo que sigue sale de **leer** `_seleccionar` y
+`ckm_trust_rule.decide`, y de los tres números ya medidos en las tensiones
+(`0adde50`). `node_extractor.py` no se toca.*
+
+### La instancia
+
+| casillero | qué le paso |
+|---|---|
+| **C** | los términos del **pool** (60 en los dos armstrong) |
+| **f** | el TF-IDF **medio** de cada término |
+| **κ** | `scores[orden[top_k-1]]`, el puntaje del `top_k`-ésimo |
+| **ε** | **`1e-12`**, `DECLARED`, *"numérica, no medida"* |
+| **T** | `seleccion_anterior`, tal como llega — **colapsada** por `self._nodes or None` |
+| **P** | **`None`** declarado (no hay reloj: F1) |
+| **g** | **`None`**: el orden alfabético queda **afuera** de la instancia |
+| **↑k** | **`None`** → `ESCALATED` |
+| **capacity** | **`top_k`** — `libres = top_k - len(arriba)` es el `free = capacity - len(above)` del engine |
+
+### Lo primero, que no es una predicción sino una lectura: **`empate` nunca está vacío**
+
+`corte = scores[orden[top_k-1]]`, así que el término del corte tiene
+`|score − corte| = 0 ≤ TOL_EMPATE` y **siempre** cae en `empate`. De ahí:
+`len(empate) ≥ 1` y `libres ≥ 1`, siempre. **El caso normal no es "no hay empate":
+es "el empate es el propio término del corte, y entra".**
+
+### Predicción — dos regímenes, y la frontera exacta
+
+| régimen | `_seleccionar` hoy | la instancia | ¿coincide el conjunto? |
+|---|---|---|---|
+| **`len(empate) ≤ libres`** | `arriba + empate` = **`top_k`** nodos | **`FIELD` · `tie_fits_free_slots`**, mismo conjunto | **SÍ** |
+| **`len(empate) > libres`** | `arriba` (+ los conservados por T) | **`ESCALATED` · `value=None`** | **NO, nunca** |
+
+**La frontera es exactamente `len(empate) > libres`.** Predigo que **no hay ninguna
+otra fuente de divergencia**: ni el `κ`, ni el `ε`, ni el tamaño del pool.
+
+### Los números, corpus por corpus
+
+| corpus | pool | `arriba` | `empate` | `libres` | régimen | hoy | la instancia |
+|---|---|---|---|---|---|---|---|
+| `armstrong_replica_seed123` | 60 | **19** | **3** | **1** | 3 > 1 | **19 nodos** | **"no decidí"** |
+| `armstrong_via_corpus_v3` | 60 | **19** | **3** | **1** | 3 > 1 | **19 nodos** | **"no decidí"** |
+
+**4 comparaciones** (2 corpus × 2 variantes de T), **4 divergencias**, todas
+`ESCALATED`.
+
+### P y T dan el mismo resultado por **razones distintas**, y eso se puede separar
+
+Las dos predicciones del TASK convergen en *"no decidí"*, y el registro **las
+distingue**:
+
+| T que llega | por qué escala | `reason` | `markers` |
+|---|---|---|---|
+| **`None`** (primer rebuild: `[] or None`) | el paso 2 **no aplica**, no hay traza | **`NO_TRACE`** | **sin** `FLOOR_UNKNOWN` |
+| **`frozenset(prev)`** (rebuild siguiente) | hay traza y **el piso no se evalúa** | **`floor_not_evaluable`** | **con** `FLOOR_UNKNOWN`, `floor_missing = "floor_absent"` |
+
+Predigo que **las dos se dan**, una por variante, y que los `markers` las separan.
+Si salieran iguales, el colapso de `T` sería invisible también en la forma.
+
+### ε = `1e-12` declarado: **indistinguible de hoy**
+
+Ya medido: **0 de 121 filas** en la banda `0 < |d| ≤ 1e-12` en los tres corpus con
+`registro_borde`. Predigo **0 divergencias atribuibles a ε**, y que un barrido
+sintético que *sí* ponga puntajes en esa banda **sí** las produzca — ahí la
+pre-declaración se vuelve visible, y sólo ahí.
+
+### El pool: predigo que **no entra en la forma**
+
+El CP0 (g) ya lo midió: el pool **le arma el `C` a `_seleccionar` y además le mueve
+el `f`** —la norma l2 se calcula sólo sobre el pool—. En la forma, `C` y `f` son dos
+casilleros **distintos** de la **misma** regla, y nada los escribe a los dos a la
+vez desde afuera.
+
+**Predigo: falla, y va al CP0b de `TASK_ckm_trust_rule_v1`.** No lo dejo afuera como
+`C`: delamor ya descartó esa lectura.
+
+### Una cosa más, que veo al armar la instancia y declaro ahora
+
+**κ sale de adentro del propio orden.** `corte = scores[orden[top_k-1]]` se calcula
+con los mismos datos sobre los que se decide. La forma dice que *todo umbral lo
+produce el orden de arriba, midiendo o declarando* (decisión del 12 oct). Acá **no
+hay orden de arriba**: el corte es un **cuantil de `C`**. `produced_by_order` no
+tiene qué poner que sea verdad.
+
+Lo voy a declarar como `produced_by_order = "n1 — el propio corpus (cuantil de C)"`
+con `provenance = MEASURED`, y a reportarlo en *"Lo que la forma no nombra"*. **No
+lo resuelvo.**
+
+**Esta entrada se commitea sola, antes del test.**

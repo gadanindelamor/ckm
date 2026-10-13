@@ -115,6 +115,14 @@ contra el código de hoy:
     **Cuál de las dos rige es de delamor.**
 - **↑k = `None` → `ESCALATED`**; el que llama decide, y hoy decide *"afuera"*: ese
   **`g` se nombra en el test** (**F2**).
+- **`T` llega colapsada, y eso también va como PREDICCIÓN.** `corpus_service.py:298`
+  pasa `seleccion_anterior=self._nodes or None`, así que una selección anterior
+  **vacía** entra como **`None`** — *"no hay traza"*. En la forma son dos cosas
+  distintas (`trace=frozenset()` contra `trace=None`), y es la misma distinción que
+  `criterio_local` usa para `primera_vuelta`. **No se toca** (el gate cubre
+  `corpus_service.py`): se escribe la predicción antes de correr, como con P.
+  Se vincula con la pregunta abierta del **arranque en frío** —`REG_regla_ckm_trust_v1`
+  §4, 4 oct: *"ningún nodo"* ¿es **traza** o es **contexto**?—. **Es de delamor.**
 - **El orden de `nodes` queda FUERA de la instancia.** `Decision.value` es un
   `frozenset` (I4), y `_seleccionar` devuelve una lista ordenada por
   `(-score, término)`. **El CP1 compara conjuntos.** El orden se nombra como **`g`

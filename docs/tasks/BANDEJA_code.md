@@ -9577,3 +9577,125 @@ coinciden en ningún régimen de empate**. Está en el docstring del engine, en 
 sección nueva del TASK y en los tests del CP1.
 
 **ALTO.** Suite: **627 pasan, 8 xfail**.
+
+---
+## Diseño del reloj de n1 — sólo lectura y propuesta — 2026-10-13 16:13 UTC
+
+*Claude Opus 5 (Code). **Sin código**: nada se tocó, nada se corrió salvo lecturas.
+delamor, 13 oct: **"w_version_id parece el candidato"** y **"de acuerdo. confirmo"**
+(al diseño sin código). La condición sobre el paso 3 quedó en `DECISIONES` (`17e2547`).*
+
+### 1. `w_version_id` **no** cambia exactamente cuando `_seleccionar` decide
+
+Las dos direcciones, leídas:
+
+**Hay rebuilds SIN nuevo `w_version_id`. Dos causas distintas:**
+
+- **`w_version.register` deduplica por sha de W** (`w_version.py:83-85`):
+  `if self._traces and self._traces[-1].sha256 == sha: return sha  # W sin cambios`.
+  Si `_seleccionar` decidió y W salió **idéntica**, **no hay marca nueva**. El
+  docstring de `corpus_service` ya lo dice (`:28`).
+- **`corpus_service.py:302-303`** — `if not nodes: return`. Si la selección queda
+  vacía, el `register` de `:357` **no se alcanza**. Y es el mismo `return` que se
+  tragaría un `value=None`: la segunda entrada del CP0b.
+
+**Hay `w_version_id` nuevos sin que la selección CAMBIE —pero no sin que decida.**
+`register` se llama **sólo** en `:357`, dentro de `_rebuild`, después de
+`_accumulate_safe` (`:298`) que llama a `_seleccionar`. Así que **todo id nuevo viene
+de una selección**. Pero W cambia también por los **conteos de pares** con los
+**mismos** nodos: ahí hubo decisión, y fue *"conservo lo mismo"*.
+
+**Conclusión:** `w_version_id` cuenta **vueltas de W**, no **vueltas de la decisión**.
+Sirve de `turn_ref` —la hélice, y el engine lo guarda sin interpretarlo— y **no
+sirve de contador del piso**: se saltea las vueltas donde la traza decidió y W no se
+movió, que son exactamente las que habría que contar.
+
+> **El candidato no alcanza, y la razón es la deduplicación.** `w_version_id` es la
+> marca de que **W** cambió; el reloj de n1 necesita la marca de que **la decisión**
+> ocurrió. No son el mismo evento.
+
+### 2. Dónde viviría el conteo
+
+- **`_seleccionar` no puede**: es un método de un servicio **stateless** y recibe
+  todo por argumento. Igual que el engine, que es puro y pide `trace_streak` a quien
+  llama.
+- **`CorpusService` sí tiene estado**: `_texts`, `_nodes`, `_W`, `_w_versions`,
+  `_registro_borde` (`:108-111`, `:299`).
+
+**Lo que `save()` persiste hoy** (`:380-390`): `texts`, `nodes`, `W`,
+`w_version_history`, `forced_w_pos`, `registro_borde`. **Ningún contador, y ningún
+parámetro de extracción** (CP0a).
+
+**Lo que haría falta:** una clave nueva en `save()` y su lectura en `_load()`
+(`:394-399`). **Sin eso el reloj se reinicia en cada sesión y mide mal** — y mediría
+mal **hacia abajo**, como si la traza hubiera decidido menos veces de las que
+decidió.
+
+### 3. Qué contaría: **por término, no global**
+
+Un contador global *"vueltas en que la traza decidió"* no distingue un término que
+viene conservándose doce vueltas de otro que empató por primera vez. Y la pregunta
+del piso es **por término**: *¿cuántas veces entró este sin que el campo lo
+distinga?*
+
+**La propuesta:** un cuarto campo en **`registro_borde`**, que ya es por término y ya
+se persiste.
+
+| campo | hoy | propuesto |
+|---|---|---|
+| `termino` | ✓ | — |
+| `score` | ✓ | — |
+| `distancia_al_corte` | ✓ (con signo) | — |
+| `pertenencia_anterior` | ✓ (`True`/`False`/`None`) | — |
+| **`vueltas_conservando`** | — | **cuántas vueltas seguidas lo decidió la traza** |
+
+**Cómo se movería:** `+1` en la vuelta en que ese término quedó **dentro del empate**
+y su pertenencia la resolvió la **traza**; **a `0`** en la vuelta en que el **campo**
+lo decidió (`|distancia| > ε`); **`None`** si no se sabe —primera vez que aparece, o
+estado cargado de un `save()` que no lo tenía—. **`None` declarado, nunca 0** (I2):
+*"nunca se contó"* no es *"se contó cero"*.
+
+**Por qué ahí y no en un contador aparte:** `registro_borde` **ya es** la traza en el
+sentido que delamor aprobó el 13 oct —*la marca de que hubo una elección: dónde se
+cortó y a qué distancia*—. El conteo es **la misma clase de dato**: dónde se cortó, a
+qué distancia, **y cuántas veces seguidas ese corte no lo decidió el campo**. Y
+hereda la persistencia, en vez de pedir una nueva.
+
+**Lo que esto NO resuelve:** el `registro_borde` se guarda **sólo del último
+rebuild** (`:299` lo reasigna, `:386` guarda el actual). Para que el contador
+sobreviva hay que **leer el anterior antes de sobrescribirlo**. Es una línea, y es
+código vivo: **no lo escribo.**
+
+### La pregunta del piso, PLANTEADA y sin resolver
+
+delamor aprobó que en `_seleccionar` **conservar es la relajación** (`h = 0`), no
+silencio absorbente, y que *"lo que falta no es el piso sino el reloj"*.
+
+**Pero el engine usa el conteo para el piso**: P veces conservando sin campo → paso
+3. Si en n1 conservar es la dinámica correcta, **¿hay piso en n1?**
+
+Las dos lecturas, sin elegir:
+
+- **Hay piso.** Un término que empata por accidente y se conserva para siempre es el
+  **sesgo de destino** que el proyecto ya marcó. El piso lo corta. **Contra:** corta
+  igual el empate estructural, que es legítimo — y un número de vueltas no distingue
+  los dos (lo dije el 13 oct y sigue en pie).
+- **No hay piso, y el reloj sólo deja la marca.** `vueltas_conservando` se **registra
+  y no se usa para decidir**. Entonces el reloj es **traza pura**, y quién mira esa
+  marca es el orden de arriba — que es lo que la condición de delamor sobre el paso 3
+  pide: **el mecanismo deja la marca, no resuelve.**
+
+**Y hay un tercer hueco, que es del engine y no de n1.** Hoy el engine **no
+distingue**:
+
+| caso | hoy |
+|---|---|
+| *"no sé el piso"* (`floor=None`, o valor `None`, o `trace_streak=None`) | `FLOOR_UNKNOWN` → la traza no decide |
+| *"acá no hay piso"* | **no se puede decir**: no hay forma de expresarlo |
+
+**Las dos salen por la misma rama.** Si la respuesta a n1 es *"no hay piso"*, el
+engine hoy lo leería como *"no se sabe"* y escalaría — que es exactamente la
+divergencia del CP1 que no se resuelve poniendo un número. **Eso es de delamor**, y
+mientras no esté decidido, **el reloj por sí solo no destraba el CP2**.
+
+**ALTO.**

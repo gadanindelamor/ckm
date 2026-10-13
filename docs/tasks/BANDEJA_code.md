@@ -8476,3 +8476,70 @@ absorbe al 5.3 del reporte anterior.
 
 Las otras tres de "dónde no se pudo decir" (el pool como un orden o dos; el origen
 del factor 3; `T` colapsada en `corpus_service.py:298`) **siguen como estaban**.
+
+---
+## CP0 — correctitud de C, y el pool en la forma — 2026-10-13 08:19 UTC
+
+*Claude Opus 5 (Code). `TASK_node_extractor_regla_v1`, CP0. **`node_extractor.py` no
+se tocó** (gate `f96c234`). Todo medido contra **scikit-learn 1.9.0**, declarada en
+`pyproject.toml` desde `5276340` — y ese `>=` registra **un piso, no la versión**.
+Tests en `tests/test_node_extractor_cp0.py`: **8 pasan, 3 `xfail(strict=True)`.*
+
+### Qué quedó `xfail` y qué quedó afirmado, y por qué
+
+`xfail` es para **lo que hoy está mal**, y "mal" acá es: *el instrumento produce
+algo que no viene del campo, y decidirlo no es de delamor*. Donde el veredicto **sí**
+es de delamor —qué cuenta como un nodo, el orden **n3** del CP0a— el test **afirma
+el comportamiento** y dice de quién es la decisión. **No marco como defecto algo
+cuya definición todavía no está tomada.**
+
+### Los seis puntos
+
+| | confirmado / refutado | evidencia | cómo queda |
+|---|---|---|---|
+| **a** | **CONFIRMADO** | el analizador da `['gun', …, 'gun control', …]` del **mismo** texto. Con los dos como nodos, el par cuenta **una vez por cada texto con el bigrama**: la arista mide **contención**, no co-ocurrencia | **`xfail` strict** |
+| **b** | **CONFIRMADO** | `"control of guns"` → `['control', 'guns', 'control guns']`. La stopword se saca **antes** de armar los n-gramas, así que sale un término **que no está en el texto** | **afirmado**: si `"control guns"` es un nodo legítimo es **n3** |
+| **c** | **CONFIRMADO, y peor que lo enunciado** | **no rechaza: trunca, y en silencio.** NFC `"información"` → `información`; **NFD** de la misma palabra → **`informacio`**. Y `"ação português naive"` → `['portugu', 'naive', …]` | **`xfail` strict** |
+| **d** | **CONFIRMADO, y sin efecto** | 45 de 703 stopwords llevan apóstrofo y el `token_pattern` no lo tiene en su clase: **ninguna puede activarse**. Son **inertes** | **afirmado** |
+| **e** | **CONFIRMADO** | corpus vacío **o sólo blancos** → 3 claves (`nodes`, `pairs`, `node_freq`); corpus normal → 5. Faltan `pairs_by_text` y `registro_borde` (`:206`, `:211`) | **`xfail` strict** |
+| **f** | **CONFIRMADO, y además estable** | cuatro términos de **frecuencia idéntica**, corte en 2: el mismo corpus **al revés** da lo mismo (no es azar ni orden de inserción), y **renombrar `alfa` → `omega` da vuelta cuál entra**. El desempate es por **nombre del término** | **afirmado**: es un `g` sin nombrar |
+
+**Lo que (d) sí mueve, y no era lo enunciado.** Las contracciones desaparecen igual,
+pero por el **fragmento**: `"don"`, `"isn"` y `"won"` **sí** están en la lista, así
+que `"don't isn't won't"` → `[]`. Las 45 con apóstrofo no intervienen.
+
+**Un hallazgo del costado, al armar el caso de (f):** el largo mínimo del
+`token_pattern` (3 caracteres) **descarta en silencio** palabras reales de dos
+letras — `mu`, `nu`, `xi`. Misma familia que (c): no rechaza con marca, desaparece.
+Está en la tabla del CP0a como `NODO`, y su efecto no estaba medido. Ahora lo está.
+
+### El pool en la forma, con sus casilleros vacíos
+
+`max_features = top_k * 3` (`node_extractor.py:218`), orden **n1** del CP0a.
+
+| casillero | qué es en el pool | ¿está? |
+|---|---|---|
+| **C — candidates** | **todos** los términos que el analizador produce sobre el corpus | sí |
+| **f — field_criterion** | la **frecuencia** del término en el corpus | sí, **y es un `f` distinto del de `_seleccionar`** (TF-IDF medio), en el mismo orden |
+| **R — record** | — | **VACÍO.** `registro_borde` es de `_seleccionar`: los términos que el pool descartó **no aparecen en ningún lado**. Medido: con 15 términos y `top_k=3`, 6 quedan afuera y **ninguno** deja rastro |
+| **κ — cut** | la frecuencia del `(top_k·3)`-ésimo | **implícito.** No se calcula ni se guarda: lo aplica `max_features` adentro de sklearn |
+| **ε — tolerance** | — | **VACÍO.** Ninguna tolerancia, ni declarada ni `None` declarado |
+| **T — trace** | — | **VACÍO.** El pool **no recibe** `seleccion_anterior`. Sólo `_seleccionar` la ve |
+| **P — floor** | — | **VACÍO.** Sin traza no hay piso que evaluar |
+| **g — context** | el **orden alfabético del término**, medido en (f) | **ESTÁ Y NO ESTÁ NOMBRADO.** Es el paso 4 corriendo sin que nadie lo declare: el mismo hallazgo que el CP0 del otro TASK hizo sobre `_seleccionar` |
+| **↑k — escalate_to** | — | **VACÍO.** El pool no escala nada: resuelve siempre |
+
+**Seis casilleros vacíos de nueve**, y de los tres que están, uno (`g`) está sin
+nombrar y otro (`κ`) es implícito. **El pool decide y no registra.**
+
+### Lo que esto deja para el CP1
+
+- El `g` alfabético aparece **dos veces** —en el pool y en `_seleccionar`— y en los
+  dos casos sin nombrar. Son **dos** decisiones de contexto en el mismo orden n1,
+  no una.
+- Si el pool es `C` o es un **segundo `f`** sigue sin poder decirse (CP0a §2). Lo
+  que el CP0 agrega: **si fuera `C`, el `C` lo produce una decisión sin R**, y eso
+  es un candidato que llega sin su origen.
+
+**ALTO.** Suite completa: **593 pasan, 8 xfail** (eran 585 + 5; los 11 nuevos son
+este CP0, 8 + 3).

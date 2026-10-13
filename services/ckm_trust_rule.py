@@ -164,10 +164,17 @@ que decidir"* → entraban todos, `FIELD`. **Se fue por orden de delamor**
 **Por qué.** Tercera entrada del CP0b: donde hay empate **el campo calla**
 —`|f − κ| ≤ ε` es exactamente *"el campo no distingue"*—, y la exención le daba esa
 decisión a la **capacidad**, un número que declara el orden de arriba. **Por la
-regla, donde el campo calla decide la traza.** Medido antes de sacarla: en los
-rebuilds de `_seleccionar` donde el empate cabía, dejar decidir a la traza **cambia
-el conjunto** (4 de 16 casos reconstruidos, y `N` bajando de 20 a 11 en el más
-fuerte).
+regla, donde el campo calla decide la traza.** Medido antes de sacarla, en los
+rebuilds de `_seleccionar` donde el empate cabía: dejar decidir a la traza **cambia
+el conjunto**. **Los dos números son de corpus distintos, y va cada uno con el
+suyo:**
+
+- **4 de 16** en los corpus **trackeados de interacción** `A(24)` y `D(12)`
+  (`BANDEJA` A.3) — ahí `N` baja de 20 a 19;
+- **`N` de 20 a 11** en **ARM40** (`BANDEJA`, la exención), que es un corpus de
+  **autor único escrito a mano** (`test_armstrong_stop_coco.py:35`).
+
+Las dos son **reconstrucciones por prefijos**, no la historia de ningún log.
 
 **`capacity` sigue usándose, en el paso 2 y en el 4:**
 

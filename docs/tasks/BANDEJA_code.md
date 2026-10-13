@@ -9057,3 +9057,78 @@ Sigue siendo la **reconstrucción por prefijos** (`ab4e987`), no la historia rea
 rebuilds simulados por corpus, de los cuales 8 son régimen (b). **No es el log.**
 
 **Esta entrada se commitea sola, antes del test.**
+
+---
+## La exención: el resultado, y un error de reporte propio — 2026-10-13 15:18 UTC
+
+*Claude Opus 5 (Code). La predicción está en `1fb504e`, **commiteada antes** del
+test. Sólo tests; nada de código vivo. Hora de `date -u`.*
+
+### LO PRIMERO: los dos corpus registrados son EL MISMO
+
+`armstrong_replica_seed123_corpus_state.json` y `armstrong_via_corpus_v3_state.json`
+tienen **los mismos `texts`, bit a bit** —mismo sha256— y los mismos `nodes`.
+
+**En los reportes del CP0 (g), del CP1 y de la relajación escribí *"idéntico en los
+dos corpus"* como si fuera réplica. No lo era: es la misma medición dos veces.**
+
+- **Ningún número medido cambia.** Cambia **lo que sostienen**: donde dije **n = 2**,
+  hay **n = 1**.
+- Los corpus registrados **distintos** son: **armstrong** (uno) y **vivo_03**, que
+  tiene pool = 1 y no ejerce ninguna de estas ramas.
+- Las *"121 filas"* de la banda de ε (`0adde50`) son **60 + 60 + 1**, y los dos 60
+  son el mismo corpus: **61 filas distintas**.
+- Queda **clavado en un test** (`test_los_dos_corpus_registrados_son_EL_MISMO`) para
+  que no se repita, y falla si algún día dejan de ser iguales.
+
+Lo digo con la misma regla con la que reporté el resto: **"replicado en dos corpus"
+era falso**, y no lo verifiqué cuando lo escribí la primera vez. Lo verifiqué ahora
+porque los números salieron idénticos **por tercera vez**, y eso ya era demasiado.
+
+### MI PREDICCIÓN QUEDÓ REFUTADA EN LOS DOS NÚMEROS
+
+| | predicho | medido |
+|---|---|---|
+| el conjunto cambia | **6 de 8** o más | **5 de 8** |
+| empatados que venían de afuera | **más del 70 %** | **53 %** (16 de 30) |
+| `N` conservando por debajo de `top_k` | sí | **sí** (baja hasta **11**) |
+
+**Y el modo de falla es el que había nombrado de antemano.** En la predicción
+escribí: *"si falla, falla hacia abajo, porque la meseta del corte podría estar
+poblada por los mismos términos rebuild tras rebuild, y entonces ya estaban
+adentro"*. **Es exactamente lo que pasó:** los **3** rebuilds que no cambian tienen
+`venian_de_afuera = 0` — la meseta **entera** ya estaba adentro. La meseta **no
+rota** en esos casos.
+
+Que haya acertado el mecanismo de mi propio error no arregla los números: **los dos
+estaban mal, y los dos hacia arriba.**
+
+### La tabla, régimen (b)
+
+| n_textos | empatados | de afuera | N hoy | N conservando | cambia |
+|---|---|---|---|---|---|
+| 7 | 9 | **9** | 20 | **11** | sí |
+| 10 | 4 | 3 | 20 | 17 | sí |
+| 15 | 3 | **0** | 20 | 20 | **no** |
+| 16 | 6 | **0** | 20 | 20 | **no** |
+| 18 | 3 | **0** | 20 | 20 | **no** |
+| 22 | 1 | 1 | 20 | 19 | sí |
+| 23 | 2 | 1 | 20 | 19 | sí |
+| 39 | 2 | 2 | 20 | 18 | sí |
+
+**No da cero: la diferencia no es sólo de forma, cambia la práctica en 5 de 8.** El
+caso de `n = 7` es el más fuerte: hoy **20 nodos**, conservando **11**.
+
+Y una relación exacta que se cumple en los ocho: **`N_hoy − N_conservando =
+venian_de_afuera`**. Está en el test. Dice que la exención hace **una sola cosa**:
+mete a los empatados que estaban afuera.
+
+### Tercera entrada del CP0b, registrada
+
+`TASK_ckm_trust_rule_v1`, con el `"si de acuerdo"` de delamor: **la exención del
+paso 1 deja decidir a la capacidad (`top_k`, declarado, n2) donde el campo calla
+(`h = 0`)**, y por la regla ahí decide la traza. Origen: `_seleccionar`
+(`TASK_desempate_seleccion_nodos_v1`), pasada al engine. **`criterio_local` no se
+afecta** (`capacity=None`). **Si se queda o se va es de delamor.**
+
+**ALTO.** Suite: **620 pasan, 8 xfail**.

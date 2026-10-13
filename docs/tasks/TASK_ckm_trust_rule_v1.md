@@ -223,6 +223,39 @@ puede recibir una duda.**
 
 **Sin resolver.**
 
+### 3. La exención del paso 1 deja decidir a la **capacidad** donde el campo calla
+
+*Entrada del 13 oct. Sugerencia de Opus de medir y registrar; delamor: **"si de
+acuerdo"**. **Sin resolver.***
+
+El paso 1 tiene una exención: *"si el empate cabe en los lugares libres, no hay
+empate que decidir"* → entran todos, `FIELD · tie_fits_free_slots`.
+
+**Pero ahí el campo calla.** `h = 0` es exactamente *"el campo no distingue"*, y por
+la regla eso es del **paso 2**: decide la traza. La exención se lo saca y lo entrega
+a **`top_k`** —un valor **declarado**, de **n2**—. **La capacidad decide donde el
+campo no habla.**
+
+**Medido** (`58f6de4`): el régimen de la exención es el **21 %** de los rebuilds
+reconstruidos. Y lo que cambiaría si ahí decidiera la traza (`1fb504e`):
+
+| | |
+|---|---|
+| rebuilds de régimen (b) | **8** |
+| empatados en total | **30**, de los cuales **16 (53 %)** venían de afuera |
+| el conjunto **cambia** | **5 de 8** |
+| `N` conservando | baja hasta **11** (con `top_k = 20`) |
+| los **3** que no cambian | tenían la meseta **entera** ya adentro |
+
+**No es diferencia de forma solamente: cambia la práctica en 5 de 8.**
+
+**Origen de la exención:** `_seleccionar` (`TASK_desempate_seleccion_nodos_v1`), y de
+ahí **pasó al engine**. **`criterio_local` no se afecta**: va con `capacity=None`, y
+sin capacidad la exención no aplica.
+
+**Si la exención se queda o se va es de delamor: no está decidido.**
+
+
 ## Fuera de este TASK
 
 - `should_rebuild` y `calibrate` como instancias en código: se ven en el CP0, pero no se implementan.

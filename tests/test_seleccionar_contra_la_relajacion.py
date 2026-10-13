@@ -331,3 +331,117 @@ def test_el_corte_cae_sobre_una_meseta(ruta) -> None:
     assert len(tamanos) == 38
     assert min(tamanos) == 1 and max(tamanos) == 12
     assert tamanos.count(1) == 1, "el corte casi nunca cae sobre un solo término"
+
+
+# ── La exención del paso 1: ¿cuánto cambiaría si la traza decidiera ahí? ──
+#
+# Pedido de delamor/Opus. La predicción está en `1fb504e`, commiteada antes.
+
+@pytest.mark.parametrize("ruta", CORPUS_REGISTRADOS, ids=lambda p: p.stem)
+def test_que_pasaria_si_la_traza_decidiera_donde_el_empate_cabe(ruta, capsys) -> None:
+    """
+    En los **8 rebuilds de régimen (b)** —el empate cabe en los libres—, hoy entran
+    **todos** los empatados. Acá se mide qué pasaría si **conservara la traza**
+    también ahí: cuántos empatados venían de afuera, cuánto quedaría `N`, y si
+    cambia el conjunto.
+
+    **Reconstrucción por prefijos**, no la historia real (`ab4e987`).
+    """
+    if not ruta.exists():
+        pytest.skip(f"corpus registrado ausente (no trackeado): {ruta.name}")
+
+    textos = [t for t in json.loads(ruta.read_text())["texts"] if t and t.strip()]
+    svc = NodeExtractorService(top_k=20, ngram_max=2)
+    top_k = 20
+    filas, anterior = [], None
+
+    for n in range(3, len(textos) + 1):
+        vec = svc._vectorizer(max_features=60)
+        M = vec.fit_transform(textos[:n])
+        terms = vec.get_feature_names_out()
+        scores = np.asarray(M.mean(axis=0)).flatten()
+        if len(terms) <= top_k:
+            continue
+        orden = sorted(range(len(terms)), key=lambda i: (-scores[i], terms[i]))
+        corte = scores[orden[top_k - 1]]
+        arriba = [i for i in orden if scores[i] - corte > TOL]
+        empate = [i for i in orden if abs(scores[i] - corte) <= TOL]
+        libres = top_k - len(arriba)
+
+        hoy = svc._seleccionar(terms, scores, anterior)[0]
+        if len(empate) <= libres:                       # régimen (b)
+            prev = set(anterior) if anterior is not None else set()
+            fuera = [i for i in empate if str(terms[i]) not in prev]
+            conservando = [str(terms[i]) for i in arriba] + \
+                          [str(terms[i]) for i in empate if str(terms[i]) in prev]
+            filas.append({
+                "n_textos": n,
+                "n_empatados": len(empate),
+                "venian_de_afuera": len(fuera),
+                "N_hoy": len(hoy),
+                "N_conservando": len(conservando),
+                "cambia": set(hoy) != set(conservando),
+            })
+        anterior = hoy
+
+    assert len(filas) == 8, f"régimen (b) en {len(filas)} rebuilds, no 8"
+
+    tot_emp = sum(f["n_empatados"] for f in filas)
+    tot_fuera = sum(f["venian_de_afuera"] for f in filas)
+    cambian = sum(1 for f in filas if f["cambia"])
+
+    with capsys.disabled():
+        print(f"\n  === {ruta.stem} — régimen (b), {len(filas)} rebuilds ===")
+        print("  n_textos  empatados  de_afuera  N_hoy  N_conserv  cambia")
+        for f in filas:
+            print(f"  {f['n_textos']:>8}  {f['n_empatados']:>9}  {f['venian_de_afuera']:>9}"
+                  f"  {f['N_hoy']:>5}  {f['N_conservando']:>9}  {f['cambia']}")
+        print(f"  empatados totales: {tot_emp} | de afuera: {tot_fuera}"
+              f" ({tot_fuera / tot_emp:.0%}) | cambian: {cambian} de {len(filas)}")
+
+    # LO MEDIDO, que es lo que fija el test (ver el reporte para la predicción,
+    # que quedó REFUTADA en los dos números: predije "cambia en 6 de 8 o más" y
+    # "más del 70 % de afuera"; salió 5 de 8 y 53 %)
+    assert cambian == 5
+    assert tot_emp == 30 and tot_fuera == 16
+    # N conservando cae por debajo de top_k en los ocho, y N_hoy nunca lo pasa
+    assert all(f["N_conservando"] <= top_k for f in filas)
+    assert all(f["N_hoy"] <= top_k for f in filas)
+    # y los tres que NO cambian son los que tenían la meseta ENTERA adentro: ése
+    # es el modo de falla que la predicción había nombrado de antemano
+    assert [f["venian_de_afuera"] for f in filas if not f["cambia"]] == [0, 0, 0]
+    assert min(f["N_conservando"] for f in filas) == 11
+    # la exención es lo único que separa las dos: sin empatados de afuera no habría
+    # diferencia, y los 36 vinieron de afuera
+    assert all(f["N_hoy"] - f["N_conservando"] == f["venian_de_afuera"] for f in filas)
+
+
+def test_los_dos_corpus_registrados_son_EL_MISMO() -> None:
+    """
+    **Error de reporte propio, declarado acá.** Los dos archivos de
+    `process/experiments/` tienen **los mismos `texts`, bit a bit** —mismo sha— y
+    los mismos `nodes`.
+
+    En los reportes del CP0 (g), del CP1 y de la relajación escribí *"idéntico en
+    los dos corpus"* **como si fuera réplica**. No lo era: es **la misma medición
+    dos veces**. Ningún número medido cambia; cambia **lo que sostienen**: donde
+    dije n = 2, hay n = 1.
+
+    Este test está para que el error no se repita: si alguien vuelve a leer los dos
+    como independientes, acá está dicho que no lo son.
+    """
+    import hashlib
+
+    presentes = [r for r in CORPUS_REGISTRADOS if r.exists()]
+    if len(presentes) < 2:
+        pytest.skip("hacen falta los dos archivos para comparar")
+
+    shas = []
+    for r in presentes:
+        d = json.loads(r.read_text())
+        shas.append(hashlib.sha256(
+            json.dumps(d["texts"], sort_keys=True).encode()).hexdigest())
+    assert len(set(shas)) == 1, (
+        "los dos archivos ya NO tienen los mismos texts: el reporte del 13 oct "
+        "decía que sí, y habría que volver a medir tratándolos como dos"
+    )

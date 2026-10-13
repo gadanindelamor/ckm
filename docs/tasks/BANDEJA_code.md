@@ -9007,3 +9007,53 @@ de los rebuilds reconstruidos.**
    no del log.**
 
 **ALTO.** Suite: **617 pasan, 8 xfail** (eran 606 + 8; 11 tests nuevos).
+
+---
+## La exención del paso 1: ¿cuánto cambiaría si la traza decidiera ahí? — LA PREDICCIÓN — 2026-10-13 15:16 UTC
+
+*Claude Opus 5 (Code). Pedido de delamor/Opus. **Sólo tests.** Esta entrada se
+commitea **antes** del test. Hora de `date -u`.*
+
+### Qué se mide
+
+Los **8 rebuilds** de cada corpus donde el empate **cabe** en los libres —régimen
+(b), el 21 % de `58f6de4`—. Hoy entran **todos** los empatados. Si en cambio
+**conservara la traza**, también ahí:
+
+1. **cuántos empatados estaban afuera** en la selección anterior — hoy entran, y
+   conservando quedarían afuera;
+2. **cuántos nodos quedarían** (`N` frente a `top_k`);
+3. **si cambia el conjunto final** respecto de hoy.
+
+### Mi predicción
+
+**Predigo que NO da cero, y que da bastante.** El razonamiento: los empatados están
+en el **fondo** del ranking —es el borde del `top_k`—, y la selección anterior tenía
+~20 nodos de un pool de 60. Los términos de la meseta del corte son justamente los
+que **entran y salen** entre rebuilds. Así que espero que **la mayoría de los
+empatados viniera de afuera**.
+
+**Los números que pongo, y que pueden salir mal como el 15 % de ayer:**
+
+| | predicción |
+|---|---|
+| el conjunto cambia | en **6 de los 8** o más |
+| empatados que venían de afuera | **más del 70 %** del total de empatados en esos 8 |
+| `N` conservando | **menor que hoy** en los rebuilds donde cambia, y **por debajo de `top_k` = 20** |
+
+**Y predigo la dirección del error, si me equivoco:** si falla, falla **hacia
+abajo** —menos cambio del que digo—, porque la meseta del corte podría estar
+poblada por los **mismos** términos rebuild tras rebuild, y entonces ya estaban
+adentro. Es el mismo tipo de suposición que ayer me salió al revés: supuse que la
+igualdad exacta era rara y era la norma. Acá supongo que la meseta **rota**, y
+podría ser **estable**.
+
+**Si da cero en todo:** entonces la diferencia entre la exención y la traza es **de
+forma, no de práctica**, y así hay que decirlo.
+
+### Lo que esta medición NO es
+
+Sigue siendo la **reconstrucción por prefijos** (`ab4e987`), no la historia real: 38
+rebuilds simulados por corpus, de los cuales 8 son régimen (b). **No es el log.**
+
+**Esta entrada se commitea sola, antes del test.**

@@ -8723,3 +8723,85 @@ con `provenance = MEASURED`, y a reportarlo en *"Lo que la forma no nombra"*. **
 lo resuelvo.**
 
 **Esta entrada se commitea sola, antes del test.**
+
+---
+## CP1 — el resultado: la predicción se cumplió entera — 2026-10-13 10:48 UTC
+
+*Claude Opus 5 (Code). `TASK_node_extractor_regla_v1`, CP1. La predicción está en
+`2f9ead0`, **commiteada antes** de escribir el test. `node_extractor.py` no se tocó.
+`tests/test_node_extractor_como_instancia.py`: **10 pasan**.*
+
+### Contra qué se comparó
+
+Una **copia congelada** de `_seleccionar` de `94208a5`, copiada sin tocar nada salvo
+sacarla del objeto. No contra mi lectura de ella.
+
+### La predicción, punto por punto
+
+| predicho | resultado |
+|---|---|
+| `empate` **nunca** está vacío; `libres ≥ 1` siempre | **se cumple** |
+| `len(empate) ≤ libres` → `FIELD · tie_fits_free_slots`, **mismo conjunto** | **se cumple** |
+| `len(empate) > libres` → `ESCALATED`, **nunca coincide** | **se cumple** |
+| **la frontera es exactamente ésa, y no hay otra fuente de divergencia** | **se cumple** — barrido de **90 casos: 30 coinciden, 60 divergen**, y la suma cierra: no hay un tercer resultado |
+| armstrong: pool 60, `arriba` 19, `empate` 3, `libres` 1 → hoy **19 nodos**, la instancia **"no decidí"** | **se cumple**, los dos corpus, las dos variantes de T |
+| **P y T escalan por razones distintas**, y el registro las separa | **se cumple** |
+| ε = `1e-12`: 0 divergencias atribuibles | **se cumple** |
+| **el pool no entra en la forma** | **se cumple** |
+
+**Ninguna sorpresa.** Lo digo con la misma cautela que el 24/24 del CP3: que la
+predicción acierte entera dice que la **lectura** era correcta, no que la forma esté
+bien puesta. Las dos cosas que el CP1 encontró están abajo, y no las predije como
+problemas sino como casilleros.
+
+### P y T: la misma decisión, razones distintas
+
+Las dos predicciones del TASK convergen en *"no decidí"*, y **el registro las
+distingue**:
+
+| T que llega | `reason` | `markers` |
+|---|---|---|
+| **`None`** (primer rebuild: `[] or None`) | `NO_TRACE` | **sin** `FLOOR_UNKNOWN` |
+| **`frozenset(prev)`** | `floor_not_evaluable` | **con** `FLOOR_UNKNOWN`, `floor_missing="floor_absent"` |
+
+Importa porque si salieran iguales, el colapso de `T` en `corpus_service.py:298`
+—`self._nodes or None`— sería invisible **también en la forma**. No lo es.
+
+### El pool: **no entra**. Es falla, no `C`
+
+Lo que haría falta para que el pool fuera sólo `C`: que los puntajes de los
+candidatos **no dependan de cuáles son los candidatos**. **Medido: no se cumple**
+—es el CP0 (g)—. El pool le arma el `C` a `_seleccionar` **y le mueve el `f`**.
+
+En la forma, `C` y `f` son **dos casilleros distintos de la misma regla**, y nada
+los escribe a los dos a la vez desde afuera. **Un `C` que cambia el `f` del paso
+siguiente no es un `C`.**
+
+**Va al CP0b de `TASK_ckm_trust_rule_v1`.** No se lo deja afuera como `C`: delamor
+descartó esa lectura el 13 oct.
+
+### Lo que la forma no nombra
+
+| qué distinguía | dónde vivía | dónde vive después |
+|---|---|---|
+| **el orden de `nodes`** | `sorted(…, key=(-score, término))`, `:267` | **se pierde** en la instancia: `Decision.value` es un `frozenset` (I4). Queda **afuera**, nombrado como **`g` alfabético**, y aparece **dos veces** en n1 —el pool y `_seleccionar`—, las dos sin nombrar. Es orden **vivo**: mueve `w_sha` y `N_eff` |
+| **"los empatados quedan afuera" sin traza** | `elif anterior is None: elegidos = arriba`, `:277` | **se pierde la decisión, no un rótulo.** Hoy decide; la instancia escala. Ese *"afuera"* es un `g` que el código aplica **sin declararlo** (F2) |
+| **"conserva el que ya estaba"** | `:280-281` | **inalcanzable** con P = `None`. No se pierde el casillero —`T` llega—, se pierde el **paso** |
+| **el `registro_borde`** | `:283-292`, los 60 del pool con score, distancia con signo y pertenencia anterior | **sobrevive y es más rico que `R`**: trae a **todos** los candidatos, también los que no entraron. Es traza en el sentido aprobado el 13 oct —*dónde se cortó y a qué distancia*— y el `record` del engine lo reproduce entero |
+| **κ** | `scores[orden[top_k-1]]`, `:271` | **la forma no lo nombra.** Es un **cuantil de `C`**: se calcula con los mismos datos sobre los que se decide, y la forma dice que *todo umbral lo produce el orden de arriba*. Acá **no hay orden de arriba**. Lo declaré `produced_by_order = "n1 — el propio corpus (cuantil de C)"`, que es cierto y no es lo que la forma pide. **Es de delamor** |
+
+**Decisiones perdidas: una** —*"los empatados quedan afuera"*, por P—. **Rótulos
+perdidos: uno** —el orden—. Lo demás sobrevive o no entra.
+
+### Lo que esto deja
+
+- **Dos cosas para el CP0b del otro TASK:** el pool que escribe `C` y `f`, y el
+  `κ`-cuantil sin orden de arriba.
+- **P = `None` no es una omisión que se tape poniendo un número.** Donde el
+  instrumento no tiene reloj, el paso 2 no corre. Si la lectura que rige es la de
+  F1 —*quedar afuera para siempre es silencio absorbente*— entonces **hoy
+  `_seleccionar` está haciendo exactamente eso** y la regla lo está señalando. Si
+  rige la otra —*conservar es la relajación `h = 0`*— entonces falta el reloj, no
+  el piso. **Es de delamor.**
+
+**ALTO.** Suite: **606 pasan, 8 xfail** (eran 596 + 8; 10 tests nuevos).

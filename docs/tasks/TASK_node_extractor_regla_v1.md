@@ -57,8 +57,11 @@ escribirlo como instancia de `CkmTrustRule`.** Mismo camino que `criterio_local`
    **Columnas:** valor · **origen** (declarado / medido / default de librería / no se
    sabe) · qué **orden** lo produce · si **`calibrate`** lo calibra hoy · si
    **`save()`** lo persiste · **tolerancia** (o `None` declarado).
-   **Y separar tres especies:** calibrable · **definición de qué es un nodo** (de
-   delamor) · **numérica** (no es de la regla).
+   **Y separar las especies:** calibrable · **definición de qué es un nodo** (de
+   delamor) · **numérica** (no es de la regla) · **reservado: hoy no decide**.
+   **`window` va como fila**, en esa última especie: `__init__` lo toma y el
+   docstring dice *"no usado aún; reservado para ventana de co-ocurrencia
+   intra-texto"*.
 4. **Dónde no se pudo decir.**
 
 **Reporta:** las cuatro listas.
@@ -92,10 +95,31 @@ contra el código de hoy:
 
 **Casilleros conocidos de antemano, a declarar, no a resolver:**
 
-- **ε = `None` declarado** (`TOL_EMPATE` es **numérica**, no de la regla);
-- **P = `None` declarado** (no hay reloj: **F1**);
+- **ε = `1e-12`**, `provenance = DECLARED`, `source = "numérica, no medida"` —
+  **no `None`**. *Decide Opus, 13 oct: `TOL_EMPATE` es **del instrumento** y ocupa
+  el casillero **ε** de `_seleccionar`; su valor es **declarado con origen
+  numérico**, no medido.* El reporte del CP1 **declara la diferencia** entre
+  `node_extractor.py:176` (*"tolerancia DE LA REGLA"*) y `TASK_ckm_trust_rule_v1`
+  (*"numérica, no de la regla"*). **`node_extractor.py` no se toca.**
+- **P = `None` declarado** (no hay reloj: **F1**). *Atribución: lo pre-declaró Opus
+  **sin ver la decisión 5** del 12 oct.* Con P = `None` el engine **no llega al paso
+  2**, así que la instancia **no puede conservar** y devuelve `ESCALATED` donde
+  `_seleccionar` decide. **Eso va como PREDICCIÓN escrita antes de correr, no como
+  sorpresa, y no se resuelve.** Entra al **CP0b de `TASK_ckm_trust_rule_v1`** con
+  las **dos lecturas**, las dos de Code, declaradas como tales:
+  - **F1 (12 oct):** quedar afuera para siempre **es** el silencio absorbente, y el
+    piso es lo que lo impide;
+  - **tensión 1 (13 oct):** conservar **es** la regla de la relajación (`h = 0`
+    conserva `s_i`), y ahí la traza no es un silencio.
+
+    **Cuál de las dos rige es de delamor.**
 - **↑k = `None` → `ESCALATED`**; el que llama decide, y hoy decide *"afuera"*: ese
   **`g` se nombra en el test** (**F2**).
+- **El orden de `nodes` queda FUERA de la instancia.** `Decision.value` es un
+  `frozenset` (I4), y `_seleccionar` devuelve una lista ordenada por
+  `(-score, término)`. **El CP1 compara conjuntos.** El orden se nombra como **`g`
+  (alfabético)**, con lo ya medido: mueve `w_sha` y `N_eff`, y
+  `corpus_service.py:175` dice que `nodes_changed` cubre *"conjunto **u** orden"*.
 
 **Reporta:** igual, o **la lista de diferencias**, y **"Lo que la forma no nombra"**
 —decisiones **vs** rótulos, como en el CP3 de `TASK_ckm_trust_rule_v1`—. **Si la

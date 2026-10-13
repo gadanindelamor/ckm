@@ -125,13 +125,18 @@ def _conjunto(dec):
 
 # ── El régimen 1: el empate cabe → la forma y el código coinciden ──────────
 
-def test_cuando_el_empate_cabe_la_instancia_da_el_mismo_conjunto() -> None:
+def test_CP4_el_empate_que_cabe_ya_NO_coincide_con_seleccionar() -> None:
     """
-    **Régimen predicho 1.** `len(empate) <= libres` → `FIELD · tie_fits_free_slots`,
-    y el conjunto es **el mismo** que el de hoy.
+    **El CP4 se llevó el único régimen donde la instancia coincidía.**
 
-    Es el caso **normal**: sin empate real, `empate` es sólo el término del corte y
-    `libres` es 1, así que cabe.
+    Hasta el 13 oct esto era el *"régimen 1"* del CP1: `len(empate) <= libres` →
+    `FIELD · tie_fits_free_slots`, **mismo conjunto** que `_seleccionar`. Era el
+    caso normal —sin empate real, el empate es sólo el término del corte y cabe—.
+
+    **Sacada la exención**, el empate va al paso 2; acá no hay traza, así que la
+    duda **sube**. `_seleccionar` sigue metiendo al término del corte: **conserva su
+    copia de la exención hasta el CP2** de este TASK, y la divergencia queda
+    declarada.
     """
     terms = np.array(["alfa", "beta", "gama", "delta", "epsilon"])
     scores = np.array([0.9, 0.7, 0.5, 0.3, 0.1])
@@ -139,11 +144,11 @@ def test_cuando_el_empate_cabe_la_instancia_da_el_mismo_conjunto() -> None:
     hoy = _SELECCIONAR_CONGELADO(terms, scores, None, top_k)
     dec = _decidir(terms, scores, None, top_k)
 
-    assert dec.origin == FIELD
-    assert dec.reason == REASON_TIE_FITS
-    assert _conjunto(dec) == set(hoy) == {"alfa", "beta", "gama"}
-    assert dec.record["n_tied"] == 1, "el empate es el propio término del corte"
-    assert dec.record["free_slots"] == 1
+    assert set(hoy) == {"alfa", "beta", "gama"}, "_seleccionar no cambió"
+    assert dec.origin == ESCALATED and dec.reason == NO_TRACE
+    assert _conjunto(dec) is None
+    # la capacidad sigue registrada: se fue su salida del paso 1, no ella
+    assert dec.record["n_tied"] == 1 and dec.record["free_slots"] == 1
 
 
 def test_empate_nunca_esta_vacio() -> None:
@@ -217,10 +222,16 @@ def test_P_y_T_escalan_por_razones_DISTINTAS_y_el_registro_las_separa() -> None:
 
 # ── La frontera: `len(empate) > libres` y nada más ─────────────────────────
 
-def test_la_frontera_es_exactamente_empate_mayor_que_libres() -> None:
+def test_CP4_el_barrido_ya_no_coincide_en_ningun_regimen() -> None:
     """
-    **Barrido.** Predicho: coincide **si y sólo si** el empate cabe. Ninguna otra
-    fuente de divergencia — ni κ, ni ε, ni el tamaño del pool.
+    **El CP4 borró la frontera.** El CP1 había medido **30 coinciden / 60 divergen**,
+    y la frontera era exactamente `len(empate) > libres`.
+
+    **Sacada la exención, divergen los 90.** La causa es la misma de siempre —**P =
+    `None`**: sin piso evaluable el paso 2 no corre y la instancia escala—, y ahora
+    sin la exención que le tapaba un régimen.
+
+    **La divergencia entre la forma y `_seleccionar` pasa de un régimen a todos.**
     """
     casos, difs, iguales = 0, 0, 0
     for n in (4, 5, 8, 12):
@@ -238,19 +249,15 @@ def test_la_frontera_es_exactamente_empate_mayor_que_libres() -> None:
                     casos += 1
                     hoy = set(_SELECCIONAR_CONGELADO(terms, scores, anterior, top_k))
                     dec = _decidir(terms, scores, anterior, top_k)
-                    cabe = dec.record["n_tied"] <= dec.record.get("free_slots", 0)
-                    if cabe:
-                        assert _conjunto(dec) == hoy, "cabe y no coincidió"
-                        assert dec.origin == FIELD
+                    if _conjunto(dec) == hoy:
                         iguales += 1
                     else:
-                        assert _conjunto(dec) is None, "no cabe y decidió igual"
+                        # todas escalan: ni una decide
+                        assert _conjunto(dec) is None
                         assert dec.origin == ESCALATED
                         difs += 1
-    assert casos >= 50
-    assert iguales and difs, "el barrido tiene que tocar los dos regímenes"
-    # y la suma cierra: no hay un tercer resultado
-    assert iguales + difs == casos
+    assert casos == 90
+    assert (iguales, difs) == (0, 90), "el CP4 dejó alguna coincidencia"
 
 
 # ── ε: indistinguible hoy, visible sólo si algo cae en la banda ────────────

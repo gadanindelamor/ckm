@@ -251,14 +251,23 @@ def test_lo_que_vivo_03_no_puede_medir(registros) -> None:
 
 # ── El contrafáctico que el CP0 encontró ────────────────────────────────────
 
-def test_con_capacity_1_se_invertirian_17_de_24(registros) -> None:
+def test_CP4_con_capacity_1_ya_NO_se_invierte_ninguna(registros) -> None:
     """
-    **Lo que el CP0 encontró y por eso `capacity=None`.** Con `capacity=1` el
-    empate exacto tiene un lugar libre y cae en la exención del paso 1 —*"si E cabe
-    en los lugares libres, no hay empate que decidir"*—, así que entraría como
-    `FIELD` y daría **llamar**.
+    **El contrafáctico del CP0 desapareció con el CP4.**
 
-    No es una hipótesis: se mide acá. 17 `sin_cambio` se darían vuelta.
+    El CP0 había encontrado que con `capacity=1` el empate exacto caía en la
+    exención del paso 1 y daba **llamar**: **17 de 24** se daban vuelta, y por eso
+    el mapeo fijó `capacity=None`.
+
+    **Sacada la exención** (13 oct, orden de delamor), con `capacity=1` el empate
+    va al **paso 2**: hay traza, el piso es evaluable y no está cumplido, lo que la
+    traza conserva es **nada**, y `0 ≤ 1` lugares libres → `TRACE` con valor vacío →
+    **no llamar**. **0 inversiones.**
+
+    Dice algo que vale dejar escrito: **`capacity=1` ya no es peligroso acá.** La
+    razón por la que el mapeo eligió `capacity=None` era la exención, y la exención
+    no está. `capacity=None` sigue siendo lo correcto por otro motivo —*"no hay
+    lugares que contar"* en una decisión única—, no por este contrafáctico.
     """
     invertidos = []
     for dev, reg in registros:
@@ -266,6 +275,8 @@ def test_con_capacity_1_se_invertirian_17_de_24(registros) -> None:
         llamar = (dec.value is None) or (CANDIDATO in dec.value)
         if llamar != reg["llamar"] and reg["via"] != "auditoria":
             invertidos.append((reg["motivo"], dec.origin, dec.reason))
-    assert len(invertidos) == 17
-    assert {m for m, _, _ in invertidos} == {"sin_cambio"}
-    assert {(o, r) for _, o, r in invertidos} == {(FIELD, REASON_TIE_FITS)}
+    assert invertidos == []
+    # y la decisión con capacity=1 coincide con la de capacity=None, las 24
+    for dev, reg in registros:
+        assert ((_decidir(reg, capacity=1).value is None)
+                == (_decidir(reg).value is None))

@@ -9506,3 +9506,74 @@ antes de reescribirlos, y **626 + 8** otra vez después, sin tests nuevos ni per
 toca. Y los `xfail` del CP0 siguen siendo 3.
 
 **Esta entrada se commitea sola, antes de tocar el engine.**
+
+---
+## B — CP4: la exención salió. El resultado — 2026-10-13 15:53 UTC
+
+*Claude Opus 5 (Code). Predicción en `8e0cf10`, **commiteada antes** del cambio.
+Decisiones en `876ee53`, commit propio. `node_extractor.py` **no se tocó**. Hora de
+`date -u` en llamada separada.*
+
+### La predicción se cumplió, con una excepción que es mía
+
+**Al aplicar el cambio: exactamente 4 tests fallaron, exactamente los 4 predichos.**
+Ninguno más.
+
+| predicho | resultado |
+|---|---|
+| `criterio_local`: 24/24 y el barrido de 312 **intactos** | **se cumple** |
+| **un solo** test del engine cambia | **se cumple** |
+| `test_epsilon_define_el_empate` pasa igual aunque hoy salga por la exención | **se cumple** |
+| `test_con_capacity_1_se_invertirian_17_de_24`: **0 inversiones, no 17** | **se cumple, exacto** |
+| el barrido del CP1: **0 coinciden / 90 divergen** | **se cumple, exacto** |
+| los que miden `_seleccionar` no cambian | **se cumple** |
+| la suite queda en **626 + 8**, *"sin tests nuevos"* | **NO: quedó en 627 + 8** |
+
+**El 627 es mío y lo declaro.** Agregué **un test nuevo** que no había predicho:
+`test_CP4_la_constante_queda_y_el_engine_no_la_emite`, que fija por texto que
+`REASON_TIE_FITS` **está declarada** y que **no se devuelve en ninguna `Decision`**.
+Lo agregué porque la decisión sobre la constante necesitaba quedar atada a algo y no
+sólo a un docstring. Es un test más del que dije; el número no se desliza solo.
+
+### Qué se fue y qué se quedó
+
+**Se fue:** la salida del paso 1 por capacidad.
+
+**Se quedaron:**
+
+- **`capacity` y `free`**, que los usa el **paso 2** —si lo que la traza conserva no
+  cabe, el paso 2 **no decide**: `REASON_TRACE_SHORT`— y el **paso 4**. `free_slots`
+  sigue en el registro, y hay un test que lo verifica junto con `n_tied`.
+- **`REASON_TIE_FITS`, sin producirse.** No la borré. La razón es **quien lo lea**:
+  hay registros ya escritos —`registro_borde`, decisiones guardadas— donde `reason`
+  vale `"tie_fits_free_slots"`, y **borrar el nombre deja ese dato sin a qué
+  resolver**. No es andamiaje de regresión: es el único camino para leer una traza
+  vieja. Su comentario dice que el engine no la emite y dónde sigue viva.
+
+### Lo que la forma no nombra
+
+| qué distinguía | dónde vivía | dónde vive después |
+|---|---|---|
+| *"el empate cabe, así que no hay empate que decidir"* | `ckm_trust_rule.py`, paso 1 | **se pierde como decisión del engine.** No sobrevive en ningún casillero: era una salida del paso 1 y el paso 1 ya no la tiene. **Es lo que delamor pidió sacar**, así que la pérdida es el objetivo, no un daño |
+| **el rótulo** `tie_fits_free_slots` | el mismo lugar | **sobrevive como nombre, sin productor.** Es traza en el sentido aprobado el 13 oct: la marca de que **hubo** una decisión con ese origen, aunque ya no se tome |
+| *"con `capacity=1` se invertirían 17"* | `test_criterio_local_como_instancia` | **se pierde el contrafáctico**, no una decisión: ya no hay nada que invertir. Y deja dicho que **`capacity=None` en `criterio_local` sigue siendo correcto por otro motivo** —*"no hay lugares que contar"* en una decisión única—, **no por este contrafáctico** |
+| *"el régimen donde la instancia coincide con `_seleccionar`"* | el CP1 | **se pierde, y era el único.** La divergencia pasa de **un régimen** a **todos** |
+
+**Decisiones perdidas: una, a propósito.** **Rótulos perdidos: ninguno.**
+
+### Lo que el CP4 hizo visible
+
+Con la exención, el CP1 podía decir *"la instancia coincide en un régimen"*. **Sin
+la exención no coincide en ninguno: 0 de 90.** Y la causa no es el CP4 — **es P =
+`None`**, que ya estaba. La exención le **tapaba** un régimen a esa divergencia.
+
+**La divergencia no creció: se dejó de ver tapada.**
+
+### La divergencia con `_seleccionar`, declarada
+
+`node_extractor._seleccionar` **conserva su copia de la exención** hasta el **CP2 de
+`TASK_node_extractor_regla_v1`**. Hasta entonces el engine y esa instancia **no
+coinciden en ningún régimen de empate**. Está en el docstring del engine, en la
+sección nueva del TASK y en los tests del CP1.
+
+**ALTO.** Suite: **627 pasan, 8 xfail**.

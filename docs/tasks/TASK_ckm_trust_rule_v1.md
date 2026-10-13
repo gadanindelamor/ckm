@@ -37,6 +37,7 @@ Lo que dijo delamor (11 oct):
 Regla_k = ⟨ C_k, f_k, R_k, κ_k, ε_k, T_k, P_k, g_k, ↑k ⟩
 
 1. |f_k(c) − κ_k| > ε_k             → decide f_k              origin = FIELD
+   · (CP4, 13 oct: acá estaba la exención por capacidad, y SE FUE)
 2. empate y existe T_k               → decide T_k (conserva)   origin = TRACE
    · si 2 se repite P_k veces sin campo → 3
 3. no hay T_k (o se cumplió el piso) → NO_TRACE:
@@ -147,6 +148,34 @@ Perder un rótulo —la instancia distinguía dos razones y la forma escribe una
 se declara **como pérdida**, con su nombre, y lo resuelve delamor. Un reporte que
 dice "nada se pierde" porque ninguna decisión cambió está tapando la segunda
 (corrección de Opus, 13 oct, sobre el reporte del CP3).
+
+## CP4 — la exención del paso 1 salió de la regla
+
+*Orden de delamor, 13 oct: **"bueno vamos por sacar la exención de la regla"**,
+citando a Opus: *"la exención sólo entra en juego cuando hay una capacidad, un número
+de lugares, como `top_k` en `_seleccionar`"*.*
+
+**Fundamento:** la **tercera entrada del CP0b**. Donde hay empate el campo **calla**
+—`|f − κ| ≤ ε` es exactamente *"el campo no distingue"*—, y la exención le daba esa
+decisión a la **capacidad**, un número declarado por el orden de arriba. **Por la
+regla, donde el campo calla decide la traza.**
+
+**Qué se fue:** la salida del paso 1 por capacidad (`len(tied) <= free → FIELD ·
+tie_fits_free_slots`).
+
+**Qué se queda:** `capacity` y `free`, que los usan el **paso 2** —si lo que la traza
+conserva no cabe, el paso 2 no decide: `REASON_TRACE_SHORT`— y el **paso 4**. Y la
+constante `REASON_TIE_FITS`, **sin producirse**: hay registros ya escritos donde
+`reason` vale `"tie_fits_free_slots"`, y borrar el nombre deja ese dato sin a qué
+resolver.
+
+**Divergencia declarada:** `node_extractor._seleccionar` **conserva su propia copia
+de la exención** hasta el **CP2 de `TASK_node_extractor_regla_v1`**. Hasta entonces,
+el engine y esa instancia **no coinciden en ningún régimen de empate** (medido: el
+barrido del CP1 pasó de 30/60 a **0/90**).
+
+**Alcance:** `services/ckm_trust_rule.py` y lo que lo describe. **`_seleccionar` no
+se tocó.**
 
 ## CP0b — entradas registradas, sin resolver
 

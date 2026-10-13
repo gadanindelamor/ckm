@@ -53,7 +53,7 @@ conversación (condición de delamor).
        `f` no se puede aplicar sobre ese conjunto: la duda SUBE.
                                                         origin = ESCALATED
     1. |f(c) − κ| > ε           → decide f              origin = FIELD
-       · si el empate cabe en los lugares libres, entra  origin = FIELD
+       · (CP4: acá estaba la exención por capacidad, y se fue)
     2. empate y existe T        → decide T (conserva)   origin = TRACE
        · si el piso P se cumplió → 3
        · si el piso **no se puede evaluar** → 3
@@ -155,16 +155,32 @@ frenarlo. delamor: *"es exacto. la arrogancia de dictar… ESA es"*.
 **Esto corrige lo que el CP1 había aprobado**, donde la traza seguía decidiendo
 con `FLOOR_UNKNOWN` puesto.
 
-## La capacidad
+## La capacidad — y la exención que se fue (CP4, 13 oct)
 
-El paso 1 dice: *"si E cabe en los lugares libres, no hay empate que decidir"*.
-Eso es **capacidad**, y sin ella la exención no se puede expresar.
+El paso 1 **tenía** una exención: *"si E cabe en los lugares libres, no hay empate
+que decidir"* → entraban todos, `FIELD`. **Se fue por orden de delamor**
+(*"bueno vamos por sacar la exención de la regla"*).
 
-- `capacity = k` → si los empatados caben en los lugares que quedan, **entran
-  todos** y la decisión es `FIELD`.
-- `capacity = None` → **no hay lugares que contar**, así que la exención **no
-  aplica** y todo empate hay que decidirlo. Es el caso de una sola decisión
+**Por qué.** Tercera entrada del CP0b: donde hay empate **el campo calla**
+—`|f − κ| ≤ ε` es exactamente *"el campo no distingue"*—, y la exención le daba esa
+decisión a la **capacidad**, un número que declara el orden de arriba. **Por la
+regla, donde el campo calla decide la traza.** Medido antes de sacarla: en los
+rebuilds de `_seleccionar` donde el empate cabía, dejar decidir a la traza **cambia
+el conjunto** (4 de 16 casos reconstruidos, y `N` bajando de 20 a 11 en el más
+fuerte).
+
+**`capacity` sigue usándose, en el paso 2 y en el 4:**
+
+- `capacity = k` → `free = k − |above|`. Si lo que la **traza** conserva no cabe en
+  `free`, el paso 2 **no decide** —elegir cuáles entran sería otro desempate, y no
+  es de la traza— y la duda sube (`REASON_TRACE_SHORT`). El `g` del paso 4 también
+  lo recibe.
+- `capacity = None` → **no hay lugares que contar**. Es el caso de una sola decisión
   (`criterio_local`, `should_rebuild`).
+
+**Divergencia declarada:** `node_extractor._seleccionar` **conserva su copia de la
+exención** hasta el CP2 de `TASK_node_extractor_regla_v1`. Hasta entonces, el engine
+y esa instancia **no coinciden en ningún régimen de empate**.
 
 ## I4 — el orden no es del campo
 
@@ -211,7 +227,13 @@ FIELD_VALUE_UNKNOWN = "field_value_unknown"  # `f` devolvió NaN para algún can
 
 # ── Los motivos ───────────────────────────────────────────────────────────────
 REASON_FIELD            = "field_decided"            # paso 1, sin empate
-REASON_TIE_FITS         = "tie_fits_free_slots"      # paso 1, el empate cabe
+# EL ENGINE YA NO LA EMITE (CP4, 13 oct): la exención del paso 1 se fue. La
+# constante **se queda** y no se borra, por *quien lo lea*: hay registros ya
+# escritos —`registro_borde`, decisiones guardadas— donde `reason` vale
+# "tie_fits_free_slots", y sin el nombre ese dato no tiene a qué resolver.
+# Sigue viva en `node_extractor._seleccionar`, que conserva su propia copia de
+# la exención hasta el CP2 de `TASK_node_extractor_regla_v1`.
+REASON_TIE_FITS         = "tie_fits_free_slots"      # paso 1 — YA NO SE EMITE
 REASON_TRACE            = "trace_conserves"          # paso 2
 REASON_FLOOR_REACHED    = "floor_reached"            # paso 2 → 3 por el piso
 REASON_NO_TRACE         = NO_TRACE                   # paso 3, sin traza
@@ -571,16 +593,20 @@ class CkmTrustRule:
             return Decision(value=frozenset(above), origin=FIELD,
                             record=base_record, reason=REASON_FIELD)
 
-        # "Si E cabe en los lugares libres, no hay empate que decidir."
-        # Sin capacidad no hay lugares que contar: la exención no aplica.
+        # ── CP4: acá estaba la exención del paso 1, y se fue ────────────────
+        # Decía: "si E cabe en los lugares libres, no hay empate que decidir" →
+        # entraban todos, FIELD · tie_fits_free_slots. **Orden de delamor, 13
+        # oct.** El fundamento es la tercera entrada del CP0b: donde hay empate
+        # el campo CALLA (|f − κ| ≤ ε), y la exención le daba esa decisión a la
+        # **capacidad** —un número declarado por el orden de arriba—. Por la
+        # regla, donde el campo calla decide **la traza**.
+        #
+        # `free` SE SIGUE CALCULANDO: lo usan el paso 2 (si lo que la traza
+        # conserva no cabe, el paso 2 no decide) y el paso 4.
         free = None
         if capacity is not None:
             free = capacity - len(above)
             base_record["free_slots"] = free
-            if len(tied) <= free:
-                return Decision(value=frozenset(above) | frozenset(tied),
-                                origin=FIELD, record=base_record,
-                                reason=REASON_TIE_FITS)
 
         # ── Paso 2 — la traza conserva, salvo que el piso se haya cumplido ────
         # El piso se evalúa **sólo si hay traza**: sin T el paso 2 no aplica, y

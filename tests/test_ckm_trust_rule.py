@@ -325,12 +325,38 @@ def test_el_g_no_puede_elegir_fuera_del_empate() -> None:
 
 # ── La capacidad (T12) ───────────────────────────────────────────────────────
 
-def test_el_empate_que_cabe_en_los_lugares_libres_no_es_empate() -> None:
-    """Paso 1: *"si E cabe en los lugares libres, no hay empate que decidir"*."""
+def test_CP4_el_empate_que_cabe_YA_NO_es_exento() -> None:
+    """
+    **CP4, 13 oct.** Acá estaba el test *de* la exención: con `capacity=3` el empate
+    `{b, c}` cabía en los 2 libres y entraba como `FIELD · tie_fits_free_slots`.
+
+    **La exención se fue** (orden de delamor). Donde hay empate el campo **calla**, y
+    por la regla ahí decide **la traza**. Sin traza, la duda **sube**.
+
+    `free_slots` **sigue en el registro**: la capacidad no se fue, se fue su salida
+    del paso 1.
+    """
     d = _regla(cut=0.50, tolerance=0.01).decide(["a", "b", "c"], capacity=3)
-    assert d.origin == FIELD and d.reason == REASON_TIE_FITS
-    assert d.value == frozenset({"a", "b", "c"})
-    assert d.record["free_slots"] == 2
+    assert d.origin == ESCALATED and d.reason == NO_TRACE
+    assert d.value is None
+    assert d.record["n_tied"] == 2 and d.record["free_slots"] == 2
+    # y con traza **y piso declarado**, el paso 2 decide: la capacidad se usa ahí
+    # (sin piso sería FLOOR_UNKNOWN y la traza no decidiría — decisión del 12 oct)
+    con_t = _regla(cut=0.50, tolerance=0.01, floor=3).decide(
+        ["a", "b", "c"], capacity=3, trace={"b"}, trace_streak=0)
+    assert con_t.origin == TRACE and con_t.value == frozenset({"a", "b"})
+
+
+def test_CP4_la_constante_queda_y_el_engine_no_la_emite() -> None:
+    """`REASON_TIE_FITS` **no se borra**: hay registros ya escritos donde `reason`
+    vale `"tie_fits_free_slots"`, y sin el nombre ese dato no tiene a qué resolver.
+    Lo que se verifica es que **el engine ya no la produce**."""
+    assert REASON_TIE_FITS == "tie_fits_free_slots"
+    fuente = (Path(__file__).resolve().parent.parent
+              / "services/ckm_trust_rule.py").read_text()
+    # la constante está declarada, y no se devuelve en ninguna Decision
+    assert "REASON_TIE_FITS         =" in fuente
+    assert "reason=REASON_TIE_FITS" not in fuente
 
 
 def test_capacity_None_no_exime_el_empate() -> None:

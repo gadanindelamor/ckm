@@ -146,7 +146,7 @@ mismo perder una **decisión** que perder un **rótulo**. Perder una decisión e
 Perder un rótulo —la instancia distinguía dos razones y la forma escribe una sola—
 se declara **como pérdida**, con su nombre, y lo resuelve delamor. Un reporte que
 dice "nada se pierde" porque ninguna decisión cambió está tapando la segunda
-(corrección de delamor, 13 oct, sobre el reporte del CP3).
+(corrección de Opus, 13 oct, sobre el reporte del CP3).
 
 ## Fuera de este TASK
 

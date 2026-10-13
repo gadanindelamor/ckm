@@ -17,7 +17,7 @@ marco como defecto algo cuya definición todavía no está tomada.
 |---|---|---|---|
 | **a** | bigramas anidados → W positiva por construcción | **`xfail` strict** | W deja de salir del campo. No depende de qué es un nodo |
 | **b** | bigramas que atraviesan stopwords | **afirmado** | si `"control guns"` es un nodo legítimo es **n3** |
-| **c** | NFD y letras fuera del alfabeto → **truncamiento silencioso** | **`xfail` strict** | la misma palabra da dos nodos distintos según cómo venga codificada |
+| **c** | NFD y letras fuera del alfabeto → **truncamiento silencioso** | **ARREGLADO por S1** (13 oct): el `xfail` pasó a test que afirma el arreglo | la misma palabra daba dos nodos distintos según cómo venga codificada |
 | **d** | 45 stopwords que el `token_pattern` nunca produce | **afirmado** | son **inertes**: no cambian ninguna salida |
 | **e** | corpus vacío devuelve 3 claves y no 5 | **`xfail` strict** | el contrato de `accumulate` no es el mismo según la entrada |
 | **f** | el pool desempata por **orden alfabético**, sin nombrarlo y sin R | **afirmado** | es un `g` sin nombre: el CP0 lo reporta, no lo corrige |
@@ -104,28 +104,46 @@ def test_b_el_bigrama_atraviesa_la_stopword() -> None:
 
 # ── c — Unicode ────────────────────────────────────────────────────────────
 
-def test_c_la_evidencia_del_truncamiento() -> None:
-    """Sin juicio: qué sale. **No rechaza: trunca, y en silencio.**"""
+def test_c_ARREGLADO_POR_S1() -> None:
+    """
+    **El punto (c) del CP0 está arreglado** (S1, 13 oct). Lo que este test afirmaba
+    —el truncamiento silencioso— **ya no pasa**, y acá queda el arreglo afirmado.
+
+    Lo que pasaba: el patrón viejo `[a-záéíóúüñ…]` **no rechazaba lo que no
+    entraba: lo truncaba**. `"português"` salía `"portugu"`, `"ação"` desaparecía, y
+    `"información"` en **NFD** salía `"informacio"` porque el acento combinante
+    cortaba el token. Un término truncado **no es un término que no entró**: es un
+    nodo distinto que nadie declaró, con la forma de uno legítimo.
+
+    **Precisión que la medición dejó clara:** el castellano en **NFC** ya salía bien
+    —las tildes españolas estaban en la clase vieja—. Lo que rompía era **NFD** y las
+    letras de **otros alfabetos**.
+    """
     an = _analizador()
     nfc = "información"
     nfd = unicodedata.normalize("NFD", nfc)
     assert an(nfc + " importante")[0] == "información"
-    # el acento combinante corta el token y deja una palabra que no existe
-    assert an(nfd + " importante")[0] == "informacio"
-    # letras fuera de la clase del token_pattern: lo mismo
-    assert _analizador()("ação português naive") == ["portugu", "naive", "portugu naive"]
+    assert an(nfd + " importante")[0] == "información", "NFD daba 'informacio'"
+    assert an("ação português naive") == [
+        "ação", "português", "naive", "ação português", "português naive"]
+    # y el largo mínimo sigue en 3 (delamor: es definición de nodo, no entra)
+    assert an("mu nu xi") == []
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "CP0 (c): NFC y NFD de la misma palabra dan dos nodos distintos, y el de NFD "
-    "es una palabra truncada que no existe. El token_pattern asume precompuesto y "
-    "strip_accents=None; ninguna de las dos condiciones está declarada (CP0a §3)"))
 def test_c_la_misma_palabra_da_el_mismo_nodo_venga_como_venga() -> None:
-    """**Lo que debería valer y no vale.** La normalización Unicode del texto de
-    entrada no debería cambiar qué nodo sale."""
+    """
+    **Era `xfail(strict=True)` y ahora vale.** La normalización Unicode del texto de
+    entrada ya **no** cambia qué nodo sale: `analizar` normaliza a **NFC** antes de
+    tokenizar (S1).
+
+    Las dos condiciones que el CP0a había encontrado sin declarar —*el
+    `token_pattern` asume precompuesto* y *`strip_accents=None`*— **dejaron de ser
+    condiciones**: la primera porque se normaliza, la segunda porque el patrón ya no
+    depende de qué letra es.
+    """
     an = _analizador()
-    nfc = "información"
-    assert an(nfc)[0] == an(unicodedata.normalize("NFD", nfc))[0]
+    for palabra in ("información", "ação", "português", "mañana", "coöperate"):
+        assert an(palabra)[:1] == an(unicodedata.normalize("NFD", palabra))[:1], palabra
 
 
 # ── d — stopwords que el token_pattern nunca produce ───────────────────────

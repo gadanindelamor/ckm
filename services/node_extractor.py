@@ -13,6 +13,7 @@ Sin LLM. Sin estado entre llamadas.
 
 from __future__ import annotations
 import re
+import unicodedata
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
@@ -51,7 +52,22 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 # El `_` esta DENTRO de la clase de caracteres, y eso importa: hay nodos que
 # dependen de el (`delta_r`, `d_ckm`, `operador_stop_coco` estan en el pool de
 # ARM40). Sacarlo partiria esos terminos.
-_TOKEN_PATTERN = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}"
+#
+# S1 del CP-S (13 oct): **cualquier letra Unicode**, en vez de la lista
+# ES+EN que habia. `[^\W\d]` es "caracter de palabra que no es digito", o sea
+# **letra de cualquier alfabeto, o `_`**. El patron anterior era
+#
+#     [a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}
+#
+# y **no rechazaba lo que no entraba: lo TRUNCABA, en silencio**. `"português"`
+# salia `"portugu"`, `"ação"` desaparecia, y `"informacion"` en NFD salia
+# `"informacio"` porque el acento combinante cortaba el token. Un termino
+# truncado **no es un termino que no entro**: es un nodo distinto, que nadie
+# declaro, con la forma de un nodo legitimo.
+#
+# **El largo minimo (3) NO se toca** (delamor, 13 oct): las palabras de dos
+# letras son **definicion de nodo**, y eso no es de este paso.
+_TOKEN_PATTERN = r"[^\W\d][^\W\d]{2,}"
 _TOKEN_RE = re.compile(_TOKEN_PATTERN)
 
 _STOPWORDS = {
@@ -179,25 +195,36 @@ class NodeExtractorService:
         **El analizador. Único lugar donde se define cómo se reconoce un
         término** (S0 del CP-S, 13 oct).
 
-        Reproduce **bit a bit** lo que hacía `TfidfVectorizer` con
-        `analyzer="word"`, en este orden —leído en sklearn 1.9.0—:
+        **S0** reprodujo **bit a bit** lo que hacía `TfidfVectorizer` con
+        `analyzer="word"`. **S1 cambia dos cosas adentro, y nada más** (13 oct):
+        **normaliza a NFC** antes de tokenizar, y el patrón acepta **cualquier
+        letra Unicode**. Ver `_TOKEN_PATTERN`.
 
-        1. **preprocess:** `strip_accents=None` (identidad) + `lowercase=True`;
-        2. **tokenize:** `token_pattern.findall(texto)`;
+        El orden es:
+
+        1. **normalizar a NFC** (S1) + `lowercase` explícito;
+        2. **tokenize:** `_TOKEN_RE.findall(texto)`;
         3. **`_word_ngrams`:** saca las stopwords **primero** y **después** arma
            los n-gramas **sobre los que quedaron**.
 
         **El paso 3 es la causa de que `"control of guns"` dé `"control guns"`**:
         la stopword se va antes de que los bigramas existan, así que `control` y
-        `guns` quedan adyacentes. **S0 no lo arregla: lo reproduce.** El arreglo
-        es S3, y espera (hay traza que leer antes: C-value, RAKE, Nothman).
+        `guns` quedan adyacentes. **S1 no lo arregla**, y S0 tampoco lo hacía: el
+        arreglo es **S3**, y espera (hay traza que leer antes: C-value, RAKE,
+        Nothman et al.). Lo mismo con los **bigramas anidados** (S2) y con el
+        **contrato de `accumulate` con corpus vacío** (S4).
 
         El orden de la lista también se reproduce: **unigramas primero** —los que
         pasaron el filtro— y después los bigramas **en orden de aparición**. No es
         un detalle gratuito: que coincida la **lista** y no sólo el **conjunto** es
         lo que hace verificable el "bit a bit".
         """
-        texto = texto.lower()
+        # S1: NFC **antes** de tokenizar. Sin esto, la misma palabra en NFD
+        # —`"información"` con tilde combinante— se parte en el acento y sale
+        # `"informacio"`: dos nodos distintos para una palabra, segun como
+        # vino codificada. El `lower()` va explicito porque con un `analyzer`
+        # invocable sklearn **no** aplica su `lowercase`.
+        texto = unicodedata.normalize("NFC", texto).lower()
         tokens = _TOKEN_RE.findall(texto)
         # las stopwords salen ANTES de armar los n-gramas (sklearn `_word_ngrams`)
         tokens = [w for w in tokens if w not in _STOPWORDS]

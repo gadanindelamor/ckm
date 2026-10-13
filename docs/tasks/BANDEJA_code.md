@@ -9699,3 +9699,126 @@ divergencia del CP1 que no se resuelve poniendo un número. **Eso es de delamor*
 mientras no esté decidido, **el reloj por sí solo no destraba el CP2**.
 
 **ALTO.**
+
+---
+## CP-S — tensiones antes de tocar nada — 2026-10-13 16:28 UTC
+
+*Claude Opus 5 (Code). **Sin código**: nada del repo se tocó. La evaluación corrió en
+un script del scratchpad, fuera del repo. **ALTO**: la tensión 1 cambia una premisa.
+Hora de `date -u`, llamada separada.*
+
+### TENSIÓN 1 — S3 **no arregla su propio ejemplo**, y cerrarlo toca el borde que delamor acaba de reiterar
+
+S3 dice: *"los bigramas se arman sólo con tokens adyacentes del texto; un bigrama con
+una stopword en medio no existe (`"control of guns"` no da `"control guns"`)"*.
+
+**Lo implementé en el scratchpad y lo medí. Resultado:**
+
+| texto | hoy | con S3 |
+|---|---|---|
+| `"control with guns"` | `[control, guns, control guns]` | `[control, guns]` **arreglado** |
+| `"control the guns"` | `[control, guns, control guns]` | `[control, guns]` **arreglado** |
+| **`"control of guns"`** | `[control, guns, control guns]` | `[control, guns, control guns]` **SIGUE IGUAL** |
+
+**La razón no es la stopword: es el largo mínimo.** `"of"` tiene **2 letras**, así que
+**no es un token** —el patrón pide 3—, y la adyacencia *entre tokens* no lo ve. El
+bigrama se forma entre `control` y `guns` porque, para el tokenizador, **son
+adyacentes**. `"with"` y `"the"` sí se arreglan porque tienen 3+ letras y entonces sí
+son tokens, y ahí el filtro de stopwords los corta.
+
+**Para cerrar el caso de `"of"` hay dos caminos, y los dos tocan lo que no entra:**
+
+- **bajar el largo mínimo** → *las palabras de dos letras*, que delamor acaba de
+  reiterar que **no entran** (es definición de nodo);
+- **calcular la adyacencia sobre TODAS las palabras del texto**, no sobre los tokens
+  que pasaron el filtro. `"of"` **nunca sería un nodo**; sólo **rompería** la
+  adyacencia entre `control` y `guns`.
+
+**El segundo camino no hace nodo a ninguna palabra de dos letras** —no toca la
+definición de nodo—, pero **sí cambia qué mira la extracción**, y eso no está
+decidido. **No lo elijo. Es de delamor.**
+
+**Qué hago mientras no esté decidido:** S3 **se puede hacer igual**, y arregla las
+stopwords de 3+ letras —que son **658 de las 703**—. El caso de `"of"` queda
+**declarado como no arreglado**, con su razón. Las 45 con apóstrofo siguen inertes
+(CP0 d).
+
+### TENSIÓN 2 — S1 y S3 comparten el instrumento: un **analizador propio**
+
+Medido contra sklearn 1.9.0:
+
+- un `analyzer` invocable hace que sklearn **ignore** `ngram_range`, `stop_words`,
+  `token_pattern` **y `lowercase`** (cuatro warnings, y los features salen en
+  mayúscula);
+- un `preprocessor` propio **reemplaza** el lowercasing: con `lowercase=True` y
+  preprocessor propio, `"Control GUNS"` sale `['Control', 'GUNS']`.
+
+**Consecuencia:** S3 **exige** un `analyzer` propio, y ese analyzer **descarta** la
+configuración con la que S1 se haría *"a la sklearn"* (`preprocessor` + `token_pattern`
+nuevo). Hacer S1 así y después S3 **tiraría el trabajo de S1** y dejaría, en el medio,
+un commit donde `token_pattern` está puesto y **no se usa**.
+
+**Propuesta, que respeta "un commit por punto":** **S1 introduce el analizador
+propio** —NFC, lowercase explícito, letra Unicode, largo mínimo 3 intacto, y bigramas
+y stopwords **como hoy**—, y **S3 cambia una sola cosa adentro**: el orden entre armar
+n-gramas y filtrar stopwords. Cada punto queda en su commit y nada se tira.
+
+**Y queda una condición que el analizador propio trae consigo:** `lowercase`, `norm`,
+`smooth_idf` y compañía siguen siendo de sklearn, pero `token_pattern`, `stop_words`
+y `ngram_range` **dejan de estar en manos de la librería**. Siete filas de la tabla
+del CP0a se mueven de *"default de librería"* a *"declarado"*. **Es mejora de origen,
+y hay que actualizar esa tabla.**
+
+### TENSIÓN 3 — el saneamiento invalida, **como tests**, casi todos los números de hoy
+
+Los reportes de hoy quedan válidos como **registro de la extracción vieja**. Pero los
+**tests** que fijan esos números van a fallar, porque miden la extracción.
+
+| archivo | qué le pasa |
+|---|---|
+| `test_node_extractor_cp0.py` | **los 3 `xfail(strict=True)` pasan a verde** → y por `strict` **eso falla**: hay que sacarles el `xfail`. Más la evidencia de **(c)**, que asserta el truncamiento (`informacio`, `portugu`) y deja de valer. **(b) y (d) NO cambian**: (b) usa `"control of guns"`, el caso que la tensión 1 deja sin arreglar; (d) sigue dando `[]` |
+| `test_corpus_del_repo_A3.py` | **los 6**: todos fijan conteos derivados de la extracción |
+| `test_seleccionar_contra_la_relajacion.py` | los de **conteo** (`8/29/1`, `30/16/5`, la meseta). Los sintéticos, con términos y puntajes a mano, **no cambian** |
+| `test_node_extractor_como_instancia.py` | el de **corpus registrados** (60/19/3/1). Los sintéticos, no |
+| `test_monitor_services.py:132` | `test_un_texto_no_distingue_sin_precedente` asserta `nodes == []`. **Hay que medirlo**: el conjunto de términos de ese texto cambia con S1/S3 |
+| `test_node_extractor.py`, `test_extraccion_una_rama.py` | asertan `sig == [-1,-1,1]` sobre textos ASCII sin stopwords en medio: **predigo que no cambian** |
+
+### Lo medido: el conjunto de nodos antes/después (sólo S1, sin S2 ni S3)
+
+| corpus | pool | N | salen | entran |
+|---|---|---|---|---|
+| **ARM40** | 60 → 60 | 19 → 19 | **5** | **5** |
+| **A(24)** | 60 → 60 | 20 → 20 | **1** (`happy`) | **1** (`channel`) |
+| **D(12)** | 60 → 60 | 20 → **19** | **1** (`joined channel`) | 0 |
+| **E(7)** | 55 → **51** | **12 → 20** | 1 (`hola mcp`) | **9** |
+
+**`E` es el que más se mueve: de 12 nodos a 20.** Entran nueve términos en castellano
+que el patrón viejo truncaba o perdía (`conocimiento`, `cohesivo`, `emerge tension`,
+`inconmensurables`, `perspectivas`). **Es el corpus con más acentos y el más chico.**
+
+**Esto es con S1 solo.** S2 (pares por contención) y S3 cambian **pares**, no el
+conjunto de nodos — salvo por el efecto indirecto de S3 sobre qué bigramas existen,
+que sí mueve el pool.
+
+### Los estados ya guardados
+
+Los seis corpus del repo tienen `nodes` persistidos, y esos `nodes` entran como
+`seleccion_anterior` en el próximo rebuild (`corpus_service.py:298`). **Después del
+saneamiento, algunos de esos términos no se pueden volver a producir:** `joined
+channel` (D), `hola mcp` (E), y en ARM40 los cinco que salen. En el estado viejo
+también hay términos **truncados** (`portugu`-style) donde el corpus tenía acentos.
+
+**Qué pasa cuando eso ocurre:** `_seleccionar` hace `prev = set(anterior)` y pregunta
+`terms[i] in prev`. Un término que ya no se produce **simplemente nunca coincide**:
+no rompe, **no deja marca**, y la traza queda más chica de lo que su registro dice.
+**Es el mismo patrón del `return` sin marca.** **Reportado, no corregido** — y no
+entra: es el `if not nodes` y el reloj, que delamor dejó afuera.
+
+### Lo que NO entra, reiterado por delamor el 13 oct
+
+Las palabras de dos letras · el stemming · las stopwords con contenido · la exención
+que todavía tiene `_seleccionar` · el desborde por encima de `top_k` · el `return` sin
+marca · el reloj.
+
+**ALTO.** La tensión 1 cambia una premisa: **S3 no arregla `"control of guns"`**, y
+cerrarlo requiere una decisión que es de delamor. S1, S2, S4 y S5 no están trabados.

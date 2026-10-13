@@ -8438,3 +8438,41 @@ también.
    reporto porque cambia qué casillero recibe la instancia del CP1.
 
 **ALTO.**
+
+---
+## CP0a — corrección — 2026-10-13 07:41 UTC
+
+*Claude Opus 5 (Code). Corrige la entrada del CP0a (`4249d1d`) por indicación de
+delamor/Opus. **La entrada anterior no se edita** (regla de la BANDEJA): la
+corrección va acá.*
+
+### La unidad de texto es `CAL`, no `NODO`
+
+**delamor, 13 oct: *"es calibración"***. En la tabla del punto 4 estaba como `NODO`
+con orden `n2/n3`. Queda:
+
+| parámetro | valor | origen | orden | ¿`calibrate`? | ¿`save()`? | tolerancia | especie |
+|---|---|---|---|---|---|---|---|
+| **unidad de texto** | la del que llama | **no se sabe** | **n2** | **no** | indirecto | — | **`CAL`** |
+
+### La línea n2/n3 **es** la línea CAL/NODO, y hoy no está trazada
+
+Las filas marcadas `NODO` en la tabla dicen orden **n2**, y `NODO` lo decide delamor,
+que es **n3**. La inconsistencia es real y **no la resuelvo**: es un solo punto, y
+absorbe al 5.3 del reporte anterior.
+
+**Punto único, que reemplaza al 5.3:**
+
+> **No sé trazar la línea entre `n2` y `n3`, que es la misma línea entre `CAL` y
+> `NODO`.** Todo lo que hoy vive en `n2` —los parámetros de extracción, declarados
+> por una persona en un commit— incluye cosas que son **definición de qué es un
+> nodo** y por lo tanto de `n3` (delamor): el alfabeto y el largo mínimo del
+> `token_pattern`, `ngram_max`, las stopwords, `lowercase`, `strip_accents`. Y
+> también incluye cosas que mueven **el puntaje** sin mover *qué es un término*
+> —`norm="l2"`, `smooth_idf`, `sublinear_tf`, `min_df`/`max_df`—, que puse `CAL`
+> porque cambian **cuál entra** y no **qué puede entrar**. Esa frontera la dibujé
+> yo al armar la tabla; **no sale de ningún registro**, y por eso las filas `NODO`
+> quedan con orden `n2` cuando deberían ser `n3`. **Es de delamor.**
+
+Las otras tres de "dónde no se pudo decir" (el pool como un orden o dos; el origen
+del factor 3; `T` colapsada en `corpus_service.py:298`) **siguen como estaban**.

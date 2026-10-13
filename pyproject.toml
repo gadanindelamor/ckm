@@ -28,6 +28,12 @@ dependencies = [
     "numpy>=1.24",
     "scipy>=1.11",
     "networkx>=3.0",
+    # services/node_extractor.py importa TfidfVectorizer y la dependencia no
+    # estaba declarada (CP0a, 13 oct). Siete parametros que deciden salen de
+    # los defaults de esta libreria -- lowercase, strip_accents, norm,
+    # smooth_idf, use_idf, sublinear_tf, min_df/max_df -- y el desempate de
+    # max_features tambien. Corre 1.9.0.
+    "scikit-learn>=1.9.0",
 ]
 
 [project.optional-dependencies]

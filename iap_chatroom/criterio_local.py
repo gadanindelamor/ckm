@@ -106,6 +106,25 @@ claves, ninguna nueva), el sorteo de la auditoria y el de `auditado_pase` --con
 su orden, que es lo que hace deterministico un RNG con semilla--, el estado
 interno y `divergencia_auditoria`.
 
+**EL DOMINIO: la equivalencia vale para `n_nuevos >= 0`.** Afuera cambia la
+**decision**, no un rotulo. Con `n_nuevos < 0` y `nombrado=True` la cascada
+llamaba --`if nombrado:` iba antes que cualquier cuenta-- y la forma no:
+`f = n_nuevos + nombrado <= 0`, asi que el candidato queda empatado (`f = 0 =
+kappa`) o por debajo del corte, y la traza conserva el silencio. Lo leyo Opus el
+13 oct y esta corrido en
+`test_fuera_del_dominio_n_nuevos_negativo_la_decision_cambia`. **Fijado, no
+corregido:** corregirlo es una decision sobre el modelo. Desde el lazo vivo no
+llega --`autonomous_device.py:711` pasa `len(nuevos)`--, pero `evaluar` es
+publica y no valida su entrada.
+
+**UNA RUTA NUEVA: `evaluar` ahora puede levantar.** Antes del CP3 no levantaba
+nunca. El `AssertionError` de mas abajo salta cuando la regla dice *llamar* y el
+mapeo no tiene rotulo para esa combinacion. **Es alcanzable** --con `f` no
+medible (`n_nuevos` NaN) el engine devuelve `ESCALATED · field_value_unknown`
+sin haber evaluado el piso, y ninguna rama de rotulo agarra--, y **no llega
+desde el lazo vivo** por la misma razon que lo anterior. Se declara en vez de
+inventar un motivo, que es lo que el `raise` evita.
+
 **La auditoria no entra en la forma** (CP2): no resuelve un empate, **mide la
 regla**. Queda donde estaba, leyendose encima de la decision.
 """

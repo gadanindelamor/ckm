@@ -16,12 +16,19 @@ tocar nada salvo sacarla del objeto: es el oráculo, no un resumen.
 
 El barrido recorre el producto de:
 
-- `tick`: `None` y un entero
-- `n_nuevos`: 0, 1, 7
-- `nombrado`: False, True
-- `nunca_llamo`: False, True
-- `vueltas_sin_llamar`: 0, 1, piso−1, piso, piso+1
-- `piso_vueltas`: 1, 3, 12
+| eje | valores |
+|---|---|
+| `tick` | `None`, 5 |
+| `n_nuevos` | 0, 1, 7 — **sólo no negativos**, ver "el dominio" abajo |
+| `nombrado` | `False`, `True` |
+| `nunca_llamo` | `False`, `True` |
+| `vueltas_sin_llamar` | 0, 1, piso−1, piso, piso+1 |
+| `piso_vueltas` | 1, 3, 12 |
+
+**Son 312 y no 360.** El eje `vueltas_sin_llamar` es un **set**, así que con
+`piso_vueltas = 1` los valores `{0, 1, piso−1=0, piso=1, piso+1=2}` colapsan a
+`{0, 1, 2}`: tres en vez de cinco. 2·3·2·2·**3** + 2·3·2·2·**5** + 2·3·2·2·**5**
+= 72 + 120 + 120 = **312**. El test lo afirma.
 
 La auditoría se neutraliza (`tasa_auditoria=0.0` y `tasa_auditoria_pase=0.0`):
 **no es de la regla** —no resuelve un empate, la mide—, así que entra en su
@@ -29,16 +36,28 @@ propio test y no en el barrido.
 
 ## El resultado
 
-- **`llamar` es idéntico en las 360 combinaciones.** Ninguna excepción.
-- **`motivo`/`via` difieren en exactamente un caso**, el declarado en el
-  docstring del módulo: **piso vencido y campo positivo a la vez**. La cascada
-  evaluaba el piso antes del campo (`piso`/`VIA_PISO`); la forma hace decidir
-  al campo primero y el engine ni llega a evaluar el piso
-  (`mensajes_nuevos`/`nombrado`, `VIA_CRITERIO`).
+- **`llamar` es idéntico en las 312 combinaciones.** Ninguna excepción.
+- **`motivo` difiere en 60 de 312, y `via` en las mismas 60.** Todas son el
+  mismo caso: **piso vencido y campo positivo a la vez**. La cascada evaluaba
+  el piso antes del campo (`piso`/`VIA_PISO`); la forma hace decidir al campo
+  primero y el engine ni llega a evaluar el piso (`mensajes_nuevos`/`nombrado`,
+  `VIA_CRITERIO`).
 
-Esa colisión es **0 de 24 en el vivo 03** (lo mide
-`test_criterio_local_como_instancia.py`). Acá se mide cuántas son en el barrido
-y se exhibe que no hay ninguna otra.
+El 60 es **del barrido**, no una tasa esperable: un tercio de las filas tiene
+`piso_vueltas = 1`, que sobre-representa la colisión. En `vivo_03` es **0 de
+24** (lo mide `test_criterio_local_como_instancia.py`).
+
+## El dominio: la equivalencia vale para `n_nuevos >= 0`
+
+**Afuera del dominio la decisión sí cambia**, y no es un rótulo. Con
+`n_nuevos < 0` y `nombrado=True`, la cascada llamaba —`if nombrado:` iba antes
+que cualquier cuenta— y la forma no: `f = n_nuevos + nombrado <= 0`, así que el
+candidato queda empatado o por debajo del corte y **la traza conserva el
+silencio**.
+
+Lo vio Opus **leyendo** (13 oct) y acá se **corre**:
+`test_fuera_del_dominio_n_nuevos_negativo_la_decision_cambia`. Queda **fijado,
+no corregido** — corregirlo es una decisión sobre el modelo.
 """
 
 import itertools
@@ -452,3 +471,91 @@ def test_tick_None_y_despues_un_tick_conocido_no_esta_en_el_barrido() -> None:
             assert r2["llamar"] is True
             # el estado que lo explica: la llamada sin tick dejó el UNKNOWN
             assert f._tick_ultima_llamada == 7
+
+
+# ── El borde del dominio, y la ruta nueva ──────────────────────────────────
+
+def test_el_barrido_son_312_y_por_que() -> None:
+    """El número sale del **dedup** de `vueltas_sin_llamar`: con `piso=1` los
+    cinco valores colapsan a tres. No es 360."""
+    filas = list(_barrido())
+    assert len(filas) == 312
+    por_piso = {}
+    for e, _, _ in filas:
+        por_piso[e["piso_vueltas"]] = por_piso.get(e["piso_vueltas"], 0) + 1
+    assert por_piso == {1: 72, 3: 120, 12: 120}
+    # y el barrido no mete negativos: ése es el borde del dominio
+    assert {e["n_nuevos"] for e, _, _ in filas} == {0, 1, 7}
+
+
+def test_fuera_del_dominio_n_nuevos_negativo_la_decision_cambia() -> None:
+    """
+    **El borde que Opus leyó el 13 oct, corrido acá.** La equivalencia del CP3
+    vale para `n_nuevos >= 0`. Con `n_nuevos < 0` **y** `nombrado=True` la
+    **decisión** cambia, no el rótulo:
+
+    - la cascada llamaba — `if nombrado:` iba antes que cualquier cuenta;
+    - la forma no — `f = n_nuevos + nombrado <= 0`, el candidato queda empatado
+      (`f = 0 = κ`) o por debajo del corte, y **la traza conserva el silencio**.
+
+    Se **fija, no se corrige**: corregirlo es una decisión sobre el modelo.
+    `n_nuevos` negativo no llega desde el lazo vivo —`autonomous_device.py:711`
+    pasa `len(nuevos)`—, pero `evaluar` es pública y no lo valida.
+    """
+    def ahora(n, nom):
+        f = CriterioLocal(
+            umbrales=UmbralesCriterioLocal(piso_vueltas=9, tasa_auditoria=0.0,
+                                           tasa_auditoria_pase=0.0),
+            rng=random.Random(0),
+        )
+        f._tick_ultima_llamada, f._vueltas_sin_llamar = 0, 1   # hay traza
+        r = f.evaluar(tick=5, n_nuevos=n, nombrado=nom)
+        return (r["llamar"], r["motivo"], r["via"])
+
+    def antes(n, nom):
+        return _CASCADA_ANTES(tick=5, n_nuevos=n, nombrado=nom,
+                              nunca_llamo=False, vueltas_sin_llamar=1,
+                              piso_vueltas=9)
+
+    # el borde exacto: f = -1 + 1 = 0 = κ, empate, la traza conserva
+    assert antes(-1, True) == (True, MOTIVO_NOMBRADO, VIA_CRITERIO)
+    assert ahora(-1, True) == (False, MOTIVO_SIN_CAMBIO, None)
+    # y más abajo del corte, lo mismo
+    assert antes(-3, True) == (True, MOTIVO_NOMBRADO, VIA_CRITERIO)
+    assert ahora(-3, True) == (False, MOTIVO_SIN_CAMBIO, None)
+    # sin `nombrado` no hay diferencia: la cascada tampoco llamaba
+    for n in (-3, -1):
+        assert antes(n, False) == ahora(n, False) == (False, MOTIVO_SIN_CAMBIO, None)
+    # y en el dominio declarado, las dos coinciden
+    for n in (0, 1, 7):
+        for nom in (False, True):
+            assert antes(n, nom) == ahora(n, nom)
+
+
+def test_el_raise_es_alcanzable_y_con_que() -> None:
+    """
+    **La ruta nueva en código vivo** (delamor/Opus, 13 oct): antes del CP3
+    `evaluar` no levantaba nunca. Ahora puede levantar `AssertionError` cuando
+    la regla dice *llamar* y el mapeo no tiene rótulo para esa combinación.
+
+    **Es alcanzable**, y ésta es la evidencia: con `f` no medible —`n_nuevos`
+    NaN— el engine devuelve `ESCALATED · field_value_unknown` **sin haber
+    evaluado el piso**, así que ninguna de las tres primeras ramas de rótulo
+    agarra y `origin != FIELD`.
+
+    **No llega desde el lazo vivo:** `autonomous_device.py:711` pasa
+    `len(nuevos)`, que es un `int >= 0`. Pero `evaluar` es pública y no valida
+    su entrada, así que la ruta existe. Se declara; no se tapa con un rótulo
+    inventado, que es justo lo que el `raise` evita.
+    """
+    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=9))
+    f._tick_ultima_llamada, f._vueltas_sin_llamar = 0, 1        # hay traza
+    with pytest.raises(AssertionError, match="llamar sin rotulo"):
+        f.evaluar(tick=5, n_nuevos=float("nan"))
+
+    # y la contracara: con una entrada del dominio no levanta nunca
+    for n in (0, 1, 7):
+        for nom in (False, True):
+            g = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=9))
+            g._tick_ultima_llamada, g._vueltas_sin_llamar = 0, 1
+            g.evaluar(tick=5, n_nuevos=n, nombrado=nom)         # no levanta

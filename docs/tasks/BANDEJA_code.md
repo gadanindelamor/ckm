@@ -8185,3 +8185,56 @@ ahora se ve en el diff de esa lista.
 *Revisado por delamor el 13 oct. Esta entrada se amplió con el conteo de `motivo`/
 `via`, la secuencia `tick=None` → tick conocido, la corrección de "nada se pierde" y
 la decisión sobre la colisión. **Commiteado y pusheado** después de eso.*
+
+---
+## CP3 — los cuatro ajustes de la revisión — 2026-10-13 05:11 UTC
+
+*Claude Opus 5 (Code). Revisión de delamor/Opus contra `b9b70c4`. Ninguna decisión
+cambia.*
+
+**1. Atribución, en commit propio (`19633ba`).** Dos cosas estaban escritas en
+`DECISIONES_opus.md` como decisiones de delamor y son de Opus: la corrección de
+*"nada se pierde"*, y el no agregar el origen de la `Decision` al registro. **La
+segunda importa**: delamor no la decidió, así que **sigue abierta**. Atribuirle una
+decisión que no tomó cierra un frente que está abierto, y después nadie lo reabre.
+
+**2. El docstring del test decía 360 y "un caso"; el test afirma 312 y 60.**
+Alineado. **El 312 sale del dedup**: `vueltas_sin_llamar` es un **set**, así que con
+`piso_vueltas = 1` los cinco valores `{0, 1, piso−1, piso, piso+1}` colapsan a tres.
+`72 + 120 + 120 = 312`. Hay un test nuevo que lo afirma y verifica el reparto por
+piso.
+
+**3. El dominio: la equivalencia vale para `n_nuevos >= 0`.** Opus lo vio leyendo;
+acá está **corrido, y se confirma**. Con `n_nuevos < 0` y `nombrado=True`:
+
+| | antes | ahora |
+|---|---|---|
+| `n_nuevos=-1, nombrado=True` | `(True, nombrado, criterio)` | `(False, sin_cambio, None)` |
+| `n_nuevos=-3, nombrado=True` | `(True, nombrado, criterio)` | `(False, sin_cambio, None)` |
+| `n_nuevos<0, nombrado=False` | `(False, sin_cambio, None)` | igual |
+
+**Esto sí es una decisión, no un rótulo.** La cascada llamaba porque `if nombrado:`
+iba antes que cualquier cuenta; la forma no, porque `f = n_nuevos + nombrado <= 0`
+deja al candidato empatado (`f = 0 = κ`) o por debajo del corte, y la traza conserva
+el silencio. **Fijado en un test, no corregido** — corregirlo es una decisión sobre
+el modelo. Declarado en el docstring de `criterio_local.py`.
+
+Desde el lazo vivo no llega: `autonomous_device.py:711` pasa `len(nuevos)`.
+**Pendiente anotado y sin tocar:** `autonomous_device.py:453` usa
+`observation.get("n_nuevos", 0)` —I2, la ausencia con valor 0—, **anterior al CP3**,
+y está en el render del prompt, no en la entrada del filtro.
+
+**4. `evaluar` ahora puede levantar, y antes no.** Ruta nueva en código vivo, y es
+una diferencia de comportamiento aunque no cambie ninguna decisión. **Es
+alcanzable**, con esta evidencia: `n_nuevos = NaN` → `f` no medible → el engine
+devuelve `ESCALATED · field_value_unknown` **sin haber evaluado el piso** → ninguna
+de las tres primeras ramas de rótulo agarra y `origin != FIELD` →
+`AssertionError`. Corrido en `test_el_raise_es_alcanzable_y_con_que`, junto con la
+contracara: con entradas del dominio no levanta.
+
+**No llega desde el lazo vivo** por la misma razón que el punto 3. Se deja: el
+`raise` existe para no inventar un motivo, y taparlo con un rótulo sería exactamente
+lo que evita.
+
+**Suite: 585 pasan, 5 xfail** (3 tests nuevos). Las 24 de `vivo_03` y las 312 del
+barrido, sin cambios.

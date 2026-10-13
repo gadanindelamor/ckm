@@ -8238,3 +8238,86 @@ lo que evita.
 
 **Suite: 585 pasan, 5 xfail** (3 tests nuevos). Las 24 de `vivo_03` y las 312 del
 barrido, sin cambios.
+
+---
+## TASK_node_extractor_regla_v1 — tensiones contra el repo, antes del CP0a — 2026-10-13 06:02 UTC
+
+*Claude Opus 5 (Code). El TASK está escrito y commiteado (`ea5472e`). Esto es el
+paso previo que pidió delamor: evaluarlo contra el repo. **Sin tocar
+`node_extractor.py`.** Seis tensiones; dos mueven premisas de un CP.*
+
+### 1. `P = None` deja **inalcanzable** el paso 2, que es el trabajo de `_seleccionar`
+
+El CP1 pre-declara **P = `None`** (*"no hay reloj: F1"*). Con la **decisión 5 del 12
+oct** —*el piso no evaluable sube la duda*— el engine hace esto
+(`ckm_trust_rule.py:585-600`): si **hay traza** y `floor is None` → `floor_absent`
+→ `FLOOR_UNKNOWN` → **la traza no decide** → `ESCALATED`, `value=None`.
+
+**Con P = `None`, el paso 2 nunca corre.** Y conservar la pertenencia anterior en
+el borde **es** lo que `_seleccionar` hace.
+
+**Medido, no supuesto.** En `process/experiments/armstrong_replica_seed123_corpus_state.json`
+(pool 60, `top_k` 20): `arriba = 19`, `empate = 3`, `libres = 1`. El empate **no**
+cabe → cae en la rama de `anterior`, con `pertenencia_anterior = False` en los tres
+→ `_seleccionar` devuelve **19 nodos**. La instancia con P = `None` devolvería **"no
+decidí"**. Eso es una **decisión** distinta, no un rótulo.
+
+La fisura: **F1** (*no hay reloj, P vacío*) y la **decisión 5** (*sin piso la traza
+no decide*) se escribieron por separado, y juntas cierran el paso 2 justo donde la
+traza **no** es un silencio absorbente sino la regla de la relajación (`h = 0`
+conserva `s_i`). Es material del **CP0b** del otro TASK: la regla aplicada al pie de
+la letra da un resultado equivocado. **No lo resuelvo.**
+
+### 2. `TOL_EMPATE`: el código dice lo contrario que el TASK
+
+| fuente | qué dice |
+|---|---|
+| `node_extractor.py:176` | *"Tolerancia **DE LA REGLA** de desempate (no del registro)"* |
+| este TASK, CP1 | *"`TOL_EMPATE` es **numérica**, no de la regla"* |
+| `TASK_ckm_trust_rule_v1` | *"No confundir con `TOL_EMPATE = 1e-12`… que es tolerancia **numérica**"* |
+
+El CP0a tiene que clasificarla en una de **tres especies**, y las fuentes no
+coinciden. Regla del 10 oct: si código y docstring difieren, **se declara antes de
+afirmar**. La declaro; **no elijo la especie**.
+
+### 3. `ε = None`: medido, **no muerde** en los corpus registrados
+
+La pre-declaración `ε = None` cambia el empate de *"`|d| ≤ 1e-12`"* a *"`d = 0`
+exacto"*. Barrí los tres corpus con `registro_borde`: **0 de 121 filas** caen en la
+banda `0 < |d| ≤ 1e-12`. Empates **exactos**: 3, 3 y 1. Así que sobre esta
+evidencia `ε = None` y `ε = 1e-12` son **indistinguibles**, y la pre-declaración no
+carga peso que no tenga. Lo digo para que el CP1 no lo lea como confirmado: no está
+medido fuera de estos tres corpus.
+
+### 4. **I4** contra el orden de `nodes`
+
+`Decision.value` es un **`frozenset`** por diseño (*si el orden decidiera algo,
+sería contexto*). `_seleccionar` devuelve una **lista ordenada** por
+`(-score, término)`, y ese orden **es vivo**: `corpus_service.py:175` dice
+*"`nodes_changed` cubre conjunto **u orden**"*, y el CP0 del otro TASK ya midió que
+mueve `w_sha` y `N_eff`.
+
+**La instancia estructuralmente no puede llevar el orden.** El CP1 sólo puede
+comparar **conjuntos**; el orden es el `g` alfabético ya señalado, y queda afuera de
+la comparación. Que quede dicho antes de que el CP1 reporte "igual".
+
+### 5. `window` no está en la lista del CP0a
+
+`__init__(self, top_k=20, ngram_max=2, window=1)`, documentado *"no usado aún;
+reservado para ventana de co-ocurrencia intra-texto"*. Es un parámetro que **hoy no
+decide nada** y que la tabla del CP0a no contempla. Va como fila con su especie
+propia, o se declara afuera.
+
+### 6. Dos columnas del CP0a ya tienen respuesta uniforme, y está medida
+
+No es tensión: es que conviene saberlo antes de armar la tabla.
+
+- **`calibrate` no calibra ninguno.** `grep` de `top_k|ngram|TOL_EMPATE|node_extractor|stopword`
+  sobre `services/calibrate.py`: **cero coincidencias**.
+- **`save()` no persiste ninguno.** `corpus_service.py:380-390` guarda `texts`,
+  `nodes`, `W`, `w_version_history`, `forced_w_pos` y `registro_borde`. **Ningún
+  parámetro de extracción.** Es el punto del `REG_unidad_texto_saturacion_v1`,
+  confirmado desde el código.
+
+**ALTO.** Las tensiones 1 y 2 mueven premisas: la 1 cambia lo que el CP1 puede
+afirmar, la 2 cambia una fila del CP0a. El CP0a arranca con el OK.

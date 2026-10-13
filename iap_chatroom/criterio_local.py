@@ -54,6 +54,60 @@ piso como los Δt.
 
 La **zona horaria propia del device** la TASK la marca opcional (*"si el device
 quiere"*). No esta implementada.
+
+----------------------------------------------------------------------------
+CP3: EL CORAZON YA NO ESTA ACA  (`TASK_ckm_trust_rule_v1`, orden de delamor)
+----------------------------------------------------------------------------
+
+Hasta el CP2 este archivo tenia **su propio corazon**: la cascada de `if` que
+decidia, con el empate, el piso y el origen escritos aca adentro. Era "la traza
+de como era antes". Desde el CP3 **no decide**: arma su instancia de
+`CkmTrustRule` y **lee** la `Decision`. Los pasos 1-4 viven una sola vez, en
+`services/ckm_trust_rule.py`.
+
+El mapeo es el del CP0 del CP2 (`c620d70`, aceptado por delamor) y verificado
+bit a bit en `tests/test_criterio_local_como_instancia.py` (24/24 sobre el vivo
+03). Aca va **tal cual**, mas la unica pieza que el CP2 no podia poner:
+
+- **`tick = None` entra por el piso.** El CP2 lo dejo declarado como alineado
+  (decision 5 del 12 oct) y **no medible** en el vivo 03 (0 de 24). La forma de
+  decirlo es `trace_streak = None`: *sin el tick no se puede saber si el piso
+  vencio*, que es literalmente el docstring de `evaluar`. El engine marca
+  `FLOOR_UNKNOWN`, la traza **no decide** y la duda sube -> se llama a D. El
+  resultado es el mismo de siempre; lo que cambia es que ahora **sale de la
+  regla** y no de un `if` puesto antes de todo.
+
+**`motivo` y `via` son rotulos, no la decision.** Salen de leer el registro del
+engine (`trace_present`, `floor_reached`, `field_inputs`) y las entradas
+propias (`tick`). Leer el registro no es reimplementar un paso: por eso el piso
+**no se recalcula aca** -- se lee `record["floor_reached"]`.
+
+**LA DIFERENCIA, declarada (no se corrige en silencio).** Hay un caso donde el
+rotulo cambia respecto de la cascada anterior: cuando el piso **y** el campo
+dan los dos al mismo tiempo (`vueltas_sin_llamar >= piso_vueltas` **y**
+`n_nuevos + nombrado > 0`). La cascada evaluaba el piso **antes** que el campo
+y rotulaba `piso` / `VIA_PISO`; la forma dice que el campo decide primero, asi
+que el engine nunca llega a evaluar el piso y el rotulo es
+`mensajes_nuevos`/`nombrado` / `VIA_CRITERIO`.
+
+- **No se pierde la decision: se pierde el rotulo.** `llamar` es la misma en ese
+  caso y en todos. Lo medido esta en `tests/test_criterio_local_cp3.py`, que
+  barre el espacio de entradas **completo** (312 combinaciones) contra una copia
+  congelada de la cascada anterior: 0 difieren en `llamar`, 60 en `motivo` y las
+  mismas 60 en `via`, todas la colision.
+- **Decision de delamor, 13 oct:** el piso **no se recalcula afuera de la regla**,
+  y el rotulo `piso` **se pierde** en la colision, declarado como perdida. No es
+  rotulable desde el registro sin ese recalculo, que seria el segundo corazon que
+  el CP3 viene a sacar.
+- En el vivo 03 ocurre **0 de 24 veces** (lo mide el CP2).
+
+Lo que **no** cambio: la firma de `evaluar`, la forma del registro (las mismas
+claves, ninguna nueva), el sorteo de la auditoria y el de `auditado_pase` --con
+su orden, que es lo que hace deterministico un RNG con semilla--, el estado
+interno y `divergencia_auditoria`.
+
+**La auditoria no entra en la forma** (CP2): no resuelve un empate, **mide la
+regla**. Queda donde estaba, leyendose encima de la decision.
 """
 
 from __future__ import annotations
@@ -61,6 +115,15 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from typing import Optional
+
+# El corazon. CP3: este archivo ya no implementa los pasos, los instancia.
+from services.ckm_trust_rule import (
+    DECLARED,
+    FIELD,
+    CkmTrustRule,
+    RuleParams,
+    Threshold,
+)
 
 # El tercer valor del vocabulario de salida. Hoy hay dos formas de terminar una
 # vuelta sin accion, y son distintas:
@@ -89,6 +152,18 @@ MOTIVO_PRIMERA = "primera_vuelta"
 VIA_CRITERIO = "criterio"
 VIA_PISO = "piso"
 VIA_AUDITORIA = "auditoria"
+
+
+# ── El mapeo a la forma (CP3). Los nombres del casillero, una sola vez ──────
+#
+# `TASK_ckm_trust_rule_v1`, CP0 del CP2 (`c620d70`). Lo que aca se declara es
+# **el mapeo**, no `criterio_local`: la kappa = 0 sale de leer `if n_nuevos > 0`,
+# y la epsilon no existe en este filtro, asi que va `None` **declarado**.
+ORDEN = "b0 — la vuelta del device"   # el orden donde rige esta instancia
+CANDIDATO = "llamar"                  # C: un solo candidato, la vuelta
+ESCALA_A = "b1 — el LLM"              # ↑k: llamar al modelo **es** escalar
+
+_MAPEO = "el mapeo del CP2 (TASK_ckm_trust_rule_v1, c620d70)"
 
 
 @dataclass(frozen=True)
@@ -205,6 +280,14 @@ class CriterioLocal:
         `tick=None` es el clock UNKNOWN. **Se llama a D.** Sin el tick no se
         puede saber si el piso vencio, y el filtro no se arroga el silencio
         sobre una dimension que no observo.
+
+        Desde el CP3 eso **no es un `if` previo**: entra por el piso. Sin tick,
+        `trace_streak=None` -> el engine marca `FLOOR_UNKNOWN`, la traza no
+        decide y la duda sube. Mismo resultado, y ahora sale de la regla.
+
+        Devuelve las mismas claves que antes del CP3. **Ninguna nueva**: la
+        `Decision` del engine se lee y no se guarda, para que el gate `f96c234`
+        valga tambien sobre la forma del registro.
         """
         umb = self.umbrales
         deltas = {
@@ -249,37 +332,123 @@ class CriterioLocal:
                 self._vueltas_sin_llamar += 1
             return r
 
-        # (a) El clock UNKNOWN: se llama. No se puede evaluar el piso sin tick.
-        if tick is None:
-            return registro(True, "tick_UNKNOWN", VIA_CRITERIO)
+        # ── LA REGLA DECIDE. Los pasos 1-4 no estan aca (CP3) ───────────
+        dec = self._regla(n_nuevos=n_nuevos, nombrado=nombrado).decide(
+            [CANDIDATO],
+            # `capacity=None`: no hay lugares que contar, asi que la exencion
+            # del paso 1 no aplica. Con `capacity=1` el empate exacto tendria
+            # un lugar libre y daria **llamar**: invertiria el skip (medido en
+            # el CP2, 17 de 24).
+            capacity=None,
+            # T: el silencio. En la primera vuelta **no hay traza**.
+            trace=None if self._sin_traza() else frozenset(),
+            # P: sin el tick el piso **no es evaluable**. `None` declarado, no
+            # 0 (decision 5 del 12 oct). De aca sale el viejo `tick_UNKNOWN`.
+            trace_streak=None if tick is None else self._vueltas_sin_llamar,
+            turn_ref={"tick": tick},
+            # f es la suma, asi que pierde cual de los dos disparo: el registro
+            # del engine los conserva por separado.
+            field_inputs={"n_nuevos": n_nuevos, "nombrado": nombrado},
+        )
+        # `ESCALATED` -> llamar es literal: llamar al modelo **es** escalar.
+        llamar = (dec.value is None) or (CANDIDATO in dec.value)
 
-        # (b) La primera vuelta: **nunca llamo** no es "llamo hace 0 vueltas".
-        #     El estado del filtro arranca en UNKNOWN, y arrogarse el silencio
-        #     sobre un device que todavia no decidio nada es el mismo relleno
-        #     de ausencias que vengo sacando de todo el resto. Ademas sostiene
-        #     la iniciativa desde la vuelta 1 y no desde la 12.
-        if self._tick_ultima_llamada is None and self._vueltas_sin_llamar == 0:
-            return registro(True, MOTIVO_PRIMERA, VIA_CRITERIO)
+        # ── Los rotulos: se LEEN del registro, no se vuelven a decidir ──────
+        # El orden de abajo es el de los rotulos de siempre, para que la traza
+        # siga diciendo lo mismo. No es el orden de la decision: eso ya paso.
+        if llamar:
+            if tick is None:
+                # el piso no se pudo evaluar, y la unica razon posible aca es
+                # que no hubo tick: `piso_vueltas > 0` lo garantiza el
+                # __post_init__, y el piso siempre esta declarado.
+                return registro(True, "tick_UNKNOWN", VIA_CRITERIO)
+            if not dec.record["trace_present"]:
+                return registro(True, MOTIVO_PRIMERA, VIA_CRITERIO)
+            if dec.record.get("floor_reached"):
+                return registro(True, MOTIVO_PISO, VIA_PISO)
+            if dec.origin == FIELD:
+                # LA DIFERENCIA declarada en el docstring: si el piso tambien
+                # estaba vencido, el engine no llego a evaluarlo y el rotulo
+                # es el del campo. La decision es la misma; el rotulo no.
+                return registro(
+                    True,
+                    MOTIVO_NOMBRADO if nombrado else MOTIVO_MENSAJES,
+                    VIA_CRITERIO,
+                )
+            # No hay rotulo para esto. El mapeo se declara total y, si no lo
+            # es, lo dice: inventar un motivo seria afirmar lo que no se sabe.
+            raise AssertionError(
+                f"llamar sin rotulo: origin={dec.origin!r} reason={dec.reason!r} "
+                f"record={dec.record!r}"
+            )
 
-        # (c) El piso, deterministico. Va antes que todo lo demas
-        #     para que ningun criterio posterior pueda dejarlo sin efecto.
-        # `piso_vueltas > 0` lo garantiza __post_init__: no hay rama apagada.
-        if self._vueltas_sin_llamar >= umb.piso_vueltas:
-            return registro(True, MOTIVO_PISO, VIA_PISO)
-
-        # (d) El criterio propiamente: lo que cambio.
-        if nombrado:
-            return registro(True, MOTIVO_NOMBRADO, VIA_CRITERIO)
-        if n_nuevos > 0:
-            return registro(True, MOTIVO_MENSAJES, VIA_CRITERIO)
-
-        # (e) La auditoria: se llama aunque el criterio diga que no, para medir
-        #     el costo del sesgo. No sostiene la iniciativa — eso es (b).
+        # La auditoria **no es de la regla**: no resuelve un empate, la mide.
+        # Se llama aunque la regla diga que no, para ver el costo del sesgo. No
+        # sostiene la iniciativa — eso es el paso 3 sin traza.
         if self.rng.random() < umb.tasa_auditoria:
             return registro(True, MOTIVO_AUDITORIA, VIA_AUDITORIA)
 
-        # (f) El skip, con su motivo y sus deltas.
+        # El skip, con su motivo y sus deltas.
         return registro(False, MOTIVO_SIN_CAMBIO, None)
+
+    # ------------------------------------------------------------------
+    def _sin_traza(self) -> bool:
+        """
+        T no existe: **nunca llamo** no es "llamo hace 0 vueltas".
+
+        El estado del filtro arranca en UNKNOWN, y arrogarse el silencio sobre
+        un device que todavia no decidio nada es el mismo relleno de ausencias
+        que vengo sacando de todo el resto. Ademas sostiene la iniciativa desde
+        la vuelta 1 y no desde la 12.
+
+        Llenar el casillero T es del instanciador; **decidir con el** es del
+        engine (paso 2).
+        """
+        return self._tick_ultima_llamada is None and self._vueltas_sin_llamar == 0
+
+    def _regla(self, *, n_nuevos: int, nombrado: bool) -> CkmTrustRule:
+        """
+        La instancia de la vuelta: ``Regla_k = <C, f, R, kappa, eps, T, P, g, ^k>``.
+
+        Se arma por vuelta porque **f es de la vuelta**: cierra sobre
+        `n_nuevos` y `nombrado`. Los umbrales no cambian; f si.
+
+        | casillero | que es aca |
+        |---|---|
+        | **C** | la vuelta. Un candidato: `"llamar"` |
+        | **f** | `n_nuevos + nombrado` |
+        | **kappa** | **0**, `DECLARED` **por el mapeo**: sale de leer `if n_nuevos > 0` |
+        | **eps** | `None` **declarado**: este filtro no tiene epsilon |
+        | **T** | el silencio (`_sin_traza`), y `P` = `piso_vueltas` |
+        | **g** | **no hay**. La auditoria no es un `g`: mide la regla |
+        | **^k** | el LLM. `ESCALATED` -> llamar |
+
+        `g=None` quiere decir que **no hay paso 4**: sin traza y sin piso, la
+        duda sube y no se resuelve aca (I5).
+        """
+        umb = self.umbrales
+        return CkmTrustRule(
+            order=ORDEN,
+            params=RuleParams(
+                cut=Threshold(
+                    value=0.0, produced_by_order=_MAPEO, provenance=DECLARED,
+                    source="sale de leer `if n_nuevos > 0`, la cascada anterior",
+                ),
+                tolerance=Threshold(
+                    value=None, produced_by_order=_MAPEO, provenance=DECLARED,
+                    source="criterio_local no declara epsilon (TASK, 11 oct)",
+                ),
+                floor=Threshold(
+                    value=umb.piso_vueltas, produced_by_order=_MAPEO,
+                    provenance=DECLARED,
+                    source=("UmbralesCriterioLocal.piso_vueltas, "
+                            f"calibrado={umb.calibrado}"),
+                ),
+            ),
+            field_criterion=lambda _c: n_nuevos + int(bool(nombrado)),
+            context=None,
+            escalate_to=ESCALA_A,
+        )
 
 
 def divergencia_auditoria(registros: list[dict]) -> dict:

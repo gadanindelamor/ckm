@@ -116,7 +116,37 @@ delamor: *"el campo continuo no salta; salta la medición; el instrumento NO sal
 | **CP0** | Sin código. Escribir cada instancia en la forma: `criterio_local`, `should_rebuild`, `calibrate`, `NodeExtractor._seleccionar`. Tabla con un casillero por elemento, citando archivo y línea. | Los casilleros vacíos, usando como entrada la tabla de desalineamientos (Opus vio: ε falta en criterio_local y en should_rebuild; P falta en calibrate; el volumen es un g sin nombre) y las instancias que **no entran en la forma**. Si una no entra, se reporta, no se fuerza: puede fallar la forma o la instancia. |
 | **CP1** | `services/ckm_trust_rule.py`, puro, con tests de la forma: los cuatro orígenes, el empate con ε, **`tolerance` obligatoria (sin default; `None` sólo declarado y registrado)**, el piso que lleva de 2 a 3, `None` declarado, el paso 3 sin `escalate_to`. | Verde, xfail o lo que no se pudo testear. |
 | **CP2** | Expresar `CriterioLocal` como instancia de `CkmTrustRule` **en un test**, sin tocar `criterio_local.py`. Mismas entradas, mismas decisiones, mismos motivos que hoy, sobre `experiments/vivo_03_criterio_local_log.json`. | Bit a bit igual, o la lista de diferencias. Cada diferencia es una diferencia entre la forma y la instancia, y se reporta sin elegir. |
-| **CP3** | **Sólo con orden de delamor:** que `criterio_local.py` instancie el módulo. | — |
+| **CP3** | **Sólo con orden de delamor:** que `criterio_local.py` instancie el módulo. **Paso fijo, antes del ALTO: la sección "Lo que la forma no nombra"** (acordado el 12 oct, escrito el 13). | Las 24 decisiones de `vivo_03` iguales y la suite completa sin cambios, más **"Lo que la forma no nombra"**. |
+
+## "Lo que la forma no nombra" — paso fijo de todo mapeo a la regla
+
+*Acordado con delamor el 12 oct; quedó sin escribir y se escribe acá el 13. **Vale
+para cada mapeo futuro de una instancia a la regla**, no sólo para el CP3.*
+
+Un mapeo que sólo reporta lo que **entró** en los casilleros da por no existente lo
+que quedó afuera. La forma `⟨C, f, R, κ, ε, T, P, g, ↑k⟩` tiene nueve casilleros, y
+una instancia viva suele distinguir cosas que **ninguno** de los nueve nombra.
+
+El reporte del mapeo lleva una sección con esa lista. Para **cada** elemento:
+
+- **qué distinguía** la instancia,
+- **dónde vivía**: `archivo:línea` **antes** del cambio,
+- **dónde vive después**, o **"se pierde"** si se pierde.
+
+**Si algo se pierde, no se resuelve: se reporta y ALTO.** Perder una distinción es
+una decisión sobre el modelo, y no es de Code.
+
+Un elemento puede quedar afuera de los nueve casilleros y **no** perderse: puede
+sobrevivir como rótulo leído del registro, como insumo en `field_inputs`, o
+alrededor del engine —la auditoría **mide** la regla y por eso no es un casillero
+de la regla—. Eso también se declara, con su lugar nuevo.
+
+**La distinción que importa, y que el reporte tiene que hacer explícita:** no es lo
+mismo perder una **decisión** que perder un **rótulo**. Perder una decisión es ALTO.
+Perder un rótulo —la instancia distinguía dos razones y la forma escribe una sola—
+se declara **como pérdida**, con su nombre, y lo resuelve delamor. Un reporte que
+dice "nada se pierde" porque ninguna decisión cambió está tapando la segunda
+(corrección de delamor, 13 oct, sobre el reporte del CP3).
 
 ## Fuera de este TASK
 

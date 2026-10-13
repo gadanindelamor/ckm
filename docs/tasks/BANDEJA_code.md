@@ -8008,3 +8008,180 @@ propio registro, cada uno con su `source`. El módulo sigue sin que nadie lo lla
 en el código vivo (gate `f96c234`).
 
 **ALTO.**
+
+---
+## CP3 — `criterio_local` instancia el engine — 2026-10-13 04:24 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). `TASK_ckm_trust_rule_v1`, CP3. Orden de
+delamor, 13 oct. **Sin commitear**: esto es el ALTO del checkpoint.*
+
+### Lo que se hizo
+
+`iap_chatroom/criterio_local.py` ya no decide. La cascada de `if` que estaba en
+`criterio_local.py:252-282` **se fue**: ahora arma su instancia de `CkmTrustRule`
+(`_regla()`) y **lee** la `Decision`. Los pasos 1–4 viven una sola vez, en
+`services/ckm_trust_rule.py`.
+
+El mapeo es el del CP0 del CP2 (`c620d70`), tal cual, más la pieza que el CP2 no
+podía poner: **`tick=None` entra por el piso**. Sin tick no se puede saber si el
+piso venció —es literalmente el docstring de `evaluar`—, así que
+`trace_streak=None`, el engine marca `FLOOR_UNKNOWN`, la traza no decide y la duda
+sube. Se llama a D igual que siempre; lo que cambia es que **sale de la regla** y
+no de un `if` puesto antes de todo. Era la decisión 5 del 12 oct, que el CP2 dejó
+declarada como alineada y **no medible** en `vivo_03` (0 de 24). Ahora está medida.
+
+**`motivo` y `via` son rótulos, no la decisión.** Salen de leer el registro de la
+`Decision` (`trace_present`, `floor_reached`) y las entradas propias (`tick`). El
+piso **no se recalcula acá**: hay un test textual que verifica que la comparación
+`_vueltas_sin_llamar >= …` ya no está en el archivo. Era el segundo corazón.
+
+### La verificación
+
+- **Las 24 decisiones de `experiments/vivo_03_criterio_local_log.json`: iguales.**
+  No por el mapeo del test del CP2 —eso ya estaba—, sino **replayando el log por
+  `criterio_local` mismo**, que es lo que el CP3 cambió. Secuencial y con estado:
+  cada device corre sus vueltas en orden y el filtro lleva su `_vueltas_sin_llamar`;
+  si una vuelta se corriera de lugar, las de atrás se desalinearían. Coinciden
+  `llamar`, `motivo`, `via`, `auditado_pase` **y** `vueltas_sin_llamar`, los 24.
+  El azar no se re-sortea: se guioniza desde el log (hay exactamente una tirada por
+  vuelta, y el log dice cuál fue).
+- **El barrido completo del espacio de entradas: 312 combinaciones, `llamar`
+  idéntico en las 312.** Contra una **copia congelada** de la cascada de `60e21f5`,
+  no contra mi lectura de ella. Ejes: `tick` (None, int) × `n_nuevos` (0,1,7) ×
+  `nombrado` × `nunca_llamó` × `vueltas_sin_llamar` (0, 1, piso−1, piso, piso+1) ×
+  `piso_vueltas` (1, 3, 12).
+- **Suite completa: 579 pasan, 5 xfail.** Eran **569 + 5**; los 10 nuevos son
+  `tests/test_criterio_local_cp3.py` (ahora 11, con el replay del vivo 03).
+- **El registro no ganó ni perdió claves.** La `Decision` se lee y **no se guarda**,
+  para que el gate valga también sobre la forma del registro. Hay un test.
+- **El orden de los sorteos no se movió**: exactamente una tirada de RNG por vuelta,
+  igual que antes, verificado contra un testigo con la misma semilla.
+
+### La única diferencia, declarada
+
+**La colisión piso–campo.** Cuando el piso venció **y** el campo da positivo a la
+vez (`vueltas_sin_llamar >= piso_vueltas` **y** `n_nuevos + nombrado > 0`):
+
+| | antes | ahora |
+|---|---|---|
+| `llamar` | `True` | `True` |
+| `motivo` | `piso` | `mensajes_nuevos` / `nombrado` |
+| `via` | `VIA_PISO` | `VIA_CRITERIO` |
+
+La cascada evaluaba el piso **antes** que el campo; la forma hace decidir al campo
+primero, y entonces el engine **nunca llega a evaluar el piso**. **La decisión es la
+misma.** En el barrido son 60 de 312 combinaciones — ese número es del barrido, que
+tiene `piso_vueltas=1` en un tercio de las filas y por eso sobre-representa la
+colisión; **no** es una tasa esperable en una corrida. En `vivo_03` es **0 de 24**
+(lo midió el CP2: los dos `piso` tienen `f = 0`).
+
+No es rotulable desde el registro sin recalcular el piso afuera del engine, y eso
+sería el segundo corazón que el CP3 viene a sacar.
+
+**El conteo que pidió delamor (13 oct), sobre las 312:**
+
+| | difieren |
+|---|---|
+| `llamar` | **0** |
+| `motivo` | **60** |
+| `via` | **60**, y son **las mismas 60 filas** |
+
+**Todas son la colisión. Ninguna otra.** Que `motivo` y `via` cambien en el mismo
+conjunto importa: si cambiaran en conjuntos distintos habría dos diferencias y no
+una. Y los únicos pares que se dan vuelta son `piso → mensajes_nuevos`,
+`piso → nombrado` y `VIA_PISO → VIA_CRITERIO`. Medido en
+`test_cuantas_difieren_en_motivo_y_en_via_y_son_las_mismas`.
+
+### Lo que la forma no nombra
+
+*Paso fijo pedido por delamor (acordado el 12 oct, escrito el 13). Escrito también
+como sección propia del TASK, para que valga en cada mapeo futuro.*
+
+La forma `⟨C, f, R, κ, ε, T, P, g, ↑k⟩` tiene nueve casilleros. Esto es lo que
+`criterio_local` distinguía y **ninguno de los nueve nombra**:
+
+| qué distinguía | dónde vivía (antes) | dónde vive después |
+|---|---|---|
+| **la primera vuelta** — el device nunca llamó al LLM | `criterio_local.py:261-262` | **No se pierde.** Es **T que no existe**: `_sin_traza()` (`:391`) pasa `trace=None` y el engine corre el paso 2 en vacío. El rótulo `primera_vuelta` se lee de `record["trace_present"]` (`:361`). **La forma no tiene "primera vuelta"**: tiene "no hay traza", y no son lo mismo — "nunca llamé" y "llamé y no conservo nada" son dos cosas que la forma escribe igual |
+| **`nombrado` vs `mensajes_nuevos`** | `criterio_local.py:271` y `:273`, dos ramas | **No se pierde.** `f` es la **suma** y la pierde; viaja en `field_inputs` (`:347`) y el rótulo se re-deriva de la entrada propia (`:371`). Pero **la forma no la nombra**: `f = 1` por nombrado y `f = 1` por un mensaje son el mismo punto del campo |
+| **la auditoría al azar** | `criterio_local.py:278-279` | **No se pierde, y no es un casillero.** Queda donde estaba (`:384`), **afuera** del engine, leyéndose encima de la `Decision`. No resuelve un empate: **mide la regla**. Por eso tampoco es un `g` — un `g` decide, la auditoría observa |
+| **`dt_minimo_s`** | `criterio_local.py:131` (declarado), `:231` (al registro) | **Igual que antes: se registra y nunca se aplica.** `:202` y `:310`. **El CP3 no lo cambia** — ya era así en `60e21f5`, y el docstring del módulo lo dice desde el CP2b: los Δt entran "como información que viaja en el registro". No hay ninguna comparación contra `dt_minimo_s` en el repo (verificado por `grep`), ni antes ni ahora |
+
+**No se pierde ninguna decisión; se pierde un rótulo.** La corrección es de delamor
+(13 oct): decir "nada se pierde" contradecía el quinto punto de abajo.
+
+De los cuatro de la tabla **no se pierde nada**. Lo que sí hay en el segundo es una
+distinción que la forma **no puede escribir** —`f` como suma no dice cuál de los dos
+disparó—, y que se sostiene con `field_inputs`: eso es registro (R), no campo (f).
+
+**El quinto, que apareció al mapear y no estaba en la lista.** La forma no nombra la
+diferencia entre *"el piso venció"* y *"el campo decidió"* cuando las dos son verdad.
+Es la colisión de la sección anterior, y ahí **se pierde el rótulo `piso`**:
+
+| qué distinguía | dónde vivía (antes) | dónde vive después |
+|---|---|---|
+| **piso vencido vs campo positivo, los dos a la vez** | `criterio_local.py:267` evaluado **antes** que `:271-273` | **Se pierde el rótulo.** En la colisión el rótulo es el del campo; `piso`/`VIA_PISO` no sale. **La decisión no se pierde**: se llama igual |
+
+**Decisión de delamor, 13 oct** (*"Code tiene razón"*): el piso **no se recalcula
+afuera de la regla**; en la colisión el rótulo es el del campo y el rótulo `piso`
+**se pierde**, declarado como pérdida acá y en la tabla. No se corrige.
+
+**El origen de la `Decision` en el registro sigue abierto** (delamor, 13 oct): no se
+agrega.
+
+### Un hallazgo de antes del CP3, que el CP3 no introduce ni arregla
+
+delamor preguntó si el barrido incluye `tick=None` seguido de un tick conocido.
+**No lo incluye**: el barrido arma un filtro por combinación y le pone el estado a
+mano, así que **no tiene secuencias**. Se midió aparte, y sale esto:
+
+| vuelta | entrada | rótulo |
+|---|---|---|
+| 1 | `tick=1` | `primera_vuelta` |
+| 2 | `tick=None` | `tick_UNKNOWN` |
+| 3 | `tick=7` | **`primera_vuelta` otra vez** |
+
+La llamada con `tick=None` guarda `_tick_ultima_llamada = None` —*"no se sabe en qué
+tick se llamó, y eso no es el tick −1"*, el comentario está desde el CP2b— y
+`_sin_traza()` lee ese *no se sabe* como *nunca llamó*. Es **I2 por la puerta de
+atrás**: una ausencia leída como un valor, justo en el archivo donde se venían
+sacando.
+
+**Es de antes del CP3**: se corrió la misma secuencia contra el archivo de `60e21f5`
+y da lo mismo, rótulo por rótulo. **No se arregló** —sería un cambio de
+comportamiento, y no es de este checkpoint—. Queda clavado en un test y reportado.
+
+### El inventario del "un solo corazón" se movió
+
+`iap_chatroom/criterio_local.py` **salió** de `CORAZONES_CONOCIDOS`. No fue a
+`SOLO_TEXTO`: sigue produciendo `MOTIVO_`/`VIA_` como salida viva, que es más que
+"usa los nombres". Se abrió una tercera lista, **`INSTANCIAS`**, que es la palabra
+que el TASK ya usaba (*"cada aplicación es una instancia"*). Que un archivo pase de
+`CORAZONES_CONOCIDOS` a `INSTANCIAS` es lo que se ve cuando un corazón se alinea, y
+ahora se ve en el diff de esa lista.
+
+### Archivos tocados
+
+- `iap_chatroom/criterio_local.py` — la cascada por la instancia, más el docstring
+  del CP3 con la diferencia declarada.
+- `services/ckm_trust_rule.py` — sólo el docstring: ya no es cierto que nadie lo llame.
+- `tests/test_ckm_trust_rule.py` — la tercera lista del inventario.
+- `tests/test_criterio_local_cp3.py` — **nuevo**, 11 tests.
+- `docs/tasks/TASK_ckm_trust_rule_v1.md` — la fila del CP3 y la sección nueva.
+
+### Lo que NO se hizo
+
+- **No se commiteó.** Esto es el ALTO.
+- **No se tocó `tests/test_criterio_local.py`**: los 60-y-pico tests de CP2b pasan
+  sin cambios, y ésa es parte de la verificación.
+- **No se eligió ningún valor.** κ y ε los declara el mapeo; P sale de
+  `UmbralesCriterioLocal.piso_vueltas`, con su `calibrado` en el `source`.
+- **No se agregó nada al registro**, ni siquiera el origen de la `Decision`. Habría
+  sido información útil en la traza y es un cambio de comportamiento. delamor, 13
+  oct: **sigue abierto, no se agrega.**
+- **No se arregló** el `primera_vuelta` después de un `tick_UNKNOWN`: es de antes y
+  no es de este checkpoint.
+
+*Revisado por delamor el 13 oct. Esta entrada se amplió con el conteo de `motivo`/
+`via`, la secuencia `tick=None` → tick conocido, la corrección de "nada se pierde" y
+la decisión sobre la colisión. **Commiteado y pusheado** después de eso.*

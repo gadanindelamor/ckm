@@ -4,6 +4,11 @@
 `TASK_ckm_trust_rule_v1`, CP2. **`iap_chatroom/criterio_local.py` NO se toca**: se
 lo expresa en la forma, acá, y se compara contra sus propios registros.
 
+*(Vale en su marco: el CP3 —13 oct— sí lo tocó, y ahí `criterio_local` pasó a
+instanciar el engine. Este archivo queda como lo que midió el CP2, el mapeo
+escrito **afuera**. El replay del mismo log **por `criterio_local` mismo** está en
+`tests/test_criterio_local_cp3.py`.)*
+
 Entrada: `experiments/vivo_03_criterio_local_log.json` — el vivo 03, **24
 registros** de 2 devices, `piso_vueltas = 6`, `calibrado: false`.
 

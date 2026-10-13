@@ -6,8 +6,16 @@ aplicación de la regla"*. Los pasos 1–4, el empate con ε, el piso, el origen
 registro viven **una sola vez**: acá. Cada aplicación es una **instancia** que le
 pasa sus elementos al engine y **no reimplementa ningún paso**.
 
-**Gate `f96c234`: este módulo es puro y nadie lo llama todavía** (hasta el CP3).
-No importa nada del repo, no escribe nada, no tiene estado entre llamadas.
+**El módulo es puro**: no importa nada del repo, no escribe nada, no tiene
+estado entre llamadas.
+
+**CP3 (13 oct, orden de delamor): ya lo llama alguien.** `iap_chatroom/
+criterio_local.py` es la primera instancia en producción: le pasa sus
+casilleros y lee la `Decision`. El gate `f96c234` se sostuvo donde importa —las
+24 decisiones del vivo 03 y las 312 combinaciones del barrido dan lo mismo que
+antes—, y la única diferencia es un **rótulo** en la colisión piso-campo, que
+está declarada en el docstring de ese archivo y medida en
+`tests/test_criterio_local_cp3.py`.
 
 ## La forma, con el nombre largo de cada letra
 

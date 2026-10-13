@@ -401,8 +401,9 @@ def test_origin_fuera_de_ORIGINS_levanta() -> None:
 # encuentra un off-by-one).
 #
 # La lista está **medida**, no supuesta: sale del inventario del REPORTE CP0 del
-# 12 oct, corriendo este mismo barrido. Y va en **dos partes**, porque un archivo
-# que sólo usa los nombres no es un corazón (sugerencia de delamor, 12 oct).
+# 12 oct, corriendo este mismo barrido. Y va en **tres partes**, porque un archivo
+# que sólo usa los nombres no es un corazón (sugerencia de delamor, 12 oct) y una
+# **instancia** tampoco lo es (CP3, 13 oct: `criterio_local` pasó de una a otra).
 
 NEEDLES = {
     "empate": ("TOL_EMPATE", "empate"),
@@ -414,8 +415,6 @@ NEEDLES = {
 # Corazones conocidos: **reimplementan** empate, piso u origen. Cada uno es un
 # alineamiento **pendiente**, no un aval. El gate `f96c234` prohíbe tocarlos.
 CORAZONES_CONOCIDOS = {
-    "iap_chatroom/criterio_local.py":
-        "exceptuado por el TASK: la traza de cómo era antes. No se toca hasta el CP3",
     "services/node_extractor.py":
         "_seleccionar: empate (TOL_EMPATE), traza (seleccion_anterior) y g (orden alfabético)",
     "services/corpus_service.py":
@@ -431,6 +430,20 @@ CORAZONES_CONOCIDOS = {
 SOLO_TEXTO = {
     "iap_chatroom/autonomous_device.py":
         "pasa piso_vueltas a CriterioLocal: es consumidor, no implementación",
+}
+
+# **Instancias**: le pasan sus casilleros al engine y **no reimplementan ningún
+# paso**. Siguen apareciendo en el barrido porque conservan su vocabulario de
+# rótulos (`MOTIVO_`, `VIA_`), que es salida viva y no una segunda decisión.
+#
+# No son un corazón ni una coincidencia: son la tercera cosa que el TASK nombra
+# —*"cada aplicación es una instancia"*—, y por eso van en su propia lista. Que
+# un archivo **entre** acá viniendo de `CORAZONES_CONOCIDOS` es el resultado de
+# un alineamiento, y se ve en el diff de esta lista.
+INSTANCIAS = {
+    "iap_chatroom/criterio_local.py":
+        "CP3: instancia CkmTrustRule. Conserva MOTIVO_/VIA_ como rótulos, "
+        "leídos del registro de la Decision; el piso no se recalcula acá",
 }
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -463,7 +476,7 @@ def test_un_solo_corazon_no_aparece_ninguno_nuevo() -> None:
     dos direcciones son información.
     """
     halladas = set(_barrido())
-    declaradas = set(CORAZONES_CONOCIDOS) | set(SOLO_TEXTO)
+    declaradas = set(CORAZONES_CONOCIDOS) | set(SOLO_TEXTO) | set(INSTANCIAS)
     nuevas = halladas - declaradas
     assert not nuevas, (
         "apareció un corazón fuera de la lista congelada: "
@@ -481,8 +494,11 @@ def test_la_lista_congelada_no_mezcla_corazones_con_coincidencias() -> None:
     """Sugerencia de delamor, 12 oct: que el inventario no se infle. Un archivo que
     sólo usa los nombres **no es un corazón**, y cada parte lleva su razón."""
     assert not (set(CORAZONES_CONOCIDOS) & set(SOLO_TEXTO))
+    assert not (set(CORAZONES_CONOCIDOS) & set(INSTANCIAS))
+    assert not (set(SOLO_TEXTO) & set(INSTANCIAS))
     assert all(v for v in CORAZONES_CONOCIDOS.values())
     assert all(v for v in SOLO_TEXTO.values())
+    assert all(v for v in INSTANCIAS.values())
 
 
 def test_el_falso_positivo_es_la_prueba_del_limite() -> None:

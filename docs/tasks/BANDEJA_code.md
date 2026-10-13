@@ -8321,3 +8321,120 @@ No es tensión: es que conviene saberlo antes de armar la tabla.
 
 **ALTO.** Las tensiones 1 y 2 mueven premisas: la 1 cambia lo que el CP1 puede
 afirmar, la 2 cambia una fila del CP0a. El CP0a arranca con el OK.
+
+---
+## CP0a — órdenes, condiciones y variables de NodeExtractor — 2026-10-13 07:08 UTC
+
+*Claude Opus 5 (Code). `TASK_node_extractor_regla_v1`, CP0a. **Sin código**: nada se
+tocó, nada se corrió salvo lecturas. Los cuatro ajustes de delamor/Opus están en
+`0f3391c`.*
+
+### 1. Órdenes
+
+Criterio: *un orden es lo que queda fijo mientras el de abajo varía.*
+
+| orden | qué decide | qué queda fijo mientras el de abajo varía | ↑k |
+|---|---|---|---|
+| **n0 — el texto** | `evaluate(text, nodes)` → σ ∈ {+1,−1}^N (`:298-307`) | `nodes` y el analizador | **n1** |
+| **n1 — el corpus, una vuelta de `accumulate`** | el **pool** (`:218`) y **`_seleccionar`** (`:256`) → `nodes` | `top_k`, el factor **3**, `ε`, el analizador | **n2** |
+| **n2 — los parámetros de extracción** | quién fija `top_k`, el factor 3, `ngram_max`, el `token_pattern`, las stopwords, `TOL_EMPATE`, la unidad de texto | — | **n3** |
+| **n3 — qué es un nodo** | delamor. **Caso base: decide declarando** | — | — |
+
+**Contigüidad.** n0→n1 y n1→n2 se sostienen con el criterio. n2→n3 es la frontera
+que el TASK ya pone afuera (*"qué es un nodo lo decide delamor"*).
+
+**n2 no tiene instancia en código.** No lo mide `calibrate` (cero coincidencias), no
+lo persiste `save()`, y ningún registro lo acompaña: es **una persona en un commit**.
+Por eso todo valor de la tabla de abajo sale con origen `DECLARADO` o `default de
+librería`, ninguno `MEDIDO`. El orden de arriba existe y **no deja traza**.
+
+**La vuelta de n1 es la hélice** (decisión del 12 oct): cada `accumulate` ocurre
+sobre otro corpus, así que la recursión tiene caso base. Hoy el `turn_ref` que le
+correspondería es el `w_version_id`, que `CorpusService` sí lleva.
+
+### 2. El *"no se ubica"* del CP0: **sigue sin poder decirse**, y con razón
+
+El **pool** y **`_seleccionar`** son **dos decisiones en el mismo orden n1**, no dos
+órdenes. El criterio no los separa: los dos corren **una vez por `accumulate`**,
+sobre el mismo corpus, y ninguno queda fijo mientras el otro varía. Y son dos
+criterios **distintos**: el pool corta por **frecuencia**, `_seleccionar` por
+**TF-IDF medio**.
+
+Las dos lecturas posibles, sin elegir:
+
+- **el pool es `C`** — produce los candidatos y no es un paso de la regla. Limpio
+  con la forma, pero deja sin explicar que el pool **decide** (excluye términos) y
+  **no tiene R**;
+- **el pool es un segundo `f` en n1** — explica que decida, y la forma lo prohíbe:
+  *"hay uno solo"* (delamor, 12 oct).
+
+**No se fuerza.** Escribir el pool en la forma con sus casilleros vacíos es el CP0.
+
+### 3. Condiciones — lo que tiene que valer para que la salida signifique algo
+
+| condición | hoy | se declara | se registra | se persiste |
+|---|---|---|---|---|
+| **unidad de texto** | la pone **quien llama**: un elemento de la lista de `ingest(texts)` (`corpus_service.py:120-125`). El servicio no la define | **no** | no | **los textos sí** (`save()`), la *unidad* no: se recupera mirando, no leyendo una declaración |
+| **idioma/s** | **ES + EN**: stopwords unión de los dos (703) y `token_pattern` con el alfabeto acentuado de los dos | en un **comentario** (`:23-33`) | no | no |
+| **tamaño del corpus** | `min_texts` (default **3**, sin origen declarado — inventario del otro TASK) | el valor sí, su **origen no** | en el panel (`:214`) | no |
+| **saturación** | del `REG_unidad_texto_saturacion_v1`. **No hay nada en el código** que la mire | **no** | no | no |
+| **encoding** | el `token_pattern` asume **precompuesto (NFC)** y `strip_accents=None` | **no, en ningún lado** | no | no |
+
+Las tres últimas filas son **condiciones no declaradas**: hoy la salida puede
+significar otra cosa y nada lo dice. **Si se cumplen o no, lo mide el CP0** —acá no
+lo afirmo.
+
+### 4. Variables — todo parámetro que decide algo
+
+**Especies:** `CAL` calibrable · `NODO` definición de qué es un nodo (de delamor) ·
+`NUM` numérica, no es de la regla · `RES` reservado: hoy no decide.
+
+| parámetro | valor | origen | orden | ¿`calibrate`? | ¿`save()`? | tolerancia | especie |
+|---|---|---|---|---|---|---|---|
+| `top_k` | 20 (def.) · 32 en el canal · 12 en el demo | **declarado**, sin registro | n2 | **no** | **no** | — | `CAL` |
+| **factor 3** del pool (`max_features = top_k*3`) | 3, literal en `:218` | **no se sabe** — ningún registro lo nombra | n2 | **no** | **no** | — | `CAL` |
+| `ngram_max` | 2 | **declarado** | n2 | **no** | **no** | — | `NODO` |
+| `token_pattern` — **largo mínimo** | `{2,}` tras la inicial → **3 caracteres** | **declarado**, sin registro | n2 | **no** | **no** | — | `NODO` |
+| `token_pattern` — **alfabeto** | `[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]` | **declarado** | n2 | **no** | **no** | — | `NODO` |
+| **stopwords** | 703 términos, embebidos | **declarado y trazado**: NLTK 3.10.3 es (313) + en (198), sklearn (318), 112 propias (`:25-33`) | n2 | **no** | **no** | — | `NODO` |
+| **versión de las stopwords** | la del comentario; el **set** no lleva versión propia | **declarada en prosa**, no como dato | n2 | **no** | **no** | — | `NODO` |
+| `TOL_EMPATE` | `1e-12` | **declarado con origen numérico**, no medido (decide Opus, 13 oct) | n2 | **no** | **no** | **es ella misma el ε** | `NUM` |
+| `lowercase` | `True` | **default de librería** | n2 | **no** | **no** | — | `NODO` |
+| `strip_accents` | `None` | **default de librería** | n2 | **no** | **no** | — | `NODO` |
+| `norm` | `"l2"` | **default de librería** | n2 | **no** | **no** | — | `CAL` |
+| `smooth_idf` / `use_idf` | `True` / `True` | **default de librería** | n2 | **no** | **no** | — | `CAL` |
+| `sublinear_tf` | `False` | **default de librería** | n2 | **no** | **no** | — | `CAL` |
+| `min_df` / `max_df` | `1` / `1.0` | **default de librería** | n2 | **no** | **no** | — | `CAL` |
+| **unidad de texto** | la del que llama | **no se sabe** | n2/n3 | **no** | indirecto | — | `NODO` |
+| `window` | `1` | **declarado**, *"no usado aún; reservado"* (`:150`) | — | no | no | — | **`RES`** |
+
+**Las dos columnas del medio salen todas "no".** Medido: `grep` de
+`top_k|ngram|TOL_EMPATE|node_extractor|stopword` sobre `services/calibrate.py` da
+**cero**, y `save()` (`corpus_service.py:380-390`) guarda `texts`, `nodes`, `W`,
+`w_version_history`, `forced_w_pos` y `registro_borde` — **ningún parámetro de
+extracción**. Confirma el `REG_unidad_texto_saturacion_v1` desde el código.
+
+**`scikit-learn` no está declarada como dependencia.** `pyproject.toml` lista
+`numpy`, `scipy` y `networkx`; `node_extractor.py` importa `TfidfVectorizer`. Acá
+corre **1.9.0**. Las siete filas con origen *"default de librería"* dependen de una
+versión **que el repo no fija**, y el desempate de `max_features` del CP0 (f)
+también.
+
+### 5. Dónde no se pudo decir
+
+1. **El pool y `_seleccionar`: un orden o dos.** Punto 2. Las dos lecturas quedan;
+   no elijo.
+2. **El origen del factor 3.** Ningún REG, ningún commit message, ningún docstring
+   lo justifica. Es el mismo patrón que `min_texts=3` y `MAX_CICLOS=10`.
+3. **Si `norm="l2"` y `smooth_idf` son calibrables o definición de nodo.** Las puse
+   `CAL` porque cambian el *puntaje* y no *qué es un término*, pero cambian cuál
+   entra: la frontera entre `CAL` y `NODO` acá no la sé trazar.
+4. **`T` en n1 llega colapsada.** `corpus_service.py:298` pasa
+   `seleccion_anterior=self._nodes or None`: una selección anterior **vacía** entra
+   como **`None`**, o sea *"no hay selección anterior"*. En la forma son dos cosas
+   distintas —`trace=frozenset()` contra `trace=None`—, y es la misma distinción que
+   `criterio_local` usa para `primera_vuelta`. **No lo toco**: está en
+   `corpus_service.py`, no en `node_extractor.py`, y el gate cubre los dos. Lo
+   reporto porque cambia qué casillero recibe la instancia del CP1.
+
+**ALTO.**

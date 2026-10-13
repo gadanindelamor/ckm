@@ -9425,3 +9425,84 @@ de interacción.** Con los tres de acá:
   escribí el 13 oct —*"(c) es el 76 %"*— vale para ARM40 y **no** en general.
 
 **Sigo con B.**
+
+---
+## B — CP4: sacar la exención del paso 1. LA PREDICCIÓN, antes del cambio — 2026-10-13 15:46 UTC
+
+*Claude Opus 5 (Code). Orden de delamor, 13 oct: **"bueno vamos por sacar la exención
+de la regla"**. **Esta entrada se commitea antes de tocar el engine.** Hora de
+`date -u`, **en llamada separada** — las dos anteriores salieron mal por escribirla
+en el mismo comando.*
+
+### El cambio
+
+En `services/ckm_trust_rule.py`, el paso 1 deja de tener su salida por capacidad:
+
+```
+    free = capacity - len(above)        # SE SIGUE CALCULANDO
+    if len(tied) <= free:               # ESTO SE VA
+        return Decision(... FIELD, REASON_TIE_FITS)
+```
+
+`free` **se conserva**: lo usan el paso 2 (`len(conserva) > free → trace_short`) y
+el paso 4. **Con empate:** hay traza → paso 2; no hay traza → paso 3.
+
+**`_seleccionar` NO se toca**: su copia de la exención queda hasta el CP2 de
+`TASK_node_extractor_regla_v1`, y la divergencia se declara.
+
+### `REASON_TIE_FITS`: qué hago con el valor, y por qué
+
+**Se queda la constante, y queda sin producirse.** No la borro, y la razón es *quien
+lo lea*: hay registros ya escritos —`registro_borde`, decisiones guardadas— donde
+`reason` vale `"tie_fits_free_slots"`. **Borrar el nombre deja ese dato sin a qué
+resolver.** No es andamiaje de regresión: es el único camino para leer una traza
+vieja. Su docstring va a decir que el engine ya no la emite y dónde sigue viva
+(`_seleccionar`, hasta el CP2).
+
+### LA PREDICCIÓN
+
+**1. `criterio_local`: sin cambios.** Va con `capacity=None`
+(`criterio_local.py:339`), y sin capacidad la exención nunca aplicaba. Predigo
+**24/24 de `vivo_03` intacto** y el **barrido de 312 intacto**, `llamar` y rótulos.
+
+**2. Tests del engine que cambian de expectativa: UNO.**
+
+| test | qué le pasa |
+|---|---|
+| `test_el_empate_que_cabe_en_los_lugares_libres_no_es_empate` | **falla.** Es el test *de* la exención. Con `capacity=3`, `tied={b,c}`, `free=2` y **sin traza**, pasa a `ESCALATED · NO_TRACE`. Hay que reescribirlo como *"ya no hay exención"* |
+| `test_epsilon_define_el_empate` | **pasa igual**, aunque su caso `grande` hoy sale por la exención: sólo asserta `n_tied == 2`, y eso no cambia |
+
+Predigo que **ningún otro** test del engine cambia: los demás con empate tienen
+`len(tied) > free` y por lo tanto ya no pasaban por ahí.
+
+**3. `test_criterio_local_como_instancia`: cambia UNO, y se da vuelta entero.**
+`test_con_capacity_1_se_invertirian_17_de_24` **falla**. Con `capacity=1` y sin
+exención: `tied={llamar}`, `above` vacío, `free=1`; hay traza (`frozenset()`), el
+piso es evaluable y no está cumplido, `conserva=[]`, `0 ≤ 1` → **`TRACE` con valor
+vacío → no llamar**. Predigo **0 inversiones, no 17**.
+
+Eso dice algo que vale escribir: **sacar la exención vuelve inofensivo el
+`capacity=1`** que el CP2 había descartado. El contrafáctico que justificaba
+`capacity=None` **desaparece**.
+
+**4. `test_node_extractor_como_instancia` (CP1): cambian DOS.**
+
+| test | predicción |
+|---|---|
+| `test_cuando_el_empate_cabe_la_instancia_da_el_mismo_conjunto` | **falla.** Era el único caso donde la instancia coincidía con `_seleccionar`. Pasa a `ESCALATED` (ahí `trace=None`) |
+| `test_la_frontera_es_exactamente_empate_mayor_que_libres` | **falla.** El barrido daba **30 coinciden / 60 divergen**; predigo **0 / 90** |
+
+**Y esto es lo que el CP4 hace visible:** con la exención, el CP1 reportó que la
+instancia coincide con `_seleccionar` en un régimen. **Sin la exención no coincide en
+ninguno.** La divergencia pasa de *"en el 76 % de los rebuilds"* a **todos**, y la
+causa es la misma de siempre: **P = `None`**.
+
+**5. Conteo de la suite.** Hoy **626 pasan, 8 xfail**. Predigo **4 tests que fallan**
+antes de reescribirlos, y **626 + 8** otra vez después, sin tests nuevos ni perdidos
+—los cuatro cambian de expectativa, no de existencia—.
+
+**6. Lo que predigo que NO cambia:** `test_seleccionar_contra_la_relajacion` y
+`test_corpus_del_repo_A3` **no usan el engine**: miden `_seleccionar`, que no se
+toca. Y los `xfail` del CP0 siguen siendo 3.
+
+**Esta entrada se commitea sola, antes de tocar el engine.**

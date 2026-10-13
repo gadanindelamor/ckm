@@ -9822,3 +9822,57 @@ marca · el reloj.
 
 **ALTO.** La tensión 1 cambia una premisa: **S3 no arregla `"control of guns"`**, y
 cerrarlo requiere una decisión que es de delamor. S1, S2, S4 y S5 no están trabados.
+
+---
+## S0 — analizador propio, bit a bit. LA PREDICCIÓN — 2026-10-13 16:41 UTC
+
+*Claude Opus 5 (Code). `TASK_node_extractor_regla_v1`, CP-S. **Esta entrada se
+commitea antes de tocar `node_extractor.py`.** Hora de `date -u`, llamada separada.*
+
+### Qué reproduce el analizador de hoy, leído en sklearn 1.9.0
+
+`build_analyzer()` con `analyzer="word"` hace, en este orden:
+
+1. **preprocess** — `strip_accents=None` (identidad) + `lowercase=True` → `.lower()`;
+2. **tokenize** — `token_pattern.findall(texto)`;
+3. **`_word_ngrams(tokens, stop_words)`** — **saca las stopwords primero** y **después**
+   arma los n-gramas **sobre los que quedaron**.
+
+**El paso 3 es la causa de `"control of guns"` → `"control guns"`**, y no se toca en
+S0: S0 reproduce, no arregla.
+
+El orden de la lista que devuelve sklearn: **unigramas primero** (los filtrados), y
+después los bigramas **en orden de aparición**.
+
+### LA PREDICCIÓN
+
+**1. Bit a bit en la lista, no sólo en el conjunto.** Predigo que el analizador nuevo
+devuelve **la misma lista, en el mismo orden**, para todo texto. No el mismo `set`:
+**la misma secuencia**. Si sólo coincidiera el conjunto, lo diría.
+
+**2. Los cuatro corpus: mismos términos y mismos nodos.** `ARM40`, `A(24)`, `D(12)`,
+`E(7)`: predigo **pool idéntico** (60/60/60/55) y **conjunto de nodos idéntico**
+(19/20/20/12), con `_seleccionar` sin tocar.
+
+**3. Ningún test cambia.** Predigo **627 pasan, 8 xfail**, igual que ahora. Los 3
+`xfail(strict=True)` del CP0 **siguen en rojo-esperado**: S0 no arregla nada.
+
+**4. Lo que sí cambia, y no es comportamiento:** `TfidfVectorizer` deja de recibir
+`token_pattern`, `stop_words`, `ngram_range` y `lowercase` —con un `analyzer`
+invocable los **ignora**, y dejarlos puestos emite cuatro warnings—. Pasan a ser
+**declaraciones del módulo**, usadas por el analizador. Predigo **cero warnings** de
+sklearn después del cambio, y que `_vectorizer()` siga siendo **el único lugar** donde
+se define cómo se reconoce un término: `accumulate` y `evaluate` siguen con **una sola
+rama** (`TASK_extraccion_una_rama_v1`).
+
+**5. Lo que no sé y voy a verificar, no suponer:** `evaluate` llama a
+`self._vectorizer().build_analyzer()`. Con un `analyzer` invocable, sklearn devuelve
+el callable **envuelto** en su decoder. **No afirmo que sea equivalente: lo mido.** Si
+no lo fuera, `evaluate` cambiaría y eso sería cambio de comportamiento.
+
+**6. El riesgo que veo, nombrado antes:** el patrón de hoy tiene `_` **dentro** de la
+clase de caracteres, y hay nodos que dependen de eso —`delta_r`, `d_ckm`,
+`operador_stop_coco` están en el pool de ARM40—. Si el analizador nuevo perdiera el
+`_`, esos términos se partirían. **Lo verifico explícitamente**, no lo doy por hecho.
+
+**Esta entrada se commitea sola, antes del cambio.**

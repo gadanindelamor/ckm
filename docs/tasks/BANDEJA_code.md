@@ -8928,3 +8928,82 @@ medio **exactamente iguales**. Pongo el número: **(c) por debajo del 15 % de lo
 rebuilds** en cada corpus.
 
 **Esta entrada se commitea sola, antes del test.**
+
+---
+## `_seleccionar` contra la relajación — el resultado — 2026-10-13 15:02 UTC
+
+*Claude Opus 5 (Code). La predicción está en `ab4e987`, **commiteada antes** del
+test. `node_extractor.py` no se tocó. `tests/test_seleccionar_contra_la_relajacion.py`:
+**11 pasan**. La hora sale de `date -u`.*
+
+### Los cinco casos
+
+| | caso | resultado |
+|---|---|---|
+| **a** | arriba / abajo del corte | **CONFIRMADO: coincide**, y no es conservación — el estado previo no interviene (verificado con cuatro estados previos distintos, misma salida) |
+| **b** | empate que **cabe** | **CONFIRMADO: NO conserva.** El término del corte tiene `h == 0` exacto, la relajación dice *conservar*, y `_seleccionar` lo **mete** viniera de donde viniera |
+| **c** | empate que **no cabe**, con `anterior` | **CONFIRMADO: conserva**, y **en las dos direcciones** — el `+1` y también el `−1`. Ahí `_seleccionar` **es** la relajación: el vector coincide entero |
+| **d** | empate que **no cabe**, sin `anterior` | **ni confirmado ni refutado: dos descripciones de la misma salida** |
+| **e** | ε | **CONFIRMADO: difieren por construcción.** `h == 0` exacto contra la banda `|h| ≤ 1e-12` |
+
+### (d): el test no puede separarlas, como estaba predicho
+
+- **`g` (lectura de Opus):** no hay traza, algo de contexto resuelve → afuera.
+- **T declarada (mía):** el docstring de `accumulate` declara *"bootstrap: el estado
+  inicial es 'ningún nodo'"*, o sea `s = −1` para todos → **conservar**.
+
+Verificado: bajo el bootstrap declarado, `_seleccionar` da **exactamente** el vector
+de la relajación. **Las dos lecturas son indistinguibles por la salida.** Es la
+pregunta abierta del arranque en frío (`REG_regla_ckm_trust_v1` §4): *"ningún
+nodo"* ¿es **traza** o es **contexto**? **Sin resolver. Es de delamor.**
+
+### MI PREDICCIÓN DE (b) FRENTE A (c) QUEDÓ REFUTADA
+
+Predije *"(b) muy por encima de (c)"*, con número: *"(c) por debajo del 15 %"*.
+
+**Medido, los dos corpus, idéntico:**
+
+| | rebuilds | % |
+|---|---|---|
+| **(b)** el empate cabe | **8** | 21 % |
+| **(c)** no cabe, con `anterior` | **29** | **76 %** |
+| **(d)** no cabe, sin `anterior` | 1 | 3 % |
+
+**(c) domina.** Me equivoqué por un factor de cinco y en la dirección contraria.
+
+**El mecanismo, que es lo que importa.** Mi razonamiento era *"la igualdad exacta es
+rara"*. **En TF-IDF sobre un corpus chico no es rara: es la norma al fondo del
+ranking.** Los términos que aparecen en los **mismos** documentos con los **mismos**
+conteos tienen vectores idénticos, y por lo tanto **medias idénticas**. En 40 textos
+hay muchos términos que aparecen una vez en un solo documento, y **entre ellos son
+indistinguibles para este `f`**.
+
+Medido aparte: `len(empate)` va de **1 a 12**, y vale **1 en 1 de 38** rebuilds.
+
+> **El corte cae sobre una meseta, no sobre un punto.**
+
+### Lo que eso cambia de lo anterior
+
+**La lectura de (b) como *"el caso normal"* era mía, y es falsa.** Sigue siendo
+cierto que el término del corte **siempre** está en el empate (CP1), y que **cuando
+cabe** `_seleccionar` viola la relajación. Lo que no es cierto es que eso sea lo que
+pasa casi siempre: pasa **1 de 5 veces**.
+
+**Y refuerza lo del CP1 por otro lado.** El régimen dominante es justo el que la
+instancia **no puede reproducir**: (c) es `len(empate) > libres`, que con P = `None`
+da `ESCALATED`. O sea que **la divergencia del CP1 no es un borde raro: es el 76 %
+de los rebuilds reconstruidos.**
+
+### Dos cosas que corrijo de mi propio trabajo, sin maquillarlas
+
+1. **El caso (e) estaba mal construido** en el primer intento: puse el término de la
+   banda **como el del corte**, y entonces su `h` era `0` y no había banda que
+   mostrar. Corregido: `gama` es el corte y `delta` queda a `−5e-13`. Ahí sí
+   divergen — la relajación lo saca (`h < 0`) y `_seleccionar` lo conserva adentro.
+2. **La reconstrucción no es la historia.** Los corpus registrados son un snapshot
+   final; los 38 rebuilds salen de correr la selección sobre prefijos crecientes de
+   `texts`, encadenando cada selección como `anterior`. Declarado **antes** de que
+   el número existiera (`ab4e987`), y lo repito acá: **38 es de la reconstrucción,
+   no del log.**
+
+**ALTO.** Suite: **617 pasan, 8 xfail** (eran 606 + 8; 11 tests nuevos).

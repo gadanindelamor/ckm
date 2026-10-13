@@ -188,6 +188,41 @@ falla porque el registro decía *"todo κ lo produce el orden de arriba"*, y del
 corrigió el 13 oct que esa frase era **redacción del registro**, no suya: *"nada es
 producido… mucho menos por un orden contiguo"*. Queda como **condición declarada**.
 
+### 2. `NodeExtractor` no tiene ↑k: el hueco está abierto de un lado y tapiado del otro
+
+*Entrada del 13 oct, desde el CP1 de `TASK_node_extractor_regla_v1`. delamor:
+**"EXACTO"**.*
+
+*"`NodeExtractor` no tiene ↑k"* ya figuraba como **ejemplo** en la fila del CP0b.
+**Lo nuevo es la asimetría**, y está medida:
+
+- **Del lado de la forma, el hueco está abierto.** La instancia del CP1 devuelve
+  `ESCALATED · value=None` con `escalate_to=None` — *acá hacía falta decidir, del
+  campo no salía, y arriba no habló nadie*. Eso es I5 funcionando: `escalate_to` es
+  un **`str`**, el módulo lo **registra y nunca lo llama**, y por eso la duda **queda
+  abierta** en vez de resolverse. La regla está construida para **no poder cerrarse
+  sobre sí misma**.
+- **Del lado del código, está tapiado.** `corpus_service.py:298-303` hace
+  `nodes = result["nodes"]` y su **única** rama es `if not nodes: return`. **No hay
+  rama para `value=None`.**
+- **Y es peor que no tenerla.** `None` es *falsy*, así que esa única rama lo
+  **tragaría como `if not nodes`**: *"no decidí"* y *"no hubo nodos"* salen por el
+  mismo `return`, sin marca. **Es I2 en el orden del llamador** — la no-decisión
+  leída como resultado vacío. Lo mismo que `self._nodes or None` hace una línea más
+  arriba con `T`.
+
+**Hoy `_seleccionar` decide igual** —*"afuera"*, o conserva—, y lo decide **sin
+tener de dónde**: es el `g` que el código aplica sin declararlo (**F2**). La forma,
+aplicada, **no agrega un problema: nombra uno que ya estaba.**
+
+**Dónde está el ↑k que falta.** Existe: es **n2** —los parámetros de extracción— y
+arriba **n3**, delamor. Lo que no existe es el **canal**. Es lo mismo que el CP0a
+encontró y no conectó: *"n2 no tiene instancia en código… es una persona en un
+commit"*, y `save()` no persiste nada suyo. **Un orden que no deja traza tampoco
+puede recibir una duda.**
+
+**Sin resolver.**
+
 ## Fuera de este TASK
 
 - `should_rebuild` y `calibrate` como instancias en código: se ven en el CP0, pero no se implementan.

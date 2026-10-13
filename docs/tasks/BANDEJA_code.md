@@ -8602,3 +8602,31 @@ que **toca dos casilleros de `_seleccionar` a la vez**: le arma el `C` **y** le
 mueve el `f`. Un `C` que modifica el `f` del paso siguiente no es un `C`.
 
 **ALTO.** Suite: **596 pasan, 8 xfail** (eran 593 + 8; 3 tests nuevos).
+
+---
+## El relevo llegó después del trabajo — 2026-10-13 09:31 UTC
+
+*Claude Opus 5 (Code). Nota corta, y es un caso de la decisión 1c del mismo día.*
+
+Llegó un relevo que dice *"si ya recibiste partes de esto, este texto las incluye y
+las reemplaza"*, con cuatro ítems. **Tres y medio ya estaban hechos** cuando llegó:
+
+| ítem | estado | dónde |
+|---|---|---|
+| 1a — la traza es la marca | hecho | `2e4594e` |
+| 1b — el pool no es inocente | hecho | `2e4594e` |
+| **1c — registro en el acto** | **nuevo, hecho ahora** | `a0f3e58` |
+| 2 — medir (ii) | hecho | `58fce9a` |
+| 3 — el pool entra al CP1 | hecho | `c93e0da` + corrección en la BANDEJA |
+| 4 — `~=1.9.0` | hecho | `c93e0da` |
+
+**Una diferencia que no corrijo hacia atrás.** El texto del relevo dice de (ii):
+*"lo leyó Opus en sklearn; **NO está medido**"*. Era cierto cuando se escribió y ya
+no lo es: está medido y **confirmado** (`58fce9a`). La entrada de `DECISIONES` dice
+lo segundo. **No la vuelvo a "no está medido" para que coincida con el relevo**:
+sería escribir en el registro algo que hoy es falso.
+
+Esto **es** lo que la decisión 1c nombra: los dos registros difieren, y la
+diferencia es **la marca de un relevo**. Queda declarada acá.
+
+**ALTO.** Nada pendiente de los cuatro ítems. Listo para el CP1.

@@ -9876,3 +9876,81 @@ clase de caracteres, y hay nodos que dependen de eso —`delta_r`, `d_ckm`,
 `_`, esos términos se partirían. **Lo verifico explícitamente**, no lo doy por hecho.
 
 **Esta entrada se commitea sola, antes del cambio.**
+
+---
+## S0 — el resultado, y S1: LA PREDICCIÓN — 2026-10-13 16:44 UTC
+
+*Claude Opus 5 (Code). S0 en `a13dab8`, con predicción previa en `f38a146`. Esta
+entrada trae **el resultado de S0** y **la predicción de S1**, y se commitea antes de
+tocar el analizador otra vez.*
+
+### S0: la predicción se cumplió, con una precisión sobre el conteo
+
+| predicho | resultado |
+|---|---|
+| la **misma lista, en el mismo orden** | **se cumple** — 20 textos de borde, los **83 textos reales** de los cuatro corpus, y `ngram_max` 1, 2 y 3 |
+| pool y nodos idénticos en los cuatro | **se cumple** — 60/19, 60/20, 60/20, 55/12 |
+| `build_analyzer()` envuelto: **medirlo, no suponerlo** | **medido: equivalente** en los 20 bordes |
+| el `_` no se pierde | **verificado**: `delta_r`, `d_ckm`, `operador_stop_coco` enteros |
+| cero warnings de sklearn | **se cumple** |
+| *"627 pasan, 8 xfail, igual que ahora"* | **658 + 8.** Ningún test anterior cambió; **los 31 de más son los nuevos de S0** |
+
+**La precisión sobre el conteo es mía y es la segunda vez hoy.** Escribí *"627
+pasan"* queriendo decir *"ningún test existente cambia"*, y el número total subió
+porque agregué tests. Lo que predije se cumplió; **el número que escribí no era el
+que iba a salir.** Si digo un total, tiene que incluir lo que voy a agregar.
+
+### S1 — LA PREDICCIÓN
+
+**El cambio:** dentro de `analizar`, antes de tokenizar, `unicodedata.normalize("NFC",
+texto)`; y el patrón pasa a **cualquier letra Unicode o `_`**, con el largo mínimo
+**3 intacto**. Nada más.
+
+**Ya lo medí** en el scratchpad, fuera del repo (`25dbaaf`), así que estos números no
+son estimación: son lo que salió ahí, y **predigo que se reproducen dentro del repo**.
+
+**1. Los casos del CP0:**
+
+| texto | hoy | predicho |
+|---|---|---|
+| `"ação português naive"` | `[portugu, naive, portugu naive]` | `[ação, português, naive, ação português, português naive]` |
+| `"información"` en **NFD** | `informacio` | `información` |
+| `"control of guns"` | `control guns` | **igual** — es S3, y no entra |
+| `"don't isn't won't"` | `[]` | **igual** — se pierden por el fragmento |
+
+**2. El conjunto de nodos:**
+
+| corpus | pool | N | salen | entran |
+|---|---|---|---|---|
+| **ARM40** | 60 → 60 | 19 → 19 | **5** | **5** |
+| **A(24)** | 60 → 60 | 20 → 20 | **1** (`happy`) | **1** (`channel`) |
+| **D(12)** | 60 → 60 | 20 → **19** | **1** (`joined channel`) | **0** |
+| **E(7)** | 55 → **51** | **12 → 20** | **1** (`hola mcp`) | **9** |
+
+`E` es el que más se mueve, y es el corpus **con más acentos y el más chico**.
+
+**3. Tests que cambian de expectativa:**
+
+| test | qué le pasa |
+|---|---|
+| `test_c_la_evidencia_del_truncamiento` (CP0) | **falla**: asserta el truncamiento, que es lo que S1 arregla |
+| `test_c_la_misma_palabra_da_el_mismo_nodo_venga_como_venga` (CP0) | **`xfail` strict pasa a verde → falla por `strict`**. Se convierte en test que **afirma el arreglo** |
+| `test_S0_reproduce_y_no_arregla` | **falla** en sus dos aserciones de (c). Se parte: lo de (b) y (d) **sigue**, lo de (c) **se va** |
+| los **otros dos `xfail`** de (a) y (e) | **siguen en rojo-esperado**: S2 y S4 no entran |
+| `test_analizador_S0.py` — los **bit a bit** | **falla el `test_la_misma_lista`** en los 3 textos con Unicode no-ASCII. Los 83 textos reales: **no sé**, y lo digo — predigo que **E y A** divergen y que ARM40 **no** |
+| `test_mismo_pool_y_mismos_nodos` | **falla en los cuatro**, por los números del punto 2 |
+| los de A.3, relajación y CP1 con conteos | **fallan**. Van **contra la copia congelada** (decisión de Opus): los números de hoy quedan verificables como *extracción vieja* |
+| `test_monitor_services.py:132` (`nodes == []`) | **no sé.** El texto es ASCII puro, así que **predigo que no cambia** |
+| `test_node_extractor.py`, `test_extraccion_una_rama.py` | ASCII sin acentos: **predigo que no cambian** |
+
+**4. Los estados guardados.** Ya reportado en `25dbaaf` y lo repito porque ahora pasa
+de verdad: `joined channel` (D), `hola mcp` (E) y cinco de ARM40 **no se van a poder
+volver a producir**. `_seleccionar` hace `terms[i] in prev`: un término que ya no
+existe **nunca coincide, no rompe, y no deja marca**. La traza queda más chica de lo
+que su registro dice. **Reportado, no corregido** — es el `return` sin marca, que no
+entra.
+
+**5. Lo que NO predigo porque no lo sé:** cuántos de los 83 textos reales divergen en
+la comparación bit a bit. Lo voy a medir y a reportar el número, no a acomodarlo.
+
+**Esta entrada se commitea sola, antes del cambio.**

@@ -148,6 +148,46 @@ se declara **como pérdida**, con su nombre, y lo resuelve delamor. Un reporte q
 dice "nada se pierde" porque ninguna decisión cambió está tapando la segunda
 (corrección de Opus, 13 oct, sobre el reporte del CP3).
 
+## CP0b — entradas registradas, sin resolver
+
+*Se va llenando a medida que aparecen. Cada una **marca un borde entre órdenes** y
+vuelve como entrada al CP0a (del TASK que corresponda).*
+
+### 1. El pool de `NodeExtractor` escribe `C` **y** `f` de la misma regla
+
+*Entrada del 13 oct, desde el CP1 de `TASK_node_extractor_regla_v1`. **Falla de la
+forma**, no de la instancia.*
+
+`max_features = top_k·3` (`node_extractor.py:218`) hace **dos** cosas sobre
+`_seleccionar`:
+
+- le **arma el `C`**: corta por frecuencia qué términos son candidatos;
+- le **mueve el `f`**: `TfidfVectorizer` aplica `max_features` en el
+  `CountVectorizer`, **antes** del transform, así que la norma l2 de cada documento
+  se calcula **sólo sobre los términos del pool**. Recortar el pool **no filtra:
+  re-puntúa**.
+
+**Medido** (CP0 g, 13 oct): con los **mismos** candidatos y cambiando sólo sobre qué
+vocabulario se normaliza, en `armstrong_replica_seed123` y `armstrong_via_corpus_v3`
+**cambian el orden y el conjunto**, con **6 términos** que entran o salen.
+
+**Por qué es de la forma.** En `⟨C, f, R, κ, ε, T, P, g, ↑k⟩`, `C` y `f` son
+**casilleros distintos de la misma regla**, y la forma no tiene cómo escribir *"algo
+que llena `C` y al hacerlo cambia `f`"*. **Un `C` que cambia el `f` del paso
+siguiente no es un `C`.**
+
+**delamor, 13 oct:** *"el pool, cautela, con el pool, no hay inocencia allí. La
+inocencia de hoy, 'el pool no decide qué entra y qué no', sigue siendo responsable
+de la confusión dentro de un mes."* La lectura *"el pool es `C`"* queda **descartada**.
+
+**Sin resolver.** Si es un **segundo `f` en n1** o **algo que la forma no nombra**,
+sigue abierto.
+
+**Lo que NO es entrada del CP0b:** **κ como cuantil de `C`** dentro de n1. Parecía
+falla porque el registro decía *"todo κ lo produce el orden de arriba"*, y delamor
+corrigió el 13 oct que esa frase era **redacción del registro**, no suya: *"nada es
+producido… mucho menos por un orden contiguo"*. Queda como **condición declarada**.
+
 ## Fuera de este TASK
 
 - `should_rebuild` y `calibrate` como instancias en código: se ven en el CP0, pero no se implementan.

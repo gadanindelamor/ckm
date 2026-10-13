@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
@@ -67,8 +68,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 #
 # **El largo minimo (3) NO se toca** (delamor, 13 oct): las palabras de dos
 # letras son **definicion de nodo**, y eso no es de este paso.
-_TOKEN_PATTERN = r"[^\W\d][^\W\d]{2,}"
-_TOKEN_RE = re.compile(_TOKEN_PATTERN)
+# (el patron vive en el perfil desde S0b; ver PERFIL_ES_EN)
 
 _STOPWORDS = {
     "a", "about", "above", "across", "after", "afterwards", "again",
@@ -169,6 +169,115 @@ _STOPWORDS = {
     "yourself", "yourselves", "él", "éramos",
 }
 
+
+# ---------------------------------------------------------------------------
+# EL PERFIL DE IDIOMA — los criterios que dependen de la lengua, en UN lugar
+# ---------------------------------------------------------------------------
+# S0b del CP-S (`TASK_node_extractor_regla_v1`, 13 oct). delamor: *"identificar
+# los criterios que dependen de esa declaracion. Aislarlos de alguna forma
+# simple, de manera que no se tomen como invariantes."*
+#
+# Estaban sueltos por el modulo y se leian como si fueran propiedades del
+# instrumento. **No lo son: son una declaracion sobre el idioma del corpus.**
+# Juntarlos no los hace verdaderos; los hace **visibles y citables**, y le da a
+# cada salida la condicion bajo la cual se extrajo.
+#
+# **NO SE DETECTA EL IDIOMA.** El perfil no valida nada: un corpus en chino se
+# extrae igual, con este perfil declarado encima. **El perfil no protege:
+# declara.** Comparar el perfil con el corpus es de otro orden.
+
+
+@dataclass(frozen=True)
+class PerfilDeIdioma:
+    """
+    Los criterios de extraccion que **dependen del idioma**, declarados juntos.
+
+    Inmutable a proposito: si alguien necesita otros criterios, declara **otro
+    perfil**, y entonces la diferencia queda escrita en vez de quedar en un
+    valor cambiado a mano.
+
+    - `nombre` — como se lo cita. Viaja en la salida y en `save()`.
+    - `alcance` — **hasta donde vale**, en palabras. Lo que esta afuera del
+      alcance no es "invalido": es **no se sabe**.
+    - `token_pattern` — que cuenta como un termino.
+    - `largo_minimo` — cuantos caracteres. **Declarado aparte del patron**
+      aunque salga de el, porque es una decision propia: en ES y EN las
+      palabras de menos de 3 letras son casi siempre funcion, **en otras
+      lenguas no**.
+    - `lowercase` — si plegar mayusculas. Supone que no pierde significado;
+      hay escrituras **sin caja**, y el turco tiene la `i` con y sin punto.
+    - `normalizacion` — la forma Unicode canonica, o `None` si no se normaliza.
+    - `stopwords` / `stopwords_origen` — la lista y **de donde salio**.
+    - `separador_de_palabras` — **lo que el patron no matchea**. Estaba por
+      omision y no escrito en ningun lado; escribirlo es la mitad del punto.
+    """
+
+    nombre                : str
+    alcance               : str
+    token_pattern         : str
+    largo_minimo          : int
+    lowercase             : bool
+    normalizacion         : Optional[str]
+    stopwords             : frozenset
+    stopwords_origen      : str
+    separador_de_palabras : str
+
+    def __post_init__(self) -> None:
+        if not self.nombre or not self.alcance:
+            raise ValueError(
+                "nombre y alcance son obligatorios: un perfil sin alcance "
+                "escrito se vuelve a leer como invariante, que es lo que S0b "
+                "viene a sacar"
+            )
+        if self.largo_minimo < 1:
+            raise ValueError("largo_minimo tiene que ser >= 1")
+        if not self.stopwords_origen:
+            raise ValueError(
+                "stopwords_origen es obligatorio: una lista de stopwords sin "
+                "de donde salio es un valor sin origen"
+            )
+
+    def to_dict(self) -> dict:
+        """Lo que viaja en la salida y en `save()`. **La lista entera no**: su
+        tamano y su origen, que es lo que hace falta para saber bajo que
+        condicion se extrajo."""
+        return {
+            "nombre"               : self.nombre,
+            "alcance"              : self.alcance,
+            "token_pattern"        : self.token_pattern,
+            "largo_minimo"         : self.largo_minimo,
+            "lowercase"            : self.lowercase,
+            "normalizacion"        : self.normalizacion,
+            "n_stopwords"          : len(self.stopwords),
+            "stopwords_origen"     : self.stopwords_origen,
+            "separador_de_palabras": self.separador_de_palabras,
+        }
+
+
+PERFIL_ES_EN = PerfilDeIdioma(
+    nombre="es_en_v1",
+    alcance=(
+        "castellano e ingles, alfabeto con espacios. "
+        "Fuera de esto: NO SE SABE -- no esta medido ni validado, y la "
+        "extraccion corre igual."
+    ),
+    token_pattern=r"[^\W\d][^\W\d]{2,}",
+    largo_minimo=3,
+    lowercase=True,
+    normalizacion="NFC",
+    stopwords=frozenset(_STOPWORDS),
+    stopwords_origen=(
+        "703: union de NLTK 3.10.3 spanish (313) e english (198), "
+        "sklearn ENGLISH_STOP_WORDS (318) y 112 propias del proyecto "
+        "(decision de delamor, sep 2026)"
+    ),
+    separador_de_palabras=(
+        "lo que el token_pattern NO matchea: espacios, puntuacion y digitos. "
+        "Supone que las palabras van separadas -- chino, japones y tailandes "
+        "no lo hacen"
+    ),
+)
+
 class NodeExtractorService:
     """
     Stateless. Cada método puede llamarse de forma independiente.
@@ -181,14 +290,20 @@ class NodeExtractorService:
         Dado un texto y una lista de nodos conocidos, devuelve σ ∈ {+1,-1}^N.
     """
 
-    def __init__(self, top_k: int = 20, ngram_max: int = 2, window: int = 1):
+    def __init__(self, top_k: int = 20, ngram_max: int = 2, window: int = 1,
+                 perfil: "PerfilDeIdioma" = PERFIL_ES_EN):
         """
         top_k    — cuántos términos retener como nodos candidatos
         ngram_max — máximo largo de n-grama (1=unigramas, 2=bigramas)
         window   — no usado aún; reservado para ventana de co-ocurrencia intra-texto
+        perfil   — **los criterios que dependen del idioma** (S0b). El default es
+                   `PERFIL_ES_EN`, y **el default también es una declaración**: todo
+                   lo que se extrajo sin elegir perfil se extrajo bajo ése.
         """
         self.top_k     = top_k
         self.ngram_max = ngram_max
+        self.perfil    = perfil
+        self._token_re = re.compile(perfil.token_pattern)
 
     def analizar(self, texto: str) -> List[str]:
         """
@@ -224,10 +339,18 @@ class NodeExtractorService:
         # `"informacio"`: dos nodos distintos para una palabra, segun como
         # vino codificada. El `lower()` va explicito porque con un `analyzer`
         # invocable sklearn **no** aplica su `lowercase`.
-        texto = unicodedata.normalize("NFC", texto).lower()
-        tokens = _TOKEN_RE.findall(texto)
+        #
+        # S0b: los cuatro criterios de abajo —normalizacion, lowercase, patron
+        # y stopwords— salen **del perfil**, no de constantes del modulo. Si
+        # hacen falta otros, se declara **otro perfil**.
+        perfil = self.perfil
+        if perfil.normalizacion:
+            texto = unicodedata.normalize(perfil.normalizacion, texto)
+        if perfil.lowercase:
+            texto = texto.lower()
+        tokens = self._token_re.findall(texto)
         # las stopwords salen ANTES de armar los n-gramas (sklearn `_word_ngrams`)
-        tokens = [w for w in tokens if w not in _STOPWORDS]
+        tokens = [w for w in tokens if w not in perfil.stopwords]
         salida = list(tokens)
         for n in range(2, self.ngram_max + 1):
             for i in range(len(tokens) - n + 1):
@@ -286,15 +409,21 @@ class NodeExtractorService:
                     distancia_al_corte (con signo), pertenencia_anterior.
                     Continuo: no guarda categorías; "empate" se deriva al
                     leer, con la tolerancia que se elija entonces.
+              "perfil": dict                — **bajo qué condición se extrajo**
+                    (S0b): nombre, alcance, y los criterios que dependen del
+                    idioma. Va en **las tres** salidas, también en las vacías.
+                    No se detecta el idioma: se declara.
             }
         """
         if not texts:
-            return {"nodes": [], "pairs": {}, "node_freq": {}}
+            return {"nodes": [], "pairs": {}, "node_freq": {},
+                    "perfil": self.perfil.to_dict()}
         n_original = len(texts)
         idx_orig   = [k for k, t in enumerate(texts) if t and t.strip()]
         texts      = [texts[k] for k in idx_orig]
         if not texts:
-            return {"nodes": [], "pairs": {}, "node_freq": {}}
+            return {"nodes": [], "pairs": {}, "node_freq": {},
+                    "perfil": self.perfil.to_dict()}
 
         # pool: los top_k·3 términos MÁS FRECUENTES del corpus; de ese pool,
         # los top_k de mayor TF-IDF medio. La selección es "TF-IDF entre los
@@ -335,6 +464,9 @@ class NodeExtractorService:
             "node_freq"     : dict(node_freq),
             "pairs_by_text" : pairs_by_text,
             "registro_borde": registro,
+            # S0b: bajo QUÉ condición se extrajo. Va en las tres salidas,
+            # también en las vacías: el perfil rige aunque no salga nada.
+            "perfil"        : self.perfil.to_dict(),
         }
 
     def _seleccionar(self, terms, scores, anterior):

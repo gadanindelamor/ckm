@@ -297,6 +297,9 @@ class CorpusService:
         # (regla de la relajación: empate conserva). TASK_desempate_seleccion_nodos_v1.
         result = self._accumulate_safe(self._texts, seleccion_anterior=self._nodes or None)
         self._registro_borde = result.get("registro_borde", [])
+        # S0b: bajo qué perfil de idioma se extrajo esta W. `None` declarado si
+        # el extractor no lo informó — nunca el perfil de hoy por defecto.
+        self._perfil_extraccion = result.get("perfil")
         nodes  = result["nodes"]
 
         if not nodes:
@@ -386,6 +389,11 @@ class CorpusService:
             "forced_w_pos"    : self._force_w_pos,
             # registro continuo del borde de la última selección de nodos
             "registro_borde"  : getattr(self, "_registro_borde", []),
+            # S0b: el perfil de idioma bajo el que se extrajo. `None` quiere
+            # decir "no se sabe" —un estado guardado antes de S0b—, y NO se
+            # rellena con el perfil actual: poner el de hoy en un estado de
+            # ayer afirmaría una condición que nadie registró (I2).
+            "perfil_extraccion": getattr(self, "_perfil_extraccion", None),
         }
         self.storage_path.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
@@ -397,6 +405,8 @@ class CorpusService:
         self._W     = np.array(raw_W) if raw_W is not None else None
         self._w_versions.from_list(state.get("w_version_history", []))
         self._registro_borde = state.get("registro_borde", [])
+        # `None` declarado: los estados anteriores a S0b no lo tienen
+        self._perfil_extraccion = state.get("perfil_extraccion")
 
 
 # ---------------------------------------------------------------------------

@@ -10143,3 +10143,54 @@ igual, con el perfil ES+EN declarado encima. **El perfil no protege: declara.** 
 alguien compare el perfil contra el corpus es otro orden.
 
 **Esta entrada se commitea sola, antes del cambio.**
+
+---
+## S0b — el resultado. A1.PAUSA — 2026-10-13 17:22 UTC
+
+*Claude Opus 5 (Code). Inventario y predicción en `e7aa7bc`, **commiteados antes**.
+Decisiones en `6547270`.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Medido o leído:** los tres sitios del inventario (`grep` sobre `services/` e
+`iap_chatroom/`, con archivo:línea) · el bit a bit post-S0b (corrido: 20 bordes, 83
+textos reales, `ngram_max` 1/2/3) · pool y nodos idénticos · que **un solo** test
+cambió por la clave nueva · que el barrido estructural encuentra **cuatro** sitios.
+
+**Del peso del contexto:** que el perfil *"hace visibles"* los criterios. Es el
+argumento con el que lo escribí, **no una medición**. Lo único medido es que ahora
+están en un lugar y que un test falla si aparecen en otro.
+
+### Lo hecho
+
+| | |
+|---|---|
+| **1. Inventario** | **siete** criterios en `node_extractor`, con el que no estaba escrito en ningún lado: **qué separa palabras**, que era *lo que el patrón no matchea*. Y **tres** afuera: `_OPPOSITION_MARKERS`, `behavior_graph._detect` —**que no estaba en el pedido y agregué**— y el `.lower()` de `autonomous_device`, que no es extracción |
+| **2. Aislados** | `PerfilDeIdioma` inmutable + `PERFIL_ES_EN`, con el alcance escrito: *"castellano e inglés, alfabeto con espacios. Fuera de esto: NO SE SABE"*. El servicio lo recibe; `analizar` saca de él la normalización, el `lowercase`, el patrón y las stopwords |
+| **test estructural** | barrido sobre `services/` e `iap_chatroom/` con lista congelada de **cuatro** sitios conocidos y su razón. Falla si aparece uno nuevo **y si sale uno** |
+| **3. Viaja y se persiste** | `perfil` en **las tres** salidas de `accumulate`, también las vacías; `perfil_extraccion` en `save()`, con `None` declarado al cargar estados viejos — **nunca el perfil de hoy por defecto** (I2) |
+
+### La predicción
+
+**Se cumplió entera.** Cero divergencias bit a bit; pool y nodos idénticos
+(60/19, 60/20, 60/20, 55/12); **un solo** test cambió —el de las claves de
+`accumulate`, que pasan a **4 y 6**—; el `xfail` de (e) **sigue en rojo**, el
+contrato sigue partido y S4 no entra; `_load` no rompe con estados viejos.
+
+**Lo que había declarado no saber:** cuántos sitios encuentra el barrido. Dije *"veo
+dos leyendo"*. Salieron **cuatro**: los dos, más `autonomous_device.py` —un
+`.lower()` sobre el texto de una excepción, que no es extracción— y
+`node_extractor.py` mismo, que **es** el perfil.
+
+### Lo que S0b no hace
+
+**No detecta el idioma ni valida nada.** Un corpus en chino se extrae igual, con
+`es_en_v1` declarado encima. **El perfil no protege: declara.**
+
+### La diferencia de relevo
+
+S0b pedía ir **antes de S1**, y S1 ya estaba commiteado. No lo revertí —efecto medido
+cero— así que **el perfil nace con los valores de S1** y el bit a bit se verificó
+contra el analizador de ahora. Está en `6547270`.
+
+**A1.PAUSA.**

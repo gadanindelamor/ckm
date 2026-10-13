@@ -177,10 +177,12 @@ def test_d_las_45_stopwords_con_apostrofo_son_inertes() -> None:
 def test_e_la_evidencia_del_contrato_partido() -> None:
     """Sin juicio: qué claves salen en cada caso."""
     svc = NodeExtractorService(top_k=5)
-    assert set(svc.accumulate([])) == {"nodes", "pairs", "node_freq"}
-    assert set(svc.accumulate(["  ", ""])) == {"nodes", "pairs", "node_freq"}
+    # S0b agregó `perfil` a las TRES salidas: el perfil rige aunque no salga
+    # nada. El contrato **sigue partido** —4 contra 6—, y eso es S4, que no entra.
+    assert set(svc.accumulate([])) == {"nodes", "pairs", "node_freq", "perfil"}
+    assert set(svc.accumulate(["  ", ""])) == {"nodes", "pairs", "node_freq", "perfil"}
     assert set(svc.accumulate(["gun control reduces violence"])) == {
-        "nodes", "pairs", "node_freq", "pairs_by_text", "registro_borde"}
+        "nodes", "pairs", "node_freq", "pairs_by_text", "registro_borde", "perfil"}
 
 
 @pytest.mark.xfail(strict=True, reason=(
@@ -191,7 +193,8 @@ def test_e_la_evidencia_del_contrato_partido() -> None:
 def test_e_accumulate_devuelve_el_mismo_contrato_siempre() -> None:
     """**Lo que debería valer y no vale.** Las cinco claves, con el corpus que sea."""
     svc = NodeExtractorService(top_k=5)
-    esperado = {"nodes", "pairs", "node_freq", "pairs_by_text", "registro_borde"}
+    esperado = {"nodes", "pairs", "node_freq", "pairs_by_text",
+                "registro_borde", "perfil"}
     assert set(svc.accumulate([])) == esperado
 
 

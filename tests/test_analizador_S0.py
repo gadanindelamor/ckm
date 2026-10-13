@@ -227,3 +227,89 @@ def test_una_sola_rama_y_sin_warnings() -> None:
     envuelto = svc._vectorizer().build_analyzer()
     for t in BORDES:
         assert envuelto(t) == svc.analizar(t), f"build_analyzer divergió: {t[:40]!r}"
+
+
+# ── S0b — el perfil de idioma, en UN solo lugar ───────────────────────────
+
+def test_S0b_bit_a_bit_contra_el_analizador_de_antes_del_perfil() -> None:
+    """**S0b no cambia comportamiento.** Los criterios se mudaron al perfil y el
+    analizador da lo mismo: los bordes, los 83 textos reales y `ngram_max` 1/2/3
+    ya lo verifican arriba; acá se fija que el perfil **es** el que rige."""
+    from services.node_extractor import PERFIL_ES_EN
+    svc = NodeExtractorService(top_k=20, ngram_max=2)
+    assert svc.perfil is PERFIL_ES_EN
+    assert svc.perfil.normalizacion == "NFC" and svc.perfil.lowercase
+    assert svc.perfil.largo_minimo == 3
+    assert len(svc.perfil.stopwords) == 703
+
+
+def test_S0b_otro_perfil_cambia_la_extraccion_y_queda_declarado() -> None:
+    """El punto de aislarlos: cambiar un criterio **es declarar otro perfil**, no
+    tocar un valor. Y la diferencia queda escrita en la salida."""
+    import dataclasses
+    from services.node_extractor import PERFIL_ES_EN
+    sin_sw = dataclasses.replace(PERFIL_ES_EN, nombre="sin_stopwords",
+                                 stopwords=frozenset(),
+                                 stopwords_origen="ninguna, a propósito")
+    svc = NodeExtractorService(top_k=20, ngram_max=1, perfil=sin_sw)
+    assert "the" in svc.analizar("the guns")
+    assert svc.accumulate(["the guns here"])["perfil"]["nombre"] == "sin_stopwords"
+    # inmutable: no se cambia un criterio en el lugar
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        PERFIL_ES_EN.lowercase = False
+
+
+def test_S0b_el_perfil_viaja_en_accumulate_y_se_persiste() -> None:
+    """*"No se detecta el idioma: se declara bajo qué condición se extrajo."*"""
+    svc = NodeExtractorService(top_k=5)
+    for salida in (svc.accumulate([]), svc.accumulate(["  "]),
+                   svc.accumulate(["gun control reduces violence"])):
+        assert salida["perfil"]["nombre"] == "es_en_v1"
+        assert "NO SE SABE" in salida["perfil"]["alcance"]
+    # la lista entera NO viaja: su tamaño y su origen, que es lo que hace falta
+    d = svc.accumulate([])["perfil"]
+    assert d["n_stopwords"] == 703 and "NLTK" in d["stopwords_origen"]
+    assert "stopwords" not in d
+
+
+def test_S0b_ningun_otro_lugar_escribe_esos_criterios_a_mano() -> None:
+    """
+    **Test estructural**, como el de *"un solo corazón"*. Si aparece un criterio de
+    idioma **fuera** del perfil y fuera de la lista congelada, falla.
+
+    Es **textual**: ve los nombres con los que el repo ya los escribe. No ve una
+    copia que los renombre, y lo dice para no afirmar más de lo que verifica.
+    """
+    NEEDLES = ("stop_words", "_STOPWORDS", "strip_accents", "token_pattern",
+               ".lower()", "normalize(")
+    # Conocidos: se LISTAN, no se tocan acá. Cada uno con su razón.
+    CONOCIDOS = {
+        "services/node_extractor.py": "ES el perfil: PERFIL_ES_EN y analizar",
+        "services/corpus_service.py":
+            "_OPPOSITION_MARKERS (ES+EN) y su .lower(): es el CP1b, no S0b",
+        "services/behavior_graph.py":
+            "_detect: .lower() y \\b sobre BEHAVIOR_TERMAP_V1 en inglés. Listado "
+            "en el inventario de S0b, no tocado",
+        "iap_chatroom/autonomous_device.py":
+            ".lower() sobre el texto de una excepción, para clasificar el error: "
+            "no es extracción",
+    }
+    raiz = Path(__file__).resolve().parent.parent
+    hallados = {}
+    for carpeta in ("services", "iap_chatroom"):
+        for f in sorted((raiz / carpeta).rglob("*.py")):
+            rel = f.relative_to(raiz).as_posix()
+            if "test" in f.parts or f.name.startswith("test_"):
+                continue
+            hits = [n for n in NEEDLES if n in f.read_text(errors="replace")]
+            if hits:
+                hallados[rel] = hits
+
+    nuevos = set(hallados) - set(CONOCIDOS)
+    assert not nuevos, (
+        f"criterio de idioma fuera del perfil: {sorted(nuevos)}. El perfil vive "
+        "en services/node_extractor.py; si es otro sitio, va al inventario de S0b"
+    )
+    salieron = set(CONOCIDOS) - set(hallados)
+    assert not salieron, f"salieron de la lista: {sorted(salieron)}"
+    assert all(v for v in CONOCIDOS.values())

@@ -12,6 +12,7 @@ Sin LLM. Sin estado entre llamadas.
 """
 
 from __future__ import annotations
+import re
 from collections import defaultdict
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
@@ -32,6 +33,27 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 # cuando, antes...). Quedan afuera de toda lista estandar: "puede", "solo",
 # "dos", "hacia" — extension propia NO adoptada.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Cómo se reconoce un término — DECLARADO ACÁ, no delegado a la librería
+# ---------------------------------------------------------------------------
+# S0 del CP-S (`TASK_node_extractor_regla_v1`, 13 oct). Hasta acá el
+# `token_pattern`, las stopwords, el `ngram_range` y el `lowercase` se los
+# pasaba a `TfidfVectorizer` y los aplicaba sklearn. Ahora el analizador es
+# propio, y por eso **sklearn ignoraria esos cuatro parametros**: dejarlos
+# puestos emite cuatro warnings y no hace nada. Pasan a ser declaraciones de
+# este modulo (CP0a: siete filas se mueven de "default de libreria" a
+# "declarado").
+#
+# **S0 NO CAMBIA NINGUN COMPORTAMIENTO.** Reproduce lo que hacia sklearn, bit a
+# bit, incluido el orden de la lista. Lo que venga despues cambia *adentro* del
+# analizador.
+#
+# El `_` esta DENTRO de la clase de caracteres, y eso importa: hay nodos que
+# dependen de el (`delta_r`, `d_ckm`, `operador_stop_coco` estan en el pool de
+# ARM40). Sacarlo partiria esos terminos.
+_TOKEN_PATTERN = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}"
+_TOKEN_RE = re.compile(_TOKEN_PATTERN)
+
 _STOPWORDS = {
     "a", "about", "above", "across", "after", "afterwards", "again",
     "against", "ain", "al", "algo", "algunas", "algunos", "all", "almost",
@@ -152,21 +174,56 @@ class NodeExtractorService:
         self.top_k     = top_k
         self.ngram_max = ngram_max
 
+    def analizar(self, texto: str) -> List[str]:
+        """
+        **El analizador. Único lugar donde se define cómo se reconoce un
+        término** (S0 del CP-S, 13 oct).
+
+        Reproduce **bit a bit** lo que hacía `TfidfVectorizer` con
+        `analyzer="word"`, en este orden —leído en sklearn 1.9.0—:
+
+        1. **preprocess:** `strip_accents=None` (identidad) + `lowercase=True`;
+        2. **tokenize:** `token_pattern.findall(texto)`;
+        3. **`_word_ngrams`:** saca las stopwords **primero** y **después** arma
+           los n-gramas **sobre los que quedaron**.
+
+        **El paso 3 es la causa de que `"control of guns"` dé `"control guns"`**:
+        la stopword se va antes de que los bigramas existan, así que `control` y
+        `guns` quedan adyacentes. **S0 no lo arregla: lo reproduce.** El arreglo
+        es S3, y espera (hay traza que leer antes: C-value, RAKE, Nothman).
+
+        El orden de la lista también se reproduce: **unigramas primero** —los que
+        pasaron el filtro— y después los bigramas **en orden de aparición**. No es
+        un detalle gratuito: que coincida la **lista** y no sólo el **conjunto** es
+        lo que hace verificable el "bit a bit".
+        """
+        texto = texto.lower()
+        tokens = _TOKEN_RE.findall(texto)
+        # las stopwords salen ANTES de armar los n-gramas (sklearn `_word_ngrams`)
+        tokens = [w for w in tokens if w not in _STOPWORDS]
+        salida = list(tokens)
+        for n in range(2, self.ngram_max + 1):
+            for i in range(len(tokens) - n + 1):
+                salida.append(" ".join(tokens[i:i + n]))
+        return salida
+
     def _vectorizer(self, **extra) -> TfidfVectorizer:
         """
-        Único lugar donde se define cómo se reconoce un término.
+        El vectorizador, con **el analizador propio** (`analizar`).
 
-        accumulate() lo ajusta sobre el corpus; evaluate() usa su analizador
+        `accumulate()` lo ajusta sobre el corpus; `evaluate()` usa su analizador
         sobre el texto. Las dos ramas no pueden volver a divergir: antes
-        evaluate buscaba substring crudo ("now" dentro de "know") mientras W
-        salía de esta tokenización. TASK_extraccion_una_rama_v1.
+        `evaluate` buscaba substring crudo (`"now"` dentro de `"know"`) mientras W
+        salía de esta tokenización. `TASK_extraccion_una_rama_v1`.
+
+        **No se le pasan `ngram_range`, `stop_words`, `token_pattern` ni
+        `lowercase`:** con un `analyzer` invocable sklearn **los ignora** y emite
+        un warning por cada uno. Los cuatro viven ahora en `analizar` y en las
+        constantes del módulo. Lo que **sigue** siendo de la librería es el resto
+        —`norm="l2"`, `smooth_idf`, `use_idf`, `min_df`/`max_df`,
+        `sublinear_tf`—, y eso está en la tabla del CP0a.
         """
-        return TfidfVectorizer(
-            ngram_range   = (1, self.ngram_max),
-            stop_words    = list(_STOPWORDS),
-            token_pattern = r"[a-záéíóúüñA-ZÁÉÍÓÚÜÑ_][a-záéíóúüñA-ZÁÉÍÓÚÜÑ_]{2,}",
-            **extra,
-        )
+        return TfidfVectorizer(analyzer=self.analizar, **extra)
 
     # ------------------------------------------------------------------
     # Modo acumulación

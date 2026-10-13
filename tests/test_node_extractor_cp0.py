@@ -231,3 +231,111 @@ def test_f_el_pool_no_deja_registro() -> None:
     # y ninguno de los 6 deja rastro en la salida
     assert not (fuera & set(r["nodes"]))
     assert all(t not in str(r["registro_borde"]) for t in fuera)
+
+
+# ── g — el pool decide DOS veces: qué entra, y cuánto vale ─────────────────
+#
+# delamor, 13 oct: *"el pool, cautela, con el pool, no hay inocencia allí. La
+# inocencia de hoy, 'el pool no decide qué entra y qué no', sigue siendo
+# responsable de la confusión dentro de un mes."*
+#
+# La vía (i) —`max_features = top_k*3` corta por frecuencia— ya está medida en
+# los tests de (f). La vía (ii) la leyó Opus en sklearn y **no estaba medida**:
+# `TfidfVectorizer` aplica `max_features` en el `CountVectorizer`, **antes** del
+# transform, así que la **norma l2 de cada documento se calcula sólo sobre los
+# términos del pool**. Recortar el pool no filtra: **re-puntúa**.
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+RAIZ = Path(__file__).resolve().parent.parent
+CORPUS_REGISTRADOS = [
+    RAIZ / "process/experiments/armstrong_replica_seed123_corpus_state.json",
+    RAIZ / "process/experiments/armstrong_via_corpus_v3_state.json",
+]
+
+
+def _dos_puntajes(svc, textos, maxf):
+    """Los **mismos** candidatos del pool, puntuados de las dos maneras.
+
+    Devuelve `(terminos_del_pool, puntaje_con_pool, puntaje_sin_pool)`. Aislar
+    (ii) pide esto: si se comparara el pool contra todo el vocabulario, se
+    estarían midiendo (i) y (ii) juntas.
+    """
+    vp = svc._vectorizer(max_features=maxf)
+    Mp = vp.fit_transform(textos)
+    tp = vp.get_feature_names_out()
+    sp = np.asarray(Mp.mean(axis=0)).flatten()
+
+    va = svc._vectorizer()                      # sin max_features
+    Ma = va.fit_transform(textos)
+    ta = va.get_feature_names_out()
+    sa = np.asarray(Ma.mean(axis=0)).flatten()
+
+    mapa = {t: i for i, t in enumerate(ta)}
+    return tp, sp, np.array([sa[mapa[t]] for t in tp])
+
+
+def test_g_el_pool_repuntua_caso_deterministico() -> None:
+    """
+    **(ii) confirmada, sin depender de ningún archivo.** Mismos candidatos, lo
+    único que cambia es sobre qué vocabulario se normaliza, y **el orden de los
+    nodos elegidos cambia**.
+
+    El orden **es vivo**: mueve `w_sha` y `N_eff` (CP0 del otro TASK), y
+    `corpus_service.py:175` dice que `nodes_changed` cubre *"conjunto **u**
+    orden"*.
+    """
+    svc = NodeExtractorService(top_k=3, ngram_max=1)
+    textos = [
+        "alfa beta gama ruido uno dos tres cuatro cinco seis",
+        "alfa beta gama",
+        "alfa beta siete ocho nueve",
+        "alfa gama diez once doce trece",
+        "beta gama catorce",
+        "alfa beta gama quince dieciseis",
+    ]
+    tp, sp, s_sin = _dos_puntajes(svc, textos, maxf=9)
+
+    con, _ = svc._seleccionar(tp, sp, None)
+    sin, _ = svc._seleccionar(tp, s_sin, None)
+
+    assert con == ["beta", "alfa", "gama"]
+    assert sin == ["beta", "gama", "alfa"]
+    assert con != sin, "el recorte del pool cambió el orden"
+    # el puntaje de cada término baja, y **no proporcionalmente**: ahí está (ii)
+    assert all(s_sin[i] < sp[i] for i, t in enumerate(tp) if t in ("alfa", "gama"))
+    assert float(sp[list(tp).index("alfa")]) > float(sp[list(tp).index("gama")])
+    assert float(s_sin[list(tp).index("alfa")]) < float(s_sin[list(tp).index("gama")])
+
+
+@pytest.mark.parametrize("ruta", CORPUS_REGISTRADOS, ids=lambda p: p.stem)
+def test_g_el_pool_repuntua_en_los_corpus_registrados(ruta) -> None:
+    """
+    Lo mismo sobre los corpus registrados, donde el efecto es **más fuerte**: con
+    los mismos 60 candidatos, **cambia también el conjunto elegido**, no sólo el
+    orden.
+
+    **Estos archivos no están trackeados** (`project_untracked_no_commit`), así
+    que el test se saltea si no están. Por eso el caso determinístico de arriba
+    existe: la evidencia de (ii) no puede depender de un archivo que no está en
+    el repo.
+    """
+    if not ruta.exists():
+        pytest.skip(f"corpus registrado ausente (no trackeado): {ruta.name}")
+
+    textos = [t for t in json.loads(ruta.read_text())["texts"] if t and t.strip()]
+    svc = NodeExtractorService(top_k=20, ngram_max=2)
+    tp, sp, s_sin = _dos_puntajes(svc, textos, maxf=60)
+    assert len(tp) == 60
+
+    con, _ = svc._seleccionar(tp, sp, None)
+    sin, _ = svc._seleccionar(tp, s_sin, None)
+
+    assert len(con) == len(sin) == 19
+    assert con != sin, "el orden no cambió"
+    assert set(con) != set(sin), "el conjunto no cambió"
+    # seis términos entran o salen sólo por cómo se normalizó
+    assert len(set(con) ^ set(sin)) == 6

@@ -8543,3 +8543,62 @@ nombrar y otro (`κ`) es implícito. **El pool decide y no registra.**
 
 **ALTO.** Suite completa: **593 pasan, 8 xfail** (eran 585 + 5; los 11 nuevos son
 este CP0, 8 + 3).
+
+---
+## CP0 (g) — el pool re-puntúa, medido — 2026-10-13 09:04 UTC
+
+*Claude Opus 5 (Code). Agrega el punto (g) al CP0 (`94208a5`) y **corrige una frase
+de ese reporte**. La entrada anterior no se edita. `node_extractor.py` sin tocar.*
+
+### La corrección al reporte del CP0
+
+Donde decía:
+
+> *"Si el pool es `C` o es un **segundo `f`** sigue sin poder decirse (CP0a §2)."*
+
+**Ya se puede decir la mitad.** delamor, 13 oct: *"el pool, cautela, con el pool, no
+hay inocencia allí. La inocencia de hoy, 'el pool no decide qué entra y qué no',
+sigue siendo responsable de la confusión dentro de un mes."* **Queda descartada la
+lectura "el pool es `C`": el pool DECIDE.** Si es un **segundo `f` en n1** o **algo
+que la forma no nombra**, sigue abierto.
+
+### (g) — el pool decide por dos vías
+
+| vía | mecanismo | estado |
+|---|---|---|
+| **(i) qué entra** | `max_features = top_k·3` corta por **frecuencia** (`:218`) | ya medida en el CP0 (f): el empate lo rompe el **nombre del término** |
+| **(ii) cuánto vale** | `TfidfVectorizer` aplica `max_features` en el `CountVectorizer`, **antes** del transform → **la norma l2 de cada documento se calcula sólo sobre los términos del pool** | **leída por Opus en sklearn, medida acá por primera vez** |
+
+**Recortar el pool no filtra: re-puntúa.**
+
+### Cómo se aisló (ii) de (i)
+
+Comparar *"con pool"* contra *"sin pool"* mediría **las dos juntas**: sin
+`max_features`, `_seleccionar` recibe 256 candidatos en vez de 60. El aislamiento es
+otro: **los mismos 60 candidatos**, y lo único que cambia es **sobre qué vocabulario
+se normalizó**.
+
+### Resultado
+
+| corpus | candidatos | orden cambia | conjunto cambia | entran/salen |
+|---|---|---|---|---|
+| `armstrong_replica_seed123` | 60 (los mismos) | **sí** | **sí** (19 y 19) | **6** |
+| `armstrong_via_corpus_v3` | 60 (los mismos) | **sí** | **sí** (19 y 19) | **6** |
+| caso determinístico del test | 9 (los mismos) | **sí** — `['beta','alfa','gama']` contra `['beta','gama','alfa']` | no | 0 |
+
+**(ii) CONFIRMADA. No se retira de DECISIONES.**
+
+Los dos corpus registrados **no están trackeados**, así que esos tests se saltean si
+faltan. Por eso existe el caso determinístico: **la evidencia de (ii) no puede
+depender de un archivo que no está en el repo.** Ahí el efecto es más chico —cambia
+el orden y no el conjunto—, y alcanza: el orden **es vivo**, mueve `w_sha` y
+`N_eff`, y `corpus_service.py:175` dice que `nodes_changed` cubre *"conjunto **u**
+orden"*.
+
+### Lo que esto le agrega al CP1
+
+El pool **entra** en la instancia (TASK corregido en `c93e0da`). Y entra sabiendo
+que **toca dos casilleros de `_seleccionar` a la vez**: le arma el `C` **y** le
+mueve el `f`. Un `C` que modifica el `f` del paso siguiente no es un `C`.
+
+**ALTO.** Suite: **596 pasan, 8 xfail** (eran 593 + 8; 3 tests nuevos).

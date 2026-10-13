@@ -9233,3 +9233,91 @@ predicción propia — no es el apéndice que parecía—, y porque la tensión 
 cómo se lee todo lo que medí hoy.
 
 **ALTO.**
+
+---
+## A.3 — contención, origen, y LA PREDICCIÓN antes de medir — 2026-10-13 15:48 UTC
+
+*Claude Opus 5 (Code). **Esta entrada se commitea antes del test.** Hora de
+`date -u`.*
+
+### A.3.1 — Contención: el sha no la detecta, y hay bastante
+
+| relación | tipo |
+|---|---|
+| **B(20) ⊂ ARM40** | **prefijo** — los primeros 20 |
+| **F(8) ⊂ D(12)** | **prefijo** — los primeros 8 |
+| **C(4) ⊂ F(8)** y **C(4) ⊂ D(12)** | **subconjunto** (no prefijo) |
+| **E(7) ∩ D(12)** y **E(7) ∩ F(8)** | **1 texto** cada una |
+| **A(24)** | **sin ninguna relación con nadie** |
+
+**La cadena del canal IAP está anidada: `C(4) ⊂ F(8) ⊂ D(12)`.**
+
+**Independientes que se miden en A.3: `A(24)`, `D(12)`, `E(7)`.** Tres.
+
+**Declarados con su relación, y NO medidos:**
+
+- **`B(20)`**: prefijo de ARM40, ya medido hoy — la reconstrucción por prefijos de
+  n=40 **ya pasó por él**;
+- **`F(8)`**: prefijo de `D(12)` — medir `D` por prefijos **lo cubre** (`D[:8] == F`);
+- **`C(4)`**: subconjunto de los dos. **No es prefijo**, así que la reconstrucción de
+  `D` **no** pasa por su estado exacto. Queda declarado, no medido: medirlo aparte
+  sería un cuarto corpus que comparte sus 4 textos con los otros dos.
+
+### A.3.2 — Origen de cada corpus
+
+| | n | origen | evidencia |
+|---|---|---|---|
+| **A** | 24 | **interacción** (canal IAP multi-device), **capturada en experimento** | textos son mensajes del canal (`"ClaudeSonnet_5_1 joined the channel"`, `"GroqLlama_3-3-70b_2…"`); commit `fced216`, *"corridas Armstrong tres modos y wmixta natural/forzado"* |
+| **ARM / B** | 40 / 20 | **autor único**, escrito a mano | la lista literal está en `iap_chatroom/tests/test_armstrong_stop_coco.py:35` (`"CKM is a formal model for knowledge graph dynamics…"`). **No es interacción: son enunciados declarativos sobre CKM** |
+| **C** | 4 | **interacción** (canal IAP) | `"MarkOpolus joined the channel"`, `"**CHANNEL OPEN — PeterPlam Orchestrating**…"` |
+| **D** | 12 | **interacción** (canal IAP) | `"TinkerBellucio joined the channel"`, `"PeterPlam joined the channel"` |
+| **E** | 7 | **no se sabe** | `"primer mensaje de prueba"` + enunciados en castellano sobre cohesión. **No aparece en ningún `.py`** (verificado con `grep`), así que no salió de un script del repo: ingesta manual o corrida de canal que no dejó el generador |
+| **F** | 8 | **interacción** (canal IAP) | prefijo de `D` |
+
+**Esto cambia cómo se lee lo que medí hoy.** Todo lo del CP0 (g), CP1, relajación y
+exención se midió sobre **ARM40, que es de autor único y escrito a mano en un
+test**. **No es un corpus de interacción.** El `f` de `_seleccionar` —TF-IDF medio—
+se comportó como se comportó sobre **enunciados declarativos redactados por una
+persona**, y la meseta del corte que encontré puede ser propiedad de eso.
+
+### LA PREDICCIÓN
+
+**Conteos, no porcentajes** (los corpus van de 4 a 24 textos).
+
+| corpus | rebuilds esperados | (b) cabe | (c/d) no cabe |
+|---|---|---|---|
+| **A(24)** | ~22 | **12 o más** | el resto |
+| **D(12)** | ~10 | **5 o más** | el resto |
+| **E(7)** | ~5 | **0 o 1** | **4 o 5** |
+
+**El mecanismo con el que predigo, que es lo que quiero poner a prueba:** la meseta
+del corte aparece cuando **muchos términos comparten la media exacta**, y eso pasa
+cuando el pool se llena de términos **raros e indistinguibles**. ARM40 tiene
+vocabulario 256 y la meseta fue grande (`len(empate)` 1–12). **`A` tiene 1411**: el
+pool de 60 se llena con términos **genuinamente frecuentes**, cuyas medias
+difieren. Así que predigo **menos meseta en `A`, y por lo tanto más (b)**.
+
+`E` va al revés: vocabulario **55**, el pool **no corta**, y en el estado final
+`empate = 9`. Predigo meseta grande y **(c/d) casi siempre**.
+
+**La exención, en los rebuilds (b):** predigo que el conjunto cambia en
+**aproximadamente la mitad**, y no me comprometo con más precisión que eso —con un
+`empate = 1`, lo único que decide es si el término del corte ya estaba adentro, y el
+rango 20 es la posición más volátil—. **Puedo errar en las dos direcciones, y digo
+cada mecanismo:** si sale **más** cambio, es que el top-20 rota más de lo que creo;
+si sale **menos**, es que el término del corte se repite rebuild tras rebuild, que
+es lo que pasó en 3 de los 8 de ARM40.
+
+**Nota sobre mis dos predicciones de hoy:** las dos fallaron **hacia arriba**
+(predije más cambio del que hubo). **No estoy corrigiendo por eso**: si acá predigo
+`A` con más (b) es por el vocabulario, no por compensar. Lo digo para que se vea de
+dónde sale el número.
+
+### Lo que esta medición NO es
+
+**Reconstrucción por prefijos**, no la historia real. Y para `A` hay una salvedad
+propia: sus textos son **mensajes de canal en orden temporal**, así que el prefijo
+**sí** se parece a una historia; para ARM40, que es una lista escrita a mano, el
+orden es el que puso el autor.
+
+**Esta entrada se commitea sola, antes del test.**

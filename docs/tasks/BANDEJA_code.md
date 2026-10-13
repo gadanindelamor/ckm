@@ -9954,3 +9954,119 @@ entra.
 la comparación bit a bit. Lo voy a medir y a reportar el número, no a acomodarlo.
 
 **Esta entrada se commitea sola, antes del cambio.**
+
+---
+## S1 — el resultado. A1.PAUSA — 2026-10-13 16:52 UTC
+
+*Claude Opus 5 (Code). Predicción en `6b9e416`, commiteada antes del cambio.
+`node_extractor.py` cambiado por orden de delamor. Suite **660 pasan, 7 xfail**.*
+
+### A1 — qué de esto es verificable y qué es peso del contexto
+
+*Primera vez que escribo esta sección (decisión del 13 oct). La hago antes del
+reporte, no después.*
+
+**De comprensión verificable — medido o leído, con dónde:**
+
+- los cuatro casos del CP0 después de S1 (corrido: `analizar` sobre cada texto);
+- **0 de 83 textos divergen** bit a bit contra la copia congelada (corrido, los
+  cuatro corpus);
+- pool y nodos **idénticos** en los cuatro (corrido);
+- que el analizador del scratchpad **incluía S3** (corrido: reconstruí los dos y
+  comparé `"control with guns"` y `E(7)`);
+- que el castellano en **NFC** ya salía bien con el patrón viejo (corrido);
+- que `build_analyzer()` con `analyzer` invocable es equivalente (corrido, 19
+  bordes);
+- los cuatro warnings que sklearn emite si se le pasan `token_pattern`,
+  `stop_words`, `ngram_range` y `lowercase` junto a un `analyzer` (corrido);
+- el orden interno de `_word_ngrams` (leído en sklearn 1.9.0: stopwords primero,
+  n-gramas después).
+
+**Del peso del contexto — lo digo porque viene de lo que se viene diciendo, no
+porque lo haya medido:**
+
+- **que S1 "es un arreglo real"**. Es verdad que arregla un truncamiento, y **no
+  medí ningún corpus donde eso cambie un resultado**. La frase se apoya en el
+  argumento —*un nodo truncado es un nodo que nadie declaró*—, que es razonamiento,
+  no medición;
+- **que `E` "es el corpus con más acentos"**. Lo escribí dos veces hoy y **nunca lo
+  conté**. Lo que medí es que E es el que más se movía **con S1+S3**, y eso ya no
+  vale como evidencia de lo otro;
+- **que los corpus del repo "no tienen letras fuera del alfabeto viejo"**: eso sí
+  está medido **indirectamente** —0 divergencias—, pero no conté los caracteres. Es
+  inferencia desde el resultado, no observación directa.
+
+### Los cuatro casos del CP0, después de S1
+
+| texto | antes | ahora |
+|---|---|---|
+| `"ação português naive"` | `[portugu, naive, portugu naive]` | **`[ação, português, naive, ação português, português naive]`** |
+| `"información"` en **NFD** | `informacio` | **`información`** |
+| `"control of guns"` | `control guns` | **igual** — es **S3**, y no entra |
+| `"don't isn't won't"` | `[]` | **igual** — se pierden por el fragmento |
+
+### MI PREDICCIÓN DEL CONJUNTO DE NODOS QUEDÓ REFUTADA
+
+Predije que los cuatro corpus se movían, con números que presenté así: *"ya lo medí
+en el scratchpad, así que estos números no son estimación"*.
+
+**Medido ahora, dentro del repo:**
+
+| corpus | pool | N | salen | entran |
+|---|---|---|---|---|
+| ARM40 | 60 → 60 | 19 → 19 | **0** | **0** |
+| A(24) | 60 → 60 | 20 → 20 | **0** | **0** |
+| D(12) | 60 → 60 | 20 → 20 | **0** | **0** |
+| E(7) | 55 → 55 | 12 → 12 | **0** | **0** |
+
+**Y bit a bit: 0 de 83 textos divergen.**
+
+**El error es de atribución, y es el peor de los tres de hoy.** El analizador del
+scratchpad armaba los bigramas sobre **todos** los tokens y después descartaba los
+que tenían stopword — **eso es S3**. Los números `5/5`, `1/1`, `12→20` eran de
+**S1 + S3**, y los reporté en `25dbaaf` bajo el título *"sólo S1, sin S2 ni S3"*.
+**Ese título era falso cuando lo escribí.**
+
+Las otras dos predicciones falladas de hoy eran números mal estimados. **Esta no: era
+una medición de otra cosa, presentada como si fuera de ésta** — y presentada con la
+autoridad de *"no es estimación"*. Lo que falló no fue el número: fue que no verifiqué
+qué estaba midiendo.
+
+**Lo que sí quedó bien, y por eso no se perdió el trabajo:** declaré antes de medir
+*"lo que NO predigo porque no lo sé: cuántos de los 83 textos reales divergen"*. Ese
+número existía y salió **0**.
+
+### Entonces: **S1 arregla algo que no pasa en ningún corpus del repo**
+
+El truncamiento era real —está medido en `"ação português"` y en NFD— y **ninguno de
+los 83 textos lo dispara**. Los corpus son ES+EN precompuesto.
+
+Eso no lo vuelve inútil: el arreglo está **antes** de que entre un texto que lo
+necesite, y los datos del canal IAP vienen de modelos y de personas que pueden
+escribir en NFD sin avisar. **Pero el efecto medido es cero, y así hay que leerlo.**
+
+### Corrección a `25dbaaf`
+
+La tabla titulada *"Lo medido: el conjunto de nodos antes/después (sólo S1, sin S2 ni
+S3)"* **mide S1+S3**. La BANDEJA no se reescribe: queda dicho acá. Esos números
+**siguen siendo válidos** —son lo que va a pasar cuando S3 entre—, con el título
+corregido: **son de S1+S3, no de S1**.
+
+### Los estados guardados
+
+**Nada que reportar, y es consecuencia del cero.** Predije que `joined channel`,
+`hola mcp` y cinco de ARM40 no se podrían volver a producir. **Con S1 se producen
+todos igual.** El riesgo sigue existiendo y **se activa con S3**, no con S1.
+
+### Tests
+
+| | |
+|---|---|
+| **660 pasan, 7 xfail** | eran 658 + 8 |
+| el `xfail(strict)` de Unicode del CP0 | **pasó a test que afirma el arreglo** — de ahí el 8 → 7 |
+| los otros dos `xfail` | **siguen en rojo-esperado**: S2 y S4 no entran |
+| el bit a bit de S0 | se partió en dos: **`BORDES`** (coinciden, incluido el castellano en NFC) y **`ARREGLADOS_POR_S1`** (tienen que divergir, y si volvieran a coincidir S1 se habría ido) |
+| `test_S0_reproduce_y_no_arregla` | se partió: **(b) y (d) siguen**, **(c) se fue** a su propio test |
+| los de A.3, relajación, CP1, monitor | **ninguno cambió**, porque S1 no mueve nada en esos corpus |
+
+**A1.PAUSA.** Después, según delamor: PAUSA y volver a evaluar el escenario.

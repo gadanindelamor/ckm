@@ -20,11 +20,12 @@
 ## 4. Protocolo nuevo de hoy
 - **A Code se le pasa sólo lo que se llama `TEXTO_PARA_CODE_…`**, entero, cortado y pegado por delamor. Opus cierra cada mensaje con "**Para Code:** …".
 - **Repo en la PC:** Opus puede escribir y editar archivos, **sin comandos git que escriban**. Para no trabar el `git pull --ff-only` de delamor: sólo archivos nuevos en `docs/opus/`; no editar trackeados salvo pedido.
-- **Abierto:** delamor quiere que la traza de Opus (decisiones, ESTADO, documentos) **llegue a GitHub por push**. Propuesta de Opus: Opus la escribe en `docs/opus/` (y los textos en `docs/opus/textos_para_code/`); el push sale de la PC — **o lo hace delamor** con `git pull --ff-only && git add docs/opus && git commit -m "opus: traza" && git push`, **o lo hace Opus** con permiso de borrado sobre la carpeta del repo (git lo necesita) y probando si el push funciona. **delamor no eligió todavía.**
+- **La traza de Opus vive en el repo, en `docs/opus/`** (delamor: *"esos van al repo, sino desaparecen"*). Con permiso de borrado sobre `ckm___source` (dado el 14 oct, por sesión), Opus hace en la PC `git pull --ff-only`, escribe en `docs/opus/` y commitea. **El push lo hace delamor** (`git push` desde su PC): la sesión de Opus no tiene credenciales de GitHub. `contexto_claude` y el proyecto quedan como copia; **la fuente es el repo**.
+- **Cuidado técnico (encontrado el 14 oct):** `device_commit_files` con el **mismo `stagedPath`** entrega una versión **vieja** del archivo aunque reporte "written". Así quedaron viejos tres archivos de `contexto_claude`. **Siempre stagear con un nombre nuevo y verificar con md5 en la PC después de escribir.**
 
 ## 5. Esperando a delamor
 1. Pegar el CP1 a Code.
-2. Elegir cómo sale el push de la traza (§4).
+2. **Hacer `git push`** desde la PC (commits de Opus en `docs/opus/` esperando).
 3. Las preguntas de `revision_tasks_marco_14oct2026.md`: cerrar `node_extractor_regla_v1` y retirar "perfil distinto → A1.PAUSA"; pausar `ckm_trust_rule_v1`, `calibrate`, canal IAP CP3; `fabrication_service_v2` sólo como la pregunta del Caso 0.11; ¿histéresis en este paper o trabajo futuro? Y de `aporte_vs_rueda`: ¿el método es aporte o condición?
 4. Completar la frase cortada sobre `should_rebuild` / rebuild.
 

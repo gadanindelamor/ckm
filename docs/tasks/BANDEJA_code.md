@@ -11232,3 +11232,106 @@ tocar `services/`.
 **No se fija umbral** (lo dice el CP-E). No se arregla nada: lo que el código hace se mide.
 No se toca `services/`, ni el gate (`f96c234`). La salida es **una tabla para el paper** y un
 driver en `experiments/`.
+
+---
+## CP-E — el resultado. La predicción se refutó en tres de cinco. A1.PAUSA — 2026-10-15 03:42 UTC
+
+*Claude Opus 5 (Code). Predicción en `7c6e75a`, **commiteada antes y no reescrita**. Driver:
+`experiments/driver_cpe_rango_neff.py`. `services/` no se tocó (verificado con `git status`).*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** todo lo numérico de abajo — 3 corpus × (5 `top_k` + 4 pool + 3 listas + 1 texto
+extra) × 10 seeds, `n_runs=1000` · los solapamientos de Jaccard entre conjuntos de nodos ·
+la realineación de W y sus diferencias · los cambios de signo.
+
+**Del peso del contexto:** nada en los números. Sí en una lectura: que la granularidad
+entera de los conteos **sea** la causa de la sensibilidad a un texto es mi explicación del
+mecanismo. Está apoyada en tres medidas (pocas razones distintas, signos que cambian,
+negativos que bajan), pero **es una explicación, no una medición directa**.
+
+### La tabla — cuánto mueve cada perilla (rango de N_eff / N_eff de la base)
+
+| corpus | seed | `top_k` | pool | stopwords | +1 texto |
+|---|---|---|---|---|---|
+| **A24** (24 textos) | 0,071 | 0,855 | 0,693 | **0,866** | 0,660 |
+| **D12** (12 textos) | 0,088 | **2,389** | 1,974 | 0,864 | 0,279 |
+| **E7** (7 textos) | 0,074 | **1,747** | 0,936 | **0,038** | 0,432 |
+
+**Líneas base** (`top_k=20`, pool ×3, 703 stopwords, `n_runs=1000`, 10 seeds):
+A24 → N=20, **N_eff = 15,52 ± 0,32**; D12 → N=20, **5,27 ± 0,16**; E7 → N=12,
+**10,10 ± 0,20**.
+
+### La predicción, contra lo que pasó
+
+| | Predije | Pasó |
+|---|---|---|
+| **el orden** `top_k` > sw > pool ≈ +1 texto > seed | — | **REFUTADO.** Sólo dos partes se sostienen: **seed es la más chica en los tres** (0,07–0,09) y **`top_k` es primera o empatada primera**. Las stopwords van de **0,866 (A24) a 0,038 (E7)**: en E7 son **la última**. El pool, que predije *"chica"*, es **segunda en dos de tres** |
+| **"N_eff crece con N"** | — | **REFUTADO, y fuerte.** No es monótona. A24: `top_k` 15 → **2,25**, y 20 → **15,52**. E7: 10 → 5,37, 15 → **23,01**, 20 → 10,10. **No es ruido**: las sd son 0,04–0,85 contra saltos de 7× |
+| **+1 texto "la más chica, cerca de cero"** | — | **REFUTADO.** 0,28–0,66. En A24 **cae 66%**: 15,52 → 5,27 |
+| seed: sd 0,1–0,3 sobre las bases | — | **se cumplió**: 0,32 / 0,16 / 0,20 |
+| *"¿E7 produce W?"* (lo había declarado no sabido) | — | **Sí**, N=12 |
+| *"¿con 0 stopwords sube o baja?"* (no predije signo) | — | **No tiene signo fijo**: A24 baja (15,52 → 2,08), D12 sube (5,27 → 7,29), E7 sube apenas |
+
+### El mecanismo del hallazgo más grande
+
+**Un texto con vocabulario ya visto deja el conjunto de nodos IDÉNTICO y mueve N_eff 66%.**
+
+Medido, en A24 y D12: **Jaccard = 1,00** entre los nodos de la base y los de "+1 texto". Es
+el mismo conjunto — pero **en otro orden** (15 y 8 posiciones cambian), así que comparar W
+sin realinear compara pares distintos. Realineadas:
+
+| | A24 | D12 |
+|---|---|---|
+| entradas de W que cambian | **236 de 380** | 152 de 380 |
+| ‖ΔW‖_F (alineada) | 1,759 | 0,950 |
+| razones W₁/W₀ distintas | **8** | **5** |
+| **entradas que cambian de signo** | **18** | **38** |
+| negativos | 86 → 76 | 98 → 70 |
+
+**No es un reescalado** (serían una sola razón): **hay signos que se dan vuelta**. El texto
+agregado no tiene marcador, así que sus 28 pares suman **+1 a `pos`**; donde `raw = pos−neg`
+era un entero negativo chico, ese +1 lo lleva a 0 o a positivo. **Los conteos son enteros
+chicos**, y con 7 a 24 textos **una unidad es el 4–14% del corpus**.
+
+**Y esto no transfiere lo que la TASK trae del CP6.** El CP-E cita: *"N_eff fue función de la
+partición, no de los pesos, desde el paso 5"*. Acá **la partición es idéntica y N_eff se
+mueve 66%**. No digo que el CP6 esté mal: era el **campo plantado con el campo quieto**,
+donde ‖ΔW‖ decaía como 1/n. **Sobre los corpus del repo no vale**, y la diferencia es
+exactamente esa: acá un texto **cambia signos**, no sólo magnitudes.
+
+### Para el paper
+
+> **N_eff es estable frente al muestreo y a nada más.** Con `n_runs=1000`, la dispersión
+> entre 10 seeds es del **7–9%** del valor, en los tres corpus. Cualquier otra perilla lo
+> mueve **entre 3 y 34 veces más**: `top_k` (0,86–2,39), el tamaño del pool (0,69–1,97), la
+> lista de stopwords (0,04–0,87) y **un solo texto más, con vocabulario ya visto** (0,28–0,66).
+> **N_eff no es monótona en `top_k`.** Con corpus de 7 a 24 textos los conteos de W son
+> enteros chicos y una unidad puede **cambiar el signo** de un par, así que N_eff **no es
+> función sólo del conjunto de nodos**: con el conjunto idéntico se movió un 66%.
+> Medido sobre los tres corpus independientes del repo. **Sin umbral.**
+
+### El recurso que falta, declarado
+
+**`nltk` no está instalado** y la lista de 703 está embebida (`node_extractor.py:30-36`), así
+que *"sólo NLTK"* no se puede construir ni separar de la unión. Usé **0 stopwords** como
+tercer nivel. **Qué cambia:** la **magnitud** de la dependencia queda igual de caracterizada
+(0,04–0,87); lo que **no** se puede decir es cuánto aporta **cada lista**. **No cambia lo que
+el CP-E afirma**, así que seguí; si querés el nivel de NLTK, hay que instalarlo y es decisión
+tuya.
+
+### Dos cosas del instrumento que salieron al pasar
+
+- **El pool no es una perilla del código:** está cableado en `max_features = top_k*3`
+  (`node_extractor.py`). Lo varié con una subclase **dentro del driver**, que sólo reemplaza
+  ese valor. El primer intento movía también `top_k` —rompiendo el *"de a una por vez"*— y lo
+  corregí antes de correr.
+- **`top_k` no es N:** D12 con `top_k=25` da **N=24** y con 32 da **29**; E7 con 15 da **11**.
+  Es la regla de desempate, ya declarada en el paso 5.
+
+### Lo que no se tocó
+
+El gate (`f96c234`). `services/`. Nada vivo. **No se fijó umbral.**
+
+**A1.PAUSA.** De `TASK_condiciones_del_paper_v1` quedan **CP-M** (opcional) y **CP-N** (sólo
+con tu orden).

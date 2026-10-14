@@ -10711,3 +10711,46 @@ salida de `accumulate`.
 
 **A1.PAUSA.** Con esto el **CP1 está completo**. Queda el **CP3** de la TASK (sin código: qué
 haría falta para que entre una W de otro productor) y, en la otra, el **CP-T**.
+
+---
+## CP2 — la declaración ejecutable: LA PREDICCIÓN — 2026-10-14 23:51 UTC
+
+*Claude Opus 5 (Code). Opus (Cowork) por delamor: *"CP1 verificado y aprobado. Antes del CP3
+va el CP2… Sólo tests, sin tocar el código. Si algo difiere, se corrige el documento y se
+reporta."* **Commiteada antes de escribir el test.***
+
+### Qué voy a predecir, y qué no
+
+Lo que sigue es **mi lectura del patrón y del código**, escrita antes de correr. Donde no
+estoy seguro, lo digo.
+
+| # | Operador | Ejemplo | Predigo |
+|---|---|---|---|
+| 1 | Normalización | `año` NFC vs NFD | **mismo token** `año`. Sin el NFC, la NFD se parte en el acento y da `ano` |
+| 1 | — | `año` vs `ano` | **dos nodos distintos**: la ñ pasa |
+| 2 | Tokenización | `peter_pan` | **un solo token** de 9 caracteres. `_` es `\w` y no es dígito, así que `[^\W\d]` lo acepta |
+| 2 | — | `co-alinear` | **`alinear` y nada más**. En `c` el patrón pide 2 caracteres más y encuentra `o` y después `-`: no matchea. `co` no existe |
+| 2 | — | palabras de 2 letras | **no existen**: el patrón pide 1 + 2 = **3** mínimo |
+| 2 | — | `https://www.x.com/y` | **`https`, `www`, `com`**. `x` e `y` son de 1 letra. **A nivel del patrón**, que es el alcance que el documento se da (*"probado con el patrón del paso 2"*) |
+| 2 | — | puntuación, guiones, emojis, dígitos | **no pueden llegar a un token** |
+| 3 | Filtrado | `of` en `control of guns` | **se va**: está en las 703 |
+| 4 | N-gramas | `control of guns` | **`control guns`**: la stopword se va **antes** de armar los bigramas, así que quedan adyacentes. **No es un bug: es la condición declarada**, y S3 (que lo cambiaría) está en espera |
+| 5 | Selección | pool y corte | de los `top_k*3` más frecuentes, los `top_k` de mayor TF-IDF medio; **con empate en el borde, N puede no ser `top_k`** |
+| 6 | Presencia | un par en una unidad | **1 por unidad**, aunque los dos términos se repitan muchas veces en el mismo texto |
+| 7 | Signo | `but` dentro de `distribution` | **s(u) = −1**. Es **condición declarada, no bug**: la búsqueda es por subcadena |
+| 7 | — | `force_w_pos` | **anula el signo** |
+| 8 | W | — | diagonal 0, rango [−1, 1], `/ máx\|·\|` |
+
+### Lo que no sé
+
+- **Si `https`, `www` o `com` están en las 703 stopwords.** No lo miré. Por eso el test del
+  ejemplo de la URL va **al nivel del patrón** —que es donde el documento lo afirma— y, si
+  además paso la URL por el analizador completo y alguno desaparece, **lo reporto**: sería
+  una diferencia entre lo que el documento sugiere y lo que llega a W.
+- **Cuántos de los ejemplos difieren del documento.** Predigo **cero**, pero el CP1 ya
+  comparó los valores escritos, no los ejemplos. Esto es lo primero que los corre.
+
+### La regla, por si difiere
+
+Si algún test muestra que el código hace otra cosa que la declaración: **se corrige el
+documento, se reporta, y el extractor no se toca.**

@@ -10631,3 +10631,83 @@ documento, se reporta, y el extractor no se toca.**
 
 El gate (`f96c234`). El comportamiento del extractor. El signo. La divergencia (b), que **se
 declara** y ya está en el paso 7 del documento.
+
+---
+## Paso 3 — CP1: el resultado. A1.PAUSA — 2026-10-14 23:24 UTC
+
+*Claude Opus 5 (Code). Predicción en `edb2234`, **commiteada antes**. CP1 en `168fd59`.
+Rebase sobre `3d47f4f`.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** la suite completa, **676 pasan, 7 xfailed, 0 fallan** (85 s) · los 9 casos
+nuevos, entre ellos el que compara la declaración del código contra el documento · que
+`window` no existe como atributo (`AttributeError` al intentar declararlo) · el estado
+guardado, con la marca de `w_version` apuntando a una declaración que está en el registro.
+
+**Del peso del contexto:** nada que yo vea. Lo de abajo o se corrió o es una línea citada.
+
+### La predicción, contra lo que pasó
+
+| | Predije | Pasó |
+|---|---|---|
+| Tests existentes que se mueven | **uno solo**, `test_extraccion_fallida_no_borra.py`, en **3 lugares** | **Exacto.** Los tres, y nada más |
+| `test_node_extractor_cp0`, `test_analizador_S0` | no se mueven | **No se movieron** |
+| `test_w_version` (`to_list`/`from_list`) | no se mueve, por el default | **No se movió.** Ninguna rama hizo falta |
+| `test_firma_ckm` (6 campos) | no se mueve | **No se movió** |
+| Suite | 667 + los nuevos, 0 fallan | **676 + 7 xfailed, 0 fallan** |
+| *"¿`ngram_max` se puede declarar sin tocar nada más?"* — **dije que no lo había verificado** | creía que sí | **Sí.** Como parámetro del servicio, no del perfil |
+
+**La predicción se cumplió entera**, incluido lo que había marcado como no verificado.
+
+### Lo que encontré haciéndolo
+
+**1. `window` no se puede declarar: no existe.** El constructor lo acepta
+(`node_extractor.py:318`) y **lo descarta** — nunca se guarda ni se usa, dice *"reservado"*.
+Intenté declararlo y saltó `AttributeError`. **Lo saqué de la declaración y no toqué el
+código**: declarar un parámetro que el servicio tira sería declarar algo que no es. Queda
+escrito en un comentario, ahí.
+
+**2. El hash de las stopwords estaba por quedar en dos lugares.** Lo tenía en un bloque
+propio *y* en el perfil, que ya traía el conteo y el origen. Es exactamente lo que la TASK
+dice que no (*"sin duplicarse"*), así que el hash entró **al perfil**, que es su único lugar,
+y el bloque salió. Lo mismo rige a los operadores 1, 2 y 3: **no copian valores**, nombran en
+`del_perfil` qué claves del perfil son sus parámetros.
+
+**3. Lo que anuncié en la predicción y se cumplió:** `stopwords_origen` es **histórico** —la
+lista está embebida, no se lee de la librería— y `entorno.sklearn` es **1.9.0**, el que hoy
+corre el TF-IDF. Quedan **separados** en el dato. No cambié nada por esto.
+
+### Qué quedó
+
+| | |
+|---|---|
+| **1–6** | `NodeExtractorService.declaracion()` |
+| **7 (signo) y 8 (W)** | `CorpusService.declaracion_extraccion()`, que compone |
+| **Lo invisible del CP0** | `top_k`, `ngram_max`; **hash sha256** de las dos listas (no sólo el conteo: dos listas distintas de 703 dan el mismo número y el mismo origen escrito a mano); `smooth_idf`/`norm`/`use_idf`/`sublinear_tf`; `max_features = top_k·3`; python 3.12.1, sklearn 1.9.0, numpy 2.4.6; la fórmula de W |
+| **Productor** | sha256 del **fuente** de `node_extractor.py` y `corpus_service.py` |
+| **Atada al sha de W** | `WTracePoint.declaracion_sha` — **referencia, no copia**. Los dicts viven una vez en `declaraciones: {sha: …}`. Verificado: dos rebuilds bajo la misma declaración dejan **una** entrada |
+| **Sin declaración** | `None` = *no se sabe*. Un estado anterior al CP1 carga con `None` en sus marcas y **no se completa con la de hoy** (I2). Hay un test que lo fija |
+| **Sin rama para estados viejos** | el default del campo alcanzó. Ni un `if` |
+| **(b) declarada** | la condición del NFC está en el documento **y** en el dato, con un test que exige las dos |
+
+### El test que importa para el paper
+
+`test_el_codigo_dice_lo_mismo_que_el_documento` **lee los valores del documento** —el patrón,
+el largo mínimo, `|S| = 703`, los 44 marcadores, NFC, `smooth_idf`/`norm="l2"`,
+`max_features`, la diagonal 0, *"cada par cuenta 1 por unidad"*— y los compara con lo que
+produce el código. **Hoy coinciden.** No hubo que corregir el documento.
+
+### Lo que sigue sin verificarse, y el documento lo dice
+
+Las **referencias bibliográficas** de la declaración siguen *"citadas de memoria: a verificar
+antes de entrar al paper"*. **No las verifiqué**: no estaba en el CP1.
+
+### Lo que no se tocó
+
+El gate (`f96c234`). El comportamiento del extractor: la declaración **describe**, no cambia
+nada — y la suite, con los mismos números de siempre, es lo que lo sostiene. El signo. La
+salida de `accumulate`.
+
+**A1.PAUSA.** Con esto el **CP1 está completo**. Queda el **CP3** de la TASK (sin código: qué
+haría falta para que entre una W de otro productor) y, en la otra, el **CP-T**.

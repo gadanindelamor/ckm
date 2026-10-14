@@ -187,9 +187,16 @@ def test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W(tmp_path):
     """
     **El caso límite del paso 5, encontrado corriendo el CP2.**
 
-    Si el grupo empatado del corte tiene más miembros que `top_k` y no hay
-    selección anterior, **no entra ninguno**: `N = 0`. Y entonces `_rebuild`
-    vuelve antes de construir nada, así que **W se queda en `None`**.
+    Si **ningún término queda estrictamente por encima del corte**, el grupo
+    empatado **no cabe** en `top_k` y **no hay selección anterior**
+    (bootstrap), no entra ninguno: `N = 0`. Y entonces `_rebuild` vuelve antes
+    de construir nada, así que **W se queda en `None`**.
+
+    Las tres condiciones son la precisión de delamor (14 oct) sobre la primera
+    redacción de Code, que decía *"si el grupo empatado tiene más miembros que
+    top_k"*: eso no es lo que decide. `N = len(arriba)`
+    (`node_extractor.py:_seleccionar`), así que **N = 0 sólo si `arriba` está
+    vacío**.
 
     No es una falla: es la regla de la relajación (h = 0 conserva, y en el
     bootstrap el estado anterior es "ningún nodo") llevada a su límite. Pasa
@@ -200,6 +207,7 @@ def test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W(tmp_path):
     top_k"*; **no decía que puede ser 0 y dejar el corpus sin W**. Se corrigió
     el documento (CP2, 14 oct), no el código.
     """
+    # las tres condiciones, verificadas y no supuestas
     sin_vocabulario_comun = [
         "gun control reduces violence in urban areas",
         "however the second amendment protects arms",
@@ -207,8 +215,13 @@ def test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W(tmp_path):
     ]
     ex = NodeExtractorService(top_k=6)
     r  = ex.accumulate(sin_vocabulario_comun)
-    puntajes = {round(d["score"], 15) for d in r["registro_borde"]}
-    assert len(puntajes) < len(r["registro_borde"]), "sin empate no se mide esto"
+    reg   = r["registro_borde"]
+    tol   = NodeExtractorService.TOL_EMPATE
+    arriba = [d for d in reg if d["distancia_al_corte"] > tol]
+    empate = [d for d in reg if abs(d["distancia_al_corte"]) <= tol]
+    assert arriba == [],              "1) nada estrictamente arriba del corte"
+    assert len(empate) > 6,           "2) el grupo empatado no cabe en top_k"
+    assert all(d["pertenencia_anterior"] is None for d in reg), "3) bootstrap"
     assert r["nodes"] == []
 
     c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3, top_k=6)

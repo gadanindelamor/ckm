@@ -10194,3 +10194,78 @@ cero— así que **el perfil nace con los valores de S1** y el bit a bit se veri
 contra el analizador de ahora. Está en `6547270`.
 
 **A1.PAUSA.**
+
+---
+## CP0 (declaración_extracción) — qué se declara hoy y qué falta. A1.PAUSA — 2026-10-14 14:05 UTC
+
+*Claude Opus 5 (Code). `TASK_declaracion_extraccion_v1`, CP0. **Sin código**: sólo lectura
+contra `83fad71` (= `fb2b87a` + las dos TASK + la decisión). Referencia de los 8 operadores:
+`docs/tasks/declaracion_extraccion_W_14oct2026.md`.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Leído en el código, con archivo:línea:** las ocho filas de la tabla · que `w_version`
+guarda cuatro campos y ninguno dice cómo se produjo W (`w_version.py:72-92`) · que
+`perfil_extraccion` entra y sale del estado (`corpus_service.py:302, 396, 409`) · las dos
+divergencias de abajo.
+
+**Corrido (dos conteos, nada más):** `len(_STOPWORDS)` = **703**, `len(PERFIL_ES_EN.stopwords)`
+= 703, `len(_OPPOSITION_MARKERS)` = **44**. Y sobre los ocho `*_state.json` del repo:
+**ninguno** tiene la clave `perfil_extraccion` — todos son anteriores a S0b, y `_load` los
+deja en `None` declarado, que es lo correcto (I2).
+
+**Del peso del contexto:** que los 703 "coincidan con la declaración". **Verifiqué el
+número, no la composición**: que sean NLTK 3.10.3 es (313) + en (198) + sklearn (318) + 112
+propias lo dice el docstring (`node_extractor.py:30-36`), y el docstring no es una medición.
+Lo mismo con los 44: conté 44, no verifiqué que la declaración se refiera a estos 44.
+
+### La tabla — los 8 operadores
+
+| # | Operador | Dónde vive | ¿Queda en la traza hoy? | Qué falta |
+|---|---|---|---|---|
+| 1 | **Normalización** `u' = minúsculas(NFC(u))` | `node_extractor.py:347-350`, valores en `PERFIL_ES_EN:257-280` | **Sí.** `perfil.to_dict()` → `accumulate["perfil"]` → `corpus_service.py:302` → `save()["perfil_extraccion"]` (`:396`) | No está **atada al sha256 de W**: hay **un** perfil por estado, no uno por marca de `w_version` |
+| 2 | **Tokenización** `[^\W\d][^\W\d]{2,}` | `node_extractor.py:351`; patrón en el perfil (`:264`), compilado en `:306` | **Sí**, `token_pattern` y `largo_minimo` en `to_dict()` (`:240-255`) | Lo mismo que (1). La **versión de Python / `re`** (el `\w` Unicode depende de ella) no se declara |
+| 3 | **Filtrado** (|S| = 703) | `node_extractor.py:353`; lista en `_STOPWORDS`, origen en el perfil (`:271-275`) | **Parcial.** Viajan `n_stopwords` y `stopwords_origen`, **no la lista** — decisión explícita del `to_dict()` | **El hash de la lista.** Hoy el origen es una frase; dos listas distintas de 703 dan el mismo registro |
+| 4 | **N-gramas** (contigüidad **después** del filtrado) | `node_extractor.py:355-357`; `ngram_max` es parámetro del constructor (`:293`) | **NO.** `ngram_max` no está en el perfil, ni en la salida de `accumulate`, ni en `save()` | Todo. Un estado con `ngram_max=1` y uno con `=2` se guardan **idénticos**. Es el primer agujero real |
+| 5 | **Selección** (top_k·3 frecuentes → top_k por TF-IDF medio) | `node_extractor.py:431` (`max_features`), `:436` (media), `:437` + `:472-505` (desempate); defaults de sklearn en `:376` | **Parcial.** `registro_borde` guarda, por término del pool, `score`/`distancia_al_corte`/`pertenencia_anterior` (`save():391`) | **`top_k` no queda en ningún lado** (se deduce del largo de `nodes`, y con empates **no coincide**). Tampoco `norm="l2"`, `smooth_idf`, ni la **versión de sklearn** |
+| 6 | **Presencia** `χ`, `σ = 2χ−1` | `node_extractor.py:452` (χ = tfidf no nulo ∩ `node_set`), `:456-458` (**1 por unidad**); `σ` sólo en `evaluate():522-523` | **NO**, como dato. Se infiere de `pairs_by_text` | Declarar que χ sale del **no-nulo de la matriz TF-IDF** y no de una comparación de cadena. Es equivalente —`smooth_idf` mantiene idf ≥ 1, así que ningún término presente da 0— pero **es otro mecanismo que el que dice la declaración** |
+| 7 | **Signo de la unidad** (44 marcadores, subcadena) | `corpus_service.py:56-69` (lista), `:227-230` (`_has_opposition`), `:322` (`force_w_pos` lo anula) | **Parcial.** `force_w_pos` sí: `save()["forced_w_pos"]` (`:389`) y `causal_event` (`:352-358`). **La lista no: ni conteo, ni hash, ni origen** | Todo lo de la lista. Es **el operador peor registrado**, y es el que el review v28 (M4) marca como la parte débil |
+| 8 | **W** `Σ s·χᵢ·χⱼ / máx\|·\|`, `Wᵢᵢ=0` | `corpus_service.py:334-342` | **Parcial.** `w_version.py:72-92` guarda `timestamp`, `sha256`, `corpus_size`, `causal_event` | **Cómo se produjo W no está.** La normalización por `máx\|·\|` y la diagonal 0 no son dato en ninguna parte |
+
+### Dos divergencias, leídas (no corridas)
+
+**(a) Una W con declaración puede quedar registrada sin ella.** `_accumulate_safe`
+(`corpus_service.py:239-245`) absorbe el `ValueError` devolviendo `{"nodes", "pairs",
+"node_freq"}` — **sin `"perfil"`**. En `_rebuild`, `self._perfil_extraccion =
+result.get("perfil")` (`:302`) corre **antes** del `if not nodes: return` (`:305-306`). Un
+solo texto degenerado en el batch deja **la W anterior viva** y su perfil en `None`. El
+`None` de `_load` dice *"no se sabe"* y es correcto; **éste dice lo mismo y es falso**. Es el
+caso contrario a I2: no se completa de más, se borra de menos. Lo mismo pasa con
+`registro_borde` (`:301`, default `[]`).
+
+**(b) El signo no pasa por la normalización.** `_has_opposition` (`:229`) hace `.lower()` y
+**no** `unicodedata.normalize("NFC", ...)`, al revés que `analizar` (`:347-350`). Sin efecto
+hoy —los 44 marcadores son ASCII, verificado leyendo la lista— pero es una condición que no
+está escrita y que cambia sola el día que entre un marcador con tilde.
+
+**Ninguna de las dos se toca**: la regla 2 de la TASK dice que el comportamiento es decisión
+de delamor.
+
+### Dónde entran W producidas por otros caminos (sólo nombradas)
+
+| Camino | Qué hace | Operadores |
+|---|---|---|
+| `experiments/build_W_base_N64.py:125-141` | Usa `NodeExtractorService` y **arma W él mismo**: `cooc / corpus_size`, sin signo, sin `máx\|·\|` | 1–6 iguales; **7 y 8 son otros**. No pasa por `CorpusService`: sin `w_version`, sin perfil guardado |
+| `experiments/sintetico_campo_plantado.py:112` | `CorpusService` con `ngram_max=1` y signo **plantado**; y en el mismo script φ (`:295`) y PMI (`:303`) sobre la matriz de presencia (`:284`) | W del repo **más** dos matrices que son otros operadores 6–8 |
+| `experiments/fourforums_pipeline_v8h.py:158` | Escribe `W_asim_v8h.json`. **No es una W**: son estadísticas de asimetría de *stance* por par de autores (`:117-156`). El nombre del archivo engaña | Ninguno de los 8 |
+| Los drivers que instancian `CorpusService` (`driver_W_corpus_informes`, `driver_neel_salamanca`, `replay_*`, `baseline_d_ckm`, `monitor_service`, `stochastic_attractor_eval`, …) | Mismo camino, mismos 8 operadores | Cada uno fija **su** `top_k` y `ngram_max`, **y eso no queda en la traza** — es (4) y (5) otra vez, multiplicado |
+
+### Lo que el CP0 deja dicho para el CP1
+
+Lo que hoy viaja es **el perfil de idioma** (S0b): operadores 1, 2 y 3 (parcial). Lo que
+falta para la declaración de los 8: **`ngram_max` y `top_k`** (hoy invisibles), **hash de las
+dos listas**, **la lista de marcadores entera como registro**, **los defaults y la versión de
+sklearn**, **la fórmula de W**, y sobre todo **atar la declaración al `sha256` de W** en vez
+de tener una sola por estado.
+
+**A1.PAUSA.**

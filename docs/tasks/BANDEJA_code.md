@@ -10400,3 +10400,75 @@ por separado; que sean el mismo mecanismo es **mi lectura**, y el párrafo final
 analogía — no una medición.
 
 **Sin A1.PAUSA**: no hay nada que decidir acá. El **CP1** sigue esperando el OK.
+
+---
+## Paso 2 — corregir (a): LA PREDICCIÓN — 2026-10-14 21:18 UTC
+
+*Claude Opus 5 (Code). `TEXTO_PARA_CODE_CP1_declaracion_14oct2026.md`, Paso 2. **Commiteada
+antes de escribir el test y antes de tocar el código.** Pasos 0 (`95cd5f4`) y 1 (`0f836b2`)
+hechos.*
+
+### Qué va a fallar hoy, y por qué
+
+El test nuevo (`tests/test_extraccion_fallida_no_borra.py`): con una W viva, su perfil y su
+`registro_borde`, se fuerza que la extracción falle y se verifica que **los cuatro** queden
+intactos.
+
+`_rebuild` (`corpus_service.py:298-306`) asigna en este orden:
+
+```
+result                  = self._accumulate_safe(...)      # :298  dict SIN "perfil"
+self._registro_borde    = result.get("registro_borde", []) # :299  -> []
+self._perfil_extraccion = result.get("perfil")             # :302  -> None
+nodes                   = result["nodes"]                  # :303  -> []
+if not nodes: return                                       # :305-306
+```
+
+`_accumulate_safe` absorbe el `ValueError` devolviendo `{"nodes", "pairs", "node_freq"}` —
+**sin `"perfil"`** (`:239-245`). Las dos asignaciones corren **antes** del `return`.
+
+**Predicción, por aserción:**
+
+| Qué se verifica | Hoy | Por qué |
+|---|---|---|
+| `_perfil_extraccion` intacto | **FALLA** → `None` | `:302` corre antes del `return` |
+| `_registro_borde` intacto | **FALLA** → `[]` | `:299`, ídem, con default `[]` |
+| `W` intacta | **pasa** | `self._W` sólo se asigna en `:344`, después del `return` |
+| `nodes` intactos | **pasa** | `self._nodes` sólo en `:343`, ídem |
+| sin marca nueva en `w_version` | **pasa** | `register` sólo en `:360` |
+| el estado guardado: `perfil_extraccion` nulo **al lado de** una W no nula | **FALLA** | `ingest` llama `save()` después de `_rebuild` (`:132`) |
+
+**Son 3 de 6**: dos en memoria y la tercera es su huella en disco, que es la que importa —
+un estado que declara *"no se sabe bajo qué condición se extrajo"* sobre una W que **sí**
+tiene declaración.
+
+### Cómo voy a forzar la falla
+
+`monkeypatch` sobre `NodeExtractorService.accumulate` para que levante `ValueError`. **No**
+con un corpus degenerado: con textos buenos ya acumulados, `TfidfVectorizer` no levanta, así
+que el corpus no alcanza para llegar al camino. Lo que el test afirma es el **contrato** de
+`_accumulate_safe` —*si la extracción falla, lo vivo no se toca*—, no una causa particular de
+falla.
+
+### El cambio mínimo que voy a hacer
+
+**Mover** las dos asignaciones (`:299` y `:302`) a donde se asignan `self._nodes` y `self._W`
+(`:343-344`). Nada más. La regla que queda escrita: **el perfil y el `registro_borde`
+describen la W que está viva**, así que se actualizan cuando se actualiza W, y no antes.
+
+**Esto cambia también un caso que no es el de la divergencia**, y lo digo porque es un
+cambio de comportamiento: si la extracción **anda** pero no da nodos (corpus vacío →
+`accumulate` devuelve el perfil y `nodes: []`), hoy el perfil **se escribe igual**. Con el
+cambio **no**. Me parece lo correcto —atar una declaración a una W que esa corrida no
+produjo es lo mismo que I2 al revés— pero **no es lo que delamor pidió**, así que si esto no
+va, se dice y lo saco.
+
+### Lo que no se toca
+
+El gate (`f96c234`). La divergencia (b) —`_has_opposition` sin NFC—: **se declara** y ya está
+en `docs/defs/DECLARACION_extraccion_W_v1.md` paso 7. Ningún otro camino de `_rebuild`.
+
+### Lo que no sé
+
+Si algún test existente depende de que el perfil se escriba en el camino "sin nodos". **No lo
+busqué todavía**: lo dice la suite completa, después del cambio.

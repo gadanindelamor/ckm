@@ -30,7 +30,7 @@ la copia de `docs/opus/` es traza del día y **no se edita**.
 | **CP-T** | El teorema de presencia **se cumple en el instrumento**, por los dos caminos | `ece56f4`, reporte `2e89afa` |
 | **CP-E** | **N_eff es estable frente al muestreo y a nada más** | `0e042ac` |
 | **CP-M** | **El nulo no controla lo que produce el efecto**; no resuelve M4 | `a1c6a18` |
-| **CP-N** | **No arrancado.** Espera la vinculación de `ckm` con `ckmdatasets` | `d6a5fcb` |
+| **CP-N** | **No arrancado.** Espera la vinculación de `ckm` con `ckmdatasets`, y antes **la revisión legal de redistribución** de fourforums y CreateDebate, que delamor puso **en el preprint** | `d6a5fcb`, `0575fe7` |
 
 ---
 

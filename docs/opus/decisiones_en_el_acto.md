@@ -122,3 +122,8 @@
 - Describió una interfaz de claude.ai (Projects → archivos) que ya no existe.
 
 *Última actualización: 13 oct 2026, cierre (repo en `fb2b87a`).*
+
+## 14 oct 2026 (noche)
+- **CP-M cerrado como declaración.** delamor: *"confirmo cerrar el CP-M así, con esa declaración"*. La marca de oposición no se distingue del azar en los corpus del repo; el nulo por pares queda para corpus más grandes / CP-N.
+
+*Última actualización: 14 oct 2026, noche.*

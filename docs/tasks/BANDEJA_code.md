@@ -11335,3 +11335,63 @@ El gate (`f96c234`). `services/`. Nada vivo. **No se fijó umbral.**
 
 **A1.PAUSA.** De `TASK_condiciones_del_paper_v1` quedan **CP-M** (opcional) y **CP-N** (sólo
 con tu orden).
+
+---
+## CP-M — nulo de marcadores: LA PREDICCIÓN — 2026-10-15 04:08 UTC
+
+*Claude Opus 5 (Code). `TASK_condiciones_del_paper_v1`, CP-M (review v28, M4). **Commiteada
+antes de escribir el driver.** Corpus del repo: A24, D12, E7. Decisiones en `d6a5fcb`.*
+
+### Una parte es teorema y no se corre
+
+**El conjunto de nodos es el mismo en las barajadas, en la marca real y en W_pos.** Los
+nodos salen de `accumulate`, que **nunca ve el signo**: `s(u)` se aplica recién en `_rebuild`
+(`corpus_service.py:322`), ruteando pares ya extraídos a `pos` o a `neg`. ∎
+
+**Dos consecuencias, y la segunda es de diseño:**
+1. Cualquier diferencia de N_eff entre la marca real y una barajada es **sólo de los
+   signos**. Es exactamente la condición que el CP-E encontró más delicada: ahí, con el
+   conjunto de nodos idéntico, N_eff se movió 66%.
+2. **No hace falta re-extraer por permutación.** Extraigo una vez y re-firmo los
+   `pairs_by_text`. Para que eso no sea *"mi fórmula"* en vez de la del repo, el driver
+   **verifica que su W de la marca real sea igual a la de `CorpusService`** antes de usar
+   nada.
+
+### Qué mido
+
+Para cada corpus: **k** = textos con marcador real. `W_pos` (`force_w_pos`), `W_mixta` real,
+y **200 barajadas** que marcan **k textos al azar** ignorando el contenido. N_eff con
+`n_runs=1000` y **5 seeds** por W, para separar el ruido de muestreo de la varianza de
+permutación. **Se reporta la dispersión de las permutaciones, no sólo la media** (delamor,
+por lo del CP-E).
+
+### Predicción
+
+| | Predigo |
+|---|---|
+| **k / n** | **alto, >60%**. El review (M4) dice que la búsqueda *"siempre encuentra algo en textos suficientemente largos"*, y es por subcadena (`but` dentro de `distribution`) |
+| **la pregunta del CP-M** | **la marca real NO va a quedar afuera del nulo.** Si casi todos los textos están marcados, barajar k marcas entre n textos **se parece a la marca real por construcción**, y la caída de N_eff no distingue |
+| **dispersión de las 200 barajadas** | **grande** — del orden de lo que movió una perilla en el CP-E (decenas de por ciento), no un ruido chico alrededor de la media |
+| **signo de la caída** `W_pos → W_mixta` | **no lo predigo.** El CP-E mostró que N_eff no es monótona ni tiene signo fijo frente a estos cambios |
+| ruido de muestreo (5 seeds, misma W) | **7–9%**, como en el CP-E |
+
+### Lo que no sé
+
+- **Si hay textos repetidos** en algún corpus. Importa: barajo por índice, no por cadena, y
+  si hubiera duplicados una marca por contenido no distinguiría. Lo chequeo y lo digo.
+- Si el resultado es igual en los tres corpus o depende del tamaño.
+- Si con k alto la comparación llega a ser **vacía** (k = n: no hay nada que barajar). Si
+  pasa en algún corpus, **lo reporto como resultado**: querría decir que el procedimiento de
+  marcadores **no tiene nulo posible** en ese corpus, que es la objeción del review en su
+  forma más dura.
+
+### Lo que esto puede y no puede afirmar
+
+El CP-M es **opcional** porque el paper afirma lo que pasa **bajo** el procedimiento de
+marcadores, que está declarado (`DECLARACION_extraccion_W_v1.md`, paso 7). **El nulo le
+sirve a quien quiera leer el signo como "oposición"** — y esa lectura es del lector. Así que
+este CP **no valida ni invalida** lo que el paper afirma: acota **qué más se puede decir**.
+
+### Lo que no se toca
+
+`services/`. El gate (`f96c234`). Nada vivo. **No se fija umbral.**

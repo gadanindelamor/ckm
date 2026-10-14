@@ -1,7 +1,7 @@
 # Qué aporta CKM hoy / qué no reinventamos — 14 oct 2026
 *Opus 5.5 (Cowork), a pedido de delamor: "1. qué aporta hoy ckm. 2. separar conscientemente, sabiendo que tal línea no existe, lo que aporta de lo que NO REINVENTEMOS LA RUEDA. En este último grupo está corpus y node extractor." Primero se escribió sin buscar; después delamor: "busca todo lo que necesites, ahora sí sos libre".*
 
-**Qué se leyó (alcance):** paper v27 (abstract, §1, §7.1, §8.1); `REVIEW_REPORT_PAPER_..._v28.md` (12 oct) completo; v28 borrador sólo con grep (GOLES, enumeración exacta, TRUST); docstrings de `services/*.py`; lista de archivos del repo que mencionan "token" o usan TF-IDF/NLTK. Todo en la PC, sólo lectura, repo en `fb2b87a`. No se leyó el v28 entero.
+**Qué se leyó (alcance):** paper v27 (abstract, §1, §7.1, §8.1); `docs/opus/REVIEW_REPORT_PAPER_Landscape_Driven_Device_v28.md` (12 oct; original en la PC, `antropic/___paper/`) completo; v28 borrador sólo con grep (GOLES, enumeración exacta, TRUST); docstrings de `services/*.py`; lista de archivos del repo que mencionan "token" o usan TF-IDF/NLTK. Todo en la PC, sólo lectura, repo en `fb2b87a`. No se leyó el v28 entero.
 
 ## 1. Lo que aporta CKM hoy
 | | qué | estado según el paper/review |
@@ -30,4 +30,4 @@
 ## 5. Para delamor
 1. ¿A4 (el método) va como aporte o como condición?
 2. ¿A3 (P7) y P5 entran como aporte con su condición declarada, o esperan el nulo?
-3. El review (12 oct) es de un sistema de IA sin acceso al repo; lo verificado por Opus el 12 oct está en `verificacion_review_kimi_12oct2026.md`. Lo citado acá del review es lo que el review dice, no verificado de nuevo.
+3. El review (12 oct) es de un sistema de IA sin acceso al repo; lo verificado por Opus el 12 oct está en `claude/verificacion_review_kimi_12oct2026.md` (sólo en el proyecto claude.ai; no está en el repo). Lo citado acá del review es lo que el review dice, no verificado de nuevo.

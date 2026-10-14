@@ -19,8 +19,8 @@
 
 ## 4. Protocolo nuevo de hoy
 - **A Code se le pasa sólo lo que se llama `TEXTO_PARA_CODE_…`**, entero, cortado y pegado por delamor. Opus cierra cada mensaje con "**Para Code:** …".
-- **Repo en la PC:** Opus puede escribir y editar archivos, **sin comandos git que escriban**. Para no trabar el `git pull --ff-only` de delamor: sólo archivos nuevos en `docs/opus/`; no editar trackeados salvo pedido.
-- **La traza de Opus vive en el repo, en `docs/opus/`** (delamor: *"esos van al repo, sino desaparecen"*). Con permiso de borrado sobre `ckm___source` (dado el 14 oct, por sesión), Opus hace en la PC `git pull --ff-only`, escribe en `docs/opus/` y commitea. **El push lo hace delamor** (`git push` desde su PC): la sesión de Opus no tiene credenciales de GitHub. `contexto_claude` y el proyecto quedan como copia; **la fuente es el repo**.
+- **Repo en la PC:** con permiso de borrado (14 oct), Opus escribe en `docs/opus/` y commitea; Code escribe en el resto. Un escritor por carpeta → sin conflictos.
+- **La traza de Opus vive en el repo, en `docs/opus/`** (delamor: *"esos van al repo, sino desaparecen"*). Con permiso de borrado sobre `ckm___source` (dado el 14 oct, por sesión), Opus hace en la PC `git pull --rebase`, escribe en `docs/opus/` y commitea. **El push lo hace delamor**, siempre con `git pull --rebase` y después `git push` (no `--ff-only`: con commits de los dos lados falla; delamor: *"mete ruido"*): la sesión de Opus no tiene credenciales de GitHub. `contexto_claude` y el proyecto quedan como copia; **la fuente es el repo**.
 - **Cuidado técnico (encontrado el 14 oct):** `device_commit_files` con el **mismo `stagedPath`** entrega una versión **vieja** del archivo aunque reporte "written". Así quedaron viejos tres archivos de `contexto_claude`. **Siempre stagear con un nombre nuevo y verificar con md5 en la PC después de escribir.**
 
 ## 5. Esperando a delamor

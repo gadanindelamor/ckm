@@ -10936,3 +10936,87 @@ queda dicho.
 
 **A1.PAUSA.** Con esto la `TASK_declaracion_extraccion_v1` queda **completa en sus cuatro
 CP**. Lo siguiente, si querés, es el **CP-T** de `TASK_condiciones_del_paper_v1`.
+
+---
+## CP3 — anexo: los tres extractores, y cómo σ usaría la declaración de su W — 2026-10-15 01:09 UTC
+
+*Claude Opus 5 (Code). Pedido de Opus (Cowork) por delamor sobre el CP3. **Sin código.**
+Leído contra `94544f1`.*
+
+### A1
+
+**Leído, con archivo:línea:** los tres extractores y sus parámetros · que el de
+`ckm_monitor.py:186` **no aparece en ninguna otra línea del archivo** · que `evaluate` sólo
+depende de `analizar` (`node_extractor.py:522`), y por lo tanto de `ngram_max` y del perfil ·
+qué claves tiene hoy la declaración.
+
+**No corrido.** Y **del peso del contexto**: que llamar al tercero *"muerto"* sea la palabra
+justa — lo verificable es que su único uso es la asignación.
+
+### Los tres, con lo que de verdad los diferencia
+
+| Dónde | Cómo se construye | Qué hace | Qué de él afecta σ |
+|---|---|---|---|
+| `iap_chatroom/ckm_monitor.py:186` | `NodeExtractorService(top_k=32)` | **nada**: es su única mención en el archivo | — |
+| `CorpusService._extractor` (`corpus_service.py:86`) | con el `top_k` y el `ngram_max` que le pasan (en vivo, `top_k=32`) | **produce W** | — |
+| `MonitorService._extractor` (`monitor_service.py:119`) | `NodeExtractorService()`, **defaults** | **evalúa σ** (`:227`) | **todo** |
+
+**La precisión que importa:** el segundo y el tercero difieren hoy en `top_k` (32 contra 20),
+y **para σ eso es inerte** — `evaluate` pasa por `analizar`, que usa el **perfil** y
+`ngram_max`, no `top_k`. Lo que sí mordería es un `ngram_max` o un perfil distintos, y hoy
+**coinciden por default, no por construcción**. Esa es toda la garantía que hay.
+
+### Cómo σ usaría la declaración de su W
+
+**El dato ya existe y está atado:** cada marca de `w_version` lleva el `declaracion_sha` de
+la declaración bajo la que se produjo esa W (CP1). Lo que falta no es el dato: es que **el
+que evalúa lo lea**.
+
+**La forma, en una línea:** el evaluador no se construye por su cuenta — **sale de la
+declaración de la W que está usando**. Es la misma W que `MonitorService` ya pide al corpus
+(`monitor_service.py:217`); la declaración viaja con ella.
+
+**Qué de los 8 operadores le hace falta a σ, y es exactamente lo que la declaración trae:**
+
+| Operador | ¿Lo necesita σ? |
+|---|---|
+| 1 normalización, 2 tokenización, 3 filtrado, 4 n-gramas | **Sí.** Son `analizar`, que es todo lo que `evaluate` usa |
+| 5 selección | **No.** Los nodos ya están dados |
+| 6 presencia | **Es** σ |
+| 7 signo, 8 W | **No.** Son de la construcción de W, no de evaluar un texto |
+
+**Y acá está el límite, que es real y conviene decirlo antes de diseñar nada:** la
+declaración trae el perfil entero —normalización, `lowercase`, `token_pattern`,
+`largo_minimo`— y el `ngram_max`, pero de las stopwords trae **`n`, `hash` y origen, no la
+lista**. Eso fue una decisión del CP1 y está bien para lo que se pidió. **Consecuencia:
+la declaración alcanza para VERIFICAR que un evaluador es el de esa W; no alcanza para
+RECONSTRUIRLO.** De un hash no sale una lista de 703.
+
+De ahí salen dos caminos que no son el mismo:
+
+**(a) Adentro de CKM** —el caso de los tres de arriba—: no hay nada que reconstruir. El que
+evalúa **usa el extractor del corpus**, el mismo objeto que produjo W, en vez de armarse uno.
+Y la declaración sirve para lo que sí puede: **comparar los dos `declaracion_sha` y que una
+diferencia se vea en el panel**, como `causal_event` ya hace visible una W forzada. Es
+barato, no cambia ningún número hoy —coinciden— y **deja de depender de que los defaults
+sigan coincidiendo mañana**.
+
+**(b) Con una W ajena**: no hay extractor del cual tomar. O el productor entrega **el perfil
+completo, con la lista**, además del hash —y ahí sí σ corre bajo la declaración de su W—, o
+σ se calcula con el de CKM y **la afirmación es de dos productores**, que es la pregunta que
+ya te dejé y sigue siendo tuya.
+
+### Lo que esto agrega a las tres piezas del CP3
+
+Una cuarta, y es la que ordena a las otras: **la declaración del que evalúa y la de la W
+tienen que ser la misma, o la diferencia tiene que estar escrita.** Hoy no se comparan porque
+nadie las tenía; desde el CP1 las dos existen y tienen sha.
+
+### Lo que no hago, y es tuyo
+
+- **No toqué el extractor muerto de `ckm_monitor.py:186`.** Borrarlo es tocar el canal vivo:
+  es tu decisión, no de esta TASK. Lo que sí digo es que **mientras esté, se lee como si
+  alguien evaluara con `top_k=32`, y nadie lo hace.**
+- **No cambié que `MonitorService` se arme el suyo.** Nada vivo cambia sin orden tuya.
+
+**A1.PAUSA.**

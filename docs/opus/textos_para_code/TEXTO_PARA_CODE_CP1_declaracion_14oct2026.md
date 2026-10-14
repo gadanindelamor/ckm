@@ -5,11 +5,14 @@ Soy delamor. Leí el CP0 de `TASK_declaracion_extraccion_v1` (`6d39165`). Decido
 2. **Divergencia (b) — se declara.** `_has_opposition` no normaliza a NFC; hoy sin efecto (44 marcadores ASCII). No se toca el código.
 3. **Sí al CP1.**
 
+**Antes de empezar:** `git pull`. Desde el 14 oct la traza de Opus vive en el repo, en `docs/opus/` (la escribe Opus desde la PC; Code no la edita).
+
 Orden de trabajo. Cada paso con su REPORTE en la BANDEJA. Archivos nombrados uno por uno al commitear (sin `git add -A`). Sin regresiones ni compatibilidad hacia atrás: la única versión es la actual. No se toca el gate (`f96c234`).
 
 **Paso 0 — Decisiones.** En `docs/tasks/DECISIONES_opus.md`, commit propio: "14 oct, delamor, sobre el CP0 de declaracion_extraccion: (a) se corrige; (b) se declara; CP1 sí."
 
-**Paso 1 — La declaración entra al repo.** El CP0 citó `docs/tasks/declaracion_extraccion_W_14oct2026.md`, pero ese archivo no existía en el repo: vivía en el proyecto. Fue falta del texto de Opus, no tuya. Crear `docs/defs/DECLARACION_extraccion_W_v1.md` con el contenido de abajo, tal cual (ya incluye lo que encontraste en el CP0: el mecanismo real de χ en el paso 6, la condición (b) en el paso 7, los defaults de sklearn en el paso 5). Commit propio. Corregir en la TASK la ruta de referencia para que apunte a ese archivo.
+**Paso 1 — La declaración entra al repo.** El CP0 citó `docs/tasks/declaracion_extraccion_W_14oct2026.md`, pero ese archivo no existía en el repo: vivía en el proyecto. Fue falta del texto de Opus, no tuya. Crear `docs/defs/DECLARACION_extraccion_W_v1.md` con el contenido de abajo, tal cual (ya incluye lo que encontraste en el CP0: el mecanismo real de χ en el paso 6, la condición (b) en el paso 7, los defaults de sklearn en el paso 5). Commit propio. Corregir en la TASK la ruta de referencia para que apunte a ese archivo (hoy, por `c0bcdc5`, apunta a `docs/tasks/declaracion_extraccion_W_14oct2026.md`, que no está en el repo).
+**Una sola versión viva:** `docs/defs/DECLARACION_extraccion_W_v1.md` es la canónica; ahí se corrige si el CP1 encuentra diferencias. La copia que Opus subió en `docs/opus/declaracion_extraccion_W_14oct2026.md` es traza del día: no se edita. Si en el Codespace quedó una copia **sin trackear** en `docs/tasks/declaracion_extraccion_W_14oct2026.md`, borrarla (es una versión anterior) y decirlo en el REPORTE.
 
 **Paso 2 — Corregir (a).** Primero la predicción, commiteada: qué test nuevo falla hoy y por qué. Después el test (`tests/test_extraccion_fallida_no_borra.py`): con una W viva y su perfil, un rebuild cuya extracción falla deja **intactos** la W, `nodes`, `_perfil_extraccion` y `_registro_borde`. Después el cambio mínimo en `CorpusService._rebuild` (no tocar el resto). Suite completa. REPORTE y **A1.PAUSA**.
 

@@ -11090,3 +11090,73 @@ y no del servicio.
 ### Lo que no se toca
 
 El gate (`f96c234`). Nada vivo. Esto no arregla nada: mide.
+
+---
+## CP-T — el resultado. A1.PAUSA — 2026-10-15 02:04 UTC
+
+*Claude Opus 5 (Code). Predicción en `dc1a822`, **commiteada antes**. CP-T en `ece56f4`.
+No se arregló nada: se midió.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** los 9 casos nuevos · la suite completa, **708 pasan, 7 xfailed, 0 fallan**
+(87 s) · los números del control (abajo).
+
+**Demostrado, no corrido:** las tres afirmaciones del CP-T. Están en el docstring del test,
+una línea cada una, y ya estaban en `DEFS_CKM_estado_actual_v16.md` §1.1 h).
+
+**Del peso del contexto:** nada en los números. Sí una elección: **decidí no barrer los
+corpus del repo**, y esa es una decisión mía sobre el alcance, no un resultado.
+
+### Lo que da el CP-T para el paper
+
+**El teorema se cumple en el instrumento, por los dos caminos**, y la predicción salió
+entera:
+
+| | |
+|---|---|
+| `force_w_pos=True` sobre corpus **con** marcadores | **0 negativos, 0 frustrados, T = 0** |
+| textos **sin** marcadores, sin forzar | **0 negativos, 0 frustrados, T = 0** |
+| W de ceros (`max_abs == 0`, sin dividir) | cumple, pero **por el guard del denominador**, no por el teorema. Queda fijado aparte para que la diferencia se vea |
+| la W forzada | **queda marcada** en `causal_event` y en el operador 7 de su declaración: el teorema valiendo **no la vuelve indistinguible** de una natural |
+
+**Para §4/§5.2 la condición se escribe así:** *con presencia sola —`force_w_pos` o corpus sin
+marcadores— no hay Wᵢⱼ < 0, no hay triángulo frustrado y T(W) = 0; es por construcción, y el
+instrumento lo cumple.*
+
+### Lo que había dicho que no sabía
+
+*"¿frustración > 0 en el control?"* — **Sí, y al máximo.** Medido: N = 5, **20 de 20**
+entradas fuera de la diagonal negativas, **T = 1.0**, **10 de 10** triángulos frustrados.
+
+**Y acá soy preciso sobre lo que ese control es y lo que no:** 3 de sus 4 textos tienen
+marcador, y como todos comparten vocabulario, **todos los pares salen iguales** (pos = 1,
+neg = 3 ⇒ W = −1 uniforme). Sirve perfecto para lo que está puesto —probar que los otros
+casos **no** son vacíos—, pero **es degenerado**: no es un corpus realista, es el extremo.
+**No se puede leer como "los corpus con marcadores dan T = 1".**
+
+### Lo que encontré leyendo, y es para el paper
+
+**`T(W)` no existe en el código.** No está en `services/` ni en `iap_chatroom/`. Sólo hay
+`frustracion()` en `experiments/orbit_analytics.py:405` y
+`experiments/sintetico_campo_plantado.py:208`; la *"torsión"* de `monitor_service` es **otra
+cosa** (pares de Δ_r, no triángulos). **El paper cita T(W) y el instrumento no lo calcula**:
+en este test lo computo desde la definición de DEFS v16, y está dicho que es del test.
+
+**Es una decisión tuya**, no de esta TASK: si T(W) va al paper como magnitud del modelo,
+debería vivir en `services/` y no en un test y dos scripts de `experiments/`.
+
+### La objeción al alcance, que mantengo
+
+No barrí los corpus del repo. Correr el teorema sobre N corpus es **correr N veces una línea
+de álgebra**; no produce una condición para el paper, produce N confirmaciones de lo mismo.
+Lo que sí hacía falta —y es lo que está— es verificar que **el instrumento** no haga otra
+cosa que la matemática, por los caminos que podrían romperlo. **Si querés el barrido igual,
+se corre.** Lo dejo dicho por la regla, no para ahorrarme el trabajo.
+
+### Lo que no se tocó
+
+El gate (`f96c234`). Nada vivo. Ninguna fórmula.
+
+**A1.PAUSA.** De `TASK_condiciones_del_paper_v1` siguen **CP-E** (rango de estabilidad de
+N_eff — ése sí es medición y no teorema), **CP-M** (opcional) y **CP-N** (sólo con tu orden).

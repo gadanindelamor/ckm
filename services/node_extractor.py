@@ -12,14 +12,18 @@ Sin LLM. Sin estado entre llamadas.
 """
 
 from __future__ import annotations
+import hashlib
 import re
+import sys
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import combinations
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # ---------------------------------------------------------------------------
@@ -187,6 +191,26 @@ _STOPWORDS = {
 # declara.** Comparar el perfil con el corpus es de otro orden.
 
 
+DECLARACION_REF = "docs/defs/DECLARACION_extraccion_W_v1.md"
+
+
+def hash_lista(items) -> str:
+    """
+    sha256 de una lista de términos, **ordenada**, una por línea.
+
+    Para que la declaración pueda decir *de qué* lista habla sin arrastrarla
+    entera. Un conteo no alcanza: dos listas distintas de 703 dan el mismo
+    conteo y el mismo origen escrito a mano. El orden se fija al ordenar, así
+    que el hash no depende de cómo se construyó el conjunto.
+    """
+    return hashlib.sha256("\n".join(sorted(items)).encode("utf-8")).hexdigest()
+
+
+def hash_fuente(path) -> str:
+    """sha256 del archivo de código. Parte del `productor` de la declaración."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 @dataclass(frozen=True)
 class PerfilDeIdioma:
     """
@@ -239,8 +263,8 @@ class PerfilDeIdioma:
 
     def to_dict(self) -> dict:
         """Lo que viaja en la salida y en `save()`. **La lista entera no**: su
-        tamano y su origen, que es lo que hace falta para saber bajo que
-        condicion se extrajo."""
+        tamano, su **hash** y su origen, que es lo que hace falta para saber
+        bajo que condicion se extrajo."""
         return {
             "nombre"               : self.nombre,
             "alcance"              : self.alcance,
@@ -249,6 +273,9 @@ class PerfilDeIdioma:
             "lowercase"            : self.lowercase,
             "normalizacion"        : self.normalizacion,
             "n_stopwords"          : len(self.stopwords),
+            # el conteo no identifica la lista: dos listas distintas de 703
+            # dan el mismo numero y el mismo origen escrito a mano. El hash si.
+            "stopwords_hash"       : hash_lista(self.stopwords),
             "stopwords_origen"     : self.stopwords_origen,
             "separador_de_palabras": self.separador_de_palabras,
         }
@@ -506,6 +533,117 @@ class NodeExtractorService:
             for i in orden
         ]
         return [str(terms[i]) for i in elegidos], registro
+
+    # ------------------------------------------------------------------
+    # La declaración
+    # ------------------------------------------------------------------
+
+    def declaracion(self) -> Dict:
+        """
+        **Los operadores 1–6, como dato.** Qué hace cada uno, con qué
+        parámetros y con qué referencia.
+
+        CKM no extrae nodos ni tokeniza (delamor, 14 oct): mide la geometría
+        de lo que le entra. La extracción **se declara**, y así la dependencia
+        queda adentro de la afirmación —*"con W producida así, pasa esto"*— en
+        vez de escondida debajo. `docs/defs/DECLARACION_extraccion_W_v1.md` es
+        el documento canónico; esto es lo mismo en forma de registro, y hay un
+        test que verifica que coincidan.
+
+        **El perfil va una sola vez.** Los operadores 1, 2 y 3 no copian sus
+        valores: nombran en `del_perfil` **qué claves del perfil** son sus
+        parámetros. El que lee resuelve el puntero; el que escribe no puede
+        dejar dos valores distintos para lo mismo.
+
+        **Las listas largas van como hash + origen** (`hash_lista`), no
+        enteras. El conteo solo no alcanza: dos listas distintas de 703
+        términos dan el mismo conteo y el mismo origen escrito a mano. El de
+        las stopwords vive **en el perfil**, que es su único lugar.
+
+        `entorno` y `stopwords_origen` **son cosas distintas, a propósito**: el
+        origen es histórico —la lista está embebida, no se lee de la librería
+        en runtime— y el entorno es la versión que hoy corre el TF-IDF, que sí
+        afecta a los operadores 5 y 6.
+
+        Los operadores **7 (signo)** y **8 (W)** no son del extractor: los
+        agrega `CorpusService.declaracion_extraccion()`.
+        """
+        return {
+            "referencia": DECLARACION_REF,
+            "productor": {
+                "nombre"    : "CKM NodeExtractorService",
+                "sha_fuente": hash_fuente(Path(__file__)),
+            },
+            "perfil": self.perfil.to_dict(),
+            # `window` NO esta: el constructor lo acepta y lo descarta --
+            # nunca se guarda ni se usa (node_extractor.py:318, "reservado").
+            # Declararlo seria declarar algo que no es.
+            "parametros_del_servicio": {
+                "top_k"    : self.top_k,
+                "ngram_max": self.ngram_max,
+            },
+            "entorno": {
+                "python" : sys.version.split()[0],
+                "sklearn": sklearn.__version__,
+                "numpy"  : np.__version__,
+            },
+            "operadores": {
+                "1_normalizacion": {
+                    "que_hace"  : "u' = minusculas(NFC(u))",
+                    "del_perfil": ["normalizacion", "lowercase"],
+                    "referencia": "Unicode UAX #15",
+                },
+                "2_tokenizacion": {
+                    "que_hace"  : ("coincidencias izquierda->derecha, no solapadas, de "
+                                   "token_pattern sobre Unicode"),
+                    "del_perfil": ["token_pattern", "largo_minimo",
+                                   "separador_de_palabras"],
+                    "referencia": None,
+                },
+                "3_filtrado": {
+                    "que_hace"  : "saca los tokens que estan en la lista de stopwords",
+                    "del_perfil": ["n_stopwords", "stopwords_hash",
+                                   "stopwords_origen"],
+                    "referencia": ("Bird, Klein & Loper 2009; Pedregosa et al. 2011; "
+                                   "Nothman, Qin & Yurchak 2018 para sus limites"),
+                },
+                "4_ngramas": {
+                    "que_hace"  : ("G(u) = tokens filtrados mas los n-gramas contiguos "
+                                   "hasta ngram_max; la contiguidad es DESPUES del "
+                                   "filtrado ('control of guns' -> 'control guns')"),
+                    "parametros": {"ngram_max": self.ngram_max, "separador": " "},
+                    "referencia": None,
+                },
+                "5_seleccion": {
+                    "que_hace"  : ("de los top_k*3 terminos mas frecuentes del corpus "
+                                   "(max_features), los top_k de mayor TF-IDF medio; "
+                                   "empate en el corte conserva la pertenencia anterior "
+                                   "(h=0 conserva), y con empates N puede no ser top_k"),
+                    "parametros": {
+                        "top_k"        : self.top_k,
+                        "max_features" : self.top_k * 3,
+                        "tol_empate"   : self.TOL_EMPATE,
+                        "tfidf_defaults": {
+                            "smooth_idf"  : True,
+                            "norm"        : "l2",
+                            "use_idf"     : True,
+                            "sublinear_tf": False,
+                        },
+                    },
+                    "referencia": "Sparck Jones 1972; Salton & Buckley 1988",
+                },
+                "6_presencia": {
+                    "que_hace"  : ("chi_i(u) = 1 si n_i esta en G(u). Al CONSTRUIR W: el "
+                                   "no-nulo de la fila de la matriz TF-IDF restringido a "
+                                   "los nodos (equivalente, porque con smooth_idf el idf "
+                                   "es >= 1 y ningun termino presente da 0). Al EVALUAR: "
+                                   "pertenencia de la cadena del nodo al conjunto de "
+                                   "terminos del texto. sigma = 2*chi - 1"),
+                    "parametros": {},
+                    "referencia": None,
+                },
+            },
+        }
 
     # ------------------------------------------------------------------
     # Modo evaluación

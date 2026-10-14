@@ -10,15 +10,17 @@ Lo que pasaba: `_accumulate_safe` absorbe el `ValueError` de
 `TfidfVectorizer` devolviendo un dict **sin** la clave `"perfil"`, y
 `_rebuild` asignaba `_perfil_extraccion` y `_registro_borde` **antes** del
 `return` por `nodes` vacío. Resultado: la W anterior quedaba viva y su perfil
-en `None`.
+en `None`. Desde el CP1 el perfil es **una parte de la declaración**
+(`_declaracion_sha`), y el test mide sobre ella: es la misma divergencia, con
+el dato que la reemplazó.
 
 Y `None` ahí no es inocuo: el `None` que escribe `_load` quiere decir *"no se
 sabe bajo qué condición se extrajo"* —un estado anterior a S0b— y es cierto.
 **Éste decía lo mismo y era falso.** Es I2 al revés: no se completa de más, se
 borra de menos.
 
-La regla que el test fija: **el perfil y el `registro_borde` describen la W que
-está viva.** Se actualizan cuando se actualiza W, y no antes.
+La regla que el test fija: **la declaración y el `registro_borde` describen la
+W que está viva.** Se actualizan cuando se actualiza W, y no antes.
 
 El test fuerza la falla con `monkeypatch` sobre `accumulate`, no con un corpus
 degenerado: con textos buenos ya acumulados `TfidfVectorizer` no levanta, así
@@ -66,7 +68,7 @@ def corpus_vivo(tmp_path):
     c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3, top_k=8)
     c.ingest(TEXTOS)
     assert c.get_W() is not None, "el fixture no construyó W: el test no mide nada"
-    assert c._perfil_extraccion is not None
+    assert c._declaracion_sha is not None
     assert c._registro_borde
     return c
 
@@ -82,7 +84,7 @@ def test_extraccion_fallida_no_borra_lo_vivo(corpus_vivo, monkeypatch):
     """Los cuatro —W, nodos, perfil y registro_borde— quedan como estaban."""
     W_antes        = corpus_vivo.get_W().copy()
     nodes_antes    = list(corpus_vivo.get_nodes())
-    perfil_antes   = dict(corpus_vivo._perfil_extraccion)
+    decl_antes     = corpus_vivo._declaracion_sha
     registro_antes = list(corpus_vivo._registro_borde)
     sha_antes      = corpus_vivo.w_sha()
 
@@ -91,7 +93,7 @@ def test_extraccion_fallida_no_borra_lo_vivo(corpus_vivo, monkeypatch):
 
     np.testing.assert_array_equal(corpus_vivo.get_W(), W_antes)
     assert corpus_vivo.get_nodes()        == nodes_antes
-    assert corpus_vivo._perfil_extraccion == perfil_antes
+    assert corpus_vivo._declaracion_sha    == decl_antes
     assert corpus_vivo._registro_borde    == registro_antes
     # la W no cambió, así que tampoco hay marca nueva
     assert corpus_vivo.w_sha() == sha_antes
@@ -100,17 +102,18 @@ def test_extraccion_fallida_no_borra_lo_vivo(corpus_vivo, monkeypatch):
 def test_el_estado_guardado_no_queda_sin_declaracion(corpus_vivo, monkeypatch):
     """
     La huella en disco, que es la que sobrevive al proceso: un estado con una W
-    no nula **no** puede declarar `perfil_extraccion: null`.
+    no nula **no** puede declarar `declaracion_sha: null`.
     """
     _romper_extraccion(monkeypatch, corpus_vivo)
     corpus_vivo.ingest(["ok"])
 
     estado = json.loads(Path(corpus_vivo.storage_path).read_text())
     assert estado["W"] is not None
-    assert estado["perfil_extraccion"] is not None, (
-        "W viva con `perfil_extraccion: null`: el estado declara que no se sabe "
+    assert estado["declaracion_sha"] is not None, (
+        "W viva con `declaracion_sha: null`: el estado declara que no se sabe "
         "bajo qué condición se extrajo, y sí se sabe"
     )
+    assert estado["declaracion_sha"] in estado["declaraciones"]
     assert estado["registro_borde"]
 
 

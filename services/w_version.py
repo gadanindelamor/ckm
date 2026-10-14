@@ -43,6 +43,13 @@ class WTracePoint:
     sha256: str
     corpus_size: int
     causal_event: str   # "rebuild" | "load" | str libre
+    # Bajo que declaracion de extraccion se produjo ESTA W (CP1, 14 oct).
+    # Es una REFERENCIA, no una copia: el dict vive una sola vez en el estado,
+    # indexado por este sha. `None` quiere decir **no se sabe** -- una W que
+    # llego sin declaracion, o una marca anterior al CP1. Nunca se completa
+    # con la declaracion de hoy (I2): eso afirmaria una condicion que nadie
+    # registro. El default deja cargar los estados de ayer sin una rama.
+    declaracion_sha: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -74,11 +81,15 @@ class WVersionManager:
         W: np.ndarray,
         corpus_size: int,
         causal_event: str = "rebuild",
+        declaracion_sha: Optional[str] = None,
     ) -> str:
         """
         Registra marca si W cambió respecto al estado anterior.
         Si W es idéntica, no crea marca duplicada.
         Devuelve sha256 actual.
+
+        `declaracion_sha` ata la marca a **bajo qué declaración de extracción
+        se produjo esa W** (CP1). `None` es *no se sabe*, y se escribe así.
         """
         sha = sha256_W(W)
         if self._traces and self._traces[-1].sha256 == sha:
@@ -89,8 +100,13 @@ class WVersionManager:
             sha256=sha,
             corpus_size=corpus_size,
             causal_event=causal_event,
+            declaracion_sha=declaracion_sha,
         ))
         return sha
+
+    def current_declaracion_sha(self) -> Optional[str]:
+        """Declaración de la versión actual. `None` = no se sabe."""
+        return self._traces[-1].declaracion_sha if self._traces else None
 
     def current_sha(self) -> Optional[str]:
         """sha256 de la versión actual de W. None si nunca fue registrada."""

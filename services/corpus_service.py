@@ -39,12 +39,14 @@ v2: W mixta — pesos negativos por marcadores de oposición (elicitación sin s
 """
 
 from __future__ import annotations
+import hashlib
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
-from node_extractor import NodeExtractorService
+from node_extractor import (NodeExtractorService, DECLARACION_REF,
+                            hash_fuente, hash_lista)
 from w_version import WVersionManager
 
 
@@ -109,6 +111,9 @@ class CorpusService:
         self._nodes     : List[str]            = []
         self._W         : Optional[np.ndarray] = None
         self._w_versions: WVersionManager      = WVersionManager()
+        # Las declaraciones de extraccion vistas, indexadas por su sha. Cada
+        # marca de w_version apunta aca. Una sola copia por declaracion.
+        self._declaraciones: Dict[str, Dict]   = {}
 
         if self.storage_path.exists() and self.storage_path.stat().st_size > 0:
             self._load()
@@ -218,6 +223,72 @@ class CorpusService:
             "w_sha"      : self._w_versions.current_sha(),   # Firma_CKM
             "rebuild_suspendido": self._rebuild_suspendido,
         }
+
+    # ------------------------------------------------------------------
+    # La declaración
+    # ------------------------------------------------------------------
+
+    def declaracion_extraccion(self) -> Dict:
+        """
+        **Los 8 operadores, como dato.** La del extractor (1–6) más el signo
+        (7) y W (8), que son de acá.
+
+        Canónica: `docs/defs/DECLARACION_extraccion_W_v1.md`. Hay un test que
+        verifica que el código y el documento digan lo mismo; si no coinciden
+        **se corrige el documento**, no el extractor (regla de delamor, 14 oct).
+
+        Viaja atada al `sha256` de W: cada marca de `w_version` guarda el
+        `declaracion_sha` de la declaración bajo la que se produjo **esa** W.
+        Los dicts viven una sola vez, en `self._declaraciones`.
+        """
+        d = self._extractor.declaracion()
+        d["productor"] = {
+            "nombre"    : "CKM NodeExtractorService + CorpusService",
+            "sha_fuente": {
+                "node_extractor.py": d["productor"]["sha_fuente"],
+                "corpus_service.py": hash_fuente(Path(__file__)),
+            },
+        }
+        d["operadores"]["7_signo"] = {
+            "que_hace": (
+                "s(u) = -1 si u, pasado a minusculas, contiene algun marcador de "
+                "oposicion (busqueda de SUBCADENA sobre el texto entero), +1 si no"
+            ),
+            "parametros": {
+                "n_marcadores": len(_OPPOSITION_MARKERS),
+                "hash"        : hash_lista(_OPPOSITION_MARKERS),
+                "origen"      : ("ES + EN, debate real, registro formal e informal; "
+                                 "embebidos en corpus_service.py"),
+                "force_w_pos" : self._force_w_pos,
+            },
+            # La condicion (b) del CP0, DECLARADA por decision de delamor
+            # (14 oct): no se toca el codigo, se escribe lo que hace.
+            "condicion_declarada": (
+                "el texto NO se normaliza a NFC antes de buscar marcadores, a "
+                "diferencia del operador 1; hoy sin efecto porque los marcadores "
+                "son ASCII. force_w_pos anula el signo."
+            ),
+            "referencia": "review v28 M4: este operador no tiene resultado nulo",
+        }
+        d["operadores"]["8_W"] = {
+            "que_hace": ("W_ij = suma_u s(u)*chi_i(u)*chi_j(u) / max|.|, W_ii = 0; "
+                         "cada par cuenta 1 POR UNIDAD, no por repeticion"),
+            "parametros": {
+                "conteo_por_unidad": 1,
+                "normalizacion"    : "max|pos - neg|, o sin dividir si es 0",
+                "diagonal"         : 0.0,
+                "rango"            : [-1.0, 1.0],
+            },
+            "referencia": "Salton, Wong & Yang 1975",
+        }
+        return d
+
+    @staticmethod
+    def _sha_declaracion(d: Dict) -> str:
+        """sha256 de la declaración, con las claves ordenadas: mismo contenido,
+        mismo sha, para que dos W bajo la misma declaración la compartan."""
+        crudo = json.dumps(d, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(crudo.encode("utf-8")).hexdigest()
 
     # ------------------------------------------------------------------
     # Construcción de W  (v2 — mixta)
@@ -338,8 +409,8 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         self._nodes = nodes
         self._W     = W
-        # El perfil y el registro del borde DESCRIBEN LA W QUE ESTÁ VIVA, así
-        # que se escriben acá, con ella, y no apenas vuelve `accumulate`.
+        # La declaracion y el registro del borde DESCRIBEN LA W QUE ESTÁ VIVA,
+        # así que se escriben acá, con ella, y no apenas vuelve `accumulate`.
         #
         # Antes se asignaban arriba, antes del `return` por `nodes` vacío
         # (divergencia (a) del CP0, 14 oct). Una extracción que falla hace que
@@ -349,9 +420,13 @@ class CorpusService:
         # aquél decía lo mismo y era falso. Es I2 al revés: no se completa de
         # más, se borra de menos. `tests/test_extraccion_fallida_no_borra.py`.
         #
-        # S0b: `None` declarado si el extractor no informó el perfil — nunca el
-        # perfil de hoy por defecto.
-        self._perfil_extraccion = result.get("perfil")
+        # CP1: la declaracion de los 8 operadores bajo la que se produjo esta
+        # W. Se guarda UNA vez, indexada por su sha, y la marca de w_version
+        # apunta a ella.
+        declaracion = self.declaracion_extraccion()
+        decl_sha    = self._sha_declaracion(declaracion)
+        self._declaraciones[decl_sha] = declaracion
+        self._declaracion_sha   = decl_sha
         self._registro_borde    = result.get("registro_borde", [])
         # El `causal_event`, con la causa de la decisión si hubo.
         #
@@ -368,7 +443,8 @@ class CorpusService:
             evento = (
                 "rebuild_debug_force_w_pos" if self._force_w_pos else "rebuild"
             )
-        self._w_versions.register(W, len(self._texts), causal_event=evento)
+        self._w_versions.register(W, len(self._texts), causal_event=evento,
+                                  declaracion_sha=decl_sha)
 
         # CorpusService ya no crea COCO (CP4 de TASK_monitor_coco_ciclo_orbita_v2;
         # delamor: "Que deje en paz a COCO. COCO es con Monitor").
@@ -400,11 +476,14 @@ class CorpusService:
             "forced_w_pos"    : self._force_w_pos,
             # registro continuo del borde de la última selección de nodos
             "registro_borde"  : getattr(self, "_registro_borde", []),
-            # S0b: el perfil de idioma bajo el que se extrajo. `None` quiere
-            # decir "no se sabe" —un estado guardado antes de S0b—, y NO se
-            # rellena con el perfil actual: poner el de hoy en un estado de
-            # ayer afirmaría una condición que nadie registró (I2).
-            "perfil_extraccion": getattr(self, "_perfil_extraccion", None),
+            # CP1: las declaraciones de extraccion vistas, por sha. El perfil
+            # de idioma (S0b) vive ADENTRO de cada una, no duplicado afuera.
+            # Cada marca de `w_version_history` dice con cual se produjo su W;
+            # `declaracion_sha: null` ahi quiere decir **no se sabe**, y NO se
+            # rellena con la de hoy: poner la de hoy en una W de ayer
+            # afirmaría una condición que nadie registró (I2).
+            "declaraciones"    : getattr(self, "_declaraciones", {}),
+            "declaracion_sha"  : getattr(self, "_declaracion_sha", None),
         }
         self.storage_path.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
@@ -416,8 +495,10 @@ class CorpusService:
         self._W     = np.array(raw_W) if raw_W is not None else None
         self._w_versions.from_list(state.get("w_version_history", []))
         self._registro_borde = state.get("registro_borde", [])
-        # `None` declarado: los estados anteriores a S0b no lo tienen
-        self._perfil_extraccion = state.get("perfil_extraccion")
+        # `None` / `{}` declarados: los estados anteriores al CP1 no los
+        # tienen, y sus marcas quedan con `declaracion_sha: None` — no se sabe.
+        self._declaraciones   = state.get("declaraciones", {})
+        self._declaracion_sha = state.get("declaracion_sha")
 
 
 # ---------------------------------------------------------------------------

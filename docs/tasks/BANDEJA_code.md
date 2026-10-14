@@ -10343,3 +10343,60 @@ en particular**. El segundo sí tiene una razón medible: la referencia no resol
 
 **A1.PAUSA.** Sigue en pausa el **CP1**, y las tres preguntas de arriba (§4 y qué hacer con
 los tres que faltan).
+
+---
+## Por qué se desincronizan el repo y Cowork Opus — el mecanismo — 2026-10-14 20:48 UTC
+
+*Claude Opus 5 (Code). delamor, al leer el registro de ubicaciones: *"acá de notar por qué
+nos desincronizábamos entre los repos y Cowork Opus"*. **Observación, sin acción.** No se
+propone cambiar el flujo: eso lo decide delamor.*
+
+### No son tres descuidos. Es una sola cosa con tres caras
+
+**Hay dos raíces, y una no existe acá.** Opus (Cowork) escribe en la PC, en
+`C:\Users\pgada\trustexperience\antropic\contexto_claude\` — lo dice `ESTADO_al_cortar_13oct2026.md`
+§1 —, y la nombra `claude/`. **`claude/` no existe en el repo**, y nunca existió: no está en
+el árbol ni en `.gitignore`. Así que **toda** referencia que Opus escribe es **correcta desde
+la PC e irresoluble desde el Codespace**. No es un error de Opus: es que el texto declara su
+contenido y no declara **desde dónde** está mirando el árbol.
+
+**El traslado es manual y selectivo.** Los archivos llegan acá porque delamor los pega, uno
+por uno. Lo que no se pega, desde el Codespace **no se distingue de lo que nunca se
+escribió**. Las tres "faltas" del reporte anterior son exactamente eso: `ESTADO_al_cortar_12oct2026.md`,
+`REVIEW_REPORT_PAPER_..._v28.md` y `verificacion_review_kimi_12oct2026.md` **existen en
+`claude/`**; lo que yo medí es que **no están en el repo, mirando desde el Codespace**. Dicho
+como corresponde (CLAUDE.md: *"no se afirma 'no existe' sin decir desde dónde se miró"*).
+
+**Opus lee un snapshot; Code avanza.** Las cinco cabeceras del lote dicen *"leído contra
+`fb2b87a`"* / *"en la PC, sólo lectura"*. Entre que Opus lee y que el texto llega, Code
+commiteó. **Ya pasó y ya está registrado**: S0b llegó pedido *"antes de S1"* con S1 ya
+commiteado (`DECISIONES_opus.md`, 13 oct). La desincronización **no es de contenido: es de
+momento** — igual que lo que dice `decisiones_en_el_acto.md` sobre por qué existe.
+
+### Las dos marcas que dejó, medidas hoy
+
+| Marca | Qué es |
+|---|---|
+| `docs/PAPER_..._v26.md` en la raíz de `docs/` | Copia **byte a byte** (`md5 f7eb1f0b…`) del trackeado `docs/paper/PAPER_..._v26.md`. Un pegado que no supo que el archivo ya tenía casa |
+| Una TASK **commiteada** que cita un archivo **sin trackear** | `TASK_declaracion_extraccion_v1.md` → `declaracion_extraccion_W_14oct2026.md`. El texto cruzó y la referencia no |
+
+### Lo que me parece que vale la pena ver
+
+**Es la misma forma que la TASK que estamos haciendo, un nivel arriba.** La TASK dice: la
+extracción se **declara**, para que la dependencia quede **adentro** de la afirmación ("con W
+producida así, pasa esto") y no escondida debajo. `claude/X` es una dependencia **no
+declarada**: vale en su marco y no dice cuál es su marco. Una W sin declaración y una
+referencia sin raíz fallan igual — **no porque estén mal, sino porque no dicen desde dónde**.
+
+### A1 — qué es verificable
+
+**Medido hoy:** que `claude/` no está en el árbol ni en `.gitignore` · el `md5` de los dos
+v26 · las cinco cabeceras que dicen *"contra `fb2b87a`"* (archivo:línea) · que los tres
+citados no están en el repo · la ruta de la PC, **leída en `ESTADO_al_cortar_13oct2026.md`
+§1** — no verificada, no tengo la PC.
+
+**Del peso del contexto:** que las tres caras sean **una sola cosa**. Las tres están medidas
+por separado; que sean el mismo mecanismo es **mi lectura**, y el párrafo final es una
+analogía — no una medición.
+
+**Sin A1.PAUSA**: no hay nada que decidir acá. El **CP1** sigue esperando el OK.

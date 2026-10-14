@@ -10821,3 +10821,118 @@ lo que ya hacía, y los 676 de antes siguen dando lo mismo.
 
 **A1.PAUSA.** Queda el **CP3** de esta TASK (sin código: una W de otro productor) y el
 **CP-T** de `TASK_condiciones_del_paper_v1`.
+
+---
+## CP3 — una W de otro productor. Propuesta, sin código. A1.PAUSA — 2026-10-15 00:47 UTC
+
+*Claude Opus 5 (Code). `TASK_declaracion_extraccion_v1`, CP3: *"qué haría falta para que una
+W producida por otro extractor entre a CKM con su declaración, sin que CKM la produzca.
+Sólo propuesta."* **No escribí una línea de código.** Leído contra `0c181a9`.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Leído, con archivo:línea:** los seis puntos del inventario de abajo · que
+`MonitorService.__init__` construye **su propio** extractor (`monitor_service.py:119`) ·
+que `mode` depende de `_W`, no de la cantidad de textos (`corpus_service.py:140-141`) · que
+`rebuild_suspendido=True` con `_W` no nula impide el rebuild (`:134`) · que `evaluate` es
+**igualdad de cadena** contra la salida del analizador (`node_extractor.py:522-523`).
+
+**No corrido:** nada de esto se midió. Es lectura.
+
+**Del peso del contexto:** la "tasa de contacto" que propongo abajo es **una idea mía**, no
+algo que exista ni que nadie haya pedido. La traigo porque hace medible lo que si no queda
+en palabras, pero **no está validada**.
+
+### La pregunta no es cargar una matriz
+
+CKM no guarda W: **sigue evaluando textos nuevos contra sus nodos.** Cada
+`MonitorService.evaluate(text)` calcula σ con `self._extractor.evaluate(text, nodes)`
+(`monitor_service.py:227`), y eso es **igualdad de cadena** entre los nodos y lo que el
+analizador de CKM produce sobre el texto.
+
+**De ahí sale el problema real, y es concreto:** si el otro productor hace lematización, o
+corta distinto, o usa otro separador de n-gramas, sus nodos son cadenas que **el analizador
+de CKM casi nunca va a emitir**. σ daría **−1 sistemático**, y CKM mediría una geometría
+sobre nodos que para él no existen. **No fallaría: daría números.** Eso es lo peligroso.
+
+### Lo que ya está, y sirve (CP1 + CP2)
+
+| | |
+|---|---|
+| La declaración **es un dato**, con los 8 operadores y el productor | `declaracion_extraccion()` |
+| Va **atada al `sha256` de W**, por referencia | `WTracePoint.declaracion_sha` |
+| **`None` quiere decir "no se sabe"** y no se completa con la de hoy | ya hay test |
+| Una W ajena **no se pisa** en el próximo `ingest` | `rebuild_suspendido=True` ya existe (`:134`) |
+| `mode` pasa a `evaluation` con sólo tener W | `:140-141`, no depende de los textos |
+
+**Nada de esto hay que inventarlo.** Es lo que el CP1 dejó.
+
+### Lo que falta, leído uno por uno
+
+1. **No hay puerta de entrada.** El único que escribe `_W` y `_nodes` es `_rebuild`
+   (`:343-344`). Entrar hoy es asignar atributos privados desde afuera.
+2. **`corpus_size` de la marca mentiría:** `register` recibe `len(self._texts)`, y con una W
+   ajena los textos de CKM no son los que la produjeron.
+3. **`registro_borde` quedaría en `[]`**, que se lee como *"no hubo borde"* y no como *"no se
+   sabe"* — el mismo problema que la divergencia (a) del CP0, en otro campo.
+4. **σ lo sigue calculando el extractor de CKM**, y acá está lo grueso: `MonitorService`
+   construye **el suyo**, con los defaults (`NodeExtractorService()`, `monitor_service.py:119`),
+   **sin mirar el del corpus**. Hoy no hay diferencia viva porque los dos usan `ngram_max=2`
+   y `PERFIL_ES_EN`, pero **nada lo garantiza**: `experiments/sintetico_campo_plantado.py:439`
+   ya construye un `CorpusService` con `ngram_max=1`. Es la misma forma que
+   `TASK_extraccion_una_rama_v1` cerró entre `accumulate` y `evaluate`, **abierta un piso más
+   arriba**.
+5. **La declaración de un productor ajeno no tiene dónde decir "esto no lo sé".** La de hoy
+   la arma el extractor y sale completa; una ajena va a tener huecos, y el hueco tiene que
+   ser **explícito**, no una clave ausente.
+6. **Nada mide si los nodos ajenos y el analizador de CKM se tocan.**
+
+### Lo que propongo
+
+**No una API para enchufar librerías** (delamor). **Un ingreso declarado, en tres piezas:**
+
+**(1) El paquete.** El productor entrega **W + nodes + su declaración**, con los mismos 8
+casilleros. Lo que no puede llenar va como **`"no se sabe"` escrito**, no ausente. La
+declaración suma un campo que la de CKM no necesita: **quién produjo los textos y cuántos**
+—para que `corpus_size` no mienta—, y **su propio `registro_borde` o un "no se sabe"**.
+
+**(2) Una entrada que diga que no la produjo CKM.** Un camino propio, con `causal_event`
+que lo nombre —como ya pasa con `rebuild_debug_force_w_pos`, que existe justamente para que
+una W forzada no se confunda con una natural—, y con `rebuild_suspendido` **obligatorio**: si
+CKM reconstruye, la W ajena se perdió y nadie se entera.
+
+**(3) La medida de contacto, antes de medir nada más.** Antes de aceptar la W: pasar los
+textos que haya por el analizador de CKM y contar **qué fracción de los nodos ajenos aparece
+alguna vez**. Si es 0, σ va a ser −1 siempre y los números que salgan **no significan nada**.
+Es barato, es una cuenta, y convierte *"declarar la extracción"* en algo **verificable en el
+momento de entrar** en vez de un texto al lado del dato. **Esta tercera pieza es idea mía y
+no está validada** — es la que menos defiendo de las tres.
+
+### Lo que NO propongo
+
+- **Traducir** nodos ajenos a los de CKM, ni "adaptar" tokenizaciones. Eso es interpretar.
+- **Que CKM use el analizador del otro productor.** Haría falta ejecutar código ajeno.
+- Tocar el extractor, el signo o el gate.
+
+### Lo que decidí yo, porque es del trabajo
+
+Que las tres piezas sean **registro y no API**; que el hueco sea explícito y no una clave
+ausente; y que `rebuild_suspendido` sea la palanca, porque **ya existe y ya hace eso** — no
+hace falta un mecanismo nuevo.
+
+### Lo que es tuyo, delamor, y no decido
+
+**Una sola pregunta, y no es de implementación:** ¿puede CKM medir sobre una W que no
+produjo, y **seguir evaluando textos nuevos con su propio extractor**?
+
+Si la respuesta es sí, toda afirmación que salga de ahí es de **dos productores** —*"con W
+producida allá y σ medido acá"*— y eso tiene que estar escrito en el paper, no sólo en el
+estado. Si es no, el CP3 termina acá y lo de arriba no se construye.
+
+**Y una consecuencia que vale aunque el CP3 no siga:** el punto **4** —que `MonitorService`
+se arme su propio extractor sin mirar el del corpus— **ya está hoy en el código vivo**, sin
+ninguna W ajena. No lo toqué (no es de esta TASK, y nada vivo cambia sin orden tuya), pero
+queda dicho.
+
+**A1.PAUSA.** Con esto la `TASK_declaracion_extraccion_v1` queda **completa en sus cuatro
+CP**. Lo siguiente, si querés, es el **CP-T** de `TASK_condiciones_del_paper_v1`.

@@ -296,10 +296,6 @@ class CorpusService:
         # la selección anterior resuelve los empates en el borde del top_k
         # (regla de la relajación: empate conserva). TASK_desempate_seleccion_nodos_v1.
         result = self._accumulate_safe(self._texts, seleccion_anterior=self._nodes or None)
-        self._registro_borde = result.get("registro_borde", [])
-        # S0b: bajo qué perfil de idioma se extrajo esta W. `None` declarado si
-        # el extractor no lo informó — nunca el perfil de hoy por defecto.
-        self._perfil_extraccion = result.get("perfil")
         nodes  = result["nodes"]
 
         if not nodes:
@@ -342,6 +338,21 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         self._nodes = nodes
         self._W     = W
+        # El perfil y el registro del borde DESCRIBEN LA W QUE ESTÁ VIVA, así
+        # que se escriben acá, con ella, y no apenas vuelve `accumulate`.
+        #
+        # Antes se asignaban arriba, antes del `return` por `nodes` vacío
+        # (divergencia (a) del CP0, 14 oct). Una extracción que falla hace que
+        # `_accumulate_safe` devuelva un dict **sin** `"perfil"`, así que la W
+        # anterior quedaba viva y su declaración en `None`. El `None` de
+        # `_load` dice "no se sabe bajo qué condición se extrajo" y es cierto;
+        # aquél decía lo mismo y era falso. Es I2 al revés: no se completa de
+        # más, se borra de menos. `tests/test_extraccion_fallida_no_borra.py`.
+        #
+        # S0b: `None` declarado si el extractor no informó el perfil — nunca el
+        # perfil de hoy por defecto.
+        self._perfil_extraccion = result.get("perfil")
+        self._registro_borde    = result.get("registro_borde", [])
         # El `causal_event`, con la causa de la decisión si hubo.
         #
         # El marcador `force_w_pos` **no se pierde** cuando hay causa: lo usan

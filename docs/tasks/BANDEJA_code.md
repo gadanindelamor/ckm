@@ -11160,3 +11160,75 @@ El gate (`f96c234`). Nada vivo. Ninguna fórmula.
 
 **A1.PAUSA.** De `TASK_condiciones_del_paper_v1` siguen **CP-E** (rango de estabilidad de
 N_eff — ése sí es medición y no teorema), **CP-M** (opcional) y **CP-N** (sólo con tu orden).
+
+---
+## CP-E — rango de estabilidad de N_eff: LA PREDICCIÓN — 2026-10-15 02:31 UTC
+
+*Claude Opus 5 (Code). `TASK_condiciones_del_paper_v1`, CP-E. **Commiteada antes de escribir
+el driver.** Leído contra `2e89afa`.*
+
+### Esto sí es medición, no teorema
+
+A diferencia del CP-T, **N_eff no sale de una línea de álgebra**: es un muestreo
+(`landscape_engine.count_attractors` → `n_eff(basin_masses)`), y cuánto se mueve al variar
+una perilla **no se puede demostrar, hay que medirlo.**
+
+**Y es barato:** medido, **0,06 s** por N_eff con `n_runs=1000` sobre N = 20. El barrido
+entero son segundos. Acá la regla de *"no correr lo demostrable"* no aplica, y tampoco hay
+costo que ahorrar.
+
+### Los corpus
+
+Los **tres independientes** del repo, los mismos que fijó A.3 (`tests/test_corpus_del_repo_A3.py`):
+**A24** (interacción, canal IAP), **D12** (interacción), **E7** (origen no se sabe). Los
+otros tres del inventario son prefijos o subconjuntos. **Nada de `ckmdatasets`.**
+
+### Las perillas, de a una por vez
+
+| Perilla | Niveles | Nota |
+|---|---|---|
+| `top_k` | 10, 15, 20, 25, **32** | 32 es **el valor vivo** (`ckm_monitor.py:188`) |
+| tamaño del pool | `top_k`×2, ×3, ×4, ×6 | **×3 es el de hoy.** Hoy el pool **no es una perilla independiente**: está cableado en `max_features=self.top_k*3` (`node_extractor.py:431`). Lo vario **desde el driver**, sin tocar `services/` |
+| stopwords | 703 (actual), 318 (sólo sklearn), **0** | **"sólo NLTK" no se puede construir: nltk no está instalado** y la lista de 703 está embebida. Ver abajo |
+| un texto más | con vocabulario ya visto | armado con términos que ya están en el corpus |
+| seed de muestreo | 10 seeds | para la dispersión |
+
+**Lo de las stopwords es una diferencia con el enunciado del CP-E, y la declaro ahora:** pide
+*"la actual vs. sólo NLTK vs. sólo sklearn"*. `nltk` **no es dependencia del repo** —la lista
+está embebida justamente para no serlo (`node_extractor.py:30-36`)— y no se puede
+descomponer una unión en sus partes. Pongo **0 stopwords** como tercer nivel, que es el
+extremo y acota el rango por abajo. **Si querés el de NLTK, hay que instalarlo: decís vos.**
+
+**Que esto se pueda variar sin tocar nada es de S0b:** declaro **otro `PerfilDeIdioma`** y el
+extractor lo recibe. Si los criterios siguieran sueltos en el módulo, este barrido pediría
+tocar `services/`.
+
+### Predicción
+
+**El orden de las dependencias, de la que más mueve a la que menos:**
+
+**`top_k` > stopwords > pool ≈ un texto más > seed.**
+
+| | Predigo |
+|---|---|
+| `top_k` | **la dominante, por lejos.** N_eff crece con N; no predigo la forma |
+| stopwords | **segunda.** Con 0 cambian **cuáles** son los nodos, no cuántos: el pool se llena de palabras función |
+| pool (×2 a ×6) | **chica.** La selección es por TF-IDF medio *dentro* del pool; agrandarlo admite candidatos menos frecuentes |
+| un texto más con vocabulario ya visto | **la más chica, cerca de cero.** Es lo que apunta el CP6: desde el paso 5, N_eff fue **función de la partición, no de los pesos** |
+| seed (n = 10, `n_runs=1000`) | **desviación estándar del orden de 0,1–0,3** sobre un N_eff de ~5. Medido al tantear: 5,49 con `n_runs=200` contra 5,16 con 1000 — **el ruido de muestreo es visible y hay que reportarlo al lado de todo lo demás** |
+| línea base D12, `top_k=20` | **N = 20, N_eff ≈ 5,2** (`n_runs=1000`, seed 0) |
+
+### Lo que no sé
+
+- **Si E7 produce W.** Tiene 7 textos y A.3 dice que es *"el único donde el pool no corta"*;
+  con poco vocabulario compartido puede caer en el caso límite del paso 5 (N = 0, sin W). Si
+  pasa, **lo reporto como resultado**, no lo arreglo.
+- **Si el orden de arriba se sostiene en los tres corpus** o cambia con el tamaño.
+- Si con 0 stopwords N_eff sube o baja. Tengo argumentos para los dos lados y **no predigo
+  el signo**.
+
+### Lo que no se hace
+
+**No se fija umbral** (lo dice el CP-E). No se arregla nada: lo que el código hace se mide.
+No se toca `services/`, ni el gate (`f96c234`). La salida es **una tabla para el paper** y un
+driver en `experiments/`.

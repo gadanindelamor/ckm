@@ -27,7 +27,7 @@ En palabras: **W cuenta en cuántas unidades dos comparaciones respondieron `Tru
 - **URLs, mails y rutas entran como palabras:** `https://www.anthropic.com/news/…` → `https`, `www`, `anthropic`, `com`, `news`; `x@ejemplo.com` → `ejemplo`, `com`; `C:\Users\…` → `users`, ….
 - La barra `/` corta como un espacio; `sí/no`, `la/el` desaparecen (2 letras).
 - La ñ pasa: `año` y `ano` son nodos distintos.
-- Eventos del canal ("X joined the channel") entran como unidades (ver `nodo_y_W_desde_abajo_13oct2026.md` §9).
+- Eventos `SYSTEM` del canal ("X joined the channel", leaves) **no entran al corpus** desde el filtro F3b (9 oct, `iap_chatroom/ckm_monitor.py:284-312`); siguen en la observación del device. "SYSTEM es campo" queda abierto (delamor). Ver `docs/opus/nodo_y_W_desde_abajo_13oct2026.md` §9 (corregida).
 Cada uno se declara; o se decide filtrarlo antes, y eso también se declara.
 
 ## La parte débil: el paso 7 (review v28, M4)

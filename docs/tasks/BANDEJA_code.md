@@ -11020,3 +11020,73 @@ nadie las tenía; desde el CP1 las dos existen y tienen sha.
 - **No cambié que `MonitorService` se arme el suyo.** Nada vivo cambia sin orden tuya.
 
 **A1.PAUSA.**
+
+---
+## CP-T — teorema de presencia: LA PREDICCIÓN, y una objeción al alcance — 2026-10-15 01:38 UTC
+
+*Claude Opus 5 (Code). `TASK_condiciones_del_paper_v1`, CP-T. **Commiteada antes de escribir
+el test.** Leído contra `3b67afe`.*
+
+### Primero: esto es un teorema, y la regla dice no correrlo
+
+CLAUDE.md: *"No se corre lo que se demuestra. Antes de una corrida, preguntar si el resultado
+es un teorema; si lo es, se demuestra en una línea."* **Lo es, y además ya está escrito** en
+`docs/defs/DEFS_CKM_estado_actual_v16.md` §1.1 h): *"Con presencia sola no hay triángulo con
+producto de signos negativo y T(W) = 0 **por construcción**."*
+
+**Las tres afirmaciones del CP-T, en una línea cada una:**
+
+1. **Ningún Wᵢⱼ < 0.** Con `force_w_pos` —o sin marcadores— todo par va a `pos_counts`
+   (`corpus_service.py:322-331`), así que `raw = pos − neg ≥ 0`; `max_abs = |raw|.max() ≥ 0`
+   y dividir por un positivo no cambia el signo. ∎
+2. **0 triángulos con producto de signos < 0.** El producto de tres números ≥ 0 es ≥ 0. ∎
+3. **T(W) = 0.** T = Σ|Wᵢⱼ| sobre los Wᵢⱼ<0, dividido Σ|Wᵢⱼ| (DEFS v16, tabla). Sin
+   negativos el numerador es 0. ∎ *(y (3) sale de (1), no de (2))*
+
+### Entonces, qué decido y qué te dejo
+
+**Lo que decido, porque es del trabajo:** **no barro los corpus del repo.** Correr el
+teorema sobre N corpus es correr N veces lo demostrable; no agrega una condición para el
+paper, agrega N confirmaciones de una línea de álgebra. **Lo que sí vale la pena, y es otra
+cosa, es verificar el INSTRUMENTO**: que el código haga lo que dice la matemática. La TASK
+misma lo dice —*"si falla, el instrumento hace otra cosa que la matemática"*—, así que escribo
+el test contra **los caminos que podrían romperlo**, no contra una colección de corpus.
+
+**Lo que te dejo:** si querés igual el barrido sobre los corpus del repo, se corre y listo.
+Lo digo por la regla, no para evitar trabajo.
+
+### Lo que un test **sí** compra, y los caminos que mide
+
+| | Por qué podría romperse |
+|---|---|
+| `force_w_pos=True` sobre un corpus **con** marcadores | Es el camino que **saltea** el ruteo. Si `force_w_pos` no bypaseara de verdad, acá se ve |
+| textos **sin** marcadores, sin forzar | El otro camino al mismo lugar: `is_opp` falso por el texto, no por el flag |
+| el caso `max_abs == 0` | `W = raw` sin dividir (`:339`). Una W de ceros también cumple el teorema |
+| **el control** | Lo que hace que el test no sea vacío |
+
+**El control es la mitad del test.** Afirmar *"no hay negativos"* sobre un corpus que nunca
+los tuvo no distingue nada. Así que el mismo corpus, **sin forzar y con marcadores**, tiene
+que dar negativos: si no los da, el test **no está midiendo el teorema**, y lo digo.
+
+### Predicción, por aserción
+
+| | Predigo |
+|---|---|
+| W con `force_w_pos` sobre corpus con marcadores | **ningún negativo**, 0 frustrados, T = 0 |
+| W sobre textos sin marcadores | **ídem** |
+| el control (mismo corpus, sin forzar) | **sí tiene negativos**, y por eso el test mide |
+| ¿frustración > 0 en el control? | **No sé.** Que haya negativos no obliga a que haya un triángulo frustrado. Si da 0, lo reporto como lo que es: el control sirve para (1), no necesariamente para (2) |
+| suite completa | **699 + los nuevos**, 0 fallan |
+
+### Lo que ya encontré leyendo, y va al reporte igual
+
+**`T(W)` no existe en el código.** No está en `services/` ni en `iap_chatroom/`: sólo hay
+`frustracion()` en `experiments/orbit_analytics.py:405` y en
+`experiments/sintetico_campo_plantado.py:208`, y la "torsión" de `monitor_service` es **otra
+cosa** (pares de Δ_r, no triángulos). El paper lo cita y **el instrumento no lo calcula**. En
+el test lo voy a computar **desde la definición de DEFS v16**, y queda dicho que es del test
+y no del servicio.
+
+### Lo que no se toca
+
+El gate (`f96c234`). Nada vivo. Esto no arregla nada: mide.

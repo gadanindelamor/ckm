@@ -10472,3 +10472,82 @@ en `docs/defs/DECLARACION_extraccion_W_v1.md` paso 7. Ningún otro camino de `_r
 
 Si algún test existente depende de que el perfil se escriba en el camino "sin nodos". **No lo
 busqué todavía**: lo dice la suite completa, después del cambio.
+
+---
+## Paso 2 — el resultado. A1.PAUSA — 2026-10-14 21:46 UTC
+
+*Claude Opus 5 (Code). Predicción en `0b7194a`, **commiteada antes**. Test en rojo, fix,
+suite completa.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** el test en rojo antes del cambio y en verde después · la suite completa,
+**667 pasan, 7 xfailed, 0 fallan** (93 s) · que las dos clases `NodeExtractorService` son
+objetos distintos (impreso: `node_extractor` vs `services.node_extractor`, `is` → `False`).
+
+**Del peso del contexto:** nada que yo vea en este paso. Lo que afirmo abajo o se corrió o
+es una línea de código citada.
+
+### La predicción, contra lo que pasó
+
+| | Predije | Pasó |
+|---|---|---|
+| `_perfil_extraccion` | FALLA → `None` | **Sí**, exacto |
+| estado guardado con `perfil_extraccion` nulo y W no nula | FALLA | **Sí**, exacto |
+| `W`, `nodes`, sin marca nueva en `w_version` | pasan | **Sí**, exacto |
+| `_registro_borde` | FALLA → `[]` | **No se llegó a ver**: la aserción del perfil está antes y corta el test. Después del fix pasa, así que la predicción **no quedó verificada** por este camino |
+| ¿algún test existente dependía del comportamiento viejo? | *"no lo busqué, lo dice la suite"* | **Ninguno.** 667/667 |
+
+### La divergencia: el primer test pasó sin medir nada
+
+**Predije mal el instrumento, no el resultado.** Dije que iba a forzar la falla con
+`monkeypatch` sobre `NodeExtractorService.accumulate`. Lo hice y **el test pasó dos de tres
+sin haber roto nada**: la extracción seguía andando.
+
+**Por qué.** `services/` se importa **plano** entre sus módulos —`corpus_service.py:47`:
+`from node_extractor import NodeExtractorService`—, mientras el test importaba
+`from services.node_extractor import ...`. Son **dos módulos** y por lo tanto **dos clases
+distintas**:
+
+```
+clase del extractor real : node_extractor
+clase que importa el test: services.node_extractor
+misma clase? False
+```
+
+Parchear la del test deja intacta la que usa el servicio. **Lo que lo delató no fue el
+parche: fue el diff de la aserción** — el `registro_borde` "de después" tenía
+`pertenencia_anterior: True` y puntajes distintos, o sea **un rebuild que había salido
+bien**, con el texto nuevo adentro. Si hubiera mirado sólo "pasa / no pasa", me quedaba con
+dos tests verdes que no medían nada.
+
+**Arreglado** parcheando la **instancia** (`corpus._extractor`), que no depende del camino de
+import. Está escrito en el docstring del test, con el porqué, para que no se "simplifique"
+después.
+
+### El cambio
+
+Las dos asignaciones **se movieron** de antes del `return` por `nodes` vacío
+(`corpus_service.py:299, 302`) a donde se asignan `self._nodes` y `self._W`. **15 líneas
+más, 4 menos**, y de esas 15 **once son el comentario** que dice por qué. La regla queda
+escrita en el código: **el perfil y el `registro_borde` describen la W que está viva.**
+
+### El cambio de comportamiento que no es el de la divergencia
+
+Lo anuncié en la predicción y **pasó**: si la extracción **anda** pero no da nodos, antes el
+perfil se escribía igual; ahora no. **Ningún test dependía de eso** (667/667). Sigue siendo
+mi criterio, no un pedido de delamor: **si no va, se dice y lo saco.**
+
+### El test
+
+`tests/test_extraccion_fallida_no_borra.py`, tres casos: los cuatro intactos en memoria; el
+estado guardado sin `perfil_extraccion: null` al lado de una W no nula; y **lo que la
+corrección no cambia** —el texto igual se acumula—, que está para que no se "arregle" de más
+después.
+
+### Lo que no se tocó
+
+El gate (`f96c234`). El resto de `_rebuild`. La divergencia (b): **se declara**, y ya está
+en `docs/defs/DECLARACION_extraccion_W_v1.md` paso 7.
+
+**A1.PAUSA.** Sigue el **Paso 3** (CP1, la declaración como dato) cuando des el OK.

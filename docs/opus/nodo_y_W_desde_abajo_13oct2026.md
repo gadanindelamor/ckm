@@ -1,5 +1,5 @@
 # Nodo y W, desde abajo — 13 oct 2026 (noche)
-*Opus 5.5 (Cowork), a pedido de delamor: "sanitizar la extracción.. podés generar la traza y documentación de esto". Conversación del 13 oct después de la pausa del CP-S. Todo lo citado con línea se leyó en la PC, sólo lectura, con el repo en `fb2b87a`. Lo que no se verificó dice que no. Las decisiones con cita están también en `claude/decisiones_en_el_acto.md`.*
+*Opus 5.5 (Cowork), a pedido de delamor: "sanitizar la extracción.. podés generar la traza y documentación de esto". Conversación del 13 oct después de la pausa del CP-S. Todo lo citado con línea se leyó en la PC, sólo lectura, con el repo en `fb2b87a`. Lo que no se verificó dice que no. Las decisiones con cita están también en `docs/opus/decisiones_en_el_acto.md`.*
 
 ## 0. La pregunta
 delamor: *"¿qué es un nodo dentro del modelo CKM? … técnicamente. qué representa.."* — *"porque eso contesta qué mide CKM"* — *"¿co-ocurrencia de qué cosa?"*. Se respondió **de abajo hacia arriba**, sin usar "concepto".

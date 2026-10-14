@@ -21,7 +21,7 @@ Si en algún punto el código no coincide con lo que dicen estas TASKs: A1.PAUSA
 - La extracción, la tokenización y el signo **se declaran**, con su referencia. *"Lo que no es debate es que el código implemente lo que el paper declara."*
 - Al declararla, la dependencia queda **adentro** de la afirmación ("con W producida así, pasa esto"), no escondida debajo.
 - Cualquier productor de W (el `NodeExtractor` de hoy, uno personal, uno externo) entrega **W + nodos + su declaración**. CKM usa lo declarado. **No es una API para enchufar librerías** (delamor): es un registro que viaja en la traza.
-- Referencia del contenido: `claude/declaracion_extraccion_W_14oct2026.md` (los 8 operadores).
+- Referencia del contenido: `docs/opus/declaracion_extraccion_W_14oct2026.md` (los 8 operadores).
 
 ## Lo que hay hoy (leído por Opus en `fb2b87a`; el CP0 lo verifica)
 - `services/w_version.py:72` — cada marca de W guarda `timestamp`, `sha256`, `corpus_size`, `causal_event`. **No guarda cómo se produjo W.**

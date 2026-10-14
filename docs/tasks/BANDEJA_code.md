@@ -11395,3 +11395,97 @@ este CP **no valida ni invalida** lo que el paper afirma: acota **qué más se p
 ### Lo que no se toca
 
 `services/`. El gate (`f96c234`). Nada vivo. **No se fija umbral.**
+
+---
+## CP-M — el resultado. El nulo no controla lo que importa. A1.PAUSA — 2026-10-15 04:31 UTC
+
+*Claude Opus 5 (Code). Predicción en `95126ab`, **commiteada antes y no reescrita**. Driver:
+`experiments/driver_cpm_nulo_marcadores.py`. `services/` no se tocó.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** todo lo numérico · la verificación de que **la W del driver es la de
+`CorpusService`** en los tres corpus (si no, nada de esto medía el repo) · el conteo de pares
+por texto · las correlaciones.
+
+**Del peso del contexto:** que la causa del sesgo sea *"los textos largos tienen más pares y
+más chance de contener un marcador por subcadena"* es **mi explicación**. Lo medido es el
+sesgo; la causa es plausible y **no la medí**.
+
+### Los números
+
+| | A24 | D12 | E7 |
+|---|---|---|---|
+| textos (repetidos) | 24 (0) | 12 (0) | 7 (**1**) |
+| **k** con marcador real | **8 (33%)** | **2 (17%)** | **1 (14%)** |
+| N_eff(W_pos) | 2,112 | 3,240 | 10,074 |
+| N_eff(W_mixta real) | **15,654** | 5,262 | 10,074 |
+| "caída" real | **−13,542** | −2,022 | **+0,000** |
+| caída barajada (200): media · sd · rango | −2,33 · 3,42 · [−19,87, +0,10] | −9,31 · 8,21 · [−29,36, +0,27] | −42,62 · 54,15 · [−124,43, 0,00] |
+| **percentil de la real en el nulo** | **2,0** | **68,5** | **100,0** |
+| ¿afuera del rango de las 200? | NO | NO | NO |
+| ruido de muestreo dentro de una W | 0,119 | 0,437 | 0,877 |
+
+### La predicción, contra lo que pasó
+
+| | Predije | Pasó |
+|---|---|---|
+| **k/n > 60%** | — | **REFUTADO, y por lejos: 33%, 17%, 14%.** El review dice que la búsqueda *"siempre encuentra algo en textos suficientemente largos"*; **estos textos no son suficientemente largos** |
+| **"la real no queda afuera del nulo"** | — | **Se cumplió** —ninguna queda afuera— **pero mi razón era falsa.** Lo predije *porque k sería alto*; k es bajo. Y A24 cae en el **percentil 2,0**, que no es "indistinguible" |
+| dispersión grande de las barajadas | — | **se cumplió**: sd 3,4 / 8,2 / 54,1 |
+| signo de la caída (no lo predije) | — | **Es negativa en dos**: W_mixta tiene **más** N_eff que W_pos. **"Caída" no describe lo que pasa** |
+| "¿hay repetidos?" (declarado no sabido) | — | **Sí, en E7**: `'Hola desde MCP test'` dos veces |
+| "¿k = n en algún corpus?" | — | **No** |
+
+### Lo que encontré, y es lo que vale del CP-M
+
+**(1) El nulo, como está especificado, no mantiene constante lo que produce el efecto.**
+El CP-M dice *"la misma cantidad de textos marcados"*. Pero el signo sólo actúa sobre los
+**pares** que el texto aporta, y los textos no aportan lo mismo. Medido:
+
+| | pares marcados por la marca **real** | por 120 barajadas de la misma k |
+|---|---|---|
+| A24 | **131** de 349 | media 112 · rango [53, 171] |
+| D12 | **119** de 235 | media 37 · rango [6, **101**] |
+
+**En D12 la marca real marca más pares que cualquiera de las 120 barajadas** (119 > 101), con
+sólo 2 textos de 12. O sea: **los textos con marcador no son textos típicos.** Igualar la
+cantidad de *textos* deja libre la cantidad de *pares*, que es por donde entra el signo.
+**Mi explicación —textos largos: más pares y más chance de pegarle a un marcador por
+subcadena— es plausible y no la medí.**
+
+**(2) Pero los pares tampoco explican la caída.** `corr(pares marcados, caída)` = **−0,503**
+en A24 y **−0,010** en D12. En A24 explican la mitad; **en D12, nada**. Así que no alcanza
+con rehacer el nulo igualando pares: **no se sabe aún qué mueve N_eff acá.**
+
+**(3) En E7 el nulo es vacío, y es exacto.** El único texto marcado **no aporta ningún par**,
+así que `W_mixta real == W_pos` **byte a byte** (`np.array_equal` → True): la caída no es
+"casi cero", **es cero porque la marca no tiene por dónde actuar**. Y hay más: de los 7
+textos, **sólo 4 aportan pares**, y dos de ésos son **la misma cadena repetida**. La W de E7
+descansa sobre `'primer mensaje de prueba'` y `'Hola desde MCP test'` ×2. A.3 ya decía que su
+origen es *"no se sabe"*; esto agrega **de qué está hecha**.
+
+### Qué se puede afirmar, y qué no
+
+**No se puede afirmar que el signo lleve información de oposición más allá del procedimiento
+declarado.** En A24 la marca real está en el percentil 2,0, que es sugerente; en D12 en el
+68,5; en E7 el nulo es vacío. **Y la comparación está confundida**: el nulo no controla los
+pares, y en D12 la marca real es extrema en pares. **El CP-M, como está especificado, no
+resuelve M4.**
+
+**Lo que no cambia:** el paper afirma lo que pasa **bajo** el procedimiento de marcadores,
+que está declarado (`DECLARACION_extraccion_W_v1.md`, paso 7). Esto **no lo toca**. Lo que
+acota es la lectura del signo como "oposición", que es del lector — y hoy **esa lectura no
+tiene respaldo en estos corpus**.
+
+### Lo que es tuyo, delamor
+
+Rehacer el nulo **igualando pares marcados** en vez de textos es una decisión de diseño, y
+viene con la advertencia de (2): puede no alcanzar. **No lo hago sin tu orden.** Y con
+corpus de 7 a 24 textos —lo que ya dijiste en `d6a5fcb`— probablemente no se resuelva acá.
+
+### Lo que no se tocó
+
+`services/`. El gate (`f96c234`). Nada vivo. **No se fijó umbral**: el percentil se reporta.
+
+**A1.PAUSA.** Queda **CP-N**, que espera la vinculación con `ckmdatasets` (`d6a5fcb`).

@@ -10551,3 +10551,83 @@ El gate (`f96c234`). El resto de `_rebuild`. La divergencia (b): **se declara**,
 en `docs/defs/DECLARACION_extraccion_W_v1.md` paso 7.
 
 **A1.PAUSA.** Sigue el **Paso 3** (CP1, la declaración como dato) cuando des el OK.
+
+---
+## Paso 3 — CP1, la declaración como dato: LA PREDICCIÓN — 2026-10-14 22:31 UTC
+
+*Claude Opus 5 (Code). **Commiteada antes de escribir una línea.** Decisión de delamor en
+`83ad199`. Pull y rebase sobre `6fc6f97` hechos: `docs/defs/DECLARACION_extraccion_W_v1.md`
+y la copia de `docs/opus/` son **byte a byte idénticas** (diff vacío), así que la canónica no
+quedó atrás.*
+
+### Cómo lo voy a partir
+
+**Dos métodos, uno por dueño.** Los operadores **1–6** son del extractor, el **7** y el **8**
+son de `CorpusService`. Así que:
+
+- `NodeExtractorService.declaracion()` → operadores 1–6, sus parámetros, el perfil y el
+  entorno.
+- `CorpusService.declaracion_extraccion()` → la del extractor **más** 7 y 8.
+
+**Sin duplicar el perfil:** el bloque `perfil` aparece **una vez**; los operadores 1, 2 y 3
+nombran **qué claves del perfil** son sus parámetros, no copian los valores.
+
+**Atada al sha de W, por referencia y no por copia.** `WTracePoint` suma
+`declaracion_sha: Optional[str] = None`, y el estado guarda `declaraciones: {sha: dict}`.
+Así cada marca dice bajo qué declaración se produjo **esa** W, y dos W con la misma
+declaración no la guardan dos veces. **`None` quiere decir "no se sabe"**, y es lo que queda
+para las marcas de los estados viejos — **que no se completan con la de hoy** (I2).
+
+**Sin rama para estados viejos:** `from_list` hace `WTracePoint(**d)`, así que un campo **con
+default** carga los estados de ayer sin un solo `if`. Si hiciera falta un `if`, lo digo.
+
+### Qué va a entrar, con los valores de hoy
+
+| Lo que hoy es invisible | Valor que va a quedar escrito |
+|---|---|
+| `top_k`, `ngram_max` | los del servicio (hoy `20` y `2` por defecto) |
+| stopwords | `n = 703`, **hash sha256 de la lista ordenada**, y su origen |
+| marcadores de oposición | `n = 44`, **hash**, y su origen |
+| defaults de TF-IDF | `smooth_idf=True`, `norm="l2"`, `use_idf=True`, `sublinear_tf=False`, `max_features = top_k*3` |
+| versiones | `sklearn 1.9.0`, `python 3.12.1`, `numpy 2.4.6` |
+| fórmula de W | suma por unidad (1 por par por unidad), `/ máx\|·\|`, diagonal 0 |
+| productor | nombre + **sha256 del fuente** de `node_extractor.py` y `corpus_service.py` |
+
+### Predicción, por aserción
+
+| | Predigo |
+|---|---|
+| **Qué tests existentes se mueven** | **Uno solo: `tests/test_extraccion_fallida_no_borra.py`**, en **3 lugares** (`:69`, `:94`, `:110`), porque `perfil_extraccion` deja de ser clave de primer nivel del estado y pasa adentro de la declaración |
+| `test_node_extractor_cp0.py` y `test_analizador_S0.py` | **No se mueven.** La salida de `accumulate` **no cambia**: la declaración es un método aparte |
+| `test_w_version.py` (`to_list`/`from_list`) | **No se mueve**, por el default del campo nuevo |
+| `test_firma_ckm.py::test_firma_tiene_seis_campos` | **No se mueve**: la Firma es otro objeto |
+| Suite completa después | **667 pasan + los nuevos**, 7 xfailed, 0 fallan |
+
+### Lo que espero encontrar, y que no es un arreglo
+
+El paso 3 de la declaración dice *"703 … NLTK 3.10.3 es + en, sklearn `ENGLISH_STOP_WORDS`"*
+— el origen **histórico** de una lista que está **embebida** en el módulo. El sklearn que
+corre hoy el TF-IDF es **1.9.0**. **Son dos cosas distintas** y la declaración las va a
+separar: `stopwords.origen` (histórico, embebido, no depende del runtime) y
+`entorno.sklearn` (el que afecta los operadores 5 y 6). **No cambio nada por esto**; lo dejo
+escrito porque hoy se leen como si fueran lo mismo.
+
+### El test de coincidencia con el documento
+
+`docs/defs/DECLARACION_extraccion_W_v1.md` es la canónica. El test va a sacar **del
+documento** los valores verificables —el `token_pattern`, `|S| = 703`, los 44 marcadores, el
+largo mínimo 3, NFC, `smooth_idf`/`norm="l2"`, `max_features = top_k·3`, la diagonal 0— y
+compararlos con la declaración **que produce el código**. **Si no coinciden: se corrige el
+documento, se reporta, y el extractor no se toca.**
+
+### Lo que no sé
+
+- Si `declaracion()` va a poder declarar el operador 4 (`ngram_max`) **sin tocar nada más**:
+  hoy vive en el constructor y no está en el perfil. Creo que sí, como parámetro del
+  servicio y no del perfil, pero **no lo verifiqué**.
+- Cuántas líneas termina siendo. No lo predigo.
+
+### Lo que no se toca
+
+El gate (`f96c234`). El comportamiento del extractor. El signo. La divergencia (b), que **se
+declara** y ya está en el paso 7 del documento.

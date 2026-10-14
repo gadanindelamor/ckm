@@ -10269,3 +10269,77 @@ sklearn**, **la fórmula de W**, y sobre todo **atar la declaración al `sha256`
 de tener una sola por estado.
 
 **A1.PAUSA.**
+
+---
+## Ubicaciones y referencias del lote 13–14 oct — qué se movió y qué falta — 2026-10-14 20:32 UTC
+
+*Claude Opus 5 (Code). Por pedido de delamor: *"dejé las cosas en tasks. Si falta avisame
+porfa y ponelas donde van"* y *"todo lo que corregiste de los archivos y sus ubicaciones va a
+la traza Code. Se registra"*. **No se tocó ningún contenido salvo una línea, abajo.**
+**Nada de esto se trackea** (son docs de trabajo del canal Opus↔Code), salvo lo ya
+commiteado.*
+
+### 1. Lo que se corrigió adentro de un archivo — **una línea**
+
+| Archivo | Decía | Dice | Commit |
+|---|---|---|---|
+| `TASK_declaracion_extraccion_v1.md:10` | `` `claude/declaracion_extraccion_W_14oct2026.md` `` | `` `docs/tasks/declaracion_extraccion_W_14oct2026.md` `` | `c0bcdc5` |
+
+`claude/` es la carpeta de la PC (`contexto_claude\`), no una ruta del repo. Se corrigió
+**sólo acá**, porque es el único archivo **commiteado** que la usaba. Lo pregunté antes y
+delamor dijo que sí.
+
+**En los textos de Opus el prefijo `claude/` se dejó como está**: desde la PC es la ruta
+real, y el texto es su traza. Son estos: `ESTADO_al_cortar_13oct2026.md`,
+`decisiones_en_el_acto.md`, `nodo_y_W_desde_abajo_13oct2026.md`.
+
+### 2. Lo que se movió — **dos archivos, de dónde a dónde**
+
+| Lo dejó en | Fue a | Por qué |
+|---|---|---|
+| `docs/revision_tasks_marco_14oct2026.md` | `docs/tasks/revision_tasks_marco_14oct2026.md` | Es una revisión de las TASK y sus CP. Va con ellas |
+| `docs/nodo_y_W_desde_abajo_13oct2026.md` | `docs/tasks/nodo_y_W_desde_abajo_13oct2026.md` | `declaracion_extraccion_W_14oct2026.md` (§ Dirección 1) lo cita **por nombre pelado**, y desde `docs/tasks/` no resolvía |
+
+**Nada más se movió.** Los otros seis del lote ya estaban en `docs/tasks/` y ahí se quedaron:
+`ESTADO_al_cortar_13oct2026.md`, `ESTADO_al_cortar_14oct2026.md`,
+`TEXTO_PARA_CODE_tasks_14oct2026.md`, `aporte_vs_rueda_14oct2026.md`,
+`decisiones_en_el_acto.md`, `declaracion_extraccion_W_14oct2026.md`,
+`traza_externa_extraccion_13oct2026.md`.
+
+**Resultado, verificado:** todos los `.md` que esos nueve archivos se citan entre sí
+resuelven ahora como **hermanos en `docs/tasks/`**. Menos tres.
+
+### 3. Lo que falta — tres, y las tres se citan como leídas
+
+| Falta | Quién lo cita | Qué se pierde |
+|---|---|---|
+| `ESTADO_al_cortar_12oct2026.md` | `ESTADO_al_cortar_13oct2026.md` (encabezado): *"leer primero §1 (cómo se trabaja) y §6 (cómo estar): siguen valiendo"* | La cadena es **14 → 13 → 12** y se corta en el 12. Es el único que dice **cómo estar**; no está en ningún otro lado del repo |
+| `REVIEW_REPORT_PAPER_..._v28.md` (12 oct) | `aporte_vs_rueda_14oct2026.md:4`, leído **completo** | De ahí salen **M4** y **M7**, que `TASK_condiciones_del_paper_v1` cita por número en **CP-M** y **CP-N**. Hoy esos dos CP apuntan a un número de un documento que no está en el repo |
+| `verificacion_review_kimi_12oct2026.md` | `aporte_vs_rueda_14oct2026.md:33` | Qué de ese review se verificó contra el repo. Sin él, lo citado queda como *"lo que el review dice"* |
+
+**No falta el paper.** v27 y v28_borrador **están** y **trackeados**, en `docs/paper/`. El v29
+no existe todavía: es lo que `TASK_condiciones_del_paper_v1` va a producir.
+
+### 4. Dos cosas vistas, **no tocadas**, esperando decisión
+
+- **`docs/PAPER_Landscape_Driven_Device_v26.md`** (raíz de `docs/`) es **copia byte a byte**
+  del trackeado `docs/paper/PAPER_Landscape_Driven_Device_v26.md` (`md5 f7eb1f0b…` en los
+  dos). **No se borró.**
+- **`TASK_declaracion_extraccion_v1.md` está commiteado y cita
+  `declaracion_extraccion_W_14oct2026.md`, que NO está trackeado.** Quien clone el repo
+  recibe la TASK **sin su referencia** — y esa referencia es la que define los 8 operadores
+  de todo el CP0/CP1.
+
+### A1 — qué es verificable
+
+**Corrido:** el `md5sum` de los dos v26 · la resolución de cada `.md` citado en los nueve
+archivos, antes y después de mover (cada nombre pelado contra `docs/tasks/`) · que
+`docs/paper/` no tiene ningún archivo sin trackear · que no existe en el repo ningún archivo
+con "review" ni "kimi" en el nombre.
+
+**Del peso del contexto:** *"va con ellas"* como razón del primer movimiento. Es un criterio
+mío por el título y el contenido del archivo, **no algo que delamor haya dicho de ese archivo
+en particular**. El segundo sí tiene una razón medible: la referencia no resolvía.
+
+**A1.PAUSA.** Sigue en pausa el **CP1**, y las tres preguntas de arriba (§4 y qué hacer con
+los tres que faltan).

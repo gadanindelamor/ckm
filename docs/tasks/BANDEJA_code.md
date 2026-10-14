@@ -10754,3 +10754,70 @@ estoy seguro, lo digo.
 
 Si algún test muestra que el código hace otra cosa que la declaración: **se corrige el
 documento, se reporta, y el extractor no se toca.**
+
+---
+## CP2 — el resultado. A1.PAUSA — 2026-10-15 00:12 UTC
+
+*Claude Opus 5 (Code). Predicción en `29b79c4`, **commiteada antes**. CP2 en `fab24a2`.
+Sólo tests y **una corrección al documento**: el extractor no se tocó.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** los 23 casos nuevos · la suite completa, **699 pasan, 7 xfailed, 0 fallan**
+(85 s) · la pertenencia de `https`, `www`, `com` a las 703 · los puntajes del pool en el caso
+límite (2 valores distintos entre 18 términos).
+
+**Del peso del contexto:** nada en los resultados. Sí en una elección de diseño: decidir que
+el bigrama que cruza la stopword y la subcadena del signo se fijen **como condición** es lo
+que la TASK ya dice; que eso sea *"para que no se arreglen sin decidirlo"* es mi lectura de
+por qué conviene, no una medición.
+
+### La predicción, contra lo que pasó
+
+**Los 13 ejemplos salieron exactamente como los predije.** `peter_pan` un token; `co-alinear`
+sólo `alinear`; nada de 2 letras; la URL en `https`/`www`/`com`; `of` filtrado;
+`control guns`; `año` NFC = NFD y distinto de `ano`; 1 par por unidad; `but` adentro de
+`distribution` marcando −1; `force_w_pos` anulando el signo; diagonal 0 y máx|·| = 1.
+
+**Lo que había marcado como no sabido:**
+
+- *"¿`https`, `www`, `com` están en las 703?"* — **No, ninguno.** El analizador completo
+  devuelve `['https', 'www', 'com']`, igual que el patrón solo. **No hay diferencia entre lo
+  que el documento sugiere y lo que llega a W.**
+- *"Predigo cero diferencias con el documento"* — **falso. Hubo una**, abajo.
+
+### La diferencia con el documento, y qué se corrigió
+
+**Con empate total en el corte y sin selección anterior, N = 0 y W nunca se construye.**
+
+Lo encontré porque un test mío falló con `W is None`. El corpus era de 3 textos **sin
+vocabulario compartido**: cada término aparece en un solo texto, así que el pool de 18
+términos tiene **2 puntajes distintos** y el grupo de arriba es más grande que `top_k = 6`.
+Entonces `_seleccionar` no tiene nada *estrictamente* por encima del corte, los empatados no
+caben en los lugares libres, y sin selección anterior **no entra ninguno** (`arriba = []`).
+`_rebuild` vuelve por `nodes` vacío y **W se queda en `None`**.
+
+**No es una falla**: es la regla de la relajación (h = 0 conserva; en el bootstrap el estado
+anterior es *"ningún nodo"*) llevada a su límite. El documento decía *"con empates, la
+cantidad de nodos puede no ser top_k"* — **no decía que puede ser 0 y dejar el corpus sin
+W**. Se corrigió **el documento** (paso 5, "Caso límite"), se reporta, y **el extractor no se
+tocó**, como manda la regla 2.
+
+Queda **fijado** en `test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W`, que además
+verifica que la traza **no invente** una marca de W que no existe (`w_sha()` es `None`).
+
+### Lo que queda fijado como condición, no como bug
+
+| | |
+|---|---|
+| `control of guns` → `control guns` | La contigüidad se mide **después** del filtrado. **S3 lo cambiaría y está en espera** (hay traza que leer antes: C-value, RAKE, Nothman) |
+| `control de guns` → `control guns` | La otra cara: una palabra de 2 letras tampoco separa, porque desaparece antes. Fijado para que **la diferencia con S3 se vea el día que S3 entre** |
+| `but` dentro de `distribution` → −1 | Búsqueda por **subcadena**. Es lo que el review v28 (M4) señala, y sobre eso descansan W_mixta, P5 y P7 |
+
+### Lo que no se tocó
+
+El gate (`f96c234`). El extractor. El signo. Ningún comportamiento: los 23 tests **describen**
+lo que ya hacía, y los 676 de antes siguen dando lo mismo.
+
+**A1.PAUSA.** Queda el **CP3** de esta TASK (sin código: una W de otro productor) y el
+**CP-T** de `TASK_condiciones_del_paper_v1`.

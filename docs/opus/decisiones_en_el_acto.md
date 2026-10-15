@@ -133,5 +133,15 @@
 - El CP0 de ckmdatasets escrito hoy **no se pega**: era para el entorno equivocado (*"para Code es otro entorno… NO ES CKM"*).
 
 - **El proyecto claude.ai (`claude/`): existe, pero no es ubicable** (delamor, 15 oct, precisando): *"no es fantasía… es un lugar que es una URL en alguna plataforma de Claude… es inaccesible… no es ubicable"*. Opus tampoco sabe dónde está: lo ve sólo como la respuesta de una herramienta. Como **por ahora no se trabaja en la web**, los documentos quedan **en la PC (`antropic\contexto_claude\`) y en el repo (`docs/opus/`)**, en el mismo paso, verificados listando desde Windows; Opus deja de escribir en `claude/`. **Si va al repo, Opus avisa del push.**
+- **Los siete pendientes de `docs/tasks/ESTADO_declaracion_y_condiciones_15oct2026.md` §4** (delamor, 15 oct: *"confirmo el resto de las propuestas y consideraciones tuyas"*):
+  1. **T(W)** se queda en `experiments/`; no va a `services/` (sería instanciar un proceso nuevo).
+  2. **Monitor con extractor propio:** se resuelve en la Serie 2 (un solo extractor en el camino vivo).
+  3. **Extractor muerto `ckm_monitor.py:186`:** se saca en el CP1 de la Serie 2.
+  4. **Criterio único de comparación:** dirección, sin código.
+  5. **`_has_opposition` sin NFC:** se corrige en la Serie 2, junto con palabra completa (declaración v2). El arreglo va en `corpus_service.py` (CKM), no en el extractor.
+  6. **El pool (`top_k·3`)** no se vuelve perilla: ya está declarado (operador 5).
+  7. **`nltk`** no instalado: se declara y queda así.
+- **`_has_opposition` es CKM y devuelve un signo, no "oposición"** (delamor, 15 oct: *"más allá del nombre, para CKM no es oposición ni deja de serlo"*). Opus había leído que CKM "decidía significado": corregido. Queda en CKM como operador declarado (camino a); se corrige lo mecánico (subcadena, NFC).
+
 
 *Última actualización: 15 oct 2026.*

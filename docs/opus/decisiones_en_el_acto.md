@@ -132,4 +132,6 @@
 - **`ckm` pasó a privado** (delamor, 15 oct), después de que Opus señalara IDs de autor del IAC en `docs/opus/`. Antes de volver a hacerlo público para el release: revisar qué hay en el repo y en su historia.
 - El CP0 de ckmdatasets escrito hoy **no se pega**: era para el entorno equivocado (*"para Code es otro entorno… NO ES CKM"*).
 
+- **"El proyecto claude.ai (`claude/`)" no es un lugar para delamor** (delamor, 15 oct, segunda vez: *"esto NO EXISTE, anótalo, Opus, ya lo vimos, es fantasía"*). Lo que Opus escribe ahí sólo lo ve Opus. **Para delamor existen dos lugares: el repo (`docs/opus/`) y `antropic\contexto_claude\`.** Opus no vuelve a nombrar `claude/` como lugar donde delamor encuentra algo. Regla de Opus: todo documento para delamor va en el mismo paso a `docs/opus/` y a `contexto_claude`, y se verifica listando desde Windows.
+
 *Última actualización: 15 oct 2026.*

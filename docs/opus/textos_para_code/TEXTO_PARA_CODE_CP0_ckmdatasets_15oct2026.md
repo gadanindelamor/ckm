@@ -9,7 +9,8 @@ Soy delamor. **Va después del freeze del CP-E/CP-M**, no antes. `git pull` ante
 1. **Predicción antes**, commiteada: qué esperás encontrar en los puntos 2–5.
 2. **Acceso:** clonar `https://github.com/gadanindelamor/ckmdatasets` **al lado** de `ckm` en el Codespace (no adentro, no submódulo). Si el token del Codespace no alcanza, **A1.PAUSA** y reportá qué hace falta (por ejemplo permiso en `.devcontainer/devcontainer.json`); no lo crees sin orden.
 3. **Qué hay:** qué está en GitHub y qué no. Los dumps (`fourforums_no_parse_2016_05_18.sql`, 544 MB; `.gz`, 164 MB) superan el límite de GitHub: verificá si están (LFS, release) o no. Si no están, decilo; no los bajes todavía.
-4. **El productor, leyendo `fourforums_pipeline_v8g.py`** (y `find_965_v3.py`, `ckm_p1p4_module.py` si los usa), en el formato de `docs/defs/DECLARACION_extraccion_W_v1.md`:
+4. **El trabajo ya está detallado** (delamor: *"ahí se detalla minuciosamente el trabajo; lo sacamos del paper porque parecía la biblia"*): `README.md`, `CONVENTIONS.md`, `trace/DOC_ckm_scripts_v1.md` y los `REG_*` de `ckmdatasets`. **Empezá por ahí; no lo reescribas.** La declaración es corta y **referencia** esos documentos; lo que hacés es verificar contra el código que dicen lo que el código hace, y señalar dónde no.
+   **El productor, leyendo `fourforums_pipeline_v8g.py`** (y `find_965_v3.py`, `ckm_p1p4_module.py` si los usa), en el formato de `docs/defs/DECLARACION_extraccion_W_v1.md`:
    - cómo parsea el dump: tablas, claves (incluida la compuesta de `post_id`, `ac6211f`), qué hace con lo que no calza;
    - qué es un nodo (¿autor?), qué es una unidad, cómo se arma W;
    - **de dónde sale el signo**: ¿marcadores, anotaciones del IAC (stance, quote/disagreement), otra cosa? Es lo que más importa para M4;

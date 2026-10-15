@@ -3,7 +3,7 @@ DELAMOR A CODE (texto de Opus):
 Soy delamor. `git pull` antes de nada.
 
 **Decisión mía (15 oct), para DECISIONES en commit propio:**
-> *"cuando freezamos algo… se mueve a carpeta de process los archivos necesarios para reproducir, lo necesario. ie: si hay un test de densidad, que utiliza un driver, el driver se mueve no solo los resultados"*; *"sino no se va a reproducir"*; *"por eso dije basta de regresión"*. Lo que pasó no se conserva con regresiones ni compatibilidad hacia atrás en el código vivo: **se conserva congelando sus condiciones en `process/`**. Código propio (drivers, servicios) **se copia**; librerías de terceros (numpy, sklearn, nltk…) **se guarda la versión**, no se copian; modelos por API, el identificador. Molde: `process/iap_series_freeze_20261008/`.
+> *"cuando freezamos algo… se mueve a carpeta de process los archivos necesarios para reproducir, lo necesario. ie: si hay un test de densidad, que utiliza un driver, el driver se mueve no solo los resultados"*; *"sino no se va a reproducir"*; *"por eso dije basta de regresión"*; *"la regresión es cuando el producto está estabilizado"*; *"pero acá estamos investigando, ¿no?"*. Lo que pasó no se conserva con regresiones ni compatibilidad hacia atrás en el código vivo: **se conserva congelando sus condiciones en `process/`**. Código propio (drivers, servicios) **se copia**; librerías de terceros (numpy, sklearn, nltk…) **se guarda la versión**, no se copian; modelos por API, el identificador. Molde: `process/iap_series_freeze_20261008/`.
 
 **Tarea: congelar las condiciones del CP-E y del CP-M** (el paper v29 los cita).
 

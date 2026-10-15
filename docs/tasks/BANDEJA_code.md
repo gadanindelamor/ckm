@@ -11489,3 +11489,75 @@ corpus de 7 a 24 textos —lo que ya dijiste en `d6a5fcb`— probablemente no se
 `services/`. El gate (`f96c234`). Nada vivo. **No se fijó umbral**: el percentil se reporta.
 
 **A1.PAUSA.** Queda **CP-N**, que espera la vinculación con `ckmdatasets` (`d6a5fcb`).
+
+---
+## FREEZE de las condiciones del CP-E y del CP-M: LA PREDICCIÓN — 2026-10-15 10:40 UTC
+
+*Claude Opus 5 (Code). Texto de delamor: `docs/opus/textos_para_code/TEXTO_PARA_CODE_freeze_CPE_CPM_15oct2026.md`.
+Decisión registrada en `docs/tasks/DECISIONES_opus.md` (`9622fd4`). Commiteada **antes** de crear la copia
+y de correr nada.*
+
+### Qué es teorema acá, y por eso no es lo que la corrida prueba
+
+**Teorema, y no hace falta correrlo:** las dos corridas son **deterministas**. `count_attractors` recibe
+`seed` explícita (CP-E: 10 seeds; CP-M: 5) y el nulo usa `np.random.default_rng(20261015)`; la extracción
+no tiene azar. **Con el mismo código, los mismos corpus y las mismas librerías, la salida es la misma.**
+Correr no agrega información sobre los números.
+
+**Lo que la corrida sí prueba, y no es demostrable desde acá: que la copia esté cerrada.** O sea que los
+drivers, corriendo desde `process/condiciones_paper_freeze_20261015/`, resuelvan sus imports **contra la
+copia y no contra el repo vivo**, y que no falte nada. Eso es lo que se está midiendo. Por eso, además de
+los números, se verifica el `__file__` de cada módulo importado.
+
+### Lo verificado antes de predecir
+
+- Los **tres corpus están trackeados y sin modificar** desde las corridas del CP-E (`0e042ac`, 03:42 UTC)
+  y del CP-M (`a1c6a18`, 04:31 UTC): `git status --porcelain` no devuelve nada para ellos.
+  sha256 (16 primeros): A24 `f730f6e80179a1dc`, **D12 `c3bd376bb53721da`**, E7 `b4488028a7520e5d`.
+  **D12 es estado vivo** (`iap_chatroom/_state/corpus_state.json`, mtime 2026-10-09): se congela **tal
+  como está hoy**, y por eso la corrida de hoy es la única que puede confirmar que es el mismo.
+- **`services/` no cambió** desde el CP-E: `git diff --stat 0e042ac HEAD -- services/` está vacío. Lo
+  único que cambió en `experiments/` fue el alta del driver del CP-M.
+- **El mínimo de `services/` son cuatro archivos**, por lectura de los imports (no por copiar la carpeta):
+  `node_extractor.py`, `corpus_service.py`, `landscape_engine.py` y `w_version.py` (lo importa
+  `corpus_service`). `landscape_engine` no importa nada del repo. **No hay imports lazy** fuera de
+  `tempfile`/`os`/`itertools`/`math`. **No hay `services/__init__.py`** (es paquete de espacio de nombres)
+  y ningún módulo lee archivos de datos del repo: `DECLARACION_REF` es **una cadena**, no se abre.
+  Esto lo decido yo, como dice el texto, y lo declaro.
+
+### Predicción
+
+1. **Los números van a ser idénticos a los de los dos REPORTES**, no "parecidos": mismas líneas base del
+   CP-E (A24 N=20 / 15,52 ± 0,32; D12 N=20 / 5,27 ± 0,16; E7 N=12 / 10,10 ± 0,20), misma tabla de perillas,
+   y en el CP-M mismos k (8/2/1), mismos percentiles (**2,0 / 68,5 / 100,0**) y misma caída real
+   (−13,542 / −2,022 / +0,000).
+2. **La verificación interna del CP-M va a pasar**: `verificar_contra_el_repo` compara la W del driver
+   contra la de `CorpusService` y aborta si difieren. Desde la copia debería dar igual — y si abortara,
+   **sería la señal de que la copia no es fiel**, no un hallazgo sobre el modelo.
+3. **Los drivers van a correr sin editarlos.** `RAIZ = Path(__file__).resolve().parent.parent` resuelve a
+   la carpeta del freeze, y `sys.path.insert` pone esa raíz y su `services/` adelante. Predigo que el
+   `__file__` de `services.node_extractor`, `services.corpus_service`, `services.landscape_engine` y
+   `w_version` va a caer **dentro del freeze**.
+4. **`nltk` va a seguir faltando** y el CP-E va a medir otra vez con 0 stopwords como tercer nivel, igual
+   que en `0e042ac`. Va al README del freeze como lo que queda afuera.
+5. **La W de D12 va a ser la misma**, porque el archivo no se tocó. Es la predicción que **más puede
+   fallar**, porque es lo único vivo de los tres.
+
+### Lo que no sé
+
+- **Si algún módulo de `services/` se resuelve contra el repo vivo sin que yo lo vea.** Es lo que la
+  corrida prueba. El camino por el que podría pasar: `corpus_service` importa `node_extractor` **a secas**
+  (no `services.node_extractor`), así que hay **dos objetos módulo distintos** para la misma clase. Eso ya
+  pasaba en el repo y no rompió nada —no hay `isinstance` en el medio—, pero en la copia hay que mirar de
+  **dónde** sale cada uno.
+- **Cuánto tarda.** El CP-M son 200 permutaciones × 5 seeds × 1000 corridas por corpus. No tengo medido el
+  tiempo de las corridas originales.
+- **Si la salida de los drivers quedó guardada en algún lado la primera vez.** Hoy imprimen a stdout y los
+  REPORTES tienen los números **transcriptos a mano**; si aparece una diferencia de formato y no de valor,
+  es eso. En este freeze la salida se guarda **tal cual** en `resultados/`.
+
+### Lo que no se hace
+
+No se mueve nada: **se copia**, y los originales no se tocan. No se edita ningún driver. No se corrige
+nada si difiere: **se reporta**. No se toca el gate (`f96c234`), ni `services/`, ni nada vivo.
+No se fija umbral (eso ya está cerrado en el CP-E y el CP-M).

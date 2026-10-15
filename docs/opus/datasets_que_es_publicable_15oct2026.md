@@ -20,6 +20,9 @@ Texto de la página del IAC v1: **sólo pide citar** (Walker, Anand, Fox Tree, A
 - **Lectura prudente (Opus, no es asesoramiento legal):** en GitHub, un repo **sin licencia** queda con todos los derechos reservados por defecto; los Términos de GitHub permiten verlo y forkearlo **dentro de GitHub**, no redistribuirlo afuera. Los términos de los sitios de UCSC (`iac.pdf`) probablemente no aplican a una descarga desde GitHub.
 - **Consecuencias:** (1) el dump **no** va a ningún repo nuestro, ni privado — se declara con la URL del repo de origen, el commit/archivo y el sha256; (2) **en un Codespace** se puede bajar directo de ese repo (GitHub → GitHub), sin pasar por la PC; (3) **agregados** con cita: razonable; **IDs de autor a nivel de fila**: siguen esperando permiso. El mail a los mantenedores (o un issue en ese repo) sigue siendo la vía limpia.
 
+### ¿v1 o v2? (delamor: *"usamos versión V1"*)
+El archivo es un **dump de MariaDB 10.1.14, base `fourforums`**, con esquema SQL (`author`, `post`, `quote`, `mturk_author_stance`, `dataset_metadata`, …). Ese esquema SQL es el que presenta **IAC 2.0** (Abbott et al., LREC 2016); el README de v1 describe **JSON + CSV, zip de 158 MB**. **A aclarar:** de qué carpeta del repo `sl-m-lab` salió (`v1/` o `v2/`); se declara la ruta exacta. **Además:** la tabla `author` trae **nombres de usuario** de los foros — dato personal: otra razón para no publicar nada a nivel de fila.
+
 ## Clasificación
 | clase | qué | va a `ckm` público |
 |---|---|---|

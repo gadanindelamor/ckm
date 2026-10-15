@@ -23,3 +23,19 @@
 
 ## Para M4
 El signo de este productor **no tiene el problema de M4** (no hay marcadores), pero tiene otro: es **impuesto** sobre el par de polos. El nulo que corresponde no es barajar marcadores, sino preguntar qué pasa con la estructura si la postura de los autores se asigna al azar (mismas cantidades por polo), y con una W de autores, no de 2 polos.
+
+## v8h — encontrada buscando mayo/junio (delamor: "versiones viejas, buscá mayo")
+**Dónde:** `antropic/ckm___memories/ckmdatases codspace/` (15 jun 2026): `fourforums_pipeline_v8h.py`, `W_asim_v8h.json`, `run_v8h.log`, `row_counts.log`, `explore_qr_asym.log`, `README.md`. **No está en el repo `ckmdatasets`** (ahí el último es v8g, `ac6211f`, 19 may). Los informes de trabajo v2–v24 son de antes del 3 may (antes de que existiera `ckmdatasets`, 17 may); fourforums aparece recién en el informe v26 (23 jun).
+
+**Qué hace (leído el docstring y el log, no el código entero):** *"W asimétrico desde `mturk_2010_qr_task1_worker_response.disagree_agree`. Cadena: task1_vote → qr_entry → post(responder) → quote → post(quoter) → stance."* Es decir: **el signo sale de votos humanos de acuerdo/desacuerdo sobre cada par cita–respuesta** (Mechanical Turk), no de marcadores ni de la construcción. Parser por regex posicional sobre los INSERT (depende del orden de columnas del esquema: se declara).
+
+**Resultado del log (`run_v8h.log`):** 905 discusiones de gun control, 304 autores con postura, 7.876 pares resueltos, 513 pares de autores con N ≥ 2.
+
+| quién cita a quién | n | media disagree_agree | disagree | agree |
+|---|---|---|---|---|
+| T0 → T0 | 543 | −1,035 | 57,3 % | 23,8 % |
+| T0 → T1 | 3.947 | −1,613 | 64,7 % | 16,1 % |
+| T1 → T0 | 1.809 | −1,473 | 62,7 % | 17,1 % |
+| T1 → T1 | 1.577 | −0,339 | 43,1 % | 31,4 % |
+
+**Lo que dice para M4 (lectura de Opus, a verificar):** con anotación humana, el desacuerdo **no coincide** con "postura distinta": entre polos es mayor (≈ 63–65 %), pero dentro de T0 también domina (57 %). El signo impuesto de v8g (todo par cruzado negativo, todo par igual excluido) **no** es lo que dicen los anotadores. v8h es la fuente natural de un signo con ground truth y de una W de autores (513 pares), y el nulo correspondiente: permutar los votos disagree/agree entre pares conservando cantidades.

@@ -12,6 +12,9 @@ Es la página general **"Website Privacy and Terms and Conditions" de UCSC** (it
 - **Duda de alcance:** vale para los sitios **oficiales** de UCSC (los que llevan el sello); el mismo texto dice que los demás sitios alojados en UCSC no son oficiales. No está claro si `nlds.soe.ucsc.edu` (sitio de un laboratorio) es oficial, ni si el dataset tiene términos propios en el formulario.
 - **Lectura prudente (Opus, no es asesoramiento legal):** si aplica, ni siquiera subir el dump a GitHub privado o a un Codespace ("networked computer environment") estaría cubierto sin permiso explícito. **Pedir permiso por escrito a Rob Abbott** resuelve las tres cosas: uso en un entorno de nube privado, publicación de agregados y de datos derivados (IDs de autor, posturas), y la cita.
 
+### `antropic/README_iACv1.md` (delamor, 15 oct)
+Texto de la página del IAC v1: **sólo pide citar** (Walker, Anand, Fox Tree, Abbott, King, LREC 2012) y lista trabajos que lo usan. **No trae licencia ni términos de redistribución.** Describe la v1 (JSON + CSV, zip de 158 MB); lo nuestro es el dump SQL de IAC 2.0. No cambia la conclusión: sin términos explícitos, pedir permiso.
+
 ## Clasificación
 | clase | qué | va a `ckm` público |
 |---|---|---|

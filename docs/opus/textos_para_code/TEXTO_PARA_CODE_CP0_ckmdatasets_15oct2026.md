@@ -16,6 +16,7 @@ Soy delamor. **Va después del freeze del CP-E/CP-M**, no antes. `git pull` ante
    - **de dónde sale el signo**: ¿marcadores, anotaciones del IAC (stance, quote/disagreement), otra cosa? Es lo que más importa para M4;
    - qué tópicos hay en el dump (no sólo gun control) — contar, sin analizar;
    - dependencias y versiones; qué ejecuta.
+   Opus ya leyó partes de v8g (sólo lectura): `docs/opus/lectura_pipeline_fourforums_v8g_15oct2026.md`. **Verificá cada punto contra el código** (N = 2, signo impuesto, `stream_W_delta` sin uso, `CD_BASELINE` a mano, W de autores en `find_965_v3.py`) y decí si los resultados del paper (P6, P7) vienen de esta versión.
 5. **Otros datasets del IAC** nombrados en `trace/FORUMS_IACv2_README.txt` (createdebate, createdebate_released, convinceme): sólo nombrarlos y decir si el parser serviría o haría falta otro. No bajarlos.
 6. REPORTE en la BANDEJA de `ckm` y **A1.PAUSA**.
 

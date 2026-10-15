@@ -16,7 +16,7 @@ Por qué ahora: los dos drivers (`experiments/driver_cpe_rango_neff.py`, `experi
    - los tres corpus en sus mismas rutas relativas: `process/experiments/wmixta_paso2_natural/corpus_natural_uniform.json`, `iap_chatroom/_state/corpus_state.json` (**D12 tal como está hoy**, con su sha256), `process/iap/corpus_state.json`;
    - `resultados/` — la salida de cada driver (hoy imprimen a stdout: guardarla tal cual);
    - `entorno/` — `pip_freeze.txt`, `python.txt`, `commit.txt`, y la declaración de extracción (sha) con la que corrieron;
-   - `README.md` que empiece *"NO ES REPRODUCIBLE. Intento de congelar las condiciones"*, como el de la serie IAP, y diga qué queda afuera (nltk no instalado, si sigue así; la máquina; lo que no se sepa).
+   - `README.md` que empiece *"NO ES REPRODUCIBLE. Intento de congelar las condiciones"*, como el de la serie IAP, y diga qué queda afuera (nltk no instalado, si sigue así; la máquina; lo que no se sepa). Una línea: las versiones de las librerías valen mientras se puedan reinstalar; si una se retira, queda sólo el identificador, como con los modelos por API.
 3. **Correr los drivers desde la copia** y comparar contra la predicción y los REPORTES. Si algo difiere, no se corrige: se reporta.
 4. REPORTE en la BANDEJA y **A1.PAUSA**.
 

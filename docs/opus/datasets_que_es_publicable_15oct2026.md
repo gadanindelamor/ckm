@@ -15,6 +15,11 @@ Es la página general **"Website Privacy and Terms and Conditions" de UCSC** (it
 ### `antropic/README_iACv1.md` (delamor, 15 oct)
 Texto de la página del IAC v1: **sólo pide citar** (Walker, Anand, Fox Tree, Abbott, King, LREC 2012) y lista trabajos que lo usan. **No trae licencia ni términos de redistribución.** Describe la v1 (JSON + CSV, zip de 158 MB); lo nuestro es el dump SQL de IAC 2.0. No cambia la conclusión: sin términos explícitos, pedir permiso.
 
+### Fuente real del dump (delamor, 15 oct: *"ese bajé"*)
+**GitHub `sl-m-lab/Internet-Argument-Corpus`** (carpetas `v1/` y `v2/`), no el formulario de UCSC. El repo **no tiene LICENSE** y GitHub no muestra licencia; los README sólo piden citar (Walker et al., LREC 2012). La carpeta `v2/` no se pudo leer desde la sesión de Opus (robots).
+- **Lectura prudente (Opus, no es asesoramiento legal):** en GitHub, un repo **sin licencia** queda con todos los derechos reservados por defecto; los Términos de GitHub permiten verlo y forkearlo **dentro de GitHub**, no redistribuirlo afuera. Los términos de los sitios de UCSC (`iac.pdf`) probablemente no aplican a una descarga desde GitHub.
+- **Consecuencias:** (1) el dump **no** va a ningún repo nuestro, ni privado — se declara con la URL del repo de origen, el commit/archivo y el sha256; (2) **en un Codespace** se puede bajar directo de ese repo (GitHub → GitHub), sin pasar por la PC; (3) **agregados** con cita: razonable; **IDs de autor a nivel de fila**: siguen esperando permiso. El mail a los mantenedores (o un issue en ese repo) sigue siendo la vía limpia.
+
 ## Clasificación
 | clase | qué | va a `ckm` público |
 |---|---|---|

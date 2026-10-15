@@ -7,6 +7,11 @@ Sacados del índice: los dos dumps, `trace/schema_preview.txt`, `trace/4foreums 
 ## Licencia del IAC (buscado hoy)
 Las páginas del IAC ([iac2](https://nlds.soe.ucsc.edu/iac2), [iac](https://nlds.soe.ucsc.edu/iac)) **no declaran licencia ni términos de redistribución**; sólo piden citar (Walker et al., LREC 2012; Abbott et al. 2016 para IAC 2.0). La descarga pasa por un **formulario** — los términos, si los hay, estarían ahí (no visto). Contacto: Rob Abbott. **Sin licencia explícita, lo prudente es no redistribuir nada a nivel de fila**, hasta leer el formulario o preguntar.
 
+### Lo que dejó delamor: `antropic/iac.pdf` (15 oct)
+Es la página general **"Website Privacy and Terms and Conditions" de UCSC** (its.ucsc.edu, actualizada 11/01/2021), no una licencia del IAC. Dice: *"No material from any Official UCSC website may be copied, reproduced, republished, uploaded, posted, transmitted, or distributed in any way, without explicit permission, except that you may download one copy of the materials on any single computer for your personal, non-commercial home use only… the use of any such material on any other website or networked computer environment is prohibited."*
+- **Duda de alcance:** vale para los sitios **oficiales** de UCSC (los que llevan el sello); el mismo texto dice que los demás sitios alojados en UCSC no son oficiales. No está claro si `nlds.soe.ucsc.edu` (sitio de un laboratorio) es oficial, ni si el dataset tiene términos propios en el formulario.
+- **Lectura prudente (Opus, no es asesoramiento legal):** si aplica, ni siquiera subir el dump a GitHub privado o a un Codespace ("networked computer environment") estaría cubierto sin permiso explícito. **Pedir permiso por escrito a Rob Abbott** resuelve las tres cosas: uso en un entorno de nube privado, publicación de agregados y de datos derivados (IDs de autor, posturas), y la cita.
+
 ## Clasificación
 | clase | qué | va a `ckm` público |
 |---|---|---|

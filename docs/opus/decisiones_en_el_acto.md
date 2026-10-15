@@ -126,4 +126,10 @@
 ## 14 oct 2026 (noche)
 - **CP-M cerrado como declaración.** delamor: *"confirmo cerrar el CP-M así, con esa declaración"*. La marca de oposición no se distingue del azar en los corpus del repo; el nulo por pares queda para corpus más grandes / CP-N.
 
-*Última actualización: 14 oct 2026, noche.*
+## 15 oct 2026
+- **Freeze = copiar a `process/` el código propio que hace falta; librerías: versión; modelos por API: identificador.** delamor: *"sino no se va a reproducir"*, *"la regresión es cuando el producto está estabilizado… pero acá estamos investigando"*. Texto para Code: `textos_para_code/TEXTO_PARA_CODE_freeze_CPE_CPM_15oct2026.md`.
+- **Release: opción B** (un repo `ckm`, dos entornos/devcontainers, datos del IAC nunca en un repo). *"Prefiero reescribir versiones del paper y no armar versiones de infraestructura, y mucho menos una infracción por novato en GitHub."* Orden a criterio de Opus; el paper v29 no espera. Ver `datasets_que_es_publicable_15oct2026.md`.
+- **`ckm` pasó a privado** (delamor, 15 oct), después de que Opus señalara IDs de autor del IAC en `docs/opus/`. Antes de volver a hacerlo público para el release: revisar qué hay en el repo y en su historia.
+- El CP0 de ckmdatasets escrito hoy **no se pega**: era para el entorno equivocado (*"para Code es otro entorno… NO ES CKM"*).
+
+*Última actualización: 15 oct 2026.*

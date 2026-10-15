@@ -11561,3 +11561,75 @@ los números, se verifica el `__file__` de cada módulo importado.
 No se mueve nada: **se copia**, y los originales no se tocan. No se edita ningún driver. No se corrige
 nada si difiere: **se reporta**. No se toca el gate (`f96c234`), ni `services/`, ni nada vivo.
 No se fija umbral (eso ya está cerrado en el CP-E y el CP-M).
+
+---
+## FREEZE de las condiciones del CP-E y del CP-M — el resultado. La copia está cerrada y los números son idénticos. A1.PAUSA — 2026-10-15 05:02 UTC
+
+*Claude Opus 5 (Code). Predicción en `a1c717f`, **commiteada antes y no reescrita**. Decisión en
+`9622fd4`. La carpeta: `process/condiciones_paper_freeze_20261015/`.*
+
+### A1 — qué es verificable y qué es peso del contexto
+
+**Corrido:** las dos corridas completas desde la copia, desde `/tmp` y con `python -I` · la
+verificación de `__file__` de los cinco módulos · el `diff` archivo por archivo contra los
+originales · los sha256 de lo copiado · el `pip freeze` de hoy contra el del freeze del 8 oct.
+
+**Del peso del contexto:** nada en los números — son los mismos que ya estaban. Sí una cosa que
+**no** verifiqué y que corregí al escribir el README: que el entorno de hoy sea el de las
+corridas originales. **No lo es necesariamente** y no hay con qué compararlo (abajo).
+
+### Lo que pasó, contra la predicción
+
+| | Predije | Pasó |
+|---|---|---|
+| **números idénticos, no parecidos** | — | **Se cumplió, hasta el último decimal impreso.** CP-E: la tabla de perillas da 0,071/0,855/0,693/0,866/0,660 · 0,088/2,389/1,974/0,864/0,279 · 0,074/1,747/0,936/0,038/0,432, y las bases 15,519±0,323 · 5,271±0,159 · 10,101±0,200. CP-M: k 8/2/1, percentiles **2,0 / 68,5 / 100,0**, caídas −13,542 / −2,022 / +0,000 |
+| **`verificar_contra_el_repo` pasa** | — | **Se cumplió en los tres corpus**: `W del driver == W de CorpusService` (N=20, 20, 12) |
+| **los drivers corren sin editarlos** | — | **Se cumplió.** Ni una línea tocada. Los cinco módulos (`services.node_extractor`, `services.corpus_service`, `services.landscape_engine`, `node_extractor`, `w_version`) resuelven **dentro del freeze** |
+| **`nltk` sigue faltando** | — | **Se cumplió** (`entorno/nltk.txt`), y el tercer nivel de stopwords volvió a ser 0 |
+| **la W de D12 es la misma** — *"lo que más puede fallar"* | — | **Se cumplió.** sha256 `c3bd376b…b4e4d`, el mismo que medí antes de copiar |
+| los dos objetos módulo para `node_extractor` | — | **Confirmado**: `is` → `False`, y los dos salen del freeze |
+| *"cuánto tarda"* (declarado no sabido) | — | **CP-E 56 s, CP-M 3 min 16 s** |
+
+**Nada difirió.** Y eso era lo esperable: los números eran **teorema** (seeds explícitas,
+`default_rng(20261015)`, extracción sin azar). Lo que la corrida probó es lo otro: **que la copia
+está cerrada**, que es lo que no se podía demostrar desde afuera.
+
+### Lo que no se pudo congelar, y queda declarado en el README
+
+1. **Las librerías no se copian: se guarda la versión** (`numpy==2.4.6`, `scikit-learn==1.9.0`,
+   `scipy==1.17.1`). Valen **mientras se puedan reinstalar**; si una se retira, queda sólo el
+   identificador, como los modelos por API en el freeze del 8 oct.
+2. **No quedó registrado el `pip freeze` de las corridas originales.** No existía el archivo.
+   Contra el único punto de comparación que hay —el `pip_freeze.txt` del freeze del 8 oct— el de
+   hoy **difiere en una sola línea**, `networkx==3.7`, que estos drivers no importan. Así que
+   **"idéntico" vale dado este entorno, no contra el de aquel momento.** Y hay un dato que lo
+   hace concreto: la máquina **arrancó 04:13 UTC**, o sea **después** del CP-E (03:42) y **antes**
+   del CP-M (04:31): **el CP-E corrió en otro arranque del Codespace.**
+3. **`nltk` no está instalado**; la lista de 703 está embebida. Ya estaba declarado en el CP-E.
+4. **La máquina**: el intérprete y la plataforma quedan en `entorno/python.txt`; el hardware y el
+   contenedor no. **Sigue sin haber `.devcontainer/`**, igual que en el freeze del 8 oct.
+5. **D12 es estado vivo.** Acá queda la foto del 15 oct; el canal lo puede cambiar, esta copia no.
+
+### La decisión del mínimo de `services/`, declarada
+
+**Cuatro archivos**, no la carpeta entera, y no por estimación: `node_extractor`,
+`corpus_service`, `landscape_engine` (los que importan los drivers) y `w_version` (lo importa
+`corpus_service`). **No hay imports lazy** fuera de `tempfile`/`os`/`itertools`/`math`, **no hay
+`services/__init__.py`**, y **ningún módulo abre un archivo del repo** (`DECLARACION_REF` es una
+cadena). La corrida desde `/tmp` con `-I` es la verificación de que ese mínimo alcanza.
+
+### Lo que me salió mal, y no lo corrijo en silencio
+
+**La hora que puse en el encabezado de la predicción está mal.** Escribí *"2026-10-15 10:40 UTC"*
+y eran las **04:40 UTC**. No la reescribo —la predicción se commitea y no se toca—, así que queda
+acá: **donde esa predicción dice 10:40, hay que leer 04:40.** No afecta ningún número; sí afecta
+el orden de la traza si alguien la lee contra los REPORTES del CP-E (03:42) y del CP-M (04:31).
+
+### Lo que no se tocó
+
+**Los originales no se tocaron**: es `cp -p`, verificado con `diff` archivo por archivo. No se
+editó ningún driver. `services/` no cambió (`git status` limpio). El gate (`f96c234`) no se tocó.
+Nada vivo cambió. **No se fijó umbral.**
+
+**A1.PAUSA.** De `TASK_condiciones_del_paper_v1` queda **CP-N**, que espera la vinculación con
+`ckmdatasets` y la revisión legal de los corpus en el preprint (`3cdcf62`).

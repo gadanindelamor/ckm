@@ -1,0 +1,33 @@
+CP-M — nulo de marcadores   (top_k=20, n_runs=1000, 5 seeds por W, 200 permutaciones)
+
+## A24 — 24 textos, 0 repetidos
+   k (con marcador real) = 8 de 24  (33%)
+   W del driver == W de CorpusService  (N=20)
+   N_eff(W_pos)   =   2.112   (sd entre seeds 0.027)
+   N_eff(W_mixta real) =  15.654   caída real = -13.542
+   caída barajada: media -2.331  sd 3.421  [-19.870, +0.101]
+   ruido de muestreo dentro de una W: sd media 0.119
+   la caída real está en el percentil 2.0 del nulo
+   ¿afuera del rango de las 200 barajadas? NO
+
+## D12 — 12 textos, 0 repetidos
+   k (con marcador real) = 2 de 12  (17%)
+   W del driver == W de CorpusService  (N=20)
+   N_eff(W_pos)   =   3.240   (sd entre seeds 0.147)
+   N_eff(W_mixta real) =   5.262   caída real = -2.022
+   caída barajada: media -9.313  sd 8.212  [-29.364, +0.269]
+   ruido de muestreo dentro de una W: sd media 0.437
+   la caída real está en el percentil 68.5 del nulo
+   ¿afuera del rango de las 200 barajadas? NO
+
+## E7 — 7 textos, 1 repetidos
+   k (con marcador real) = 1 de 7  (14%)
+   W del driver == W de CorpusService  (N=12)
+   N_eff(W_pos)   =  10.074   (sd entre seeds 0.277)
+   N_eff(W_mixta real) =  10.074   caída real = +0.000
+   caída barajada: media -42.623  sd 54.147  [-124.432, +0.000]
+   ruido de muestreo dentro de una W: sd media 0.877
+   la caída real está en el percentil 100.0 del nulo
+   ¿afuera del rango de las 200 barajadas? NO
+
+No se fija umbral (CP-M). El percentil se reporta, no se compara contra un corte.

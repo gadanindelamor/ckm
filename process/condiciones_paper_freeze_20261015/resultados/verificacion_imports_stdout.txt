@@ -1,0 +1,10 @@
+cwd                        : /tmp
+RAIZ                       : /workspaces/ckm/process/condiciones_paper_freeze_20261015
+services.node_extractor     : /workspaces/ckm/process/condiciones_paper_freeze_20261015/services/node_extractor.py   -> DENTRO del freeze
+services.corpus_service     : /workspaces/ckm/process/condiciones_paper_freeze_20261015/services/corpus_service.py   -> DENTRO del freeze
+services.landscape_engine   : /workspaces/ckm/process/condiciones_paper_freeze_20261015/services/landscape_engine.py   -> DENTRO del freeze
+node_extractor              : /workspaces/ckm/process/condiciones_paper_freeze_20261015/services/node_extractor.py   -> DENTRO del freeze
+w_version                   : /workspaces/ckm/process/condiciones_paper_freeze_20261015/services/w_version.py   -> DENTRO del freeze
+numpy                      : 2.4.6 /usr/local/python/3.12.1/lib/python3.12/site-packages/numpy
+sklearn                    : 1.9.0
+services.node_extractor is node_extractor ? False

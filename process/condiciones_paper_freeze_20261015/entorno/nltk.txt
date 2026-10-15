@@ -1,0 +1,1 @@
+nltk instalado: False

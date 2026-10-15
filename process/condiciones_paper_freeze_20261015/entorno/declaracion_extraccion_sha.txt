@@ -1,0 +1,4 @@
+docs/defs/DECLARACION_extraccion_W_v1.md
+8ae651804ad4ac06bf573e5cd9c90964450bf882bbbb2f24f449fd0adcb4f367
+(commit del repo en el que se congelo: a1c717f)
+(ultimo commit que la toco: 0c181a9 2026-10-14T21:39:33Z defs(paso 5): la precision de delamor - N = 0 solo si nada queda estrictamente arriba del corte)

@@ -143,5 +143,6 @@
   7. **`nltk`** no instalado: se declara y queda así.
 - **`_has_opposition` es CKM y devuelve un signo, no "oposición"** (delamor, 15 oct: *"más allá del nombre, para CKM no es oposición ni deja de serlo"*). Opus había leído que CKM "decidía significado": corregido. Queda en CKM como operador declarado (camino a); se corrige lo mecánico (subcadena, NFC).
 
+- **θ_W es del Gatekeeper, y sólo del Gatekeeper** (delamor, 7 oct; recordado el 15: *"buscale la vuelta para que no se cuele de nuevo"*). En el código ya está protegido: `test_I4_theta_W_no_es_campo_de_la_config` falla si vuelve a la Config, y en el camino vivo sólo aparece en comentarios. **Se coló en los textos**: el v28 (y el borrador v29) lo listaban en `CKMLandscapeConfig` y entre las discontinuidades del instrumento, y Opus lo repitió el 15 oct. Corregido en el v29. Regla de Opus: θ_W sólo se nombra al hablar del Gatekeeper; antes de escribirlo en otro lugar, `grep theta_W services/ckm_landscape_config.py`.
 
 *Última actualización: 15 oct 2026.*

@@ -11835,8 +11835,8 @@ criterio local ni `calibrate`.
 ## S2-C0 · CP1 — REPORTE — 2026-10-18 14:51 UTC
 
 *Claude Opus 5 (Code). `TASK_iap_serie2_caso0_v1` CP1, con los tres agregados
-(`b19380f`). La predicción está arriba (`e42bff1`) y **no se tocó**. Tres commits:
-`9c301dc` (declaración v2), `663a213` (COCO, `calibrate`, tabla, S2), `d51f8ce` (canal y
+(`b19380f`). La predicción está arriba (`7550f06`) y **no se tocó**. Tres commits:
+`9414157` (declaración v2), `f4c88cd` (COCO, `calibrate`, tabla, S2), `9a6d25a` (canal y
 devices). **Suite: 751 pasan, 7 xfailed, 0 fallan** — eran 708.*
 
 ### A1 — qué de este reporte es medido y qué no

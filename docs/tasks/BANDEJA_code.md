@@ -11633,3 +11633,55 @@ Nada vivo cambió. **No se fijó umbral.**
 
 **A1.PAUSA.** De `TASK_condiciones_del_paper_v1` queda **CP-N**, que espera la vinculación con
 `ckmdatasets` y la revisión legal de los corpus en el preprint (`3cdcf62`).
+
+---
+
+## S2-C0 · CP0 — LA PREDICCIÓN, escrita antes de leer el camino vivo — 2026-10-18 13:37 UTC
+
+*Claude Opus 5 (Code, Codespace), sesión nueva, arranque en frío. `TASK_iap_serie2_caso0_v1`
+(`2f28dba`), CP0. Esto se escribe **antes** de abrir `iap_chatroom/ckm_monitor.py`,
+`services/monitor_service.py`, `services/coco.py`, `services/calibrate.py` y
+`ESTADO_canal_iap_clock_iniciativa_v2.md`, y **no se reescribe**.*
+
+### A1 — de dónde viene cada cosa que voy a predecir
+
+En esta sesión **no leí todavía una sola línea del camino vivo**. Así que, antes de la tabla,
+la separación que pide A1:
+
+- **Lo que no es predicción sino cita:** las referencias `ckm_monitor.py:215`
+  (*"COCO es de Monitor (CP4)"*), `ckm_monitor.py:186` (extractor muerto),
+  `monitor_service.py:119` (Monitor arma su propio extractor con los defaults),
+  `_punto_calibrate` con `"implementado": False`, `D_CKM_THRESHOLD = 0.40`,
+  `FRAC_REC_MIN = 0.60`, `trigger_mode="continuo"` y el *"una cantidad, dos baselines"* de
+  `monitor_service._D_ckm` **las trae la propia TASK y el ESTADO del 15 oct**. Repetirlas no
+  es comprensión mía: es el enunciado. Lo que predigo de verdad es **lo que no está escrito
+  ahí**: cuántas instancias hay, qué llega al panel, qué forma tiene lo que devuelve
+  `calibrate`, y qué pasa hoy con `should_rebuild`.
+- **Lo que viene del peso del contexto:** vengo de una traza larga donde el patrón es *"está
+  marcado y no hace nada"*. Es verosímil que lo aplique de más — que prediga "no conectado"
+  en lugares donde sí hay cable. Lo anoto para poder contarlo después.
+- **Lo que no puedo predecir y no voy a simular:** los números de `calibrate` sobre una W, y
+  si el vacío/`[assistant]` entra hoy al corpus. Ahí digo **no sé**.
+
+### Predicción
+
+| # | Pregunta del CP0 | Predicción |
+|---|---|---|
+| 1 | ¿COCO nace en Monitor? | **Sí**, lo construye `MonitorService` en su `__init__`, una sola instancia por Monitor. El canal **no lo construye**. |
+| 2 | ¿Qué ve el canal de COCO? | **Casi nada.** Predigo que `get_monitor_state` **no tiene bloque `coco`**: a lo sumo llega algún campo suelto de un disparo (una señal o una recomendación), no la conexión. Que `conectado`, id de instancia, `w_version_id`, β_c, ‖Δ_r‖, hora de la última evaluación y n de disparos **no están hoy**: por eso son el CP1 (a). |
+| 3 | ¿Cuántas instancias de COCO? | **Una en el camino vivo**; el riesgo está en los entry points: con F3a (cada entry point construye su `CKMMonitor()`) puede haber **más de un Monitor** y entonces **más de un COCO**, uno por proceso. Predigo que el launcher del vivo 03 dejó **uno solo** y que el riesgo es estructural, no actual. |
+| 4 | ¿Qué lee COCO para disparar? | **D_ckm por masas** (es el único que el código calcula desde `dabd1ed`), pero **contra su propio baseline**, fijado sobre W sola y no reseteado. O sea: **la forma es la de masas; el número no es el del panel**. Umbrales 0,40 / 0,60, calibrados sobre la forma lineal que ya no se compara. |
+| 5 | ¿Qué baseline usa `D_masa_cuencas`? | El **N_eff de la primera W del ciclo** (bootstrap), que se re-fija al abrir ciclo. El de COCO, no. |
+| 6 | ¿Qué hace hoy `should_rebuild`? | **Se calcula y no dispara.** El rebuild real lo decide otra condición (cantidad de textos/ingesta), y el valor de `should_rebuild` queda en la traza sin estar cableado a la decisión. |
+| 7 | `calibrate`: qué devuelve y qué falta | Devuelve un **objeto/dict con los umbrales** (al menos el de D_ckm y el de fracción) más algún diagnóstico de si pudo calibrar. Lo que falta para `_punto_calibrate` es **el cable y el consumidor**: pasarle la W nueva en el rebuild, guardar el resultado en el estado del ciclo, y que **COCO lea de ahí** en vez de sus constantes de módulo — y un lugar en el panel donde se vea "no calibró". Predigo que **COCO hoy no tiene por dónde recibir umbrales** (constantes de módulo, no parámetros). |
+| 8 | ¿Cuántos extractores corren? | **Tres construidos, dos que corren**: el de `CorpusService` (el que construye W), el de `MonitorService:119` (evalúa σ; coincide **por default**, no por construcción) y el **muerto** de `ckm_monitor.py:186`, que no corre. |
+| 9 | ¿Qué quedó del CLOCK y qué dispara el ODA? | El reloj del canal existe, numerado y observable; `trigger_mode="continuo"` es el único modo y el ODA corre en su propio bucle. **Nada lo dispara**: ni ticks ni mensajes. Predigo que eso ya es así en el código y que **lo que falta es la otra mitad** — que el mundo no espere y que la participación termine: `_llamar_llm` **sin timeout** y `duration` mirado **sólo entre vueltas**, así que **un device puede quedar vivo después del fin del caso**. |
+| 10 | Pendientes del ESTADO | **Fix 3** (smoke con tope) y **Fix 4** (`AgentDeviceSkin`: `None` → UNKNOWN) **sin hacer**; **F3a** sin hacer en los entry points y resuelto **sólo** por el launcher del vivo 03. Del vacío/`[assistant]`: **no sé**; predigo que el `SYSTEM` sí está filtrado (F3b) y que el **vacío** puede seguir entrando. |
+
+### Lo que espero encontrar y no está en la lista
+
+Que entre el *"primer W con ≥ 30 mensajes de ≥ 2 devices"* de la tabla y lo que el código
+hace hoy haya una diferencia de **tipo**, no de número: predigo que hoy **no hay condición de
+arranque por mensajes** —se construye W en cuanto hay textos— y que tampoco hay `min_df`.
+
+**Esto es lectura. Nada vivo cambia en el CP0.**

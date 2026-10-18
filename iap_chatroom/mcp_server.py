@@ -58,14 +58,32 @@ async def join_channel(device_id: str, device_type: str) -> dict:
 
 @mcp.tool
 async def send_message(device_id: str, text: str) -> dict:
-    """Publica un mensaje al ChatChannel. CKMMonitor lo acumula via callback."""
+    """Publica un mensaje al ChatChannel. CKMMonitor lo acumula via callback.
+
+    Devuelve `{"ok", "motivo", "message_id", "corpus_size"}`. **`ok=False` es
+    una publicacion que NO ocurrio** -- hoy, un texto vacio o solo espacios,
+    que el canal rechaza (CP1, agregado 2). `message_id` es None en ese caso.
+    """
     device = device_manager.get(device_id)
     if device is None:
         raise ValueError(f"device '{device_id}' no registrado")
 
     message = await channel.publish(device.device_id, device.device_type, text)
+    if message is None:
+        # **El canal rechazó el intento** (texto vacío o sólo espacios). No se
+        # levanta excepción: el device tiene que poder registrar que su acción
+        # no ocurrió y seguir viviendo, que es justo lo que la condición 4
+        # pide. El intento ya quedó en `channel.intentos_rechazados()`.
+        return {
+            "ok": False,
+            "motivo": "texto_vacio",
+            "message_id": None,
+            "corpus_size": ckm_monitor.get_state()["corpus_size"],
+        }
     index = len(channel.messages) - 1
     return {
+        "ok": True,
+        "motivo": None,
         "message_id": f"msg-{index}",
         "corpus_size": ckm_monitor.get_state()["corpus_size"],
     }

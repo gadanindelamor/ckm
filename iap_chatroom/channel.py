@@ -25,7 +25,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Callable, List, Literal
+from typing import Callable, List, Literal, Optional
 
 from fastapi import WebSocket
 
@@ -78,6 +78,10 @@ class ChatChannel:
         # Cada tick que alguien observó, con si tenía mensajes nuevos o no.
         # El silencio queda como dato: un tick sin mensajes es una entrada.
         self._clock_log: List[dict] = []
+        # Los intentos de publicar que el canal rechazó, con quién y cuándo.
+        # Un rechazo que no deja rastro es indistinguible de un mensaje que
+        # nunca se intentó (CP1, agregado 2 de delamor).
+        self._intentos_rechazados: List[dict] = []
         self._ultimo_tick_visto: int = -1
 
     @staticmethod
@@ -177,7 +181,44 @@ class ChatChannel:
             "entradas": entradas,
         }
 
-    async def publish(self, device_id: str, device_type: str, text: str) -> Message:
+    async def publish(
+        self, device_id: str, device_type: str, text: str
+    ) -> Optional[Message]:
+        """
+        Publica el mensaje y se lo pasa a los callbacks. **None si el canal lo
+        rechazó.**
+
+        **Un texto vacío —o sólo espacios— no se publica** (CP1, agregado 2 de
+        delamor, 18 oct). En el vivo 03 un device decidió INTERACT, el provider
+        devolvió `""` y el vacío **entró al corpus**. Eso se corrigió en el
+        device (`autonomous_device._generate`), y la corrección vale sólo para
+        ese device: el canal seguía aceptando cualquier cadena de cualquiera.
+        Acá es del canal, así que vale para todos — devices de otra clase,
+        humanos por la UI, y el REST.
+
+        **No se filtra contenido**: lo único que se mira es si queda algo
+        después de `strip()`. Qué dice el mensaje no es asunto del canal.
+
+        El intento queda en `intentos_rechazados()` con quién, cuándo, en qué
+        tick y qué se rechazó (el largo de lo que vino y su `repr` recortado,
+        no el texto entero: un vacío con espacios y un vacío sin ellos son
+        distintos y hay que poder verlos).
+        """
+        if text is None or not text.strip():
+            ahora = self._ahora()
+            self._intentos_rechazados.append({
+                "device_id": device_id,
+                "device_type": device_type,
+                "motivo": "texto_vacio",
+                "t": ahora,
+                "timestamp": datetime.fromtimestamp(ahora, timezone.utc).isoformat(),
+                "tick": int((ahora - self._t0) // TICK_PERIODO_S),
+                "reloj": RELOJ_CANAL,
+                "largo": len(text) if text is not None else None,
+                "recibido": repr(text)[:80],
+            })
+            return None
+
         ahora = self._ahora()
         message = Message(
             device_id=device_id,
@@ -220,3 +261,8 @@ class ChatChannel:
 
     def get_history(self) -> List[Message]:
         return list(self.messages)
+
+    def intentos_rechazados(self) -> List[dict]:
+        """Los intentos de publicar que el canal rechazó. Lista, no contador:
+        un contador dice cuántos, no quién ni cuándo."""
+        return list(self._intentos_rechazados)

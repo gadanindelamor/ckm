@@ -9,15 +9,29 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from iap_chatroom import arranque
 from iap_chatroom.channel import ChatChannel
-from iap_chatroom.ckm_monitor import CKMMonitor
 from iap_chatroom.device_manager import DeviceManager
 
 router = APIRouter()
 
 channel = ChatChannel()
 device_manager = DeviceManager()
-ckm_monitor = CKMMonitor()
+
+
+# **Nadie construye `CKMMonitor` al importarse** (CP1, agregado 1 de delamor,
+# 18 oct). Acá había un `ckm_monitor = CKMMonitor()` a nivel de módulo: como
+# `server.py` importa este módulo **antes** de llamar a `arranque.monitor()`,
+# ese pelado ganaba la carrera del singleton y el `--state-dir` quedaba en el
+# default — con un aviso por consola y nada en el panel. En la Serie 2 eso
+# podría escribir en el estado de otra cosa.
+#
+# El monitor se pide **cuando se usa**, a `arranque`, que es el único que sabe
+# qué directorio se pidió. La función es una línea y no cachea: el singleton ya
+# es el caché.
+def _monitor():
+    return arranque.monitor()
+
 
 
 class RegisterDeviceRequest(BaseModel):
@@ -60,6 +74,13 @@ async def post_chat(body: ChatRequest):
     if device is None:
         raise HTTPException(status_code=404, detail=f"device '{body.device_id}' no registrado")
     message = await channel.publish(device.device_id, device.device_type, body.text)
+    if message is None:
+        # El canal no publica vacíos (CP1, agregado 2). 422: la petición está
+        # bien formada y el contenido es el que el canal no acepta.
+        raise HTTPException(
+            status_code=422,
+            detail="texto vacio: el canal no publica mensajes sin contenido",
+        )
     return message.to_dict()
 
 
@@ -90,9 +111,9 @@ async def get_clock_log(desde_tick: Optional[int] = None):
 
 @router.get("/monitor")
 async def get_monitor_state():
-    return ckm_monitor.get_state()
+    return _monitor().get_state()
 
 
 @router.get("/monitor/firma")
 async def get_monitor_firma():
-    return ckm_monitor.get_firma()
+    return _monitor().get_firma()

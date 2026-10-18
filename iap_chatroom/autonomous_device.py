@@ -38,6 +38,13 @@ from iap_chatroom.providers.base import ChatMessage, Provider
 # el modelo, UNKNOWN significa que no se pudo decidir.
 DECISION_UNKNOWN = "UNKNOWN"
 
+# **Venció el caso mientras el device estaba en la vuelta** (condición 4 de la
+# Serie 2: *"la participación es finita"*). No es OP_SILENCE —el modelo no
+# decidió callar—, no es UNKNOWN —el provider no se cayó— y no es SKIP —el
+# filtro no lo frenó—: es que la oportunidad se terminó. Lo que no hizo, no lo
+# hizo.
+DECISION_FIN_DEL_CASO = "FIN_DEL_CASO"
+
 # Atributos donde los SDK suelen poner el código HTTP. **Se miran primero**:
 # un 429 en `status_code` es un dato, no una coincidencia de texto.
 _ATRIBUTOS_STATUS = ("status_code", "status", "code", "http_status")
@@ -232,6 +239,9 @@ class AutonomousDevice:
         # la misma consecuencia (UNKNOWN), y para atribuir hay que separarlas.
         self._ilegibles: list[dict] = []
         self._se_fue: bool = False
+        # True si el caso venció con el device adentro de una vuelta. Es
+        # distinto de `_se_fue`, que es irse **por decisión propia**.
+        self._cortado_por_fin_del_caso: bool = False
         # Inicio y fin del run, para el ritmo OBSERVADO (F5). None hasta que
         # corra: sin corrida no hay ritmo que medir, y eso es UNKNOWN, no 0.
         self._t_inicio: Optional[float] = None
@@ -501,9 +511,17 @@ class AutonomousDevice:
         })
         return DECISION_UNKNOWN
 
-    async def _interact(self, client: Client, decision: str, observation: dict) -> None:
+    async def _interact(self, client: Client, decision: str, observation: dict) -> dict:
         """
         Fase A del ciclo ODA. Cada decisión tiene su primitiva del canal.
+
+        **Devuelve qué pasó con la acción** (condición 4, *"las decisiones
+        tienen consecuencia"*): `{"tick_accion", "resultado"}`. El tick de la
+        acción se lee **en el momento de actuar**, no cuando se observó: entre
+        las dos cosas el mundo siguió, y si la acción cae en otro contexto eso
+        tiene que verse. `resultado` dice `publicado`, `no_ocurrio: <motivo>`
+        o `sin_accion` — las tres son distintas y ninguna se infiere de la
+        decisión.
 
         OP_SILENCE: no actúa en esta vuelta. Sin anuncio, sin log en el corpus
         del canal — sólo traza local. **El ciclo sigue**: el silencio no
@@ -526,7 +544,7 @@ class AutonomousDevice:
             # No hubo decisión. UNKNOWN no autoriza ninguna acción, y se
             # distingue de OP_SILENCE en la traza.
             self._log(DECISION_UNKNOWN, field_state)
-            return
+            return {"tick_accion": None, "resultado": "sin_accion"}
 
         if decision == DECISION_SKIP:
             # **El filtro no llamó: no hay decisión y no hay acción.** Va antes
@@ -538,17 +556,18 @@ class AutonomousDevice:
             # INTERACT, porque `_decide` manda cualquier palabra desconocida a
             # UNKNOWN. Pero es el mecanismo, y queda reportado.
             self._log(DECISION_SKIP, field_state)
-            return
+            return {"tick_accion": None, "resultado": "sin_accion"}
 
         if decision == "OP_SILENCE":
             self._log("OP_SILENCE", field_state)
-            return
+            return {"tick_accion": None, "resultado": "sin_accion"}
 
         if decision == "LEAVE":
+            tick_accion = await self._tick_ahora(client)
             await client.call_tool("leave_channel", {"device_id": self.device_id})
             self._se_fue = True
             self._log("LEAVE", field_state)
-            return
+            return {"tick_accion": tick_accion, "resultado": "se_fue"}
 
         if decision != "INTERACT":
             # **Publicar exige INTERACT explicito** (Opus, 9 oct). Antes esta
@@ -562,21 +581,49 @@ class AutonomousDevice:
             # Una decision que no se reconoce **no autoriza nada** y se
             # registra como UNKNOWN, igual que la que no existio.
             self._log(DECISION_UNKNOWN, field_state)
-            return
+            return {"tick_accion": None, "resultado": "sin_accion"}
 
         text = await self._generate()
         if text is None:
             # El provider falló al generar: la decisión fue INTERACT pero no
             # hay qué publicar. Queda registrado, y no se publica nada.
             self._log("INTERACT_SIN_TEXTO", field_state)
-            return
-        await client.call_tool(
+            return {"tick_accion": None,
+                    "resultado": "no_ocurrio: sin texto que publicar"}
+        # El tick **del momento de actuar**: entre la observación y esto, el
+        # device pudo tardar lo que quisiera decidiendo, y el mundo siguió.
+        tick_accion = await self._tick_ahora(client)
+        r = await client.call_tool(
             "send_message", {"device_id": self.device_id, "text": text}
         )
+        # **El canal puede no publicar**: desde el 18 oct rechaza los textos
+        # vacíos. Un rechazo no se cuenta como mensaje propio ni entra al
+        # historial: la acción no ocurrió, y eso se registra.
+        datos = getattr(r, "data", None) or {}
+        if datos.get("ok") is False:
+            self._log("INTERACT_RECHAZADO", field_state)
+            return {"tick_accion": tick_accion,
+                    "resultado": f"no_ocurrio: {datos.get('motivo')}"}
         self._history.append(
             {"device_id": self.device_id, "device_type": "AI", "text": text}
         )
         self._log("INTERACT", field_state)
+        return {"tick_accion": tick_accion, "resultado": "publicado"}
+
+    async def _tick_ahora(self, client: Client) -> "int | None":
+        """
+        El tick del canal **en el momento de actuar**.
+
+        Se pregunta de nuevo a propósito: el tick de la observación ya quedó
+        registrado, y lo que esto responde es otra cosa —en qué momento del
+        mundo cayó la acción—. Si el canal no contesta, `None` es UNKNOWN y no
+        se rellena con el de la observación, que diría que no pasó tiempo.
+        """
+        try:
+            r = await client.call_tool("get_clock", {})
+            return (getattr(r, "data", None) or {}).get("tick")
+        except Exception:
+            return None
 
     def _log(self, decision: str, field_state: Optional[dict] = None) -> None:
         if field_state is not None:
@@ -652,137 +699,36 @@ class AutonomousDevice:
             while time.monotonic() - start < duration and not self._se_fue:
                 vuelta += 1
 
-                # (1) el corte de la vuelta SIGUIENTE se lee ANTES de pedir los
-                #     mensajes (T2). Entre esta lectura y get_messages puede
-                #     llegar uno: aparece en la próxima vuelta, no se pierde.
-                clock_result = await client.call_tool("get_clock", {})
-                clock = clock_result.data
-                # El corte de la vuelta siguiente: un tick antes de esta
-                # lectura. Ventana en tiempo, no en vueltas: con el reloj
-                # quieto, todos los cortes serían el mismo número y mover cuál
-                # se usa no cubriría nada.
-                ventana = self._ventana(clock)
-                if ventana is None:
-                    # UNKNOWN: el corte NO avanza. Duplicados sí —los descarta
-                    # _vistos—, pérdidas no.
-                    proximo_since = since
-                else:
-                    proximo_since = clock["t"] - ventana
-
-                # (2) los mensajes desde el corte anterior
-                fetched = await client.call_tool("get_messages", {"since": since})
-                nuevos = [
-                    m for m in fetched.data
-                    if m.get("message_id") not in self._vistos
-                    and m["device_id"] != self.device_id
-                    and m.get("device_type") in ("AI", "HUMAN", "SYSTEM")
-                ]
-                for m in fetched.data:
-                    if m.get("message_id"):
-                        self._vistos.add(m["message_id"])
-                self._history.extend(nuevos)
-
-                # (3) O — una observación por vuelta, con el clock adentro. El
-                #     trigger es el último mensaje nuevo, o None si hubo
-                #     silencio: "ninguno" es el dato.
-                observation = await self._observe(
-                    client, nuevos[-1] if nuevos else None, clock=clock
-                )
-                observation["n_nuevos"] = len(nuevos)
-                observation["vuelta"] = vuelta
-
-                # (3b) el criterio local, ENTRE O y D (CP2b). Sin filtro
-                #      puesto, `reg` queda None y D corre siempre: es el
-                #      comportamiento del CP2a y el de los dos vivos.
-                #
-                #      Los Δt salen de los timestamps DEL CANAL, los dos: el
-                #      `clock["t"]` y el `timestamp` del mensaje los puso
-                #      `ChatChannel._ahora()`. Nunca el reloj del device
-                #      (TASK §0.4).
-                reg = None
-                if self.criterio_local is not None:
-                    ajeno = self._history[-1] if self._history else None
-                    propio = (
-                        observation["own_recent"][-1]
-                        if observation["own_recent"] else None
+                # **El tiempo que le queda al caso.** La vuelta entera corre
+                # bajo esto: si el caso termina mientras el device observa,
+                # decide o actúa, la vuelta se corta **ahí** y el device se va.
+                # Lo que no hizo, no lo hizo.
+                restante = duration - (time.monotonic() - start)
+                tick_observacion = self._tick_anterior
+                try:
+                    since = await asyncio.wait_for(
+                        self._una_vuelta(client, vuelta, since), timeout=restante
                     )
-                    reg = self.criterio_local.evaluar(
-                        tick=clock.get("tick"),
-                        # solo mensajes ajenos: el loop ya filtró los propios
-                        n_nuevos=len(nuevos),
-                        nombrado=any(
-                            self.device_id in (m.get("text") or "") for m in nuevos
-                        ),
-                        dt_desde_ajeno=dt_desde(
-                            clock.get("t"), ajeno.get("timestamp") if ajeno else None
-                        ),
-                        dt_desde_que_hable=dt_desde(
-                            clock.get("t"), propio.get("timestamp") if propio else None
-                        ),
-                        # declarados ausentes hasta el caso Z (CP3, delamor)
-                        estado_objetivo=None,
-                        presupuesto=None,
-                    )
-                    reg["vuelta"] = vuelta
-                    self._registros_criterio.append(reg)
-
-                # (4) D — UNA decisión por vuelta, con todo lo de arriba
-                llamadas_antes = self._llamadas_llm
-                errores_antes = len(self._errores_llm)
-                ilegibles_antes = len(self._ilegibles)
-                if reg is not None and not reg["llamar"]:
-                    # **El skip NO es OP_SILENCE.** OP_SILENCE lo decidió el
-                    # modelo; UNKNOWN fue el provider cayéndose; SKIP es el
-                    # filtro no habiendo llamado. Las tres terminan la vuelta
-                    # sin acción y las tres se distinguen en la traza.
-                    decision = DECISION_SKIP
-                else:
-                    decision = await self._decide(observation)
-                    if reg is not None:
-                        # lo que D decidió en una vuelta auditada: es lo que
-                        # mide el costo del sesgo
-                        reg["decision"] = decision
-
-                # (5) A — la primitiva que corresponda, o ninguna
-                await self._interact(client, decision, observation)
-
-                self._decisiones.append({
-                    "vuelta": vuelta,
-                    "tick": clock.get("tick"),
-                    "tick_anterior": self._tick_anterior,
-                    "reloj": clock.get("reloj"),
-                    "n_nuevos": len(nuevos),
-                    "trigger": (nuevos[-1].get("message_id") if nuevos else None),
-                    "decision": decision,
-                    "trigger_mode": self.trigger_mode,
-                    # el filtro: motivo y via, o None si no hay filtro puesto.
-                    # El motivo va en el registro DEL TURNO y no en un
-                    # contador: un contador dice cuántos, no cuáles, y cuáles
-                    # es lo que hace falta para saber si el silencio estaba
-                    # decidido (pedido de Opus).
-                    "criterio_motivo": reg["motivo"] if reg else None,
-                    "criterio_via": reg["via"] if reg else None,
-                    "umbrales_calibrados": (
-                        reg["umbrales_calibrados"] if reg else None
-                    ),
-                    # el grano con el que se calculó el corte, o UNKNOWN si el
-                    # canal no lo declaró
-                    "ventana": ventana if ventana is not None else "UNKNOWN",
-                    # Llamadas al LLM que ESTA vuelta hizo de verdad, y errores
-                    # del provider en ella. Contadas, no inferidas de la
-                    # cantidad de vueltas.
-                    "llamadas_llm": self._llamadas_llm - llamadas_antes,
-                    "errores_llm": len(self._errores_llm) - errores_antes,
-                    "ilegibles": len(self._ilegibles) - ilegibles_antes,
-                })
-
-                self._tick_anterior = clock.get("tick", -1)
-                since = proximo_since
+                except asyncio.TimeoutError:
+                    # **Venció el caso con el device adentro de la vuelta.**
+                    # Se registra como lo que es —una oportunidad que se
+                    # terminó— y no como un error del provider ni como un
+                    # silencio decidido. Las tres cosas son distintas.
+                    self._decisiones.append({
+                        "vuelta": vuelta,
+                        "tick": tick_observacion,
+                        "decision": DECISION_FIN_DEL_CASO,
+                        "trigger_mode": self.trigger_mode,
+                        "resultado_accion": "no_ocurrio: vencio el caso",
+                        "tick_observacion": tick_observacion,
+                        "tick_accion": None,
+                    })
+                    self._cortado_por_fin_del_caso = True
+                    break
 
                 if self._se_fue:
                     break
                 await asyncio.sleep(self.poll_interval)
-
             self._t_fin = time.monotonic()
 
             # Si se fue por decisión propia, ya llamó a leave_channel en A: no
@@ -792,6 +738,161 @@ class AutonomousDevice:
                     "leave_channel", {"device_id": self.device_id}
                 )
                 assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+
+
+    async def _una_vuelta(self, client, vuelta: int, since):
+        """
+        **Una vuelta entera del ODA**, de la observación a la acción.
+
+        Está acá, y no adentro del `while`, por la condición 4 de la Serie 2:
+        *"el mundo no espera a nadie"* y *"la participación es finita"*. La
+        vuelta corre bajo **el tiempo que le queda al caso** (`run` la envuelve
+        en un `wait_for` con lo que falta para `duration`), así que un device
+        que sigue decidiendo cuando el caso termina **no queda vivo después
+        del fin**.
+
+        **Esto no es un timeout de la decisión.** No hay un plazo propio para
+        pensar: el único corte es el fin del caso, que es del mundo. Un timeout
+        fijo sería el mundo decidiendo por el device.
+
+        Devuelve el corte de la vuelta siguiente (`proximo_since`).
+        """
+
+        # (1) el corte de la vuelta SIGUIENTE se lee ANTES de pedir los
+        #     mensajes (T2). Entre esta lectura y get_messages puede
+        #     llegar uno: aparece en la próxima vuelta, no se pierde.
+        clock_result = await client.call_tool("get_clock", {})
+        clock = clock_result.data
+        # El corte de la vuelta siguiente: un tick antes de esta
+        # lectura. Ventana en tiempo, no en vueltas: con el reloj
+        # quieto, todos los cortes serían el mismo número y mover cuál
+        # se usa no cubriría nada.
+        ventana = self._ventana(clock)
+        if ventana is None:
+            # UNKNOWN: el corte NO avanza. Duplicados sí —los descarta
+            # _vistos—, pérdidas no.
+            proximo_since = since
+        else:
+            proximo_since = clock["t"] - ventana
+
+        # (2) los mensajes desde el corte anterior
+        fetched = await client.call_tool("get_messages", {"since": since})
+        nuevos = [
+            m for m in fetched.data
+            if m.get("message_id") not in self._vistos
+            and m["device_id"] != self.device_id
+            and m.get("device_type") in ("AI", "HUMAN", "SYSTEM")
+        ]
+        for m in fetched.data:
+            if m.get("message_id"):
+                self._vistos.add(m["message_id"])
+        self._history.extend(nuevos)
+
+        # (3) O — una observación por vuelta, con el clock adentro. El
+        #     trigger es el último mensaje nuevo, o None si hubo
+        #     silencio: "ninguno" es el dato.
+        observation = await self._observe(
+            client, nuevos[-1] if nuevos else None, clock=clock
+        )
+        observation["n_nuevos"] = len(nuevos)
+        observation["vuelta"] = vuelta
+
+        # (3b) el criterio local, ENTRE O y D (CP2b). Sin filtro
+        #      puesto, `reg` queda None y D corre siempre: es el
+        #      comportamiento del CP2a y el de los dos vivos.
+        #
+        #      Los Δt salen de los timestamps DEL CANAL, los dos: el
+        #      `clock["t"]` y el `timestamp` del mensaje los puso
+        #      `ChatChannel._ahora()`. Nunca el reloj del device
+        #      (TASK §0.4).
+        reg = None
+        if self.criterio_local is not None:
+            ajeno = self._history[-1] if self._history else None
+            propio = (
+                observation["own_recent"][-1]
+                if observation["own_recent"] else None
+            )
+            reg = self.criterio_local.evaluar(
+                tick=clock.get("tick"),
+                # solo mensajes ajenos: el loop ya filtró los propios
+                n_nuevos=len(nuevos),
+                nombrado=any(
+                    self.device_id in (m.get("text") or "") for m in nuevos
+                ),
+                dt_desde_ajeno=dt_desde(
+                    clock.get("t"), ajeno.get("timestamp") if ajeno else None
+                ),
+                dt_desde_que_hable=dt_desde(
+                    clock.get("t"), propio.get("timestamp") if propio else None
+                ),
+                # declarados ausentes hasta el caso Z (CP3, delamor)
+                estado_objetivo=None,
+                presupuesto=None,
+            )
+            reg["vuelta"] = vuelta
+            self._registros_criterio.append(reg)
+
+        # (4) D — UNA decisión por vuelta, con todo lo de arriba
+        llamadas_antes = self._llamadas_llm
+        errores_antes = len(self._errores_llm)
+        ilegibles_antes = len(self._ilegibles)
+        if reg is not None and not reg["llamar"]:
+            # **El skip NO es OP_SILENCE.** OP_SILENCE lo decidió el
+            # modelo; UNKNOWN fue el provider cayéndose; SKIP es el
+            # filtro no habiendo llamado. Las tres terminan la vuelta
+            # sin acción y las tres se distinguen en la traza.
+            decision = DECISION_SKIP
+        else:
+            decision = await self._decide(observation)
+            if reg is not None:
+                # lo que D decidió en una vuelta auditada: es lo que
+                # mide el costo del sesgo
+                reg["decision"] = decision
+
+        # (5) A — la primitiva que corresponda, o ninguna
+        accion = await self._interact(client, decision, observation)
+
+        self._decisiones.append({
+            "vuelta": vuelta,
+            "tick": clock.get("tick"),
+            # **Los tres datos de la condición 4**: en qué tick observó, en
+            # qué tick actuó y qué pasó con la acción. `tick_accion` es None
+            # cuando no hubo acción; que sea mayor que `tick_observacion` es
+            # el caso que importa — el device actuó sobre un mundo que ya no
+            # es el que observó, y eso no se esconde.
+            "tick_observacion": clock.get("tick"),
+            "tick_accion": accion.get("tick_accion") if accion else None,
+            "resultado_accion": accion.get("resultado") if accion else None,
+            "tick_anterior": self._tick_anterior,
+            "reloj": clock.get("reloj"),
+            "n_nuevos": len(nuevos),
+            "trigger": (nuevos[-1].get("message_id") if nuevos else None),
+            "decision": decision,
+            "trigger_mode": self.trigger_mode,
+            # el filtro: motivo y via, o None si no hay filtro puesto.
+            # El motivo va en el registro DEL TURNO y no en un
+            # contador: un contador dice cuántos, no cuáles, y cuáles
+            # es lo que hace falta para saber si el silencio estaba
+            # decidido (pedido de Opus).
+            "criterio_motivo": reg["motivo"] if reg else None,
+            "criterio_via": reg["via"] if reg else None,
+            "umbrales_calibrados": (
+                reg["umbrales_calibrados"] if reg else None
+            ),
+            # el grano con el que se calculó el corte, o UNKNOWN si el
+            # canal no lo declaró
+            "ventana": ventana if ventana is not None else "UNKNOWN",
+            # Llamadas al LLM que ESTA vuelta hizo de verdad, y errores
+            # del provider en ella. Contadas, no inferidas de la
+            # cantidad de vueltas.
+            "llamadas_llm": self._llamadas_llm - llamadas_antes,
+            "errores_llm": len(self._errores_llm) - errores_antes,
+            "ilegibles": len(self._ilegibles) - ilegibles_antes,
+        })
+
+        self._tick_anterior = clock.get("tick", -1)
+        since = proximo_since
+        return proximo_since
 
     @staticmethod
     def _ventana(clock: dict) -> Optional[float]:

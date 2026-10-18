@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import gradio as gr
 
+from iap_chatroom import arranque
 from iap_chatroom.channel import ChatChannel
-from iap_chatroom.ckm_monitor import CKMMonitor
 from iap_chatroom.device_manager import DeviceManager
 
 DEVICE_ID = "device_c_human"
@@ -19,7 +19,21 @@ DEVICE_TYPE = "HUMAN"
 
 channel = ChatChannel()
 device_manager = DeviceManager()
-ckm_monitor = CKMMonitor()
+
+
+# **Nadie construye `CKMMonitor` al importarse** (CP1, agregado 1 de delamor,
+# 18 oct). Acá había un `ckm_monitor = CKMMonitor()` a nivel de módulo: como
+# `server.py` importa este módulo **antes** de llamar a `arranque.monitor()`,
+# ese pelado ganaba la carrera del singleton y el `--state-dir` quedaba en el
+# default — con un aviso por consola y nada en el panel. En la Serie 2 eso
+# podría escribir en el estado de otra cosa.
+#
+# El monitor se pide **cuando se usa**, a `arranque`, que es el único que sabe
+# qué directorio se pidió. La función es una línea y no cachea: el singleton ya
+# es el caché.
+def _monitor():
+    return arranque.monitor()
+
 
 _ROLE_BY_DEVICE_TYPE = {"HUMAN": "user", "AI": "assistant"}
 
@@ -46,11 +60,11 @@ async def _send(text: str, history: list[dict]):
 
 
 def _refresh_state() -> dict:
-    return ckm_monitor.get_state()
+    return _monitor().get_state()
 
 
 def _refresh_firma() -> dict:
-    firma = ckm_monitor.get_firma()
+    firma = _monitor().get_firma()
     if firma is None:
         return {"status": "corpus insuficiente — aun no hay firma"}
     return firma

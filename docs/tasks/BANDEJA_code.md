@@ -11772,3 +11772,62 @@ que ya está hecho.
 | **Identificación S2 / S2-C0** | **No existe** | `serie` / `caso` en panel, registros, nombres y carpeta propia |
 
 **A1.PAUSA.** Nada vivo cambió. Lo que sigue es el CP1, y no arranca sin orden.
+
+---
+
+## S2-C0 · CP1 — LA PREDICCIÓN, escrita antes de tocar una línea — 2026-10-18 14:16 UTC
+
+*Claude Opus 5 (Code). `TASK_iap_serie2_caso0_v1` CP1, con los tres agregados de delamor
+(`b19380f`). Escrita **después** de leer (el CP0 es la lectura) y **antes** de cambiar nada.
+**No se reescribe.* Base: `b19380f`, suite 708 + 7 xfailed.*
+
+### A1 — qué de esto es verificable y qué no
+
+**Verificable:** todo lo que digo que el código hace hoy sale del CP0, con archivo:línea.
+**No verificable todavía, y por eso es predicción:** cuántos tests se mueven, y si `min_df=2`
+deja W sin construir en los corpus chicos del repo. **Peso del contexto:** vengo de un CP0
+donde sobrestimé lo que faltaba tres veces; acá el riesgo es el opuesto —**subestimar el
+tamaño del cambio de `min_df`**, porque es una línea y toca todo.
+
+### Las decisiones que tomo antes de medir, para que la medición no las decida
+
+1. **`min_df` es parte de la extracción declarada, no una perilla por llamador: default 2** en
+   `NodeExtractorService` y `CorpusService`. Va en el perfil y en `declaracion_extraccion()`.
+   Lo elijo así porque la tabla lo pone al lado de `top_k=20`, que **ya es el default del
+   módulo**; un default distinto del valor declarado es la misma grieta que el `top_k=32` del
+   canal. **Sin flag de compatibilidad.**
+2. **El corte del device es el fin del caso, no un timeout de la decisión.** `_llamar_llm`
+   **no** recibe timeout propio. La vuelta entera corre bajo el **tiempo que le queda al
+   caso**; si vence mientras decide, la vuelta se corta ahí, se registra `vencio_el_caso` con
+   el tick de observación, y el device se va. Un timeout fijo sería el mundo decidiendo por
+   el device; el fin del caso es el mundo, y punto.
+3. **`send_message` cambia de forma**: devuelve `{"ok": ...}` y un texto vacío **no se
+   publica**. Sin compatibilidad: quien lo llame se adapta.
+4. **La identificación `S2` / `S2-C0` viaja como dato en el panel y en los registros.** El
+   estado del caso va a un `--state-dir` propio (`experiments/_state_S2-C0/`), como el vivo
+   03. **No creo `registers/iap_serie2/`**: `registers/` es Clase R y CLAUDE.md dice que no se
+   toca. Lo señalo en el REPORTE; si delamor quiere esa carpeta, la crea él.
+5. **El rebuild cada 10 mensajes reemplaza a `min_texts*2`**, que acoplaba el rebuild al
+   umbral del primer W. Pasa a ser un parámetro propio.
+
+### Qué predigo que va a pasar
+
+| | Predicción |
+|---|---|
+| **`min_df=2`** | Es **el cambio caro**. Predigo que mueve **entre 15 y 40 tests** de los 25 archivos que tocan extracción, y que en los corpus de 6–8 textos del repo **deja menos nodos, no cero**: el vocabulario compartido existe (A24 y A3 son debate sobre el mismo tema). Donde sí predigo **N = 0 y W sin construir** es en los fixtures de 2–3 textos cortos inventados para otra cosa. |
+| **Palabra completa + NFC en el signo** | **2 tests** se dan vuelta, y uno es `test_op7_but_adentro_de_distribution_marca_oposicion`, que hoy **fija la subcadena como condición declarada**. Ese test no se "arregla": se reescribe al revés, porque la condición cambió, y queda dicho en la declaración v2. |
+| **Sacar el extractor muerto** | **0 tests**. Nada lo lee (CP0). |
+| **El bloque `coco` en el panel** | No rompe nada: es agregar. Lo que puede romper es **exigir una sola instancia** si algún test construye dos Monitors en el mismo proceso. Predigo **1 o 2** tests tocados ahí. |
+| **`calibrate` en el rebuild** | Predigo que con la W del canal (N chico) sale **`no_calibrado`** más seguido que `calibrado`, y que eso es lo que el panel va a mostrar en el vivo. **El costo:** `n_runs=200` por punto de grilla × 5 puntos = 5 conteos extra **por rebuild**. Lo declaro; no lo bajo. |
+| **La guarda de vacío en el canal** | **1 test** nuevo y ninguno roto: hoy nadie publica vacío a propósito. |
+| **`CKMMonitor()` al importar** | Sacarlo de `api_routes` y `ui_gradio` **puede romper tests que importan esos módulos** y esperan el singleton ya armado. Predigo **1 a 3**. |
+| **El deadline del device** | Predigo que el test que exige "al vencer `duration` el device no sigue vivo" **falla hoy** (es el punto), y que el que exige que el mundo no se bloquee **pasa hoy**: el canal corre en otro proceso y los devices son tareas distintas de un `gather`. O sea: de los tres tests del punto (g), **uno rojo y dos verdes antes del cambio**. |
+| **La suite al cerrar** | **Entre 730 y 780 tests**, 0 fallando. Si al terminar hay menos de ~25 tests nuevos, el CP1 no está cubierto: son nueve puntos. |
+| **Lo que más probablemente me salga mal** | El acoplamiento `min_texts=30` ↔ los fixtures: muchos tests arman un corpus de 3 a 6 textos y esperan W. Si subo `min_texts` **en el canal** no los toco; si lo subo en `CorpusService`, los toco todos. **Decido: el 30 va en el canal (`CKMMonitor`), no en el default de `CorpusService`.** Si igual se mueven más de 10 tests por esto, mi lectura del acoplamiento estaba mal. |
+
+### Lo que NO voy a hacer en el CP1
+
+No unifico Monitor y COCO (ni los separo). No elijo escala de Δ_r —eso es el CP1b y lo elige
+delamor—: sólo **declaro en el panel de qué W_eff mide cada uno**. No toco el Fix 4
+(`AgentDeviceSkin`), que no está en el CP1. No creo procesos nuevos para la regla TRUST, el
+criterio local ni `calibrate`.

@@ -181,7 +181,14 @@ def test_e_la_evidencia_del_contrato_partido() -> None:
     # nada. El contrato **sigue partido** —4 contra 6—, y eso es S4, que no entra.
     assert set(svc.accumulate([])) == {"nodes", "pairs", "node_freq", "perfil"}
     assert set(svc.accumulate(["  ", ""])) == {"nodes", "pairs", "node_freq", "perfil"}
+    # **Y desde la v2 (`min_df = 2`), un solo texto también sale por la salida
+    # corta**: con una unidad ningún término puede aparecer en dos, así que no
+    # hay nada que seleccionar. Antes del 18 oct esta línea usaba un texto solo
+    # y daba las 6 claves.
     assert set(svc.accumulate(["gun control reduces violence"])) == {
+        "nodes", "pairs", "node_freq", "perfil"}
+    assert set(svc.accumulate(["gun control reduces violence",
+                               "gun control and violence again"])) == {
         "nodes", "pairs", "node_freq", "pairs_by_text", "registro_borde", "perfil"}
 
 
@@ -236,7 +243,12 @@ def test_f_el_pool_no_deja_registro() -> None:
     """La otra mitad del punto (f): el `registro_borde` es **del `_seleccionar`**,
     no del pool. Los términos que el pool dejó afuera **no aparecen en ningún
     lado**: no hay cómo saber cuántos eran ni a qué distancia del corte quedaron."""
-    svc = NodeExtractorService(top_k=3, ngram_max=1)
+    # **`min_df = 1` a propósito** (v2, 18 oct): lo que este test mide es el
+    # pool —que `registro_borde` es de `_seleccionar` y no del pool—, y con el
+    # `min_df = 2` declarado estos quince términos, cada uno en un solo texto,
+    # no llegarían siquiera al pool. El mecanismo es el mismo; lo que cambia es
+    # qué entra.
+    svc = NodeExtractorService(top_k=3, ngram_max=1, min_df=1)
     # quince términos de 4+ letras: ninguno se pierde por el largo mínimo
     textos = ["alfa beta gama delta", "epsilon zeta theta iota",
               "kappa lambda sigma omega", "tango bravo echo"]

@@ -28,7 +28,13 @@ TEXTS = [
 
 @pytest.fixture
 def corpus(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    # `min_df=1` declarado (v2, 18 oct): este archivo mide la consulta a
+    # `w_version` —N igual con nodos distintos—, y ese caso necesita que el
+    # top_k se llene. Con el `min_df = 2` de la declaración, estos textos
+    # dejan 3 nodos y el caso no existe. La extracción de la Serie 2 se mide
+    # en `test_serie2_caso0_cp1.py`.
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     assert c.mode == "evaluation"
     return c

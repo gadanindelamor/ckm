@@ -191,7 +191,7 @@ _STOPWORDS = {
 # declara.** Comparar el perfil con el corpus es de otro orden.
 
 
-DECLARACION_REF = "docs/defs/DECLARACION_extraccion_W_v1.md"
+DECLARACION_REF = "docs/defs/DECLARACION_extraccion_W_v2.md"
 
 
 def hash_lista(items) -> str:
@@ -305,6 +305,17 @@ PERFIL_ES_EN = PerfilDeIdioma(
     ),
 )
 
+# **Frecuencia mínima de un término para ser candidato a nodo** (declaración
+# v2, 18 oct 2026, `TASK_iap_serie2_caso0_v1`). Un término que aparece en una
+# sola unidad no co-ocurre con ningún otro **fuera de esa unidad**: el par que
+# produce es del texto, no del corpus. `min_df = 1` —el default de sklearn, y
+# lo que la v1 declaraba— los dejaba entrar.
+#
+# **Declarado, no calibrado.** Cambia los nodos y por lo tanto N_eff: lo medido
+# bajo la v1 se reproduce desde su copia congelada, no desde acá.
+MIN_DF = 2
+
+
 class NodeExtractorService:
     """
     Stateless. Cada método puede llamarse de forma independiente.
@@ -318,7 +329,7 @@ class NodeExtractorService:
     """
 
     def __init__(self, top_k: int = 20, ngram_max: int = 2, window: int = 1,
-                 perfil: "PerfilDeIdioma" = PERFIL_ES_EN):
+                 perfil: "PerfilDeIdioma" = PERFIL_ES_EN, min_df: int = MIN_DF):
         """
         top_k    — cuántos términos retener como nodos candidatos
         ngram_max — máximo largo de n-grama (1=unigramas, 2=bigramas)
@@ -326,10 +337,19 @@ class NodeExtractorService:
         perfil   — **los criterios que dependen del idioma** (S0b). El default es
                    `PERFIL_ES_EN`, y **el default también es una declaración**: todo
                    lo que se extrajo sin elegir perfil se extrajo bajo ése.
+        min_df   — **en cuántas unidades tiene que aparecer un término para ser
+                   candidato a nodo** (operador 5 de la declaración v2). El default
+                   es `MIN_DF = 2`: un término que aparece en una sola unidad
+                   **no co-ocurre con nada en ninguna otra**, así que no puede
+                   sostener un par entre unidades. Es un valor declarado, no
+                   calibrado, y viaja en la declaración atado al sha de W.
         """
+        if not isinstance(min_df, int) or min_df < 1:
+            raise ValueError(f"min_df inválido: {min_df!r} — entero >= 1")
         self.top_k     = top_k
         self.ngram_max = ngram_max
         self.perfil    = perfil
+        self.min_df    = min_df
         self._token_re = re.compile(perfil.token_pattern)
 
     def analizar(self, texto: str) -> List[str]:
@@ -397,8 +417,10 @@ class NodeExtractorService:
         `lowercase`:** con un `analyzer` invocable sklearn **los ignora** y emite
         un warning por cada uno. Los cuatro viven ahora en `analizar` y en las
         constantes del módulo. Lo que **sigue** siendo de la librería es el resto
-        —`norm="l2"`, `smooth_idf`, `use_idf`, `min_df`/`max_df`,
-        `sublinear_tf`—, y eso está en la tabla del CP0a.
+        —`norm="l2"`, `smooth_idf`, `use_idf`, `max_df`, `sublinear_tf`—, y eso
+        está en la tabla del CP0a. **`min_df` ya no**: desde la declaración v2
+        es un valor declarado de CKM (`MIN_DF`), lo pasa `accumulate` y viaja en
+        la declaración atada al sha de W.
         """
         return TfidfVectorizer(analyzer=self.analizar, **extra)
 
@@ -452,12 +474,41 @@ class NodeExtractorService:
             return {"nodes": [], "pairs": {}, "node_freq": {},
                     "perfil": self.perfil.to_dict()}
 
-        # pool: los top_k·3 términos MÁS FRECUENTES del corpus; de ese pool,
-        # los top_k de mayor TF-IDF medio. La selección es "TF-IDF entre los
-        # más frecuentes", no TF-IDF sobre todo el vocabulario.
-        vec = self._vectorizer(max_features=self.top_k * 3)
+        # **Menos unidades que `min_df`: no hay nada que seleccionar, y es un
+        # teorema, no una falla.** Ningún término puede aparecer en 2 unidades
+        # si hay una sola. Sale por la salida vacía —la misma de "no hay
+        # textos"— en vez de por el `ValueError` de sklearn ("max_df
+        # corresponds to < documents than min_df"), que diría "algo se rompió"
+        # para una condición que está declarada.
+        if len(texts) < self.min_df:
+            return {"nodes": [], "pairs": {}, "node_freq": {},
+                    "perfil": self.perfil.to_dict()}
 
-        tfidf_matrix = vec.fit_transform(texts)
+        # pool: de los términos que aparecen en `min_df` unidades o más, los
+        # top_k·3 MÁS FRECUENTES del corpus; de ese pool, los top_k de mayor
+        # TF-IDF medio. La selección es "TF-IDF entre los más frecuentes", no
+        # TF-IDF sobre todo el vocabulario.
+        vec = self._vectorizer(max_features=self.top_k * 3, min_df=self.min_df)
+
+        try:
+            tfidf_matrix = vec.fit_transform(texts)
+        except ValueError as e:
+            # **Las dos formas de "no quedó nada que seleccionar".** sklearn
+            # las levanta como error; acá son la **condición declarada** del
+            # operador 5 —N = 0 y no se construye W— y salen por la salida
+            # vacía, igual que un corpus sin textos:
+            #
+            #   - "empty vocabulary": ningún token pasó el filtrado;
+            #   - "After pruning, no terms remain": ninguno llegó a `min_df`
+            #     unidades. Es lo que pasa con corpus chicos sin vocabulario
+            #     compartido, donde cada término vive en un solo texto.
+            #
+            # Cualquier otro ValueError **se propaga**: eso sí sería algo roto.
+            msg = str(e)
+            if "empty vocabulary" in msg or "no terms remain" in msg:
+                return {"nodes": [], "pairs": {}, "node_freq": {},
+                        "perfil": self.perfil.to_dict()}
+            raise
         terms        = vec.get_feature_names_out()
 
         mean_scores  = np.asarray(tfidf_matrix.mean(axis=0)).flatten()
@@ -546,7 +597,7 @@ class NodeExtractorService:
         CKM no extrae nodos ni tokeniza (delamor, 14 oct): mide la geometría
         de lo que le entra. La extracción **se declara**, y así la dependencia
         queda adentro de la afirmación —*"con W producida así, pasa esto"*— en
-        vez de escondida debajo. `docs/defs/DECLARACION_extraccion_W_v1.md` es
+        vez de escondida debajo. `docs/defs/DECLARACION_extraccion_W_v2.md` es
         el documento canónico; esto es lo mismo en forma de registro, y hay un
         test que verifica que coincidan.
 
@@ -581,6 +632,7 @@ class NodeExtractorService:
             "parametros_del_servicio": {
                 "top_k"    : self.top_k,
                 "ngram_max": self.ngram_max,
+                "min_df"   : self.min_df,
             },
             "entorno": {
                 "python" : sys.version.split()[0],
@@ -615,12 +667,15 @@ class NodeExtractorService:
                     "referencia": None,
                 },
                 "5_seleccion": {
-                    "que_hace"  : ("de los top_k*3 terminos mas frecuentes del corpus "
-                                   "(max_features), los top_k de mayor TF-IDF medio; "
-                                   "empate en el corte conserva la pertenencia anterior "
-                                   "(h=0 conserva), y con empates N puede no ser top_k"),
+                    "que_hace"  : ("de los terminos que aparecen en min_df unidades o "
+                                   "mas, los top_k*3 mas frecuentes del corpus "
+                                   "(max_features), y de ese pool los top_k de mayor "
+                                   "TF-IDF medio; empate en el corte conserva la "
+                                   "pertenencia anterior (h=0 conserva), y con empates "
+                                   "N puede no ser top_k"),
                     "parametros": {
                         "top_k"        : self.top_k,
+                        "min_df"       : self.min_df,
                         "max_features" : self.top_k * 3,
                         "tol_empate"   : self.TOL_EMPATE,
                         "tfidf_defaults": {

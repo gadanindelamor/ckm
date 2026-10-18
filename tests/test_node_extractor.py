@@ -89,7 +89,11 @@ def test_top_k_nodos_y_pool_por_frecuencia():
     textos = _caso09()
     ex = NodeExtractorService(top_k=32)
     r = ex.accumulate(textos)
-    v = ex._vectorizer(max_features=96)
+    # **Mismo `min_df` que `accumulate`** (declaración v2, 18 oct): el pool
+    # ahora se arma después del corte por frecuencia mínima, así que un
+    # vectorizador sin `min_df` describe otro pool y el test compararía dos
+    # cosas distintas.
+    v = ex._vectorizer(max_features=96, min_df=ex.min_df)
     m = v.fit_transform(textos)
     pool = set(v.get_feature_names_out())
     assert len(r["nodes"]) == 32
@@ -106,15 +110,21 @@ def test_top_k_nodos_y_pool_por_frecuencia():
 
 # El caso tiene que ser uno donde la regla DECIDA: más empatados que lugares
 # libres. Con menos empatados que lugares, entran todos y no hay nada que
-# decidir. Medido con la lista de stopwords vigente: k = 8 (28 arriba,
-# 9 empatados, 4 libres).
-K_EMPATE = 8
+# decidir.
+#
+# **Re-medido con la declaración v2** (`min_df = 2`, 18 oct): con k = 8 ya no
+# hay empate que decidir —el corte por frecuencia mínima deja 0 empatados y 32
+# lugares—, así que el caso se corrió de nuevo sobre el mismo corpus y el
+# primer k donde la regla decide es **9** (27 arriba, 8 empatados, 5 libres).
+# El número es una medición, no una elección: si la extracción cambia, se
+# vuelve a medir.
+K_EMPATE = 9
 
 
 def _borde(textos, top_k=32):
     """(arriba del corte, empatados en el corte, lugares libres)."""
     ex = NodeExtractorService(top_k=top_k)
-    sc = np.asarray(ex._vectorizer(max_features=top_k * 3)
+    sc = np.asarray(ex._vectorizer(max_features=top_k * 3, min_df=ex.min_df)
                     .fit_transform(textos).mean(axis=0)).ravel()
     if len(sc) <= top_k:
         return 0, 0, top_k

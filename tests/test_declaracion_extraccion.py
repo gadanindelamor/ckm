@@ -14,7 +14,7 @@ Y lo que el CP0 encontró peor: había **una** declaración por estado, suelta d
 la W. Ahora cada marca de `w_version` dice con cuál se produjo **su** W.
 
 El último test es el que importa para el paper: **la declaración que produce el
-código coincide con `docs/defs/DECLARACION_extraccion_W_v1.md`**. Si no
+código coincide con `docs/defs/DECLARACION_extraccion_W_v2.md`**. Si no
 coinciden, se corrige **el documento** —no el extractor— y se reporta
 (regla 2 de la TASK).
 """
@@ -33,7 +33,9 @@ sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "services"))
 from services.corpus_service import CorpusService          # noqa: E402
 
-DOC = RAIZ / "docs" / "defs" / "DECLARACION_extraccion_W_v1.md"
+# La canónica es la **v2** desde el 18 oct (CP1 de la Serie 2). La v1
+# queda en el repo como traza del 14 oct y no se edita.
+DOC = RAIZ / "docs" / "defs" / "DECLARACION_extraccion_W_v2.md"
 
 TEXTOS = [
     "gun control reduces violence and saves lives in urban areas",
@@ -70,7 +72,8 @@ def test_lo_que_el_cp0_encontro_invisible(corpus):
     """`ngram_max`, `top_k`, los hashes, los defaults, las versiones y W."""
     d = corpus.declaracion_extraccion()
 
-    assert d["parametros_del_servicio"] == {"top_k": 6, "ngram_max": 2}
+    assert d["parametros_del_servicio"] == {"top_k": 6, "ngram_max": 2,
+                                            "min_df": 2}
 
     # las dos listas largas: hash, no sólo conteo
     assert len(d["perfil"]["stopwords_hash"]) == 64
@@ -210,16 +213,20 @@ def test_el_codigo_dice_lo_mismo_que_el_documento(corpus):
 
 def test_la_condicion_declarada_del_signo_esta_en_los_dos_lados(corpus):
     """
-    La divergencia (b) del CP0: `_has_opposition` no normaliza a NFC.
-    delamor decidió **declararla**, no corregirla. Tiene que estar escrita en
-    el documento **y** en el dato, o la decisión se pierde.
+    **Se dio vuelta con la v2** (18 oct). La divergencia (b) del CP0 —
+    `_has_opposition` no normalizaba a NFC— se **declaraba** en la v1 por
+    decisión de delamor. En la v2 se corrigió, junto con la subcadena, y lo
+    que tiene que estar en los dos lados es la condición **nueva**: palabra
+    completa y NFC.
     """
     doc = _doc()
-    assert "no** se normaliza a NFC antes de buscar marcadores" in doc
+    assert "palabra completa" in doc
+    assert "**normalizado a NFC**" in doc
     cond = corpus.declaracion_extraccion()["operadores"]["7_signo"]["condicion_declarada"]
+    assert "palabra completa" in cond
     assert "NFC" in cond and "ASCII" in cond
 
 
 def test_la_declaracion_apunta_al_documento(corpus):
     assert corpus.declaracion_extraccion()["referencia"] == \
-        "docs/defs/DECLARACION_extraccion_W_v1.md"
+        "docs/defs/DECLARACION_extraccion_W_v2.md"

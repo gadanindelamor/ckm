@@ -207,13 +207,20 @@ def test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W(tmp_path):
     top_k"*; **no decía que puede ser 0 y dejar el corpus sin W**. Se corrigió
     el documento (CP2, 14 oct), no el código.
     """
-    # las tres condiciones, verificadas y no supuestas
+    # las tres condiciones, verificadas y no supuestas.
+    #
+    # **Con `min_df = 1`** (v2, 18 oct): este corpus **no llega** a la regla de
+    # desempate con el `min_df = 2` declarado, porque ningún término aparece en
+    # dos textos y el pool queda vacío antes. Son dos caminos distintos al
+    # mismo resultado declarado —N = 0, no se construye W— y acá se verifican
+    # los dos: primero el desempate, con el `min_df` que lo deja llegar;
+    # después el de la v2, abajo.
     sin_vocabulario_comun = [
         "gun control reduces violence in urban areas",
         "however the second amendment protects arms",
         "assault weapons bans reduce mass shootings",
     ]
-    ex = NodeExtractorService(top_k=6)
+    ex = NodeExtractorService(top_k=6, min_df=1)
     r  = ex.accumulate(sin_vocabulario_comun)
     reg   = r["registro_borde"]
     tol   = NodeExtractorService.TOL_EMPATE
@@ -223,6 +230,12 @@ def test_op5_empate_total_en_el_bootstrap_no_da_nodos_ni_W(tmp_path):
     assert len(empate) > 6,           "2) el grupo empatado no cabe en top_k"
     assert all(d["pertenencia_anterior"] is None for d in reg), "3) bootstrap"
     assert r["nodes"] == []
+
+    # El otro camino, el de la v2: con `min_df = 2` no queda pool, y la salida
+    # es **la misma salida vacía**, no un error.
+    r2 = NodeExtractorService(top_k=6).accumulate(sin_vocabulario_comun)
+    assert r2["nodes"] == []
+    assert r2["pairs"] == {}
 
     c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3, top_k=6)
     c.ingest(sin_vocabulario_comun)
@@ -258,15 +271,43 @@ def test_op6_sigma_es_mas_uno_o_menos_uno(svc):
 # Operador 7 — signo
 # ---------------------------------------------------------------------------
 
-def test_op7_but_adentro_de_distribution_marca_oposicion():
+def test_op7_but_adentro_de_distribution_YA_NO_marca_oposicion():
     """
-    **Condición declarada, no bug** (declaración, paso 7 y "la parte débil").
-    La búsqueda es por **subcadena** sobre el texto entero, así que `but`
-    adentro de `distribution` alcanza. Es lo que el review v28 (M4) señala, y
-    sobre eso descansan W_mixta, P5 y P7.
+    **Se dio vuelta con la declaración v2** (18 oct 2026, CP1 de la Serie 2).
+
+    Hasta la v1 este test fijaba la **subcadena como condición declarada**:
+    `but` adentro de `distribution` marcaba oposición, y eso era lo que el
+    review v28 (M4) señalaba. La v2 exige **palabra completa**, así que el
+    mismo ejemplo ahora da False. **No es que el test se "arregló": cambió la
+    condición**, y el test cambia con ella — en el mismo commit que el código
+    y que el documento.
+
+    Lo que **no** cambió: el operador 7 sigue sin resultado nulo. La palabra
+    completa lo vuelve menos sensible, no falsable.
     """
-    assert CorpusService._has_opposition("the distribution is fair") is True
+    assert CorpusService._has_opposition("the distribution is fair") is False
     assert CorpusService._has_opposition("the data is fair") is False
+    # y el marcador suelto, que es lo que la v2 sí quiere agarrar
+    assert CorpusService._has_opposition("the data is fair but incomplete") is True
+
+
+def test_op7_el_texto_se_normaliza_a_NFC_igual_que_el_operador_1():
+    """
+    La otra mitad de la v2. Con los 44 marcadores ASCII de hoy **no cambia
+    ningún resultado**, así que lo que se fija es el mecanismo: las dos formas
+    Unicode de la misma palabra tienen que dar lo mismo.
+    """
+    import re as _re
+    from services import corpus_service as cs
+    nfc = unicodedata.normalize("NFC", "año")
+    nfd = unicodedata.normalize("NFD", "año")
+    assert nfc != nfd
+    original = cs._OPPOSITION_RE
+    try:
+        cs._OPPOSITION_RE = _re.compile(r"(?<!\w)" + _re.escape(nfc) + r"(?!\w)")
+        assert CorpusService._has_opposition(f"hace un {nfd} de esto") is True
+    finally:
+        cs._OPPOSITION_RE = original
 
 
 def test_op7_un_marcador_de_verdad_tambien():
@@ -275,10 +316,14 @@ def test_op7_un_marcador_de_verdad_tambien():
 
 
 def test_op7_force_w_pos_anula_el_signo(tmp_path):
+    # **Vocabulario compartido a propósito** (v2): con `min_df = 2` un corpus
+    # donde cada término vive en un solo texto no produce nodos, y entonces no
+    # hay W que contrastar. El contraste que este test mide es el del signo,
+    # no el del pool.
     textos = [
-        "gun control reduces violence in urban areas",
-        "however the second amendment protects arms",
-        "background checks do not stop criminals but they help",
+        "gun control reduces gun violence in urban areas",
+        "however gun control in urban areas protects nobody",
+        "gun violence in urban areas does not stop but it changes",
     ]
     normal = CorpusService(storage_path=str(tmp_path / "n.json"), min_texts=3, top_k=6)
     normal.ingest(textos)

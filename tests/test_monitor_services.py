@@ -33,47 +33,57 @@ from monitor_service import MonitorService
 # FIXTURES
 # ══════════════════════════════════════════════════════════════════════
 
+# **Re-escritos el 18 oct con la declaración v2** (`min_df = 2`). Los corpus de
+# antes tenían casi todo su vocabulario en un solo texto cada uno: con el corte
+# por frecuencia mínima quedaban 5 nodos, los textos con marcador no llegaban a
+# tener **dos** nodos activos, y entonces no aportaban ningún par — W_mixta
+# salía sin un solo peso negativo y los tests del signo dejaban de medir el
+# signo. Lo que cambió es el **corpus del test**, no lo que afirma: cada texto
+# comparte vocabulario con los otros, que es la condición bajo la cual un
+# corpus chico produce pares. Es la misma razón por la que la Serie 2 no
+# construye W con menos de 30 mensajes.
+
 # Corpus sin marcadores → W positiva
 TEXTS_POS = [
-    "gun control reduces violence and saves lives",
-    "background checks prevent criminals from buying weapons",
-    "assault weapons bans reduce mass shootings",
-    "regulations protect communities from armed criminals",
-    "firearm restrictions lower homicide rates",
+    "gun control reduces gun violence and saves lives",
+    "gun control checks prevent criminals from buying weapons",
+    "assault weapons bans reduce gun violence and shootings",
+    "weapons regulations protect communities from armed criminals",
+    "gun violence and weapons restrictions lower homicide rates",
 ]
 
 # Corpus con marcadores explícitos → W mixta
 TEXTS_MIXED = [
-    "gun control reduces violence and saves lives",
-    "however, the second amendment protects the right to bear arms",
-    "background checks prevent criminals from buying weapons",
-    "i disagree — gun rights are constitutional rights not subject to restriction",
+    "gun control reduces gun violence and saves lives",
+    "however, gun control does not reduce gun violence at all",
+    "gun control checks prevent criminals from buying weapons",
+    "i disagree — gun rights and weapons rights are constitutional rights",
     "mental health is the real cause of gun violence, not gun control",
-    "but armed citizens deter crime and protect communities",
-    "assault weapons bans reduce mass shootings",
+    "but armed citizens with weapons deter gun violence and crime",
+    "assault weapons bans reduce gun violence and mass shootings",
 ]
 
 # Corpus PAREADOS: mismo contenido base, uno sin marcadores / otro con marcadores
 # Garantiza nodos comparables para tests de ratio
 _BASE = [
-    "gun control reduces violence and saves lives",
-    "the second amendment protects the right to bear arms",
-    "background checks prevent criminals from buying weapons",
-    "assault weapons bans reduce mass shootings",
-    "gun rights are constitutional rights not subject to restriction",
-    "mental health is the real cause of gun violence",
-    "armed citizens deter crime and protect communities",
+    "gun control reduces gun violence and saves lives",
+    "gun control does reduce gun violence at all",
+    "gun control checks prevent criminals from buying weapons",
+    "assault weapons bans reduce gun violence and mass shootings",
+    "gun rights and weapons rights are constitutional rights",
+    "mental health is the real cause of gun violence, not gun control",
+    "armed citizens with weapons deter gun violence and crime",
 ]
 TEXTS_PAIRED_POS = _BASE  # sin marcadores
 
 TEXTS_PAIRED_MIX = [
-    "gun control reduces violence and saves lives",
-    "however, the second amendment protects the right to bear arms",   # marcador
-    "background checks prevent criminals from buying weapons",
-    "assault weapons bans reduce mass shootings",
-    "i disagree — gun rights are constitutional rights not subject to restriction",  # marcador
+    "gun control reduces gun violence and saves lives",
+    "however, gun control does reduce gun violence at all",             # marcador
+    "gun control checks prevent criminals from buying weapons",
+    "assault weapons bans reduce gun violence and mass shootings",
+    "i disagree — gun rights and weapons rights are constitutional rights",  # marcador
     "mental health is the real cause of gun violence, not gun control",
-    "but armed citizens deter crime and protect communities",           # marcador
+    "but armed citizens with weapons deter gun violence and crime",     # marcador
 ]
 
 
@@ -445,7 +455,11 @@ class TestWMixtaRatio:
         El ratio ×2.25 es resultado empírico (REG sesión 32), no invariante de código.
         """
         _, _, mon_pos, mon_mixed, tmps = self._make_paired()
-        prompt = "amendment rights protect violence from control"
+        # **El prompt se cambió el 18 oct con los corpus** (declaración v2):
+        # `amendment` ya no es nodo —aparece en un solo texto y `min_df = 2` lo
+        # saca—, así que el prompt viejo no activaba ningún nodo y las dos W
+        # daban el mismo fi por ausencia, no por equivalencia.
+        prompt = "rights and weapons reduce gun violence"
         fi_pos = mon_pos.evaluate(prompt)["fabrication_index"]
         fi_mix = mon_mixed.evaluate(prompt)["fabrication_index"]
 
@@ -468,7 +482,7 @@ class TestWMixtaRatio:
         Si el ratio cambia con el corpus, el test pasa — registra lo que ocurre.
         """
         _, _, mon_pos, mon_mixed, tmps = self._make_paired()
-        prompt = "amendment rights protect violence from control"
+        prompt = "rights and weapons reduce gun violence"
         fi_pos = mon_pos.evaluate(prompt)["fabrication_index"]
         fi_mix = mon_mixed.evaluate(prompt)["fabrication_index"]
 

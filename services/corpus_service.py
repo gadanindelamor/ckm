@@ -41,11 +41,13 @@ v2: W mixta — pesos negativos por marcadores de oposición (elicitación sin s
 from __future__ import annotations
 import hashlib
 import json
+import re
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
-from node_extractor import (NodeExtractorService, DECLARACION_REF,
+from node_extractor import (NodeExtractorService, DECLARACION_REF, MIN_DF,
                             hash_fuente, hash_lista)
 from w_version import WVersionManager
 
@@ -71,6 +73,27 @@ _OPPOSITION_MARKERS: set[str] = {
 }
 
 
+# **Palabra completa, no subcadena** (declaración v2, 18 oct 2026,
+# `TASK_iap_serie2_caso0_v1`). Hasta la v1 el operador 7 buscaba **subcadena**:
+# `but` adentro de `distribution` marcaba oposición, y el review v28 (M4) lo
+# señaló como la parte débil del signo. Ahora cada marcador tiene que estar
+# rodeado de algo que no sea carácter de palabra.
+#
+# **Y el texto se normaliza a NFC antes de buscar**, igual que en el operador 1.
+# Con los 44 marcadores ASCII de hoy el NFC no cambia ningún resultado; lo que
+# cambia es que deja de haber **dos normalizaciones distintas** en la misma
+# extracción, que era la incoherencia declarada en la v1.
+#
+# Los marcadores de varias palabras entran igual: el borde se exige en los dos
+# extremos del marcador entero, no palabra por palabra.
+_OPPOSITION_RE = re.compile(
+    "|".join(
+        f"(?<!\\w){re.escape(m)}(?!\\w)"
+        for m in sorted(_OPPOSITION_MARKERS, key=len, reverse=True)
+    )
+)
+
+
 class CorpusService:
 
     def __init__(
@@ -79,13 +102,16 @@ class CorpusService:
         min_texts    : int  = 3,    # umbral para pasar a modo evaluación
         top_k        : int  = 20,
         ngram_max    : int  = 2,
+        min_df       : int  = MIN_DF,
         monitor_jsonl_path: Optional[str] = None,
         force_w_pos  : bool = False,
         rebuild_suspendido: bool = False,
     ):
         self.storage_path = Path(storage_path)
         self.min_texts    = min_texts
-        self._extractor   = NodeExtractorService(top_k=top_k, ngram_max=ngram_max)
+        self._extractor   = NodeExtractorService(
+            top_k=top_k, ngram_max=ngram_max, min_df=min_df
+        )
         self._monitor_jsonl_path = monitor_jsonl_path
         # FLAG DE DESARROLLO — no usar en operacion normal.
         # force_w_pos=True saltea el ruteo por marcadores de oposicion en
@@ -122,16 +148,27 @@ class CorpusService:
     # API pública
     # ------------------------------------------------------------------
 
-    def ingest(self, texts: List[str], landscape_signal: Optional[list] = None) -> dict:
+    def ingest(self, texts: List[str], landscape_signal: Optional[list] = None,
+               habilitar_primer_W: bool = True) -> dict:
         """
         Agrega textos al corpus. Reconstruye W si hay suficientes datos.
         Devuelve estado actual.
+
+        `habilitar_primer_W=False` **acumula y no construye la primera W**,
+        aunque haya textos de sobra. Existe porque la condición del primer W
+        de la Serie 2 no es sólo de cantidad: son **≥ 30 mensajes de ≥ 2
+        devices**, y cuántos devices hay es algo que CorpusService no sabe ni
+        tiene por qué saber — lo sabe el canal, que es quien pasa esto
+        (`CKMMonitor`). Una vez que W existe, el parámetro **no la borra ni la
+        congela**: sólo decide si *nace*.
         """
         self._texts.extend(texts)
         if landscape_signal is not None:
             self._last_landscape_signal = landscape_signal
         if len(self._texts) >= self.min_texts:
-            if not (self._rebuild_suspendido and self._W is not None):
+            if self._W is None and not habilitar_primer_W:
+                pass          # acumula; la primera W todavía no tiene permiso
+            elif not (self._rebuild_suspendido and self._W is not None):
                 self._rebuild()
         self.save()
         return self.status()
@@ -190,6 +227,22 @@ class CorpusService:
             "nodes_changed"   : list(nodes) != nodes_new,
         }
 
+    @property
+    def extractor(self) -> NodeExtractorService:
+        """
+        **El extractor de este corpus**, el que construyó W.
+
+        Existe para que `MonitorService` evalúe σ **con el mismo objeto**, y
+        no con uno propio armado con los defaults (CP1 (c) de la Serie 2:
+        *"un solo extractor en el camino vivo"*). Hasta el 18 oct los dos
+        coincidían **por default**: si alguien cambiaba `top_k`, `min_df`, el
+        perfil o los n-gramas al construir el corpus, W salía de una
+        tokenización y σ de otra, sin que nada lo dijera.
+
+        Es lectura: el extractor no se reemplaza desde afuera.
+        """
+        return self._extractor
+
     def get_nodes(self) -> List[str]:
         return list(self._nodes)
 
@@ -233,7 +286,7 @@ class CorpusService:
         **Los 8 operadores, como dato.** La del extractor (1–6) más el signo
         (7) y W (8), que son de acá.
 
-        Canónica: `docs/defs/DECLARACION_extraccion_W_v1.md`. Hay un test que
+        Canónica: `docs/defs/DECLARACION_extraccion_W_v2.md`. Hay un test que
         verifica que el código y el documento digan lo mismo; si no coinciden
         **se corrige el documento**, no el extractor (regla de delamor, 14 oct).
 
@@ -251,8 +304,9 @@ class CorpusService:
         }
         d["operadores"]["7_signo"] = {
             "que_hace": (
-                "s(u) = -1 si u, pasado a minusculas, contiene algun marcador de "
-                "oposicion (busqueda de SUBCADENA sobre el texto entero), +1 si no"
+                "s(u) = -1 si u, normalizado a NFC y pasado a minusculas, contiene "
+                "algun marcador de oposicion como PALABRA COMPLETA sobre el texto "
+                "entero, +1 si no"
             ),
             "parametros": {
                 "n_marcadores": len(_OPPOSITION_MARKERS),
@@ -264,9 +318,11 @@ class CorpusService:
             # La condicion (b) del CP0, DECLARADA por decision de delamor
             # (14 oct): no se toca el codigo, se escribe lo que hace.
             "condicion_declarada": (
-                "el texto NO se normaliza a NFC antes de buscar marcadores, a "
-                "diferencia del operador 1; hoy sin efecto porque los marcadores "
-                "son ASCII. force_w_pos anula el signo."
+                "v2 (18 oct 2026): palabra completa -- el marcador tiene que estar "
+                "rodeado de algo que no sea caracter de palabra -- y el texto SI se "
+                "normaliza a NFC, igual que en el operador 1. El NFC hoy no cambia "
+                "ningun resultado (los 44 marcadores son ASCII); la palabra completa "
+                "si. El signo sigue siendo del texto entero. force_w_pos lo anula."
             ),
             "referencia": "review v28 M4: este operador no tiene resultado nulo",
         }
@@ -296,9 +352,20 @@ class CorpusService:
 
     @staticmethod
     def _has_opposition(text: str) -> bool:
-        """True si el texto contiene al menos un marcador de oposición."""
-        t = text.lower()
-        return any(m in t for m in _OPPOSITION_MARKERS)
+        """
+        True si el texto contiene al menos un marcador de oposición, **como
+        palabra completa** y sobre el texto **normalizado a NFC** (v2).
+
+        Las dos cosas cambiaron el 18 oct y las dos vienen de la revisión de
+        criterios del 15 oct (punto 4): la subcadena y la falta de NFC eran
+        casuales, no declaradas por una razón. `but` adentro de `distribution`
+        ya **no** marca oposición; `pero` adentro de `esperó`, tampoco.
+
+        Lo que **no** cambia: la lista, el `lower()`, y que el signo es del
+        **texto entero** — un marcador tiñe todos los pares de esa unidad.
+        """
+        t = unicodedata.normalize("NFC", text).lower()
+        return _OPPOSITION_RE.search(t) is not None
 
     def _accumulate_safe(self, texts: List[str], seleccion_anterior=None) -> Dict:
         """
@@ -315,7 +382,8 @@ class CorpusService:
         except ValueError:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
-    def rebuild_por_decision(self, causa: str) -> dict:
+    def rebuild_por_decision(self, causa: str,
+                             habilitar_primer_W: bool = True) -> dict:
         """
         Rebuild **por decisión**, no por ingesta. Devuelve `status()`.
 
@@ -331,6 +399,12 @@ class CorpusService:
         Con el corpus en acumulación **no reconstruye y lo dice**: la primera W
         se construye al cruzar `min_texts`, como hoy. Devolver un status normal
         acá haría que un rebuild que no ocurrió se viera igual que uno que sí.
+
+        `habilitar_primer_W=False` **también frena acá**, y es el mismo permiso
+        que en `ingest`. Sin esto la condición del primer W se podía saltear
+        por la puerta de al lado: con 40 mensajes de **un solo** device el
+        criterio de volumen disparaba, `rebuild_por_decision` sólo miraba la
+        cantidad, y la primera W nacía igual. Lo encontró el test del CP1.
         """
         if not causa:
             raise ValueError(
@@ -341,6 +415,12 @@ class CorpusService:
             st = self.status()
             st["rebuild"] = False
             st["motivo_no_rebuild"] = "corpus_en_acumulacion"
+            st["causa_pedida"] = causa
+            return st
+        if self._W is None and not habilitar_primer_W:
+            st = self.status()
+            st["rebuild"] = False
+            st["motivo_no_rebuild"] = "primer_W_no_habilitado"
             st["causa_pedida"] = causa
             return st
         self._rebuild(causa=causa)

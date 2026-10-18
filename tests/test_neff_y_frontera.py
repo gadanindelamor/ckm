@@ -222,7 +222,12 @@ TEXTS = [
 
 
 def test_panel_lleva_n_eff_y_baseline_que_se_resetea(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    # **`min_df=1` declarado** (v2, 18 oct): este fixture mide el mecanismo de
+    # arriba —no la extracción—, y con el `min_df = 2` declarado estos 7 textos
+    # dejan 3 nodos, con lo cual el mecanismo no se alcanza. La extracción de la
+    # Serie 2 se mide en `test_serie2_caso0_cp1.py`.
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=20)
 
@@ -248,7 +253,8 @@ def test_panel_lleva_n_eff_y_baseline_que_se_resetea(tmp_path):
 def test_panel_D_ckm_es_la_formula_canonica(tmp_path):
     """En el panel de Monitor, D_ckm es 1 - ln N_eff / ln N_eff0 con los
     N_eff y N_eff0 del mismo panel, y coincide con D_masa_cuencas."""
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=20)
 
@@ -280,7 +286,8 @@ def test_d_masa_borde_none(n0):
 
 
 def test_panel_declara_condicion_W(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=20)
     cw = m.evaluate("rights weapons")["condicion_W"]
@@ -294,7 +301,8 @@ def test_panel_declara_condicion_W(tmp_path):
 
 
 def test_panel_lleva_senal_de_saturacion(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"), n_runs_attractors=40)
     p = m.evaluate("rights weapons")
@@ -304,7 +312,8 @@ def test_panel_lleva_senal_de_saturacion(tmp_path):
 
 
 def test_n_runs_default_es_1000(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"))
     assert m.evaluate("rights weapons")["condicion_W"]["n_runs"] == 1000

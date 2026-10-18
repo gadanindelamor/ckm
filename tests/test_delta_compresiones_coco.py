@@ -107,7 +107,12 @@ def test_observe_no_muta_la_entrada():
 
 @pytest.fixture
 def corpus(tmp_path):
-    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5, top_k=10)
+    # **`min_df=1` declarado** (v2, 18 oct): este fixture mide el mecanismo de
+    # arriba —no la extracción—, y con el `min_df = 2` declarado estos 7 textos
+    # dejan 3 nodos, con lo cual el mecanismo no se alcanza. La extracción de la
+    # Serie 2 se mide en `test_serie2_caso0_cp1.py`.
+    c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     return c
 

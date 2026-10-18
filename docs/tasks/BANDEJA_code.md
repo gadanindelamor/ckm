@@ -11685,3 +11685,90 @@ hace hoy haya una diferencia de **tipo**, no de número: predigo que hoy **no ha
 arranque por mensajes** —se construye W en cuanto hay textos— y que tampoco hay `min_df`.
 
 **Esto es lectura. Nada vivo cambia en el CP0.**
+
+## S2-C0 · CP0 — el camino vivo, leído — 2026-10-18 14:05 UTC
+
+*Claude Opus 5 (Code). `TASK_iap_serie2_caso0_v1`, CP0. La predicción está arriba
+(`a56f53f`, rebaseada sobre `8736017`) y **no se tocó**. **Sólo lectura: no se corrió nada
+del canal y no se cambió una línea de `services/` ni de `iap_chatroom/`.** Suite al leer:
+**708 pasan, 7 xfailed, 0 fallan** — el mismo número del ESTADO del 15 oct.*
+
+### A1 — qué es verificable acá y qué no
+
+**Verificable, con archivo:línea, y es casi todo lo de abajo:** leí `ckm_monitor.py`,
+`monitor_service.py`, `coco.py`, `calibrate.py`, `node_extractor.py`, `corpus_service.py`,
+`autonomous_device.py`, `channel.py`, `mcp_server.py`, `api_routes.py`, `server.py`,
+`arranque.py` y el ESTADO del CLOCK. **Lo único que corrí fue la suite.**
+
+**Peso del contexto, y se nota en los tres fallos de la predicción:** predije *"está marcado
+y no hace nada"* en tres lugares donde **sí hay cable** (`should_rebuild`, los umbrales de
+COCO, el mensaje vacío). Venía de una traza donde ese patrón era el hallazgo, y lo apliqué
+de más.
+
+**No verificado, dicho como tal:** que `api_routes` gane la carrera del singleton en
+`server.py` lo leí **en el orden de los imports**, no lo corrí — correrlo escribiría en
+`iap_chatroom/_state/`, que es estado vivo.
+
+### Las respuestas
+
+| # | Pregunta | Lo que dice el código |
+|---|---|---|
+| 1 | ¿COCO nace en Monitor? | **Sí.** `ckm_monitor.py:220-226` le pasa `coco_config={"track_landscape": True}` a `MonitorService`, y Monitor lo construye en `_renacer_coco` (`monitor_service.py:505-550`). **Renace con cada ciclo de W** (`_sincronizar_coco_con_el_ciclo`, `:479`), con `landscape_history` vacía y `fijar_baseline()` al nacer. |
+| 2 | ¿Qué ve el canal de COCO? | **Un string.** `get_state` (`ckm_monitor.py:520-560`) expone **`temp_signal`** y nada más: sale de `panel["thermostat"]["temp_signal"]["signal"]`, y sin thermostat queda `"UNKNOWN"`. **No hay bloque `coco`**: ni `conectado`, ni id, ni `w_version_id`, ni β_c, ni μ_W, ni ‖Δ_r_compresiones‖, ni hora, ni n de disparos. Lo rico está en `panel["thermostat"]` de Monitor (`monitor_service.py:348-376`) y **el canal no lo publica**. `get_monitor_state` (MCP `:131`, REST `/monitor`) devuelve exactamente `get_state()`. |
+| 3 | ¿Cuántas instancias? | **Una viva a la vez, y una por ciclo en el tiempo.** `CKMMonitor` es singleton por proceso (`__new__`, `:166-171`); un Monitor, un COCO. El contador de existencias es `coco_generacion` y ya viaja en el panel de Monitor (`:324`) — **no en el del canal**. |
+| 4 | ¿Qué lee COCO para disparar? | **D_ckm por masas.** `COCO._count_attractors` (`coco.py:658`) es `landscape_engine.count_attractors` = `n_eff(basin_masses)`, y `observe` divide con `d_ckm(A_current, A0)` (`:296`). Umbrales `0.40` / `0.60` (`coco.py:94-96`), **calibrados sobre la forma lineal por conteo y no recalibrados** — lo declara su propio docstring (`:17-19`). |
+| 5 | ¿Qué baseline usa cada uno? | **Dos baselines, y además dos W_eff.** Monitor: A0 sobre `_combine_W_Delta(W, Δ_r)`, fijado en la primera evaluación con corpus establecido y **reseteado cuando W cambia** (`monitor_service.py:676-697`). COCO: A0 sobre **W sola**, fijado al nacer el ciclo y no reseteado (`coco.py:236-250`). |
+| 6 | ¿`should_rebuild`? | **Está conectado y vota.** Es el criterio **estructural** (gradiente de D_ckm positivo sostenido n=3, `corpus_service.py:196`) y es el primero de la jerarquía en `ckm_monitor.py:362-374`; si gana, llama a `rebuild_por_decision`. Volumen = `textos_desde_rebuild >= min_texts*2`; tiempo = `ciclos_sin_rebuild >= MAX_CICLOS` (10). `rebuild_suspendido=True`, así que **no hay rebuild por ingesta**. |
+| 7 | `calibrate`: qué devuelve y qué falta | Devuelve **`{valores, estado, condiciones}`** con `D_CKM_THRESHOLD` y `FRAC_REC_MIN`, y tres estados (`calibrado` / `no_calibrado` / `nulo_calibrado`, `calibrate.py:100-104`); `FRAC_REC_MIN` puede salir `"UNKNOWN"` si D_ckm separa y `frac_rec` no (`:305-311`). **Nadie lo llama:** `_punto_calibrate` (`ckm_monitor.py:412-416`) escribe `{"existe": True, "implementado": False, ...}` en el panel y listo. **El cable del lado de COCO ya existe**: `d_ckm_threshold` y `frac_rec_min` son parámetros de `COCO.__init__` (`coco.py:147-149`) y `coco_config` viaja entero a `_renacer_coco`. Falta: llamar a `calibrate(W_nueva)` en el punto, guardar el registro, y que el `coco_config` del ciclo nuevo lleve esos valores. |
+| 8 | ¿Cuántos extractores? | **Tres construidos, dos que corren, uno muerto.** `CorpusService` (`corpus_service.py:88`, con `top_k=32` desde el canal), `MonitorService` (`monitor_service.py:119`, **defaults**: `top_k=20`) y el muerto de `ckm_monitor.py:186` (`top_k=32`), que **no se usa en ninguna otra línea del archivo**. **Precisión sobre "coinciden por default":** para σ, `evaluate` (`node_extractor.py:652-661`) usa `build_analyzer()` y **no `top_k`** — así que el 32 contra 20 **no cambia σ hoy**; lo que tiene que coincidir es el analizador (`ngram_max`, stopwords, patrón), y coincide **por default**, no por construcción. |
+| 9 | ¿Qué dispara el ODA? | **Nada.** `trigger_mode="continuo"` es el único valor aceptado (`autonomous_device.py:197-199`) y `run()` hace una vuelta por iteración del `while`, haya o no mensajes (`:652`). El tick se **observa** (`channel.get_clock`, `:106-121`, que además registra el silencio). |
+| 10 | Pendientes del ESTADO | **Fix 3** (smoke con tope): espera a delamor. **Fix 4**: **sin hacer** — `agent_device_skin.py:58,75` sigue devolviendo `"OP_SILENCE"` cuando el agente devuelve `None`, y `:126` lee `observation["trigger"]` sin guarda. **F3a: cerrado por `arranque.py`** y usado por `server.py:39,50` y `mcp_server.py` — con una grieta, abajo. **El vacío: corregido** en `_generate` (`autonomous_device.py:319-333`, `not text.strip()`, con `vacia_antes_de_strip` / `la_vacio_el_strip`); el `[assistant]` se registra y **no se filtra**, que fue decisión declarada. |
+
+### Dónde fallé la predicción — tres, y las tres en la misma dirección
+
+1. **`should_rebuild`** no es un mecanismo sin consumidor: está conectado desde
+   `TASK_should_rebuild_conectado_v1`. Escribí *"se calcula y no dispara"* desde una lectura
+   vieja.
+2. **COCO sí tiene por dónde recibir umbrales.** Dije "constantes de módulo, no parámetros";
+   son **parámetros con default de módulo**. Lo que falta no es el cable de COCO: es quien
+   llame a `calibrate`.
+3. **El mensaje vacío ya no entra** por el device. Predije que podía seguir entrando.
+
+Las tres **sobrestiman lo que falta**. En un CP0 ese sesgo es el caro: habría pedido trabajo
+que ya está hecho.
+
+### Lo que encontré y no estaba en la lista
+
+- **No son dos baselines: son dos cantidades.** Monitor mide sobre
+  `W + (Δ_r/max Δ_r)·mean(W>0)` (`monitor_service.py:644-650`); COCO mide sobre **`W + Δ_r`
+  crudo** (`coco.py:280`), con W ∈ [−1,1] y Δ_r conteos enteros. Con un solo rechazo el W_eff
+  de COCO ya está dominado por Δ. El código declara *"una cantidad, dos baselines"*; **la
+  diferencia de escala no está declarada en ninguna parte**, y es del mismo tamaño que lo que
+  el CP1b va a medir.
+- **F3a tiene una grieta en `server.py`.** `arranque.leer_de_argv` corre antes de los imports,
+  pero el primero de ellos es `api_routes` (`server.py:40`), que en el nivel de módulo hace
+  **`CKMMonitor()` pelado** (`api_routes.py:20`). Ésa gana el singleton, y `arranque.monitor()`
+  (`:50`) devuelve esa instancia con el directorio **por default**. El propio server lo
+  detecta y **lo avisa por consola** (`:57-59`), no en el panel. `ui_gradio.py:22` tiene otro
+  `CKMMonitor()` pelado, que hoy llega después. **Leído, no corrido.**
+- **El canal no tiene guarda de vacío.** La corrección vive en el device; `send_message`
+  (`mcp_server.py:60-71`) publica cualquier string. Un device que no sea `AutonomousDevice`
+  —o un humano— puede meter un texto vacío al corpus.
+- **`_has_opposition` es subcadena y sin NFC** (`corpus_service.py:298-301`, `m in t`): las
+  dos cosas que el CP1 (e) junta en un cambio.
+- **`min_df` no existe en el camino de extracción** (no aparece en `node_extractor.py` fuera
+  de un docstring): hoy un término de un solo mensaje puede ser nodo.
+- **El panel del canal no lleva el tick.**
+
+### Lo que falta para las tres condiciones y la tabla
+
+| Condición / fila | Estado | Qué falta |
+|---|---|---|
+| **1 · D_ckm por masas** | **Cumplida en el cálculo** (Monitor y COCO) | Sacar el conteo del panel de la Serie 2 y declarar **las dos cantidades** (baseline **y** escala de Δ) |
+| **2 · COCO conectado y comprobable** | **Conectado de hecho**; **no comprobable** | Todo el bloque `coco` del CP1 (a): hoy el canal publica un solo string |
+| **3 · Extracción sensata** | `top_k=20`/pool×3/703 **sí** | `min_df=2` **no existe**; marcadores **subcadena**; **primer W a los 3 textos**, sin condición de ≥ 30 mensajes ni ≥ 2 devices; **rebuild** por tres criterios, ninguno "cada 10 mensajes"; `n_runs=1000` **ya es el default** de la Config |
+| **4 · Free will** | ODA continuo **sí**, tick observado **sí** | `_llamar_llm` **sin timeout** (`autonomous_device.py:249`) y `duration` mirado **sólo en el `while`** (`:652`): un device que está decidiendo cuando vence el caso **no queda cortado**. Sin traza de tick-observó / tick-actuó / qué pasó con la acción |
+| **5 · Calibración** | `calibrate` existe y **nadie lo llama** | La llamada en el punto, el registro en el panel, y el `coco_config` del ciclo nuevo con esos umbrales |
+| **Identificación S2 / S2-C0** | **No existe** | `serie` / `caso` en panel, registros, nombres y carpeta propia |
+
+**A1.PAUSA.** Nada vivo cambió. Lo que sigue es el CP1, y no arranca sin orden.

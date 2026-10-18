@@ -11831,3 +11831,105 @@ No unifico Monitor y COCO (ni los separo). No elijo escala de Δ_r —eso es el 
 delamor—: sólo **declaro en el panel de qué W_eff mide cada uno**. No toco el Fix 4
 (`AgentDeviceSkin`), que no está en el CP1. No creo procesos nuevos para la regla TRUST, el
 criterio local ni `calibrate`.
+
+## S2-C0 · CP1 — REPORTE — 2026-10-18 14:51 UTC
+
+*Claude Opus 5 (Code). `TASK_iap_serie2_caso0_v1` CP1, con los tres agregados
+(`b19380f`). La predicción está arriba (`e42bff1`) y **no se tocó**. Tres commits:
+`9c301dc` (declaración v2), `663a213` (COCO, `calibrate`, tabla, S2), `d51f8ce` (canal y
+devices). **Suite: 751 pasan, 7 xfailed, 0 fallan** — eran 708.*
+
+### A1 — qué de este reporte es medido y qué no
+
+**Medido, corriendo:** la suite entera; los números del canal con 45 mensajes de 2 devices
+(abajo); y cada uno de los 42 tests nuevos, que fallan si su punto falta — varios los vi
+fallar antes de implementar.
+
+**Demostrado, no corrido:** que **hoy** —antes de este CP— un device que estaba decidiendo
+cuando vencía `duration` quedaba vivo. Es una línea: `_llamar_llm` hace
+`await self.provider.complete(...)` **sin timeout**, y el `while` mira `duration` **entre**
+vueltas; si `complete` no vuelve, `run` no vuelve. No lo corrí contra el código viejo: era
+correr lo demostrable.
+
+**No medido, y lo digo porque lo predije:** de los tres tests del punto (g) predije *"uno
+rojo y dos verdes antes del cambio"*. **No lo verifiqué**: los escribí después, y contra el
+código viejo los tres habrían fallado por el import de `DECISION_FIN_DEL_CASO`, así que la
+medición no habría dicho nada. La predicción quedó sin contrastar.
+
+### Qué quedó hecho, punto por punto
+
+| | Qué |
+|---|---|
+| **(a)** | `panel["coco"]`: `conectado`, `instancia_id`, `generacion`, `instancias`, `w_version_id` + el de Monitor + `w_coincide`, `N`, `mu_W`, `beta_c` (con `"inf"` explícito y `beta_c_infinito`), `Delta_r_compresiones_norma`, `ultima_evaluacion_utc`, `n_evaluaciones_recibidas`, `disparos`, `umbrales` con origen, `calibracion` y `w_eff`. El canal lo publica entero en `get_state`. Sin COCO, el bloque **dice que no hay** y no inventa una conexión |
+| **(b)** | el panel del canal lleva `D_ckm_forma` (`masa_log`) y **ningún conteo** |
+| **(c)** | la tabla en el panel; el canal pasó de `top_k=32` a **20**; `min_df=2`; primer W con **30 mensajes de 2 devices**; rebuild cada **10**; `n_runs=1000`; **un solo extractor**: el muerto se fue y Monitor usa `corpus.extractor` |
+| **(d)** | `serie="S2"` / `caso="S2-C0"` en el panel **y en cada decisión** del `rebuild_decisions.jsonl` |
+| **(e)** | declaración **v2**, con la sección de criterios de normalización (los 14 puntos del 15 oct); NFC + palabra completa en el signo, en el mismo commit; extractor muerto afuera |
+| **(f)** | tick en el panel, leído sin registrar; dos tests: uno falla si el device sólo se activa con mensajes nuevos, otro si las vueltas siguen a los ticks |
+| **(g)** | la vuelta corre bajo **lo que le queda al caso**; `FIN_DEL_CASO` en la traza; tick de observación, tick de acción y resultado en cada decisión |
+| **(h)** | `calibrate` corre en cada rebuild; su registro entero va al panel; sus umbrales son los del COCO que **nace** con el ciclo siguiente |
+| **agregado 1** | ni `api_routes` ni `ui_gradio` construyen el monitor al importarse; test que falla si el `--state-dir` pedido no es el que queda |
+| **agregado 2** | el canal no publica vacíos y el intento queda con quién y cuándo; `send_message` devuelve `ok`/`motivo` y el device registra que su acción no ocurrió |
+| **agregado 3** | las dos W_eff declaradas en el panel, **y un test que las compara de verdad**: si alguien unificara las escalas sin tocar el texto, falla |
+
+### Lo que el canal da hoy, medido (45 mensajes, 2 devices, corpus del repo)
+
+`calibrate` → **`calibrado`**: `D_CKM_THRESHOLD = 0.1751`, `FRAC_REC_MIN = 0.8042`, y el
+panel muestra `umbrales.origen = "calibrate"`. COCO **no sigue con 0.40**. 18 nodos,
+`D_ckm = 0.0882`, `beta_c = 0.654`, `mu_W = 0.170`, **0 disparos**.
+
+### La predicción contra lo que pasó
+
+| Predije | Pasó |
+|---|---|
+| `min_df=2` mueve **15 a 40** tests | **24**. Dentro |
+| en los corpus de 6–8 textos del repo *"deja menos nodos, **no cero**"* | **Mal, y es lo más caro.** Deja **3 a 5 nodos** donde había 10–20, y en los corpus de los tests del signo deja a los textos con marcador **sin dos nodos activos**: W_mixta salía **sin un solo peso negativo**. No era "menos nodos": era que varios tests **dejaban de medir lo que decían**. Tuve que reescribir corpus de test, no sólo números |
+| **2 tests se dan vuelta** por la palabra completa | 2, y son los dos que fijaban la condición vieja (`but` en `distribution`, y el que exigía *"**no** se normaliza a NFC"*) |
+| sacar el extractor muerto: **0 tests** | 0 |
+| el bloque `coco`: **1 o 2** tests tocados | **0** rotos |
+| `calibrate` daría **`no_calibrado` más seguido** | **Mal.** Con la W del canal dio **`calibrado`**, con margen, y umbrales muy por debajo del 0.40 |
+| guarda de vacío: **1 test** nuevo, 0 rotos | 5 nuevos, 0 rotos |
+| `CKMMonitor()` al importar: **1 a 3** rotos | **1** |
+| suite al cerrar entre **730 y 780** | **751** |
+| *"lo que más probablemente me salga mal: el 30 acoplado a los fixtures"* | **Acertado el riesgo, equivocado el remedio.** Puse el 30 en el canal, como dije, y aun así **5 archivos de test** se rompieron por la condición de **≥ 2 devices**, que publican con uno solo. No lo había previsto |
+
+### Lo que encontré implementando, y no estaba en ninguna lista
+
+- **La condición del primer W se salteaba por la puerta de al lado.**
+  `rebuild_por_decision` sólo miraba la cantidad de textos: con **40 mensajes de un solo
+  device** el criterio de volumen disparaba y la primera W nacía igual. Lo encontró el test
+  de (c). Cerrado con el mismo permiso que la ingesta.
+- **Monitor y el corpus tenían dos extractores de verdad, no "uno que coincide".** El canal
+  construía el corpus con `top_k=32` y Monitor evaluaba σ con `top_k=20`. Para σ da lo mismo
+  —`evaluate` usa el analizador, no `top_k`—, pero la tabla pide **un solo extractor**, así
+  que Monitor ahora usa el del corpus: no hay dos tokenizaciones posibles.
+- **Un `ValueError` de sklearn era una condición declarada.** Con `min_df=2`, *"After
+  pruning, no terms remain"* es exactamente el *"N = 0 y no se construye W"* de la
+  declaración. Sale por la salida vacía; cualquier otro `ValueError` se propaga.
+
+### Decisiones mías, y dónde pueden revertirse
+
+1. **`min_df = 2` es default de CKM**, no una perilla del canal. Si delamor prefiere que sea
+   sólo del canal, se cambia el default y la declaración vuelve a nombrarlo como parámetro
+   por W.
+2. **Los umbrales calibrados entran en el COCO que nace**, no en el vivo.
+3. **`send_message` cambió de forma** (`ok`/`motivo`); sin compatibilidad.
+4. **No creé `registers/iap_serie2/`**: `registers/` es Clase R y CLAUDE.md dice que no se
+   toca. El estado del caso va a un `--state-dir` propio (`experiments/_state_S2-C0/`, como
+   el vivo 03) y el panel lo declara. **Si delamor quiere esa carpeta, la crea él.**
+5. **El bloque nuevo se llama `coco` y `thermostat` queda** como estaba: `thermostat` es la
+   medición del ciclo y la leen el canal y los tests; renombrarlo movería el panel entero y
+   no es de este CP. El nombre viejo queda señalado, no usado en texto nuevo.
+6. **Tests que ahora declaran `min_df=1`**: los que miden otro mecanismo (Δ_r, N_eff, ciclos,
+   `w_version`) con corpus chicos. Cada uno dice por qué. Lo digo claro porque es la decisión
+   con más riesgo de volverse costumbre: **el `min_df` declarado es 2**, y lo que se mide con
+   1 es un mecanismo, no la extracción.
+7. **`experiments/driver_cpm_nulo_marcadores.py` sigue citando la v1** y así queda: describe
+   una corrida que **corrió** bajo la v1, y está congelada en `process/`.
+
+### Lo que no hice, y por qué
+
+No toqué el Fix 4 (`AgentDeviceSkin`), que no está en el CP1. No elegí escala de Δ_r: eso es
+el CP1b, que va con su propia predicción. No unifiqué Monitor y COCO. No toqué el gate.
+
+**A1.PAUSA.**

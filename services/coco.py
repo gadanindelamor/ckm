@@ -433,6 +433,21 @@ class COCO:
             "n_devices"      : len(devices),
         }
 
+    def mu_W(self) -> float:
+        """
+        μ_W: la media de W **sobre el triángulo superior, ceros incluidos**.
+
+        Es de dónde sale β_c, y se expone aparte porque **β_c = ∞ no dice cuál
+        de las dos cosas pasó**: que μ_W sea 0 (W vacía) o que sea negativa (W
+        mixta con más oposición que acuerdo). Con el μ_W al lado, el ∞ se lee.
+
+        Que μ_W dependa de cuál par haya sido el máximo al normalizar W es un
+        acople **casual**, declarado en la revisión de criterios del 15 oct
+        (punto 7) y en la declaración v2.
+        """
+        ii, jj = np.triu_indices(self.N, k=1)
+        return float(np.mean(self.W[ii, jj])) if len(ii) else 0.0
+
     def beta_c_corpus(self) -> float:
         """
         β crítico del corpus: punto donde el campo es máximamente receptivo.
@@ -443,10 +458,12 @@ class COCO:
         μ_W global (incluye ceros) — conservador, menos sensible.
         Verificado: N=32, μ_W=0.004519 → β_c=13.83 (corpus CKM v2).
 
+        **μ_W ≤ 0 ⇒ ∞, y el ∞ es el dato**: no hay temperatura a la que este
+        campo sea receptivo. Se muestra, no se tapa (CP1 (a) de la Serie 2).
+
         Ref: REG_garantias_cS_generalizacion_v1, REG_beta_colectivo_v1
         """
-        ii, jj = np.triu_indices(self.N, k=1)
-        mu_W = float(np.mean(self.W[ii, jj]))
+        mu_W = self.mu_W()
         if mu_W <= 0:
             return float("inf")
         return 1.0 / (BETA_RHO_STAR * self.N * mu_W)

@@ -12,7 +12,9 @@ Mide fabricación: lo que σ_prompt declaró y el campo no sostuvo.
   son claves de JSONLs históricos. DEFS v12 §9, PROPUESTA v5 D4.
 
 σ_prompt sale del mismo analizador que construye W (NodeExtractor, una sola
-rama — 7bf485b). Δ_r y A0 se descartan en cualquier reconstrucción de W (D2).
+rama — 7bf485b), y desde el 18 oct del **mismo objeto**: Monitor usa
+`corpus.extractor` en vez de construir uno con los defaults. Δ_r y A0 se
+descartan en cualquier reconstrucción de W (D2).
 
 Rango de W (heredado de CorpusService): W ∈ [−1, +1]. `_rebuild()` calcula
 (pos_counts − neg_counts) / max|·|, y rutea a neg_counts los textos con
@@ -34,6 +36,7 @@ sin señal de estar desactualizada.
 from __future__ import annotations
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -116,7 +119,12 @@ class MonitorService:
         """
         self.corpus    = corpus
         self._storage  = Path(storage_path)
-        self._extractor = NodeExtractorService()
+        # **El extractor es el del corpus, no uno propio** (CP1 (c) de la
+        # Serie 2). Acá había `NodeExtractorService()` con los defaults: σ y W
+        # coincidían **por default**, no por construcción, y el canal vivo
+        # llegó a construir el corpus con `top_k=32` mientras esto evaluaba
+        # con 20. Con el mismo objeto, no hay dos tokenizaciones posibles.
+        self._extractor = corpus.extractor
         self._n_runs   = n_runs_attractors
         # ── COCO: configuración, no instancia (D4 + §1 de
         # TASK_monitor_coco_ciclo_orbita_v2) ─────────────────────────────────
@@ -183,6 +191,18 @@ class MonitorService:
         self._coco_id_anterior : Optional[int] = None
         # w_version_id del ciclo al que pertenece el COCO vigente
         self._coco_sha         : Optional[str] = None
+        # ── lo que hace falta para que la conexión de COCO sea COMPROBABLE
+        # (CP1 (a) de TASK_iap_serie2_caso0_v1). Hasta hoy COCO estaba
+        # conectado **de hecho** —Monitor lo construye y le pasa cada Δ_r— y
+        # el canal publicaba un solo string suyo (`temp_signal`). Que esté
+        # conectado y que se pueda comprobar que lo está son dos cosas.
+        self._coco_ultima_eval  : Optional[str] = None   # UTC ISO, de la última observe()
+        self._coco_n_evaluaciones: int          = 0
+        # Los umbrales con los que nace el próximo COCO, si `calibrate` los
+        # dio. `None` es **"nadie calibró"**, que no es lo mismo que "calibró y
+        # no separó": eso viaja en `_coco_calibracion`.
+        self._coco_umbrales     : Optional[dict] = None
+        self._coco_calibracion  : Optional[dict] = None
 
     # ------------------------------------------------------------------
     # API pública
@@ -345,6 +365,8 @@ class MonitorService:
             if device_id is not None:
                 self._thermostat.register_device_eval(device_id, fi)
             ts = self._thermostat.observe(self._Delta_r)
+            self._coco_ultima_eval = datetime.now(timezone.utc).isoformat()
+            self._coco_n_evaluaciones += 1
             panel["thermostat"] = {
                 "zone"        : ts.zone,
                 "D_ckm"       : ts.D_ckm,
@@ -373,6 +395,8 @@ class MonitorService:
                 ),
             }
 
+        panel["coco"] = self._panel_coco(W)
+
         self._persist(text, panel, device_id)
         return panel
 
@@ -386,6 +410,121 @@ class MonitorService:
         `corpus.coco`, que quedó deprecada en el CP4.
         """
         return self._thermostat
+
+    def _panel_coco(self, W: Optional[np.ndarray]) -> dict:
+        """
+        **La conexión de COCO, comprobable desde afuera** (CP1 (a) de
+        `TASK_iap_serie2_caso0_v1`).
+
+        delamor, 15 oct: *"Conectado = existe, está unido al canal vivo y
+        recibe cada evaluación"*, y tiene que **poder verse durante el caso**.
+        Hasta hoy el único rastro de COCO fuera de Monitor era
+        `panel["thermostat"]["temp_signal"]`: con eso no se puede decir si
+        recibió algo, cuándo, ni sobre qué W.
+
+        **Por qué es un bloque aparte de `thermostat` y no lo reemplaza.**
+        `thermostat` es **la medición del ciclo** (zona, D_ckm, α, β) y lo leen
+        el canal y los tests; esto es **la conexión** (quién es, qué W ve,
+        cuándo recibió, con qué umbrales). Son dos preguntas distintas. El
+        nombre `thermostat` quedó de antes —COCO es un regulador, no un
+        termostato— y **no se renombra acá**: eso movería el panel entero y no
+        es de este CP.
+
+        **`w_eff` es el agregado 3 de delamor (18 oct):** Monitor y COCO miden
+        sobre **dos W_eff distintas** y eso no estaba declarado en ninguna
+        parte. No se unifican (*"Monitor y COCO no se separan ni se unifican"*):
+        se declara cuál usa cada uno, en cada panel.
+        """
+        th = self._thermostat
+        if th is None:
+            return {
+                "conectado": False,
+                "motivo": ("este Monitor no tiene COCO: ni coco_config ni "
+                           "thermostat="),
+            }
+        mu_W = th.mu_W()
+        beta_c = th.beta_c_corpus()
+        return {
+            "conectado": True,
+            # `id()` del objeto vivo. Dos paneles con el mismo id son el mismo
+            # COCO; si cambia sin que `generacion` suba, alguien lo reemplazó
+            # por afuera.
+            "instancia_id": id(th),
+            "generacion": self._coco_generacion,
+            "instancias": 1,
+            "externo": self._coco_externo,
+            # Qué W ve COCO, y si es la de Monitor. `coincide=False` es la
+            # divergencia que el CP1 del renacimiento rompió con
+            # `shapes (31,31) (28,28)`: no se infiere, se mira.
+            "w_version_id": self._coco_sha,
+            "w_version_id_monitor": self.corpus.w_sha(),
+            "w_coincide": self._coco_sha == self.corpus.w_sha(),
+            "N": int(th.N),
+            # β_c y de dónde sale. μ_W ≤ 0 ⇒ β_c = ∞, y se muestra así: el
+            # infinito es el dato (revisión de criterios, punto 7).
+            "mu_W": round(mu_W, 8),
+            "beta_c": ("inf" if beta_c == float("inf") else round(beta_c, 6)),
+            "beta_c_infinito": beta_c == float("inf"),
+            # La representación propia de COCO, que Monitor no ve de otro modo.
+            "Delta_r_compresiones_norma": round(
+                float(np.linalg.norm(th.delta_state())), 6
+            ),
+            "ultima_evaluacion_utc": self._coco_ultima_eval,
+            "n_evaluaciones_recibidas": self._coco_n_evaluaciones,
+            # Disparos: cuántas veces aplicó OPERADOR_STOP_COCO. **0 es un
+            # valor**, no una falta: la Serie 2 no le exige disparar.
+            "disparos": len(th.alpha_trajectory()),
+            "umbrales": {
+                "D_CKM_THRESHOLD": th.threshold,
+                "FRAC_REC_MIN": th.frac_rec_min,
+                "origen": "calibrate" if self._coco_umbrales else "default",
+                "calibrado": bool(self._coco_umbrales),
+            },
+            "calibracion": self._coco_calibracion,
+            # Agregado 3 de delamor: las dos cantidades, declaradas.
+            "w_eff": {
+                "coco": "W + Delta_r crudo (coco.observe)",
+                "monitor": ("W + (Delta_r/max Delta_r) * media(W>0) "
+                            "(_combine_W_Delta)"),
+                "misma": False,
+                "baseline_coco": "W sola, fijado al nacer el ciclo, no se resetea",
+                "baseline_monitor": ("W_eff de Monitor, fijado en la primera "
+                                     "evaluacion con corpus establecido, se "
+                                     "resetea cuando W cambia"),
+            },
+        }
+
+    def fijar_umbrales_coco(
+        self, valores: Optional[dict], registro: Optional[dict] = None
+    ) -> None:
+        """
+        Los umbrales con los que **nace el próximo COCO**, y el registro de la
+        calibración que los produjo.
+
+        Lo llama el canal después de un rebuild (`TASK_calibrate_mecanismo_v1`
+        en su punto). `valores=None` deja los que haya —que pueden ser los
+        defaults de `coco.py`— y el `registro` dice que no se calibró: **no se
+        cae a 0.40 en silencio**, se ve que ese 0.40 es el default.
+
+        No toca al COCO vivo: cambiarle el umbral en medio del ciclo lo
+        convertiría en otro instrumento sin que el ciclo cambie.
+        """
+        self._coco_calibracion = registro
+        if not valores:
+            return
+        usables = {
+            "d_ckm_threshold": valores.get("D_CKM_THRESHOLD"),
+            "frac_rec_min": valores.get("FRAC_REC_MIN"),
+        }
+        # "UNKNOWN" es un valor declarado de `calibrate` (D_ckm separó y
+        # frac_rec no): no es un número y no se le pasa a COCO.
+        usables = {k: v for k, v in usables.items() if isinstance(v, (int, float))}
+        if not usables:
+            return
+        self._coco_umbrales = usables
+        if self._coco_config is None:
+            self._coco_config = {}
+        self._coco_config.update(usables)
 
     def _invalidar_si_W_cambio(self, nodes: list) -> Optional[str]:
         """

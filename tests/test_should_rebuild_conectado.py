@@ -20,6 +20,15 @@ La señal es `estructural or volumen or tiempo`, con:
 - tiempo: `_ciclos_sin_rebuild >= MAX_CICLOS` (10);
 - estructural: gradiente de `D_ckm` positivo en 3 pasos.
 
+**Qué cambió el 18 oct, y por qué este archivo sigue con los mismos números.**
+Con el CP1 de la Serie 2 los dos valores que acá estaban **derivados** pasaron a
+ser **parámetros**: el volumen ya no es `min_texts*2` sino `rebuild_cada`, y la
+primera W pide además `min_devices_primer_w` devices distintos. Este archivo
+mide **la jerarquía y el conteo por ciclo**, no los valores de la Serie 2, así
+que su fixture los fija donde estaban (`rebuild_cada=6`, un solo device) y lo
+que afirma sigue siendo lo mismo. Los valores de la Serie 2 —10 y 2— se miden en
+`test_serie2_caso0_cp1.py`.
+
 Así que **"sin señal" sólo existe con menos de 6 textos**. Eso no es una
 limitación del test: es el punto 3 de la TASK (el volumen tiene que contar desde
 el último rebuild). El test lo declara y se queda dentro de esa ventana; cuando
@@ -75,7 +84,7 @@ def monitor(tmp_path, monkeypatch):
     El `state_dir` sale del **fix 2**; antes había que ir por un launcher.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state")
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_state")
     assert cm.state_dir == tmp_path / "_state"
     yield cm
     monkeypatch.setattr(CKMMonitor, "_instance", None)
@@ -229,7 +238,13 @@ def test_cp2_estructural_dispara_con_gradiente_positivo(monitor) -> None:
     assert cm._corpus.should_rebuild(cm._d_ckm_history, n=3) is True
 
     sha_antes = cm._corpus.w_sha()
-    cm.on_message(_Msg("evidence about weapons is disputed by analysts"))
+    # **El texto tiene que compartir vocabulario con los tres anteriores**
+    # (declaración v2, `min_df = 2`, 18 oct): un mensaje cuyos términos
+    # aparecen una sola vez no agrega ningún nodo, la W nueva sale **idéntica**
+    # y `w_version` no registra la marca —deduplica por sha—, así que el
+    # `causal_event` de la decisión no existiría. Antes de la v2 este texto
+    # movía W; ahora no, y eso es el cambio, no una falla del test.
+    cm.on_message(_Msg("the data on gun control is contested by analysts"))
     # **La serie que disparó ya no está** (CP4): el salto reinicia la historia,
     # así que el ciclo nuevo arranca sin la pendiente de la meseta anterior.
     # Antes del CP4 esta línea afirmaba
@@ -399,10 +414,14 @@ def test_cp2_el_panel_lleva_la_causa(monitor) -> None:
         "rebuild_por_decision:volumen"
 
 
-def test_cp2_el_punto_de_calibrate_existe_y_no_hace_nada(monitor) -> None:
+def test_cp2_el_punto_de_calibrate_ahora_CORRE(monitor) -> None:
     """
-    **TASK, punto 5.** El lugar donde va `calibrate` queda marcado y declarado
-    como no implementado. Sin la marca, mañana habría que buscarlo de nuevo.
+    **Se dio vuelta el 18 oct** (CP1 (h) de la Serie 2). Este test afirmaba
+    `implementado is False`: el lugar estaba marcado y no hacía nada. Ahora
+    `calibrate` corre en cada rebuild y su resultado va al panel.
+
+    Lo que **no** cambió: que el punto esté en el panel. Lo que cambió es qué
+    dice.
     """
     cm = monitor
     for t in TODOS[:8]:
@@ -412,8 +431,11 @@ def test_cp2_el_punto_de_calibrate_existe_y_no_hace_nada(monitor) -> None:
     cm.on_message(_Msg(TODOS[8]))
     pc = cm.get_state()["punto_calibrate"]
     assert pc["existe"] is True
-    assert pc["implementado"] is False
+    assert pc["implementado"] is True
     assert pc["task"] == "TASK_calibrate_mecanismo_v1"
+    # Los tres estados declarados de `calibrate`; ninguno es "no se sabe".
+    assert pc["estado"] in ("calibrado", "no_calibrado", "nulo_calibrado")
+    assert pc["condiciones"]["w_sha"] == pc["w_sha"]
 
 
 def test_cp2_el_marcador_force_w_pos_no_se_pierde_con_la_causa(tmp_path) -> None:
@@ -614,7 +636,7 @@ def test_cp2b_un_reinicio_a_mitad_de_meseta_no_reinicia_los_contadores(
     state = tmp_path / "_state"
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    cm1 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     for t in TODOS[:7]:
         cm1.on_message(_Msg(t))
     textos_antes = cm1._textos_desde_rebuild
@@ -624,7 +646,7 @@ def test_cp2b_un_reinicio_a_mitad_de_meseta_no_reinicia_los_contadores(
 
     # ── el reinicio ──
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+    cm2 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
 
     assert cm2._textos_desde_rebuild == textos_antes, (
         f"la cuenta de volumen se reinició: {cm2._textos_desde_rebuild} "
@@ -645,13 +667,13 @@ def test_cp2b_el_jsonl_sobrevive_al_reinicio_y_la_cuenta_sigue(
     state = tmp_path / "_state"
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    cm1 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     for t in TODOS:
         cm1.on_message(_Msg(t))
     assert len(cm1.decisiones_de_rebuild()) == 1
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+    cm2 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     assert len(cm2.decisiones_de_rebuild()) == 1, "el reinicio pisó el jsonl"
     assert cm2._n_decisiones == 1, "el índice `t` no siguió de donde iba"
     monkeypatch.setattr(CKMMonitor, "_instance", None)
@@ -670,7 +692,7 @@ def test_cp2b_un_estado_ilegible_no_se_tapa_con_los_defaults(
     (state / "rebuild_state.json").write_text("{esto no es json")
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=state)
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     assert cm._ciclos_sin_rebuild == 0
     assert cm._rebuild_state_error is not None
     # el nombre de la excepción, cualquiera sea: lo que importa es que quede
@@ -739,7 +761,7 @@ def test_cp2b_los_contadores_de_una_meseta_no_pasan_a_otra(
     state = tmp_path / "_state"
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm1 = CKMMonitor(min_texts=3, state_dir=state)
+    cm1 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     for t in TODOS[:7]:
         cm1.on_message(_Msg(t))
     assert cm1._textos_desde_rebuild > 0
@@ -754,7 +776,7 @@ def test_cp2b_los_contadores_de_una_meseta_no_pasan_a_otra(
 
     # ── el reinicio ──
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm2 = CKMMonitor(min_texts=3, state_dir=state)
+    cm2 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
 
     assert cm2._textos_desde_rebuild == 0, "se arrastró la cuenta de otra meseta"
     assert cm2._ciclos_sin_rebuild == 0
@@ -785,7 +807,7 @@ def test_cp2b_descartado_y_error_no_se_colapsan(tmp_path, monkeypatch) -> None:
     (state / "rebuild_state.json").write_text("{roto")
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=state)
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=state)
     assert cm._rebuild_state_error is not None
     assert cm._rebuild_state_descartado is None, (
         "un archivo roto se reportó como un descarte por meseta"
@@ -927,7 +949,7 @@ def test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False(
     mismo.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state")
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_state")
     # el régimen se arma acá porque `CKMMonitor` construye su corpus con
     # `rebuild_suspendido=True`: no lo expone, y este test necesita el otro.
     cm._corpus._rebuild_suspendido = False
@@ -959,7 +981,7 @@ def test_cp5_el_reset_sigue_al_sha_y_no_al_mensaje(tmp_path, monkeypatch) -> Non
     el caso que `w_version` tampoco registra.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state")
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_state")
     cm._corpus._rebuild_suspendido = False
 
     observado = []
@@ -1046,7 +1068,7 @@ def test_poc_sin_volumen_gobierna_el_tiempo(tmp_path, monkeypatch) -> None:
     resetea el contador.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_state",
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_state",
                     criterios_rebuild=("estructural", "tiempo"))
     assert cm.get_state()["criterios_por_default"] is False
 
@@ -1070,7 +1092,7 @@ def test_poc_el_estructural_es_INERTE_en_los_dos_regimenes(tmp_path, monkeypatch
     """
     for crit in (None, ("estructural", "tiempo")):
         monkeypatch.setattr(CKMMonitor, "_instance", None)
-        cm = CKMMonitor(min_texts=3, state_dir=tmp_path / f"_s{crit}",
+        cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / f"_s{crit}",
                         criterios_rebuild=crit)
         d = _disparos(cm)
         assert "estructural" not in {c for _, c in d}, f"con {crit}: {d}"
@@ -1093,7 +1115,7 @@ def test_poc_umbral_0_NO_es_peso_nulo(tmp_path, monkeypatch) -> None:
     Por eso "peso nulo" se implementa **sacando al criterio de la votación**.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=0, state_dir=tmp_path / "_cero")
+    cm = CKMMonitor(min_texts=0, rebuild_cada=0, min_devices_primer_w=1, state_dir=tmp_path / "_cero")
     d = _disparos(cm)
 
     assert {c for _, c in d} == {"volumen"}, (
@@ -1106,7 +1128,7 @@ def test_poc_umbral_0_NO_es_peso_nulo(tmp_path, monkeypatch) -> None:
 
     # y el camino correcto da lo contrario: el volumen desaparece
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm2 = CKMMonitor(min_texts=3, state_dir=tmp_path / "_nulo",
+    cm2 = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_nulo",
                      criterios_rebuild=("estructural", "tiempo"))
     d2 = _disparos(cm2)
     assert "volumen" not in {c for _, c in d2}
@@ -1119,7 +1141,7 @@ def test_poc_ningun_criterio_no_es_lo_mismo_que_el_default(tmp_path, monkeypatch
     ausencias de argumento distintas y **no se colapsan**.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    cm = CKMMonitor(min_texts=3, state_dir=tmp_path / "_nadie",
+    cm = CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_nadie",
                     criterios_rebuild=())
     d = _disparos(cm)
     assert d == [], f"con ningún criterio votando disparó algo: {d}"
@@ -1132,6 +1154,6 @@ def test_poc_un_criterio_desconocido_levanta(tmp_path, monkeypatch) -> None:
     """Un nombre mal escrito dejaría un criterio fuera **en silencio**."""
     monkeypatch.setattr(CKMMonitor, "_instance", None)
     with pytest.raises(ValueError, match="criterios_rebuild"):
-        CKMMonitor(min_texts=3, state_dir=tmp_path / "_mal",
+        CKMMonitor(min_texts=3, rebuild_cada=6, min_devices_primer_w=1, state_dir=tmp_path / "_mal",
                    criterios_rebuild=("volumen", "estrutural"))
     monkeypatch.setattr(CKMMonitor, "_instance", None)

@@ -54,7 +54,10 @@ def monitor(monkeypatch):
     import iap_chatroom.ckm_monitor as mod
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
     d = Path(tempfile.mkdtemp())
-    return mod.CKMMonitor(min_texts=5, state_dir=d), d
+    # `min_devices_primer_w=1`: estos tests son de los fixes del vivo 03 y
+    # publican con un solo device. La condición de **≥ 2 devices para el primer
+    # W** es de la Serie 2 y se mide en `test_serie2_caso0_cp1.py`.
+    return mod.CKMMonitor(min_texts=5, state_dir=d, min_devices_primer_w=1), d
 
 
 # ── F3a — el estado se puede aislar, y el default no cambia ────────────────
@@ -260,7 +263,10 @@ def test_el_endpoint_monitor_y_la_tool_devuelven_lo_mismo(monitor, monkeypatch) 
     cm, d = monitor
     for t in TEXTOS:
         cm.on_message(_Msg(t))
-    monkeypatch.setattr(api_routes, "ckm_monitor", cm)
+    # `api_routes` ya no tiene un `ckm_monitor` de módulo: desde el 18 oct
+    # pide el monitor cuando lo usa (CP1, agregado 1), así que lo que se
+    # reemplaza es esa función.
+    monkeypatch.setattr(api_routes, "_monitor", lambda: cm)
     monkeypatch.setattr(mcp_server, "ckm_monitor", cm)
 
     fn_t = getattr(mcp_server.get_monitor_state, "fn", mcp_server.get_monitor_state)

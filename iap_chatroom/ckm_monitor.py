@@ -107,7 +107,9 @@ from ckm_landscape_config import CKMlandscapeConfig  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
-from node_extractor import NodeExtractorService  # noqa: E402
+from calibrate import calibrate  # noqa: E402
+from landscape_engine import D_CKM_FORMA  # noqa: E402
+from node_extractor import MIN_DF, PERFIL_ES_EN, DECLARACION_REF  # noqa: E402
 
 from iap_chatroom.channel import ChatChannel  # noqa: E402
 
@@ -141,6 +143,36 @@ CAUSA_TIEMPO = "tiempo"
 # no bajándole el umbral.
 CRITERIOS_POR_DEFAULT = (CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN, CAUSA_TIEMPO)
 
+# ───────────────────────────────────────────────────────────────────────────
+# Serie 2 del canal IAP — la identificación y los parámetros de la tabla
+# (`docs/tasks/TASK_iap_serie2_caso0_v1.md`, CP1 (c) y (d)).
+#
+# **La Serie 2 no tiene nada que ver con la serie 1** (casos 0.4–0.15,
+# congelada en `process/iap_series_freeze_20261008/`): no se compara con ella,
+# no la continúa y no la reinterpreta. Por eso la identificación viaja en el
+# panel y en cada decisión registrada, y no se deduce de la fecha.
+SERIE = "S2"
+CASO = "S2-C0"
+
+# Los "parámetros sensatos mínimos" de la TASK. **Declarados, no calibrados.**
+# Cada uno con la razón por la que no es ridículo, que es todo lo que la TASK
+# les pide:
+#
+#   - `TOP_K = 20` y pool ×3: los ya declarados. Antes el canal usaba 32 — una
+#     tercera configuración, distinta de la del módulo y de la del paper.
+#   - `MIN_DF` sale de `node_extractor` (2): un nodo que aparece en un solo
+#     mensaje no co-ocurre con nada fuera de él.
+#   - `MIN_TEXTOS_PRIMER_W = 30` y `MIN_DEVICES_PRIMER_W = 2`: con 7–24 textos
+#     N_eff se mueve 3–34× más por la extracción que por el muestreo (CP-E), y
+#     una W de un solo device no es interacción.
+#   - `REBUILD_CADA = 10` mensajes: una W por mensaje no es sensato, y
+#     `min_texts*2` ataba el rebuild al umbral del primer W — con el 30, el
+#     rebuild habría sido cada 60 mensajes sin que nadie lo decidiera.
+TOP_K = 20
+MIN_TEXTOS_PRIMER_W = 30
+MIN_DEVICES_PRIMER_W = 2
+REBUILD_CADA = 10
+
 
 class CKMMonitor:
     _instance: "CKMMonitor | None" = None
@@ -151,8 +183,12 @@ class CKMMonitor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, min_texts: int = 3, state_dir: "str | Path | None" = None,
-                 criterios_rebuild: "tuple | None" = None) -> None:
+    def __init__(self, min_texts: int = MIN_TEXTOS_PRIMER_W,
+                 state_dir: "str | Path | None" = None,
+                 criterios_rebuild: "tuple | None" = None,
+                 serie: str = SERIE, caso: str = CASO,
+                 rebuild_cada: int = REBUILD_CADA,
+                 min_devices_primer_w: int = MIN_DEVICES_PRIMER_W) -> None:
         """
         `state_dir`: dónde viven `corpus_state.json`, `corpus_G_state.json` y
         `monitor_trajectory.jsonl`. **Default: el de siempre**
@@ -183,11 +219,15 @@ class CKMMonitor:
         self._decisiones_path = state / "rebuild_decisions.jsonl"
         self._rebuild_state_path = state / "rebuild_state.json"
 
-        self._extractor = NodeExtractorService(top_k=32)
+        # **El extractor muerto se fue** (CP1 (e), decisión de delamor del 15
+        # oct). Acá vivía `NodeExtractorService(top_k=32)`, construido y nunca
+        # usado: se leía como si alguien evaluara con `top_k=32`, y nadie lo
+        # hacía. En el camino vivo queda **un solo extractor**, el de
+        # `CorpusService`, que construye W y evalúa σ.
         self._corpus = CorpusService(
             storage_path=str(state / "corpus_state.json"),
-            min_texts=min_texts,  # default=3; configurable por el caller
-            top_k=32,
+            min_texts=min_texts,   # Serie 2: 30 — el primer W espera
+            top_k=TOP_K,           # Serie 2: 20, el declarado (antes 32)
             # rebuild suspendido también en vivo (delamor): W se construye
             # cuando el dato distingue y no se reconstruye por mensaje.
             rebuild_suspendido=True,
@@ -225,6 +265,17 @@ class CKMMonitor:
             coco_config={"track_landscape": True},
         )
         self._firma = FirmaService()
+
+        # Identificación de la Serie 2 (CP1 (d)). Viaja en el panel y en cada
+        # decisión de rebuild registrada.
+        self._serie = serie
+        self._caso = caso
+        # Cada cuántos mensajes nuevos vota el criterio de volumen. Antes era
+        # `min_texts*2`, que acoplaba el rebuild al umbral del primer W.
+        self._rebuild_cada = rebuild_cada
+        # Cuántos devices distintos tienen que haber aportado texto **antes**
+        # de que se construya la primera W.
+        self._min_devices_primer_w = min_devices_primer_w
 
         self._message_count = 0
         self._devices_seen: set[str] = set()
@@ -299,7 +350,21 @@ class CKMMonitor:
         signal = th.landscape_history() if th is not None else None
         sha_before = self._corpus.w_sha()
         if not es_system:
-            self._corpus.ingest([message.text], landscape_signal=signal)
+            # El device se cuenta **antes** de la ingesta: la condición del
+            # primer W mira cuántos devices aportaron texto, y este mensaje es
+            # uno de ellos. Contarlo después dejaría el W del mensaje 30
+            # decidido con el censo del 29.
+            self._devices_seen.add(message.device_id)
+            self._corpus.ingest(
+                [message.text],
+                landscape_signal=signal,
+                # **El primer W espera ≥ 30 mensajes de ≥ 2 devices** (tabla
+                # de la Serie 2). La cantidad la mira `CorpusService` con su
+                # `min_texts`; cuántos devices hay sólo lo sabe el canal.
+                habilitar_primer_W=(
+                    len(self._devices_seen) >= self._min_devices_primer_w
+                ),
+            )
         sha_after = self._corpus.w_sha()
 
         self._message_count += 1
@@ -309,8 +374,7 @@ class CKMMonitor:
         # pseudo-device del canal entraba como uno: en los dos vivos, con dos
         # devices que nunca publicaron, `n_agentes` dio **1** y ese 1 era el
         # canal. El canal no es un participante.
-        if not es_system:
-            self._devices_seen.add(message.device_id)
+        # (el alta de `_devices_seen` ya ocurrió arriba, antes de la ingesta)
 
         # rebuild real (_rebuild() corrió y cambió W) detectado por sha,
         # no un flag que ingest() no expone — reset del contador de ciclos.
@@ -363,10 +427,12 @@ class CKMMonitor:
                 and self._corpus.should_rebuild(self._d_ckm_history, n=3)):
             self._last_rebuild_causa = CAUSA_ESTRUCTURAL
         elif (CAUSA_VOLUMEN in vota
-                and self._textos_desde_rebuild >= self._corpus.min_texts * 2):
-            # **Por ciclo, no el total** (CP3). El umbral `2*min_texts` no se
-            # toca: su valor es calibración. Lo que cambia es **sobre qué se
-            # cuenta**.
+                and self._textos_desde_rebuild >= self._rebuild_cada):
+            # **Por ciclo, no el total** (CP3). El umbral es `rebuild_cada`
+            # —10 mensajes en la Serie 2— y **ya no es `2*min_texts`**: con el
+            # primer W esperando 30 mensajes, aquella fórmula habría puesto el
+            # rebuild cada 60 sin que nadie lo decidiera. Sigue siendo un valor
+            # declarado y no calibrado.
             self._last_rebuild_causa = CAUSA_VOLUMEN
         elif (CAUSA_TIEMPO in vota
                 and self._ciclos_sin_rebuild >= MAX_CICLOS):
@@ -381,7 +447,14 @@ class CKMMonitor:
         # ingesta; este no pasa por ahí.
         if self._last_rebuild_signal:
             sha_antes = self._corpus.w_sha()
-            st = self._corpus.rebuild_por_decision(self._last_rebuild_causa)
+            st = self._corpus.rebuild_por_decision(
+                self._last_rebuild_causa,
+                # **El mismo permiso que en la ingesta.** Sin esto, el criterio
+                # de volumen construía la primera W con un solo device.
+                habilitar_primer_W=(
+                    len(self._devices_seen) >= self._min_devices_primer_w
+                ),
+            )
             self._ultimo_rebuild = {
                 "causa": self._last_rebuild_causa,
                 "causal_event": (
@@ -405,16 +478,22 @@ class CKMMonitor:
                 # mensaje se midió contra la W **anterior** al salto, así que
                 # pertenece a la meseta que se cierra y no a la que nace.
                 self._d_ckm_history = []
-                # **Acá va `calibrate`** (`TASK_calibrate_mecanismo_v1`,
-                # confirmado). El punto existe y **no hace nada todavía**, y se
-                # declara así: dejarlo sin marca haría que mañana el lugar se
-                # buscara de nuevo.
-                self._punto_calibrate = {
-                    "existe": True,
-                    "implementado": False,
-                    "task": "TASK_calibrate_mecanismo_v1",
-                    "w_sha": self._corpus.w_sha(),
-                }
+                # ── `calibrate` CORRE ACÁ (CP1 (h) de la Serie 2) ────────
+                # Hasta el 18 oct este punto existía y **no hacía nada**
+                # (`"implementado": False`). Ahora: en cada rebuild se calibra
+                # sobre la W nueva y los umbrales que salgan son los que usa
+                # COCO **en el ciclo que nace**, no en el que se cierra —
+                # cambiarle el umbral a un COCO vivo lo volvería otro
+                # instrumento sin que el ciclo cambie.
+                #
+                # **Si no calibra, se ve que no calibró**: el registro entero
+                # va al panel y COCO sigue con lo que tenía, que puede ser el
+                # 0.40 del módulo. Lo que no pasa es que el 0.40 se presente
+                # como si alguien lo hubiera medido.
+                #
+                # Costo declarado: `n_runs` × los puntos de la grilla, un
+                # conteo de órbitas por punto, **por rebuild**.
+                self._punto_calibrate = self._calibrar(clock)
             # La decisión queda en el jsonl **haya movido W o no** (CP2b): el
             # caso que no la mueve es justamente el que `w_version` no registra.
             self._ultimo_rebuild["registro"] = self._registrar_decision(
@@ -424,6 +503,36 @@ class CKMMonitor:
         # El estado de la decisión, en cada mensaje: mismo mecanismo que el
         # `save()` de CorpusService, que también guarda en cada ingesta.
         self._guardar_rebuild_state()
+
+    def _calibrar(self, clock: "dict | None" = None) -> dict:
+        """
+        Corre `calibrate` sobre la W nueva y deja los umbrales para el COCO
+        que nace con el ciclo siguiente.
+
+        Devuelve lo que va al panel: el registro de `calibrate`
+        —`{valores, estado, condiciones}`— más de qué W salió y qué se hizo
+        con él. `estado` es uno de los tres de `calibrate.py`:
+        `calibrado` (separa), `no_calibrado` (corrió y no separa) o
+        `nulo_calibrado` (no se ejecutó, p. ej. sin W).
+
+        No instancia nada nuevo: usa `services/calibrate.py` donde está y le
+        pasa la W del corpus, que `calibrate` copia y no toca.
+        """
+        W = self._corpus.get_W()
+        registro = calibrate(W, w_sha=self._corpus.w_sha(), clock=clock)
+        self._monitor.fijar_umbrales_coco(registro.get("valores"), registro)
+        return {
+            "existe": True,
+            "implementado": True,
+            "task": "TASK_calibrate_mecanismo_v1",
+            "w_sha": self._corpus.w_sha(),
+            "estado": registro["estado"],
+            "valores": registro.get("valores") or {},
+            "condiciones": registro.get("condiciones"),
+            # Qué se hizo con el resultado: los umbrales entran en el COCO del
+            # ciclo SIGUIENTE, no en el que está corriendo.
+            "aplicado_a": "el COCO del proximo ciclo",
+        }
 
     def _cargar_rebuild_state(self) -> None:
         """
@@ -515,6 +624,10 @@ class CKMMonitor:
         """
         sha_despues = self._corpus.w_sha()
         reg = {
+            # La identificación va en **cada registro**, no sólo en el panel:
+            # un jsonl suelto tiene que decir de qué serie es (CP1 (d)).
+            "serie": self._serie,
+            "caso": self._caso,
             "t": self._n_decisiones,
             "ts": clock.get("t"),
             "tick": clock.get("tick"),
@@ -557,14 +670,60 @@ class CKMMonitor:
 
         corpus_status = "operational" if status["mode"] == "evaluation" else "accumulating"
 
+        # El bloque de COCO sale del panel de Monitor, que es quien lo tiene.
+        # Sin panel todavía —nadie evaluó— se dice así y no se inventa un
+        # "conectado: False", que diría otra cosa.
+        if self._last_panel is not None:
+            coco = self._last_panel.get("coco")
+        else:
+            coco = {"conectado": None,
+                    "motivo": "todavia no hubo ninguna evaluacion"}
+        tick = ChatChannel().tick()
+
         return {
+            # ── identificación (CP1 (d)) ──────────────────────────────────
+            # Va **primero y siempre**, aunque no haya nada medido: un panel
+            # suelto tiene que poder decir de qué serie y de qué caso es. La
+            # Serie 2 no se mezcla con la serie 1.
+            "serie": self._serie,
+            "caso": self._caso,
             "corpus_size": status["n_texts"],
             "n_nodes": status["n_nodes"],
             "message_count": self._message_count,
+            # D_ckm es **la forma por masas de cuenca** y la única que el panel
+            # de la Serie 2 lleva (CP1 (b)): 1 − ln N_eff / ln N_eff_0, con
+            # N_eff = 1/Σm². El **conteo de atractores no se reporta** acá ni
+            # como D_ckm ni como medida del campo.
             "D_ckm": d_ckm,
+            "D_ckm_forma": D_CKM_FORMA,
             "temp_signal": temp_signal,
+            # El bloque de COCO: la conexión, comprobable durante el caso.
+            "coco": coco,
+            # ── el reloj del canal, en el panel (CP1 (f)) ─────────────────
+            # Se lee con `tick()`, que **deriva el tick del reloj y no lo
+            # registra**: mirar el panel no puede dejar una entrada en el log
+            # de ticks observados, que es de los devices.
+            "tick": tick,
             "n_agentes": len(self._devices_seen),
             "corpus_status": corpus_status,
+            # ── los parámetros declarados de la extracción (CP1 (c)) ──────
+            # En el panel para que una corrida no haya que reconstruirla desde
+            # el código que la corrió. Son valores **declarados, no
+            # calibrados**.
+            "parametros": {
+                "top_k": TOP_K,
+                "min_df": MIN_DF,
+                "pool": TOP_K * 3,
+                "n_stopwords": len(PERFIL_ES_EN.stopwords),
+                "ngram_max": 2,
+                "min_textos_primer_W": self._corpus.min_texts,
+                "min_devices_primer_W": self._min_devices_primer_w,
+                "rebuild_cada": self._rebuild_cada,
+                "n_runs": self._landscape_config.n_runs,
+                "unidad": "el mensaje",
+                "system_al_corpus": False,
+                "declaracion": DECLARACION_REF,
+            },
             # **Dónde está escribiendo esto.** Va al panel para que cada vivo
             # deje dicho dónde escribió, y no haya que deducirlo del comando
             # que lo lanzó (delamor/Opus, fix 2). El vivo 02 acumuló estado

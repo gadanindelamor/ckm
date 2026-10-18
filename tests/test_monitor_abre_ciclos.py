@@ -46,7 +46,13 @@ PROMPT = "gun control laws reduce violence"
 @pytest.fixture
 def corpus(tmp_path) -> CorpusService:
     """rebuild_suspendido=False: cada ingest posterior reconstruye W."""
-    c = CorpusService(storage_path=str(tmp_path / "corpus.json"), min_texts=5, top_k=10)
+    # `min_df=1` declarado (v2, 18 oct): lo que este archivo mide es **quién
+    # abre los ciclos**, no la extracción. Con el `min_df = 2` de la
+    # declaración, estos 5 textos dejan 3 nodos y N cambia al ingerir los
+    # nuevos, con lo cual la causa del ciclo sería "N" y no "W_distinta": el
+    # test dejaría de probar lo que dice.
+    c = CorpusService(storage_path=str(tmp_path / "corpus.json"), min_texts=5,
+                      top_k=10, min_df=1)
     c.ingest(TEXTS)
     assert c.mode == "evaluation"
     return c
@@ -250,7 +256,9 @@ def test_el_canal_construye_la_config_sin_W_y_sin_theta_W(tmp_path, monkeypatch)
 
     monkeypatch.setattr(mod, "_STATE_DIR", tmp_path)
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
-    cm = mod.CKMMonitor(min_texts=5)
+    # Un solo device publica: la condición de ≥ 2 devices para el primer W es
+    # de la Serie 2 y se mide en su propio archivo.
+    cm = mod.CKMMonitor(min_texts=5, min_devices_primer_w=1)
 
     cfg = cm._landscape_config
     assert cfg.sampling_mode == "uniform"
@@ -279,7 +287,7 @@ def test_el_canal_abre_el_bootstrap_y_con_rebuild_suspendido_no_abre_mas(
 
     monkeypatch.setattr(mod, "_STATE_DIR", tmp_path)
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
-    cm = mod.CKMMonitor(min_texts=5)
+    cm = mod.CKMMonitor(min_texts=5, min_devices_primer_w=1)
     cfg = cm._landscape_config
 
     @dataclass
@@ -287,7 +295,18 @@ def test_el_canal_abre_el_bootstrap_y_con_rebuild_suspendido_no_abre_mas(
         text: str
         device_id: str = "d1"
 
-    for texto in TEXTS:                          # 5 mensajes: cruza min_texts
+    # **Textos con vocabulario compartido**, porque acá el corpus lo construye
+    # el canal con su `min_df = 2` declarado y no hay dónde bajarlo: con los
+    # TEXTS de arriba —cada término en un solo texto— no habría nodos, no
+    # habría W y no habría ciclo que mirar.
+    textos_del_canal = [
+        "gun control reduces gun violence and saves lives",
+        "gun control does reduce gun violence at all",
+        "gun control checks prevent criminals from buying weapons",
+        "assault weapons bans reduce gun violence and mass shootings",
+        "gun rights and weapons rights are constitutional rights",
+    ]
+    for texto in textos_del_canal:               # 5 mensajes: cruza min_texts
         cm.on_message(_Msg(text=texto))
     assert len(cfg.ciclos) == 1
     assert cfg.ciclos[0].causa == CAUSA_BOOTSTRAP
@@ -301,7 +320,7 @@ def test_el_canal_abre_el_bootstrap_y_con_rebuild_suspendido_no_abre_mas(
     # abre ciclo. Toca un privado del corpus a propósito: es la única forma
     # de ejercitar D4 en el canal sin cambiar su configuración declarada.
     cm._corpus._rebuild_suspendido = False
-    cm.on_message(_Msg(text="red flag laws remove weapons from dangerous people"))
+    cm.on_message(_Msg(text="red flag laws remove gun weapons from violence"))
 
     assert len(cfg.ciclos) == 2, "el canal no abrió ciclo tras un rebuild real"
     assert cfg.ciclos[1].causa in (*CAUSAS_MONITOR, "W_distinta")

@@ -10,6 +10,8 @@ Leí el REPORTE del CP1 (`10a6bf1`). Confirmo tus decisiones: **`min_df = 2` def
 - *"No se instancian procesos nuevos"* se refería a **la regla CKM TRUST**: no se instancia en procesos nuevos; `calibrate` y `criterio_local`, que ya la instancian, siguen como están.
 - **No más rótulos en español.** Lo nuevo, en inglés. Y si es sencillo, **refactor con el cambio de nombre declarado**, sin alias: `criterio_local` → `local_criterion` (`CriterioLocal` → `LocalCriterion`, `UmbralesCriterioLocal` → `LocalCriterionThresholds`), `arranque` → `startup`. Lo que describe corridas pasadas y está congelado (como `experiments/vivo_03_*` si corresponde) se declara, no se reescribe; vos decidís y lo decís.
 
-**Orden:** (1) el reordenamiento de `calibrate`; (2) los dos renombres, en commits propios; (3) **el CP1b** como está en la TASK (medir D_ckm dentro de un ciclo con la escala actual de Δ_r y alternativas, y con las dos combinaciones, la de Monitor y la de COCO). **Agregado:** medí también **cuánto tarda `calibrate` en el salto** con la W del canal. Predicción antes, REPORTE y **A1.PAUSA**. No se elige escala: se mide.
+- **Las claves del panel que nacieron en el CP1** (`coco`: `conectado`, `umbrales`, `calibracion`, `disparos`, etc., y las de la tabla y la identificación S2) **pasan a inglés ahora**, antes del vivo. Declarado, sin alias.
+
+**Orden:** (1) el reordenamiento de `calibrate`; (2) los dos renombres y las claves del panel en inglés, en commits propios; (3) **el CP1b** como está en la TASK (medir D_ckm dentro de un ciclo con la escala actual de Δ_r y alternativas, y con las dos combinaciones, la de Monitor y la de COCO). **Agregado:** medí también **cuánto tarda `calibrate` en el salto** con la W del canal. Predicción antes, REPORTE y **A1.PAUSA**. No se elige escala: se mide.
 
 Reglas de siempre: archivos nombrados uno por uno, sin `git add -A`; sin regresiones ni compatibilidad hacia atrás; no se ejecuta código ajeno; donde se duda, A1.PAUSA.

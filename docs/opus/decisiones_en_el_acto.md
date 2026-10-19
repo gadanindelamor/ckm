@@ -161,4 +161,5 @@
 ### 19 oct (noche) — escala de Δ_r, tras el CP1b (`d15ba96`)
 - **`calibrate` en el salto: 68 ms → sin sombra para S2-C0** (delamor: "4 ok"). La sombra sigue como propuesta.
 - **Δ_r no se normaliza por max Δ_r** (delamor: *"no normalizar. eso decido"*). Motivo leído en el CP1b: con `/max Δ_r` el D_ckm de Monitor no acumula dentro del ciclo; cuenta pares distintos, no cuánto se rechazó.
-- **Abierto (pregunta de Opus):** sin `/max`, ¿W + Δ_r crudo (lo de COCO, medido: −1,63 con repetición) o W + Δ_r · media(W>0) (no medido)? ¿Y Monitor y COCO pasan a la misma escala?
+- **Precisado** (delamor): *"Normalizar hace que con la escala de Monitor D_ckm no acumule: cuando max Δ_r crece, todo se re-escala y el rechazo nuevo no suma."* La normalización **cancela la acumulación**. Queda **W + Δ_r**, sin `/max` y sin factor de W (Opus retiró la variante Δ_r · media(W>0): *"¿de nuevo con las cancelaciones matemáticas?"*).
+- **Consecuencia, a confirmar por delamor:** Monitor pasa a la escala de COCO; con la misma W y los mismos rechazos, las dos dan la misma W_eff. **Antes de tocar código:** leer en `coco.py` si COCO dispara cuando D_ckm < 0 (con W + Δ_r y rechazos repetidos, D_ckm se fue a −1,63 en el CP1b).

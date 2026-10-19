@@ -147,4 +147,9 @@
 - **Revisión de criterios de normalización** (`revision_criterios_normalizacion_15oct2026.md`; delamor, 15 oct: *"1 y 3 confirmo, 4 también"*): (1) la escala de Δ_r se **mide antes del vivo** (CP1b de la Serie 2; se mide, no se elige); (3) β_c y su μ_W se muestran en el bloque `coco`, con β_c = ∞ visible si μ_W ≤ 0; (4) lo demás se declara en la declaración v2 y queda. La ponderación de impacto es para poner foco, no verdad (*"acepto que sea 0,003 % confiable"*).
 - **TASK Serie 2, lo abierto** (delamor, 15 oct): D_ckm **ya es** la forma por masas, implementado (*"todo lo que leas de D_ckm es masas de cuencas; el paper no se ha enterado aún"*); devices mínimo 2; **con filtro de llamadas** (costo) y el piso según la duración. La consigna, abierta: *"orientada a que se generen textos para el cambio de fase accumulate → evaluate"*.
 
-*Última actualización: 15 oct 2026.*
+## 19 oct 2026
+- **S2-C0 CP1 (Code, `9414157`…`b3fdfb9`)** — dos decisiones de Code confirmadas por delamor: (1) **`min_df = 2` es default de CKM**, no sólo del canal (*"está declarado en la v2 y es la tabla que acordamos — confirmo"*); (2) **el estado del caso queda en la carpeta que propuso Code** (`experiments/_state_S2-C0/`), **no en `registers/`**.
+- **Coordinar REG, BANDEJA y decisiones** (delamor, 19 oct): *"los regs y la bandeja de Code y las decisiones hay que coordinarlos, ya que el mecanismo evolucionó por disponer de más herramientas"*. Pendiente; sin diseño todavía.
+- **`calibrate` y la sombra** (delamor, 18–19 oct): *"nada se descarta: W sombra se guarda"*; calibrar en la meseta es optimización y no cambia el resultado (calibrate es determinista dado W y semilla), **pero** hoy `calibrate` corre en el salto, en el mismo hilo del mensaje: mientras calibra, el canal no atiende (el mundo espera). delamor: *"calibrate debe ejecutarse antes de finalizar el ciclo i, no al inicio del ciclo i+1"*. Verificado por Opus: los umbrales que usa el COCO de i+1 se calibran sobre W_{i+1} (no hay W vieja); lo que está mal es **cuándo**. Paso siguiente: medir cuánto tarda en el salto.
+
+*Última actualización: 19 oct 2026.*

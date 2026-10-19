@@ -149,12 +149,12 @@ class CorpusService:
     # ------------------------------------------------------------------
 
     def ingest(self, texts: List[str], landscape_signal: Optional[list] = None,
-               habilitar_primer_W: bool = True) -> dict:
+               allow_first_W: bool = True) -> dict:
         """
         Agrega textos al corpus. Reconstruye W si hay suficientes datos.
         Devuelve estado actual.
 
-        `habilitar_primer_W=False` **acumula y no construye la primera W**,
+        `allow_first_W=False` **acumula y no construye la primera W**,
         aunque haya textos de sobra. Existe porque la condición del primer W
         de la Serie 2 no es sólo de cantidad: son **≥ 30 mensajes de ≥ 2
         devices**, y cuántos devices hay es algo que CorpusService no sabe ni
@@ -166,7 +166,7 @@ class CorpusService:
         if landscape_signal is not None:
             self._last_landscape_signal = landscape_signal
         if len(self._texts) >= self.min_texts:
-            if self._W is None and not habilitar_primer_W:
+            if self._W is None and not allow_first_W:
                 pass          # acumula; la primera W todavía no tiene permiso
             elif not (self._rebuild_suspendido and self._W is not None):
                 self._rebuild()
@@ -382,7 +382,7 @@ class CorpusService:
         except ValueError:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
-    def motivo_no_rebuild(self, habilitar_primer_W: bool = True) -> Optional[str]:
+    def no_rebuild_reason(self, allow_first_W: bool = True) -> Optional[str]:
         """
         Por qué un rebuild por decisión **no** ocurriría ahora, o `None` si
         ocurriría.
@@ -394,12 +394,12 @@ class CorpusService:
         """
         if len(self._texts) < self.min_texts:
             return "corpus_en_acumulacion"
-        if self._W is None and not habilitar_primer_W:
+        if self._W is None and not allow_first_W:
             return "primer_W_no_habilitado"
         return None
 
     def rebuild_por_decision(self, causa: str,
-                             habilitar_primer_W: bool = True) -> dict:
+                             allow_first_W: bool = True) -> dict:
         """
         Rebuild **por decisión**, no por ingesta. Devuelve `status()`.
 
@@ -416,7 +416,7 @@ class CorpusService:
         se construye al cruzar `min_texts`, como hoy. Devolver un status normal
         acá haría que un rebuild que no ocurrió se viera igual que uno que sí.
 
-        `habilitar_primer_W=False` **también frena acá**, y es el mismo permiso
+        `allow_first_W=False` **también frena acá**, y es el mismo permiso
         que en `ingest`. Sin esto la condición del primer W se podía saltear
         por la puerta de al lado: con 40 mensajes de **un solo** device el
         criterio de volumen disparaba, `rebuild_por_decision` sólo miraba la
@@ -427,7 +427,7 @@ class CorpusService:
                 "rebuild_por_decision necesita una causa declarada: un rebuild "
                 "sin causa no es una decisión"
             )
-        motivo = self.motivo_no_rebuild(habilitar_primer_W)
+        motivo = self.no_rebuild_reason(allow_first_W)
         if motivo is not None:
             st = self.status()
             st["rebuild"] = False
@@ -441,7 +441,7 @@ class CorpusService:
         st["causa"] = causa
         return st
 
-    def _calcular(self) -> Optional[Tuple[List[str], "np.ndarray", Dict]]:
+    def _compute(self) -> Optional[Tuple[List[str], "np.ndarray", Dict]]:
         """
         **Calcula la W que el próximo rebuild instalaría, sin instalar nada.**
 
@@ -506,7 +506,7 @@ class CorpusService:
         np.fill_diagonal(W, 0.0)
         return nodes, W, result
 
-    def W_candidata(self) -> Optional["np.ndarray"]:
+    def candidate_W(self) -> Optional["np.ndarray"]:
         """
         La W que el próximo rebuild instalaría. **Copia; la vigente no se
         toca.** `None` si la extracción no daría nodos.
@@ -516,7 +516,7 @@ class CorpusService:
         declarado acá en vez de escondido: el cálculo es determinista, así que
         las dos dan la misma W; lo que se paga es hacerla dos veces.
         """
-        calculada = self._calcular()
+        calculada = self._compute()
         if calculada is None:
             return None
         return calculada[1].copy()
@@ -530,7 +530,7 @@ class CorpusService:
         llega sólo desde `rebuild_por_decision`. Sin ella el `causal_event` es
         el de siempre, así que el rebuild por ingesta no cambia de marca.
         """
-        calculada = self._calcular()
+        calculada = self._compute()
         if calculada is None:
             return
         nodes, W, result = calculada

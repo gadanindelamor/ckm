@@ -54,10 +54,10 @@ def monitor(monkeypatch):
     import iap_chatroom.ckm_monitor as mod
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
     d = Path(tempfile.mkdtemp())
-    # `min_devices_primer_w=1`: estos tests son de los fixes del vivo 03 y
+    # `min_devices_first_w=1`: estos tests son de los fixes del vivo 03 y
     # publican con un solo device. La condición de **≥ 2 devices para el primer
     # W** es de la Serie 2 y se mide en `test_serie2_caso0_cp1.py`.
-    return mod.CKMMonitor(min_texts=5, state_dir=d, min_devices_primer_w=1), d
+    return mod.CKMMonitor(min_texts=5, state_dir=d, min_devices_first_w=1), d
 
 
 # ── F3a — el estado se puede aislar, y el default no cambia ────────────────

@@ -258,7 +258,7 @@ def test_el_canal_construye_la_config_sin_W_y_sin_theta_W(tmp_path, monkeypatch)
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
     # Un solo device publica: la condición de ≥ 2 devices para el primer W es
     # de la Serie 2 y se mide en su propio archivo.
-    cm = mod.CKMMonitor(min_texts=5, min_devices_primer_w=1)
+    cm = mod.CKMMonitor(min_texts=5, min_devices_first_w=1)
 
     cfg = cm._landscape_config
     assert cfg.sampling_mode == "uniform"
@@ -287,7 +287,7 @@ def test_el_canal_abre_el_bootstrap_y_con_rebuild_suspendido_no_abre_mas(
 
     monkeypatch.setattr(mod, "_STATE_DIR", tmp_path)
     monkeypatch.setattr(mod.CKMMonitor, "_instance", None)
-    cm = mod.CKMMonitor(min_texts=5, min_devices_primer_w=1)
+    cm = mod.CKMMonitor(min_texts=5, min_devices_first_w=1)
     cfg = cm._landscape_config
 
     @dataclass

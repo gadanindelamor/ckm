@@ -43,7 +43,7 @@ DECISION_UNKNOWN = "UNKNOWN"
 # decidió callar—, no es UNKNOWN —el provider no se cayó— y no es SKIP —el
 # filtro no lo frenó—: es que la oportunidad se terminó. Lo que no hizo, no lo
 # hizo.
-DECISION_FIN_DEL_CASO = "FIN_DEL_CASO"
+DECISION_END_OF_CASE = "END_OF_CASE"
 
 # Atributos donde los SDK suelen poner el código HTTP. **Se miran primero**:
 # un 429 en `status_code` es un dato, no una coincidencia de texto.
@@ -241,7 +241,7 @@ class AutonomousDevice:
         self._se_fue: bool = False
         # True si el caso venció con el device adentro de una vuelta. Es
         # distinto de `_se_fue`, que es irse **por decisión propia**.
-        self._cortado_por_fin_del_caso: bool = False
+        self._cut_by_end_of_case: bool = False
         # Inicio y fin del run, para el ritmo OBSERVADO (F5). None hasta que
         # corra: sin corrida no hay ritmo que medir, y eso es UNKNOWN, no 0.
         self._t_inicio: Optional[float] = None
@@ -516,11 +516,12 @@ class AutonomousDevice:
         Fase A del ciclo ODA. Cada decisión tiene su primitiva del canal.
 
         **Devuelve qué pasó con la acción** (condición 4, *"las decisiones
-        tienen consecuencia"*): `{"tick_accion", "resultado"}`. El tick de la
+        tienen consecuencia"*): `{"tick_action", "result"}`. El tick de la
         acción se lee **en el momento de actuar**, no cuando se observó: entre
         las dos cosas el mundo siguió, y si la acción cae en otro contexto eso
-        tiene que verse. `resultado` dice `publicado`, `no_ocurrio: <motivo>`
-        o `sin_accion` — las tres son distintas y ninguna se infiere de la
+        tiene que verse. `action_result` dice `published`,
+        `did_not_happen: <reason>` o `no_action` — las tres son distintas y
+        ninguna se infiere de la
         decisión.
 
         OP_SILENCE: no actúa en esta vuelta. Sin anuncio, sin log en el corpus
@@ -544,7 +545,7 @@ class AutonomousDevice:
             # No hubo decisión. UNKNOWN no autoriza ninguna acción, y se
             # distingue de OP_SILENCE en la traza.
             self._log(DECISION_UNKNOWN, field_state)
-            return {"tick_accion": None, "resultado": "sin_accion"}
+            return {"tick_action": None, "result": "no_action"}
 
         if decision == DECISION_SKIP:
             # **El filtro no llamó: no hay decisión y no hay acción.** Va antes
@@ -556,18 +557,18 @@ class AutonomousDevice:
             # INTERACT, porque `_decide` manda cualquier palabra desconocida a
             # UNKNOWN. Pero es el mecanismo, y queda reportado.
             self._log(DECISION_SKIP, field_state)
-            return {"tick_accion": None, "resultado": "sin_accion"}
+            return {"tick_action": None, "result": "no_action"}
 
         if decision == "OP_SILENCE":
             self._log("OP_SILENCE", field_state)
-            return {"tick_accion": None, "resultado": "sin_accion"}
+            return {"tick_action": None, "result": "no_action"}
 
         if decision == "LEAVE":
-            tick_accion = await self._tick_ahora(client)
+            tick_action = await self._tick_now(client)
             await client.call_tool("leave_channel", {"device_id": self.device_id})
             self._se_fue = True
             self._log("LEAVE", field_state)
-            return {"tick_accion": tick_accion, "resultado": "se_fue"}
+            return {"tick_action": tick_action, "result": "left"}
 
         if decision != "INTERACT":
             # **Publicar exige INTERACT explicito** (Opus, 9 oct). Antes esta
@@ -581,18 +582,18 @@ class AutonomousDevice:
             # Una decision que no se reconoce **no autoriza nada** y se
             # registra como UNKNOWN, igual que la que no existio.
             self._log(DECISION_UNKNOWN, field_state)
-            return {"tick_accion": None, "resultado": "sin_accion"}
+            return {"tick_action": None, "result": "no_action"}
 
         text = await self._generate()
         if text is None:
             # El provider falló al generar: la decisión fue INTERACT pero no
             # hay qué publicar. Queda registrado, y no se publica nada.
             self._log("INTERACT_SIN_TEXTO", field_state)
-            return {"tick_accion": None,
-                    "resultado": "no_ocurrio: sin texto que publicar"}
+            return {"tick_action": None,
+                    "result": "did_not_happen: nothing to publish"}
         # El tick **del momento de actuar**: entre la observación y esto, el
         # device pudo tardar lo que quisiera decidiendo, y el mundo siguió.
-        tick_accion = await self._tick_ahora(client)
+        tick_action = await self._tick_now(client)
         r = await client.call_tool(
             "send_message", {"device_id": self.device_id, "text": text}
         )
@@ -601,16 +602,16 @@ class AutonomousDevice:
         # historial: la acción no ocurrió, y eso se registra.
         datos = getattr(r, "data", None) or {}
         if datos.get("ok") is False:
-            self._log("INTERACT_RECHAZADO", field_state)
-            return {"tick_accion": tick_accion,
-                    "resultado": f"no_ocurrio: {datos.get('motivo')}"}
+            self._log("INTERACT_REJECTED", field_state)
+            return {"tick_action": tick_action,
+                    "result": f"did_not_happen: {datos.get('reason')}"}
         self._history.append(
             {"device_id": self.device_id, "device_type": "AI", "text": text}
         )
         self._log("INTERACT", field_state)
-        return {"tick_accion": tick_accion, "resultado": "publicado"}
+        return {"tick_action": tick_action, "result": "published"}
 
-    async def _tick_ahora(self, client: Client) -> "int | None":
+    async def _tick_now(self, client: Client) -> "int | None":
         """
         El tick del canal **en el momento de actuar**.
 
@@ -707,7 +708,7 @@ class AutonomousDevice:
                 tick_observacion = self._tick_anterior
                 try:
                     since = await asyncio.wait_for(
-                        self._una_vuelta(client, vuelta, since), timeout=restante
+                        self._one_turn(client, vuelta, since), timeout=restante
                     )
                 except asyncio.TimeoutError:
                     # **Venció el caso con el device adentro de la vuelta.**
@@ -717,13 +718,13 @@ class AutonomousDevice:
                     self._decisiones.append({
                         "vuelta": vuelta,
                         "tick": tick_observacion,
-                        "decision": DECISION_FIN_DEL_CASO,
+                        "decision": DECISION_END_OF_CASE,
                         "trigger_mode": self.trigger_mode,
-                        "resultado_accion": "no_ocurrio: vencio el caso",
-                        "tick_observacion": tick_observacion,
-                        "tick_accion": None,
+                        "action_result": "did_not_happen: end of case",
+                        "tick_observation": tick_observacion,
+                        "tick_action": None,
                     })
-                    self._cortado_por_fin_del_caso = True
+                    self._cut_by_end_of_case = True
                     break
 
                 if self._se_fue:
@@ -740,7 +741,7 @@ class AutonomousDevice:
                 assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
 
 
-    async def _una_vuelta(self, client, vuelta: int, since):
+    async def _one_turn(self, client, vuelta: int, since):
         """
         **Una vuelta entera del ODA**, de la observación a la acción.
 
@@ -850,7 +851,7 @@ class AutonomousDevice:
                 reg["decision"] = decision
 
         # (5) A — la primitiva que corresponda, o ninguna
-        accion = await self._interact(client, decision, observation)
+        action = await self._interact(client, decision, observation)
 
         self._decisiones.append({
             "vuelta": vuelta,
@@ -860,9 +861,9 @@ class AutonomousDevice:
             # cuando no hubo acción; que sea mayor que `tick_observacion` es
             # el caso que importa — el device actuó sobre un mundo que ya no
             # es el que observó, y eso no se esconde.
-            "tick_observacion": clock.get("tick"),
-            "tick_accion": accion.get("tick_accion") if accion else None,
-            "resultado_accion": accion.get("resultado") if accion else None,
+            "tick_observation": clock.get("tick"),
+            "tick_action": action.get("tick_action") if action else None,
+            "action_result": action.get("result") if action else None,
             "tick_anterior": self._tick_anterior,
             "reloj": clock.get("reloj"),
             "n_nuevos": len(nuevos),
@@ -1067,6 +1068,9 @@ class AutonomousDevice:
         umb = self.local_criterion.umbrales
         skips = [r for r in regs if not r["llamar"]]
         return {
+            # **Claves heredadas del CP2b**, no del CP1 de S2-C0: quedan en
+            # castellano hasta que se toque el criterio local. Pasarlas acá
+            # sería renombrar el panel de otro módulo desde afuera.
             "calibrado": umb.calibrado,
             "umbrales": {
                 "dt_minimo_s": umb.dt_minimo_s,

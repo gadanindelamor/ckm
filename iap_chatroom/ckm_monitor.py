@@ -153,8 +153,8 @@ CRITERIOS_POR_DEFAULT = (CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN, CAUSA_TIEMPO)
 # congelada en `process/iap_series_freeze_20261008/`): no se compara con ella,
 # no la continúa y no la reinterpreta. Por eso la identificación viaja en el
 # panel y en cada decisión registrada, y no se deduce de la fecha.
-SERIE = "S2"
-CASO = "S2-C0"
+SERIES = "S2"
+CASE = "S2-C0"
 
 # Los "parámetros sensatos mínimos" de la TASK. **Declarados, no calibrados.**
 # Cada uno con la razón por la que no es ridículo, que es todo lo que la TASK
@@ -164,16 +164,16 @@ CASO = "S2-C0"
 #     tercera configuración, distinta de la del módulo y de la del paper.
 #   - `MIN_DF` sale de `node_extractor` (2): un nodo que aparece en un solo
 #     mensaje no co-ocurre con nada fuera de él.
-#   - `MIN_TEXTOS_PRIMER_W = 30` y `MIN_DEVICES_PRIMER_W = 2`: con 7–24 textos
+#   - `MIN_TEXTS_FIRST_W = 30` y `MIN_DEVICES_FIRST_W = 2`: con 7–24 textos
 #     N_eff se mueve 3–34× más por la extracción que por el muestreo (CP-E), y
 #     una W de un solo device no es interacción.
-#   - `REBUILD_CADA = 10` mensajes: una W por mensaje no es sensato, y
+#   - `REBUILD_EVERY = 10` mensajes: una W por mensaje no es sensato, y
 #     `min_texts*2` ataba el rebuild al umbral del primer W — con el 30, el
 #     rebuild habría sido cada 60 mensajes sin que nadie lo decidiera.
 TOP_K = 20
-MIN_TEXTOS_PRIMER_W = 30
-MIN_DEVICES_PRIMER_W = 2
-REBUILD_CADA = 10
+MIN_TEXTS_FIRST_W = 30
+MIN_DEVICES_FIRST_W = 2
+REBUILD_EVERY = 10
 
 
 class CKMMonitor:
@@ -185,12 +185,12 @@ class CKMMonitor:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, min_texts: int = MIN_TEXTOS_PRIMER_W,
+    def __init__(self, min_texts: int = MIN_TEXTS_FIRST_W,
                  state_dir: "str | Path | None" = None,
                  criterios_rebuild: "tuple | None" = None,
-                 serie: str = SERIE, caso: str = CASO,
-                 rebuild_cada: int = REBUILD_CADA,
-                 min_devices_primer_w: int = MIN_DEVICES_PRIMER_W) -> None:
+                 series: str = SERIES, case: str = CASE,
+                 rebuild_every: int = REBUILD_EVERY,
+                 min_devices_first_w: int = MIN_DEVICES_FIRST_W) -> None:
         """
         `state_dir`: dónde viven `corpus_state.json`, `corpus_G_state.json` y
         `monitor_trajectory.jsonl`. **Default: el de siempre**
@@ -270,14 +270,14 @@ class CKMMonitor:
 
         # Identificación de la Serie 2 (CP1 (d)). Viaja en el panel y en cada
         # decisión de rebuild registrada.
-        self._serie = serie
-        self._caso = caso
+        self._series = series
+        self._case = case
         # Cada cuántos mensajes nuevos vota el criterio de volumen. Antes era
         # `min_texts*2`, que acoplaba el rebuild al umbral del primer W.
-        self._rebuild_cada = rebuild_cada
+        self._rebuild_every = rebuild_every
         # Cuántos devices distintos tienen que haber aportado texto **antes**
         # de que se construya la primera W.
-        self._min_devices_primer_w = min_devices_primer_w
+        self._min_devices_first_w = min_devices_first_w
 
         self._message_count = 0
         self._devices_seen: set[str] = set()
@@ -363,8 +363,8 @@ class CKMMonitor:
                 # **El primer W espera ≥ 30 mensajes de ≥ 2 devices** (tabla
                 # de la Serie 2). La cantidad la mira `CorpusService` con su
                 # `min_texts`; cuántos devices hay sólo lo sabe el canal.
-                habilitar_primer_W=(
-                    len(self._devices_seen) >= self._min_devices_primer_w
+                allow_first_W=(
+                    len(self._devices_seen) >= self._min_devices_first_w
                 ),
             )
         sha_after = self._corpus.w_sha()
@@ -429,7 +429,7 @@ class CKMMonitor:
                 and self._corpus.should_rebuild(self._d_ckm_history, n=3)):
             self._last_rebuild_causa = CAUSA_ESTRUCTURAL
         elif (CAUSA_VOLUMEN in vota
-                and self._textos_desde_rebuild >= self._rebuild_cada):
+                and self._textos_desde_rebuild >= self._rebuild_every):
             # **Por ciclo, no el total** (CP3). El umbral es `rebuild_cada`
             # —10 mensajes en la Serie 2— y **ya no es `2*min_texts`**: con el
             # primer W esperando 30 mensajes, aquella fórmula habría puesto el
@@ -449,16 +449,16 @@ class CKMMonitor:
         # ingesta; este no pasa por ahí.
         if self._last_rebuild_signal:
             sha_antes = self._corpus.w_sha()
-            permiso_primer_w = (
-                len(self._devices_seen) >= self._min_devices_primer_w
+            allow_first_w = (
+                len(self._devices_seen) >= self._min_devices_first_w
             )
             # ── `calibrate`, ANTES del rebuild (delamor, 19 oct) ───────────
             # Sólo si el rebuild va a ocurrir: calibrar una W que no se va a
             # instalar sería calibrar contra nada. El motivo lo da el corpus,
             # que es quien tiene la condición.
-            motivo = self._corpus.motivo_no_rebuild(permiso_primer_w)
-            if motivo is None:
-                self._punto_calibrate = self._calibrar(clock)
+            reason = self._corpus.no_rebuild_reason(allow_first_w)
+            if reason is None:
+                self._punto_calibrate = self._calibrate(clock)
             else:
                 # **No se calibró, y se ve por qué.** No es "calibró y no
                 # separó" (`no_calibrado`): es que no hubo salto que calibrar.
@@ -466,16 +466,16 @@ class CKMMonitor:
                     "existe": True,
                     "implementado": True,
                     "task": "TASK_calibrate_mecanismo_v1",
-                    "estado": NULO_CALIBRADO,
-                    "valores": {},
-                    "motivo": motivo,
-                    "momento": "antes del rebuild, sobre la W candidata",
+                    "state": NULO_CALIBRADO,
+                    "values": {},
+                    "reason": reason,
+                    "moment": "antes del rebuild, sobre la W candidata",
                 }
             st = self._corpus.rebuild_por_decision(
                 self._last_rebuild_causa,
                 # **El mismo permiso que en la ingesta.** Sin esto, el criterio
                 # de volumen construía la primera W con un solo device.
-                habilitar_primer_W=permiso_primer_w,
+                allow_first_W=allow_first_w,
             )
             self._ultimo_rebuild = {
                 "causa": self._last_rebuild_causa,
@@ -514,7 +514,7 @@ class CKMMonitor:
         # `save()` de CorpusService, que también guarda en cada ingesta.
         self._guardar_rebuild_state()
 
-    def _calibrar(self, clock: "dict | None" = None) -> dict:
+    def _calibrate(self, clock: "dict | None" = None) -> dict:
         """
         Corre `calibrate` **sobre la W candidata, antes de instalarla**, y deja
         los umbrales para el COCO que nace con el ciclo siguiente.
@@ -549,10 +549,10 @@ class CKMMonitor:
         """
         t0 = time.monotonic()
         sha_vigente = self._corpus.w_sha()
-        W = self._corpus.W_candidata()
+        W = self._corpus.candidate_W()
         sha_candidata = sha256_W(W) if W is not None else None
         registro = calibrate(W, w_sha=sha_candidata, clock=clock)
-        self._monitor.fijar_umbrales_coco(registro.get("valores"), registro)
+        self._monitor.set_coco_thresholds(registro.get("valores"), registro)
         return {
             "existe": True,
             "implementado": True,
@@ -562,19 +562,19 @@ class CKMMonitor:
             "w_sha": sha_candidata,
             # La que estaba viva **en el momento de calibrar**. Es el dato que
             # hace visible el orden.
-            "w_sha_vigente_al_calibrar": sha_vigente,
-            "momento": "antes del rebuild, sobre la W candidata",
-            "estado": registro["estado"],
-            "valores": registro.get("valores") or {},
-            "condiciones": registro.get("condiciones"),
+            "w_sha_live_at_calibration": sha_vigente,
+            "moment": "antes del rebuild, sobre la W candidata",
+            "state": registro["estado"],
+            "values": registro.get("valores") or {},
+            "conditions": registro.get("condiciones"),
             # Qué se hizo con el resultado: los umbrales entran en el COCO del
             # ciclo SIGUIENTE, no en el que está corriendo.
-            "aplicado_a": "el COCO del proximo ciclo",
+            "applied_to": "el COCO del proximo ciclo",
             # **Cuánto tardó, medido.** Corre en el hilo del mensaje: esto es
             # el tiempo que el canal no atendió. Va al panel porque es el
             # insumo de la propuesta de la sombra.
-            "duracion_s": round(time.monotonic() - t0, 4),
-            "bloqueante": True,
+            "duration_s": round(time.monotonic() - t0, 4),
+            "blocking": True,
         }
 
     def _cargar_rebuild_state(self) -> None:
@@ -669,8 +669,8 @@ class CKMMonitor:
         reg = {
             # La identificación va en **cada registro**, no sólo en el panel:
             # un jsonl suelto tiene que decir de qué serie es (CP1 (d)).
-            "serie": self._serie,
-            "caso": self._caso,
+            "series": self._series,
+            "case": self._case,
             "t": self._n_decisiones,
             "ts": clock.get("t"),
             "tick": clock.get("tick"),
@@ -719,8 +719,8 @@ class CKMMonitor:
         if self._last_panel is not None:
             coco = self._last_panel.get("coco")
         else:
-            coco = {"conectado": None,
-                    "motivo": "todavia no hubo ninguna evaluacion"}
+            coco = {"connected": None,
+                    "reason": "no evaluation yet"}
         tick = ChatChannel().tick()
 
         return {
@@ -728,8 +728,8 @@ class CKMMonitor:
             # Va **primero y siempre**, aunque no haya nada medido: un panel
             # suelto tiene que poder decir de qué serie y de qué caso es. La
             # Serie 2 no se mezcla con la serie 1.
-            "serie": self._serie,
-            "caso": self._caso,
+            "series": self._series,
+            "case": self._case,
             "corpus_size": status["n_texts"],
             "n_nodes": status["n_nodes"],
             "message_count": self._message_count,
@@ -738,7 +738,7 @@ class CKMMonitor:
             # N_eff = 1/Σm². El **conteo de atractores no se reporta** acá ni
             # como D_ckm ni como medida del campo.
             "D_ckm": d_ckm,
-            "D_ckm_forma": D_CKM_FORMA,
+            "D_ckm_form": D_CKM_FORMA,
             "temp_signal": temp_signal,
             # El bloque de COCO: la conexión, comprobable durante el caso.
             "coco": coco,
@@ -753,19 +753,19 @@ class CKMMonitor:
             # En el panel para que una corrida no haya que reconstruirla desde
             # el código que la corrió. Son valores **declarados, no
             # calibrados**.
-            "parametros": {
+            "parameters": {
                 "top_k": TOP_K,
                 "min_df": MIN_DF,
                 "pool": TOP_K * 3,
                 "n_stopwords": len(PERFIL_ES_EN.stopwords),
                 "ngram_max": 2,
-                "min_textos_primer_W": self._corpus.min_texts,
-                "min_devices_primer_W": self._min_devices_primer_w,
-                "rebuild_cada": self._rebuild_cada,
+                "min_texts_first_W": self._corpus.min_texts,
+                "min_devices_first_W": self._min_devices_first_w,
+                "rebuild_every": self._rebuild_every,
                 "n_runs": self._landscape_config.n_runs,
-                "unidad": "el mensaje",
-                "system_al_corpus": False,
-                "declaracion": DECLARACION_REF,
+                "unit": "el mensaje",
+                "system_to_corpus": False,
+                "declaration": DECLARACION_REF,
             },
             # **Dónde está escribiendo esto.** Va al panel para que cada vivo
             # deje dicho dónde escribió, y no haya que deducirlo del comando

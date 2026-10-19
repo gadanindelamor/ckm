@@ -81,7 +81,7 @@ class ChatChannel:
         # Los intentos de publicar que el canal rechazó, con quién y cuándo.
         # Un rechazo que no deja rastro es indistinguible de un mensaje que
         # nunca se intentó (CP1, agregado 2 de delamor).
-        self._intentos_rechazados: List[dict] = []
+        self._rejected_attempts: List[dict] = []
         self._ultimo_tick_visto: int = -1
 
     @staticmethod
@@ -199,23 +199,23 @@ class ChatChannel:
         **No se filtra contenido**: lo único que se mira es si queda algo
         después de `strip()`. Qué dice el mensaje no es asunto del canal.
 
-        El intento queda en `intentos_rechazados()` con quién, cuándo, en qué
+        El intento queda en `rejected_attempts()` con quién, cuándo, en qué
         tick y qué se rechazó (el largo de lo que vino y su `repr` recortado,
         no el texto entero: un vacío con espacios y un vacío sin ellos son
         distintos y hay que poder verlos).
         """
         if text is None or not text.strip():
             ahora = self._ahora()
-            self._intentos_rechazados.append({
+            self._rejected_attempts.append({
                 "device_id": device_id,
                 "device_type": device_type,
-                "motivo": "texto_vacio",
+                "reason": "empty_text",
                 "t": ahora,
                 "timestamp": datetime.fromtimestamp(ahora, timezone.utc).isoformat(),
                 "tick": int((ahora - self._t0) // TICK_PERIODO_S),
                 "reloj": RELOJ_CANAL,
-                "largo": len(text) if text is not None else None,
-                "recibido": repr(text)[:80],
+                "length": len(text) if text is not None else None,
+                "received": repr(text)[:80],
             })
             return None
 
@@ -262,7 +262,7 @@ class ChatChannel:
     def get_history(self) -> List[Message]:
         return list(self.messages)
 
-    def intentos_rechazados(self) -> List[dict]:
+    def rejected_attempts(self) -> List[dict]:
         """Los intentos de publicar que el canal rechazó. Lista, no contador:
         un contador dice cuántos, no quién ni cuándo."""
-        return list(self._intentos_rechazados)
+        return list(self._rejected_attempts)

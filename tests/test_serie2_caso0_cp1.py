@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from iap_chatroom.channel import ChatChannel                      # noqa: E402
 from iap_chatroom.autonomous_device import (                      # noqa: E402
-    DECISION_FIN_DEL_CASO,
+    DECISION_END_OF_CASE,
 )
 from iap_chatroom import ckm_monitor as mod_monitor               # noqa: E402
 from iap_chatroom.ckm_monitor import CKMMonitor                   # noqa: E402
@@ -95,7 +95,7 @@ def canal_monitor(tmp_path, monkeypatch):
     """Un `CKMMonitor` nuevo en su propio `state_dir` (el singleton se resetea)."""
     monkeypatch.setattr(CKMMonitor, "_instance", None)
     monkeypatch.setattr(ChatChannel, "_instance", None)
-    return CKMMonitor(state_dir=tmp_path / "estado")
+    return CKMMonitor(state_dir=tmp_path / "state")
 
 
 class _Msg:
@@ -118,17 +118,17 @@ def test_a_el_panel_lleva_el_bloque_coco_con_todo_lo_que_pide_la_condicion_2(
     """
     panel = monitor_con_coco.evaluate("gun violence in urban areas", device_id="d1")
     coco = panel["coco"]
-    assert coco["conectado"] is True
-    for clave in ("instancia_id", "generacion", "w_version_id",
-                  "w_version_id_monitor", "w_coincide", "mu_W", "beta_c",
-                  "Delta_r_compresiones_norma", "ultima_evaluacion_utc",
-                  "n_evaluaciones_recibidas", "disparos", "umbrales", "w_eff"):
+    assert coco["connected"] is True
+    for clave in ("instance_id", "generation", "w_version_id",
+                  "w_version_id_monitor", "w_matches", "mu_W", "beta_c",
+                  "Delta_r_compressions_norm", "last_evaluation_utc",
+                  "n_evaluations_received", "triggers", "thresholds", "w_eff"):
         assert clave in coco, f"falta {clave} en el bloque coco"
-    assert coco["w_coincide"] is True
-    assert coco["n_evaluaciones_recibidas"] == 1
-    assert coco["ultima_evaluacion_utc"] is not None
+    assert coco["w_matches"] is True
+    assert coco["n_evaluations_received"] == 1
+    assert coco["last_evaluation_utc"] is not None
     # 0 disparos es un valor: la Serie 2 no le exige disparar.
-    assert isinstance(coco["disparos"], int)
+    assert isinstance(coco["triggers"], int)
 
 
 def test_a_sin_coco_el_bloque_lo_dice_y_no_inventa_una_conexion(tmp_path):
@@ -136,8 +136,8 @@ def test_a_sin_coco_el_bloque_lo_dice_y_no_inventa_una_conexion(tmp_path):
     corpus.ingest(TEXTOS)
     m = MonitorService(corpus, storage_path=str(tmp_path / "t.jsonl"))
     panel = m.evaluate("gun violence", device_id="d1")
-    assert panel["coco"]["conectado"] is False
-    assert "motivo" in panel["coco"]
+    assert panel["coco"]["connected"] is False
+    assert "reason" in panel["coco"]
 
 
 def test_a_una_sola_instancia_de_coco_y_es_la_que_el_panel_dice(monitor_con_coco):
@@ -147,8 +147,8 @@ def test_a_una_sola_instancia_de_coco_y_es_la_que_el_panel_dice(monitor_con_coco
     de `monitor.thermostat`.
     """
     panel = monitor_con_coco.evaluate("gun violence", device_id="d1")
-    assert panel["coco"]["instancia_id"] == id(monitor_con_coco.thermostat)
-    assert panel["coco"]["instancias"] == 1
+    assert panel["coco"]["instance_id"] == id(monitor_con_coco.thermostat)
+    assert panel["coco"]["instances"] == 1
 
 
 def test_a_beta_c_infinito_se_muestra_y_no_se_oculta(monitor_con_coco):
@@ -164,7 +164,7 @@ def test_a_beta_c_infinito_se_muestra_y_no_se_oculta(monitor_con_coco):
     np.fill_diagonal(coco.W, 0.0)
     panel = monitor_con_coco.evaluate("gun violence", device_id="d1")
     assert panel["coco"]["beta_c"] == "inf"
-    assert panel["coco"]["beta_c_infinito"] is True
+    assert panel["coco"]["beta_c_infinite"] is True
     assert panel["coco"]["mu_W"] < 0
 
 
@@ -175,7 +175,7 @@ def test_agregado3_las_dos_W_eff_quedan_declaradas(monitor_con_coco):
     """
     panel = monitor_con_coco.evaluate("gun violence", device_id="d1")
     w_eff = panel["coco"]["w_eff"]
-    assert w_eff["misma"] is False
+    assert w_eff["same"] is False
     assert "crudo" in w_eff["coco"]
     assert "media(W>0)" in w_eff["monitor"]
     assert w_eff["baseline_coco"] != w_eff["baseline_monitor"]
@@ -207,7 +207,7 @@ def test_b_el_panel_del_canal_declara_la_forma_de_D_ckm_y_no_lleva_conteo(
 ):
     estado = canal_monitor.get_state()
     from services.landscape_engine import D_CKM_FORMA
-    assert estado["D_ckm_forma"] == D_CKM_FORMA == "masa_log"
+    assert estado["D_ckm_form"] == D_CKM_FORMA == "masa_log"
     # El conteo de atractores no se reporta como medida del campo en la S2.
     for clave in estado:
         assert "conteo" not in clave, f"{clave} reporta conteo en el panel S2"
@@ -219,17 +219,17 @@ def test_b_el_panel_del_canal_declara_la_forma_de_D_ckm_y_no_lleva_conteo(
 # ───────────────────────────────────────────────────────────────────────────
 
 def test_c_el_panel_lleva_la_tabla_de_parametros(canal_monitor):
-    p = canal_monitor.get_state()["parametros"]
+    p = canal_monitor.get_state()["parameters"]
     assert p["top_k"] == 20
     assert p["pool"] == 60
     assert p["min_df"] == 2
     assert p["n_stopwords"] == 703
-    assert p["min_textos_primer_W"] == 30
-    assert p["min_devices_primer_W"] == 2
-    assert p["rebuild_cada"] == 10
+    assert p["min_texts_first_W"] == 30
+    assert p["min_devices_first_W"] == 2
+    assert p["rebuild_every"] == 10
     assert p["n_runs"] >= 1000
-    assert p["system_al_corpus"] is False
-    assert p["declaracion"].endswith("DECLARACION_extraccion_W_v2.md")
+    assert p["system_to_corpus"] is False
+    assert p["declaration"].endswith("DECLARACION_extraccion_W_v2.md")
 
 
 def test_c_un_solo_extractor_en_el_camino_vivo(canal_monitor):
@@ -289,8 +289,8 @@ def test_c_el_primer_W_espera_2_devices(canal_monitor):
 
 
 def test_c_el_rebuild_es_cada_10_y_no_dos_veces_min_texts(canal_monitor):
-    assert canal_monitor._rebuild_cada == 10
-    assert canal_monitor._rebuild_cada != canal_monitor._corpus.min_texts * 2
+    assert canal_monitor._rebuild_every == 10
+    assert canal_monitor._rebuild_every != canal_monitor._corpus.min_texts * 2
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -299,8 +299,8 @@ def test_c_el_rebuild_es_cada_10_y_no_dos_veces_min_texts(canal_monitor):
 
 def test_d_el_panel_dice_de_que_serie_y_de_que_caso_es(canal_monitor):
     estado = canal_monitor.get_state()
-    assert estado["serie"] == "S2"
-    assert estado["caso"] == "S2-C0"
+    assert estado["series"] == "S2"
+    assert estado["case"] == "S2-C0"
 
 
 def test_d_cada_decision_registrada_lleva_la_identificacion(canal_monitor):
@@ -308,7 +308,7 @@ def test_d_cada_decision_registrada_lleva_la_identificacion(canal_monitor):
         canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
     decisiones = canal_monitor.decisiones_de_rebuild()
     assert decisiones, "el fixture no produjo ninguna decisión de rebuild"
-    assert all(d["serie"] == "S2" and d["caso"] == "S2-C0" for d in decisiones)
+    assert all(d["series"] == "S2" and d["case"] == "S2-C0" for d in decisiones)
 
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -463,15 +463,15 @@ def test_g_al_vencer_duration_el_device_no_sigue_vivo(canal):
     _correr(dev, ClientStub(canal), duration=0.2)
     transcurrido = _t.monotonic() - inicio
     assert transcurrido < 5, "el device siguió vivo después del fin del caso"
-    assert dev._cortado_por_fin_del_caso is True
+    assert dev._cut_by_end_of_case is True
 
 
 def test_g_la_vuelta_que_el_fin_del_caso_corto_queda_registrada(canal):
     dev = _device(ProviderQueNuncaResponde())
     _correr(dev, ClientStub(canal), duration=0.2)
     ultima = dev.decisiones()[-1]
-    assert ultima["decision"] == DECISION_FIN_DEL_CASO
-    assert ultima["resultado_accion"].startswith("no_ocurrio")
+    assert ultima["decision"] == DECISION_END_OF_CASE
+    assert ultima["action_result"].startswith("did_not_happen")
 
 
 def test_g_el_mundo_no_se_bloquea_mientras_un_device_decide(canal):
@@ -499,7 +499,7 @@ def test_g_el_mundo_no_se_bloquea_mientras_un_device_decide(canal):
     asyncio.run(correr())
     assert rapido.decisiones(), "el device rápido no llegó a decidir"
     assert canal.tick() is not None
-    assert lento._cortado_por_fin_del_caso is True
+    assert lento._cut_by_end_of_case is True
 
 
 def test_g_la_traza_lleva_tick_de_observacion_tick_de_accion_y_resultado(canal):
@@ -508,9 +508,9 @@ def test_g_la_traza_lleva_tick_de_observacion_tick_de_accion_y_resultado(canal):
     publicadas = [d for d in dev.decisiones() if d["decision"] == "INTERACT"]
     assert publicadas, "el stub no llegó a publicar"
     d = publicadas[0]
-    assert d["tick_observacion"] is not None
-    assert d["tick_accion"] is not None
-    assert d["resultado_accion"] == "publicado"
+    assert d["tick_observation"] is not None
+    assert d["tick_action"] is not None
+    assert d["action_result"] == "published"
 
 
 def test_g_una_accion_que_el_canal_no_acepta_se_registra_como_no_ocurrida(canal):
@@ -522,13 +522,13 @@ def test_g_una_accion_que_el_canal_no_acepta_se_registra_como_no_ocurrida(canal)
         async def call_tool(self, nombre, args=None):
             if nombre == "send_message":
                 return type("_R", (), {"data": {"ok": False,
-                                                "motivo": "texto_vacio"}})()
+                                                "reason": "empty_text"}})()
             return await super().call_tool(nombre, args)
 
     dev = _device(ProviderStub(["INTERACT", "algo"]))
     _correr(dev, ClientQueRechaza(canal), duration=0.05)
     rechazadas = [d for d in dev.decisiones()
-                  if (d.get("resultado_accion") or "").startswith("no_ocurrio")]
+                  if (d.get("action_result") or "").startswith("did_not_happen")]
     assert rechazadas
 
 
@@ -544,12 +544,15 @@ def test_h_el_panel_muestra_el_resultado_de_calibrate_despues_de_un_rebuild(
     punto = canal_monitor.get_state()["punto_calibrate"]
     assert punto is not None, "no hubo rebuild: el fixture no prueba nada"
     assert punto["implementado"] is True
-    assert punto["estado"] in ("calibrado", "no_calibrado", "nulo_calibrado")
+    # **Los valores son de `calibrate.py`**, que es de antes del CP1: siguen
+    # en castellano. La clave se publica en inglés; el valor es el que el
+    # módulo devuelve, y traducirlo acá sería inventarlo.
+    assert punto["state"] in ("calibrado", "no_calibrado", "nulo_calibrado")
     assert punto["w_sha"] is not None
-    assert "valores" in punto
+    assert "values" in punto
 
 
-def test_h_coco_no_sigue_con_el_0_40_del_modulo_despues_de_calibrar(
+def test_h_coco_no_sigue_con_el_0_40_del_modulo_despues_de_calibrate(
     canal_monitor,
 ):
     """
@@ -563,16 +566,16 @@ def test_h_coco_no_sigue_con_el_0_40_del_modulo_despues_de_calibrar(
     punto = estado["punto_calibrate"]
     assert punto is not None and punto["implementado"] is True
     coco = estado["coco"]
-    assert coco["conectado"] is True
-    if punto["estado"] == "calibrado" and isinstance(
-        punto["valores"].get("D_CKM_THRESHOLD"), float
+    assert coco["connected"] is True
+    if punto["state"] == "calibrado" and isinstance(
+        punto["values"].get("D_CKM_THRESHOLD"), float
     ):
-        assert coco["umbrales"]["origen"] == "calibrate"
-        assert coco["umbrales"]["calibrado"] is True
-        assert coco["umbrales"]["D_CKM_THRESHOLD"] != 0.40
+        assert coco["thresholds"]["source"] == "calibrate"
+        assert coco["thresholds"]["calibrated"] is True
+        assert coco["thresholds"]["D_CKM_THRESHOLD"] != 0.40
     else:
-        assert coco["umbrales"]["calibrado"] is False
-        assert coco["calibracion"]["estado"] == punto["estado"]
+        assert coco["thresholds"]["calibrated"] is False
+        assert coco["calibration"]["estado"] == punto["state"]
 
 
 def test_h_calibrate_corre_ANTES_de_instalar_la_W(canal_monitor):
@@ -589,12 +592,12 @@ def test_h_calibrate_corre_ANTES_de_instalar_la_W(canal_monitor):
     for i in range(45):
         canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
     punto = canal_monitor.get_state()["punto_calibrate"]
-    assert punto is not None and punto["estado"] != "nulo_calibrado"
-    assert punto["momento"] == "antes del rebuild, sobre la W candidata"
+    assert punto is not None and punto["state"] != "nulo_calibrado"
+    assert punto["moment"] == "antes del rebuild, sobre la W candidata"
     # la que se calibró es la que quedó instalada
     assert punto["w_sha"] == canal_monitor._corpus.w_sha()
     # y al calibrar estaba viva otra: si fueran iguales, habría corrido después
-    assert punto["w_sha_vigente_al_calibrar"] != punto["w_sha"]
+    assert punto["w_sha_live_at_calibration"] != punto["w_sha"]
 
 
 def test_h_sin_salto_no_se_calibra_y_se_ve_por_que(canal_monitor):
@@ -607,9 +610,9 @@ def test_h_sin_salto_no_se_calibra_y_se_ve_por_que(canal_monitor):
         canal_monitor.on_message(_Msg("solo_uno", TEXTOS[i % 8]))
     punto = canal_monitor.get_state()["punto_calibrate"]
     assert punto is not None
-    assert punto["estado"] == "nulo_calibrado"
-    assert punto["motivo"] == "primer_W_no_habilitado"
-    assert punto["valores"] == {}
+    assert punto["state"] == "nulo_calibrado"
+    assert punto["reason"] == "primer_W_no_habilitado"
+    assert punto["values"] == {}
 
 
 def test_h_el_panel_declara_cuanto_tardo_calibrate_y_que_bloquea(canal_monitor):
@@ -621,13 +624,13 @@ def test_h_el_panel_declara_cuanto_tardo_calibrate_y_que_bloquea(canal_monitor):
     for i in range(45):
         canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
     punto = canal_monitor.get_state()["punto_calibrate"]
-    assert punto["bloqueante"] is True
-    assert punto["duracion_s"] > 0
+    assert punto["blocking"] is True
+    assert punto["duration_s"] > 0
 
 
-def test_h_la_W_candidata_es_la_que_el_rebuild_instala(tmp_path):
+def test_h_la_candidate_W_es_la_que_el_rebuild_instala(tmp_path):
     """
-    `W_candidata()` no instala nada y acierta: lo que devuelve es,
+    `candidate_W()` no instala nada y acierta: lo que devuelve es,
     byte a byte, lo que el rebuild deja vivo.
     """
     # `rebuild_suspendido=True` como el canal vivo: la ingesta no reconstruye,
@@ -637,8 +640,8 @@ def test_h_la_W_candidata_es_la_que_el_rebuild_instala(tmp_path):
     corpus.ingest(TEXTOS[:4])
     sha_antes = corpus.w_sha()
     corpus.ingest(TEXTOS[4:])
-    candidata = corpus.W_candidata()
-    assert corpus.w_sha() == sha_antes, "W_candidata() movió la W viva"
+    candidata = corpus.candidate_W()
+    assert corpus.w_sha() == sha_antes, "candidate_W() movió la W viva"
     corpus.rebuild_por_decision("volumen")
     assert np.array_equal(candidata, corpus.get_W())
 
@@ -648,7 +651,7 @@ def test_h_calibrate_no_toca_la_W_viva(canal_monitor):
         canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
     W = canal_monitor._corpus.get_W()
     antes = W.copy()
-    canal_monitor._calibrar()
+    canal_monitor._calibrate()
     assert np.array_equal(canal_monitor._corpus.get_W(), antes)
 
 
@@ -708,20 +711,20 @@ def test_agregado2_tampoco_uno_de_solo_espacios(canal):
 
 def test_agregado2_el_intento_rechazado_queda_con_quien_y_cuando(canal):
     asyncio.run(canal.publish("d1", "AI", "  "))
-    intentos = canal.intentos_rechazados()
+    intentos = canal.rejected_attempts()
     assert len(intentos) == 1
     i = intentos[0]
     assert i["device_id"] == "d1"
-    assert i["motivo"] == "texto_vacio"
+    assert i["reason"] == "empty_text"
     assert i["tick"] is not None and i["timestamp"] is not None
     # el repr distingue un vacío con espacios de uno sin ellos
-    assert i["recibido"] == repr("  ")
+    assert i["received"] == repr("  ")
 
 
 def test_agregado2_un_texto_con_contenido_sigue_pasando(canal):
     m = asyncio.run(canal.publish("d1", "AI", "hola"))
     assert m is not None
-    assert canal.intentos_rechazados() == []
+    assert canal.rejected_attempts() == []
 
 
 def test_agregado2_el_vacio_no_llega_al_corpus(canal_monitor, canal):

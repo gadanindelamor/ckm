@@ -12024,3 +12024,97 @@ la media de los pesos positivos de esta W, y por lo tanto el factor entre A y D.
 
 **No se elige escala en este CP.** La tabla y lo que no se pueda afirmar van al REPORTE; la
 escala la elige delamor.
+
+## S2-C0 · CP1b — REPORTE — 2026-10-19 23:00 UTC
+
+*Claude Opus 5 (Code). Driver: `experiments/driver_cp1b_escala_delta_r.py` (determinista,
+seeds declaradas). La predicción está arriba (`88d31fc`) y no se tocó. **No se eligió escala.**
+`services/` no se tocó: la suite sigue en **755 / 7 xfailed / 0**.*
+
+### Condiciones, declaradas
+
+- **Mensajes:** los 8 `TEXTOS` de `tests/test_serie2_caso0_cp1.py` en ciclo hasta **45
+  mensajes**, dos devices alternados. **sha256 de la secuencia:
+  `c031b81de18a…`** (entero en el JSON del driver).
+- **Extracción:** `top_k = 20`, `min_df = 2`, `ngram_max = 2` — los declarados de la Serie 2.
+- **W:** **N = 19**, `sha256 b76c88ce…`, `max|W| = 1.0`, **`media(W>0) = 0.335995`**,
+  **`media(|W|≠0) = 0.335995`**, **fracción de negativos = 0.0**.
+  *Diferencia con el CP1, declarada:* el CP1 midió **N = 18** porque el canal reconstruye cada
+  10 mensajes y arrastra `seleccion_anterior`; acá W se construye **de una vez** sobre los 45.
+  Misma secuencia, un nodo de diferencia, por el camino.
+- **Conteo:** `n_runs = 1000`, `seed = 0`, D_ckm = 1 − ln N_eff / ln N_eff₀. **Baseline común
+  a las cuatro: N_eff₀ = 3.8959** (con Δ_r = 0 las cuatro escalas dan W).
+- **Rechazos:** 10 pasos, `seed = 7`, en **dos** secuencias:
+  **`sin_repeticion`** (un rechazo por par, alternando pares no nulos y nulos: `max Δ_r = 1`
+  siempre) y **`con_repeticion`** (3 pares repetidos; `max Δ_r` llega a 4), que es lo que
+  **Δ_r hace de verdad** —acumula sobre los mismos pares—.
+
+### La tabla
+
+D_ckm paso por paso (10 pasos), por escala:
+
+| escala | W_eff | `sin_repeticion` | `con_repeticion` |
+|---|---|---|---|
+| **A** (Monitor, hoy) | W + (Δ/maxΔ)·media(W>0) | +0.021 +0.033 +0.039 +0.039 +0.042 +0.040 +0.080 +0.133 +0.142 **+0.167** | +0.021 +0.033 +0.039 +0.017 +0.020 +0.039 +0.017 +0.020 +0.039 **+0.039** |
+| **B** (COCO, hoy) | W + Δ **crudo** | +0.026 +0.070 +0.040 +0.069 +0.050 +0.005 +0.024 +0.178 +0.164 **+0.200** | +0.026 +0.070 +0.040 **−0.590** −0.647 −0.803 −0.803 −1.550 −1.625 **−1.625** |
+| **C** (alternativa) | W + (Δ/maxΔ)·media(\|W\|≠0) | **idéntica a A** | **idéntica a A** |
+| **D** (alternativa) | W + Δ/maxΔ | **idéntica a B** | +0.026 +0.070 +0.040 +0.022 +0.067 +0.040 +0.070 +0.064 +0.040 **+0.049** |
+
+### Los tres resultados, dichos sin elegir nada
+
+1. **Las dos cantidades que hoy coexisten no difieren en magnitud: difieren en SIGNO.** Con
+   Δ_r acumulando sobre los mismos pares —el caso real—, **Monitor dice +0.04 y COCO dice
+   −1.63 sobre la misma W y los mismos rechazos**. D_ckm negativo es **campo expandido**: en
+   la representación de COCO, acumular rechazos sobre un par **crea órbitas** (N_eff sube de
+   3.90 a ~12), y en la de Monitor **las reduce apenas**. No es una diferencia de calibración;
+   es que las dos miran campos distintos. Hasta hoy eso no estaba medido en ninguna parte: el
+   código declaraba *"una cantidad, dos baselines"*, y lo que hay son **dos cantidades**.
+2. **Lo que decide no es el factor de W: es normalizar por `max Δ_r`.** **D** —que normaliza y
+   **no** usa ningún factor de W— se queda con A, chica y positiva (+0.02 a +0.07); **B** —que
+   no normaliza— se va a −1.6. El `media(W>0)` que el código llama *"una elección"* mueve el
+   número **mucho menos** que el `/max Δ_r` que nadie discutió.
+3. **Con la escala de hoy, D_ckm dentro de un ciclo casi no se mueve, y no acumula.** En
+   `con_repeticion` A **cicla** entre +0.017 y +0.039 y vuelve: cuando `max Δ_r` crece, la
+   normalización **re-escala todo** y el rechazo nuevo no suma. En `sin_repeticion` —10 pares
+   distintos— A sí crece, hasta +0.167. O sea: **con la escala actual, D_ckm dentro del ciclo
+   mide cuántos pares distintos se rechazaron, no cuánto se rechazó.**
+
+### `calibrate` en el salto, medido (7 corridas, misma W)
+
+| | mediana | min | max |
+|---|---|---|---|
+| extracción de la candidata | **0.0095 s** | 0.0092 | 0.0184 |
+| `calibrate` | **0.0591 s** | 0.0541 | 0.0865 |
+| **total que el canal bloquea** | **0.0684 s** | 0.0637 | 0.1049 |
+
+Con `n_runs = 200`, grilla de 5 λ, N = 19. Estado: **`calibrado`**
+(`D_CKM_THRESHOLD = 0.2446`, `FRAC_REC_MIN = 0.7623`). **Insumo para la propuesta de la
+sombra: son ~68 ms por salto.** Escala con N y con `n_runs`: el conteo de órbitas es el 86% del
+total, y la extracción de la candidata el 14%.
+
+### La predicción contra lo que pasó
+
+| Predije | Pasó |
+|---|---|
+| B domina y se separa **desde el primer paso**, extremo con ≤ 3 rechazos | **Mitad.** Domina, pero con **un** rechazo por par B ≈ A: se separa recién cuando `max Δ_r` pasa de 1, o sea en el **paso 4** de `con_repeticion`. Lo que no vi al predecir es que **`max Δ_r = 1` hace a B y D idénticas** |
+| A y C parecidas, factor **1,0–2,0**, misma dirección | **Acertado el número por la razón equivocada.** El factor es **exactamente 1,0**: esta W **no tiene negativos**, así que `media(W>0)` y `media(\|W\|≠0)` son **la misma media**. A ≡ C **por construcción**, no por parecido. **Separarlas pide una W con negativos**, y ésta no la tiene |
+| D entre A/C y B, más cerca de A | **Acertado en `con_repeticion`**; en `sin_repeticion` **D ≡ B**, que no predije |
+| D_ckm **creciente** en las cuatro, no monótona, al menos un retroceso | **Mal en lo central.** Hay retrocesos (A: 0.0390 → 0.0388; B: 0.0695 → 0.0405), pero **B no crece: se vuelve negativa y grande**. Predije la dirección equivocada para la mitad del experimento |
+| A se mueve entre **0 y 0,15**; B más de 0,3 | A: **0,146** sin repetición (en el borde) y **0,023** con repetición. B: **1,65**. Las dos dentro |
+| `calibrate`: mediana **0,2–2 s** | **Mal: 0,059 s**, un orden de magnitud más rápido. Acertado que la extracción es la parte chica (0,0095 s) |
+| Riesgo: que las curvas salgan planas y mida la secuencia | No pasó; la mitad-y-mitad de pares nulos y no nulos alcanzó |
+
+### Lo que NO se puede afirmar con esto
+
+- **Nada sobre A vs C.** Con esta W son el mismo número. Para separarlas hace falta una W con
+  pesos negativos (W_mixta) y **no la medí**: la TASK fijó el conjunto de mensajes del CP1.
+- **Nada sobre el vivo.** Esto es una W de 45 mensajes de 8 textos repetidos y una secuencia de
+  rechazos **inventada**, no observada. Lo que se midió es **el instrumento**, no el caso.
+- **El N_eff de B con Δ grande está en el borde del muestreo:** N_eff ~12 con `n_runs = 1000`
+  todavía no satura, pero no medí la dispersión entre seeds para esta W. **No afirmo el valor
+  −1.625**; afirmo el **signo** y el **orden de magnitud**.
+- **Los 68 ms son de esta máquina y esta W** (N = 19, `n_runs = 200`). No es una cota.
+
+**La escala la elige delamor.** Acá no se eligió ninguna, y `services/` no se tocó.
+
+**A1.PAUSA.**

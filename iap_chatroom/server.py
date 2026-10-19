@@ -34,9 +34,9 @@ from fastapi import FastAPI
 # existe y su directorio ya está fijado (`__init__` corta con
 # `if self._initialized: return`). Así que esto NO puede estar más abajo ni
 # dentro del `__main__`: el orden de estas líneas es el fix.
-from iap_chatroom import arranque
+from iap_chatroom import startup
 
-arranque.leer_de_argv(sys.argv)
+startup.read_from_argv(sys.argv)
 
 from iap_chatroom.api_routes import router            # noqa: E402
 from iap_chatroom.channel import ChatChannel          # noqa: E402
@@ -47,11 +47,11 @@ from iap_chatroom.ui_gradio import build_gradio_app    # noqa: E402
 # Singletons
 channel = ChatChannel()
 device_manager = DeviceManager()
-ckm_monitor = arranque.monitor()
+ckm_monitor = startup.monitor()
 
 # **Dónde escribe este proceso**, dicho al arrancar. Cada vivo deja la línea en
 # su consola, al lado del comando que lo lanzó.
-_decl = arranque.declarar()
+_decl = startup.declare()
 print(f"[server] state_dir = {_decl['state_dir']}"
       f"{' (pedido por --state-dir)' if _decl['fue_pedido'] else ' (default)'}")
 if _decl["fue_pedido"] and not _decl["coincide"]:

@@ -28,7 +28,7 @@ desactualizado el mismo día de F3b; se corrige acá.
 
 **Dónde escribe.** `state_dir` es parámetro (F3a), con el default de siempre
 (`iap_chatroom/_state/`). El server lo recibe como `--state-dir`
-(`arranque.py`), así que cada vivo puede arrancar de un estado conocido y el
+(`startup.py`), así que cada vivo puede arrancar de un estado conocido y el
 panel declara dónde escribió.
 
 **El rebuild lo decide esta clase, no la ingesta** (TASK_should_rebuild_

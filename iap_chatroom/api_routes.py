@@ -9,7 +9,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from iap_chatroom import arranque
+from iap_chatroom import startup
 from iap_chatroom.channel import ChatChannel
 from iap_chatroom.device_manager import DeviceManager
 
@@ -21,16 +21,16 @@ device_manager = DeviceManager()
 
 # **Nadie construye `CKMMonitor` al importarse** (CP1, agregado 1 de delamor,
 # 18 oct). Acá había un `ckm_monitor = CKMMonitor()` a nivel de módulo: como
-# `server.py` importa este módulo **antes** de llamar a `arranque.monitor()`,
+# `server.py` importa este módulo **antes** de llamar a `startup.monitor()`,
 # ese pelado ganaba la carrera del singleton y el `--state-dir` quedaba en el
 # default — con un aviso por consola y nada en el panel. En la Serie 2 eso
 # podría escribir en el estado de otra cosa.
 #
-# El monitor se pide **cuando se usa**, a `arranque`, que es el único que sabe
+# El monitor se pide **cuando se usa**, a `startup`, que es el único que sabe
 # qué directorio se pidió. La función es una línea y no cachea: el singleton ya
 # es el caché.
 def _monitor():
-    return arranque.monitor()
+    return startup.monitor()
 
 
 

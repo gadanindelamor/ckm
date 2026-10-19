@@ -132,12 +132,12 @@ def estimar(tope: "float | None") -> dict:
 def correr_un_caso(caso: str, tope: "float | None") -> dict:
     import runpy
 
-    from iap_chatroom import arranque
+    from iap_chatroom import startup
     from iap_chatroom.autonomous_device import AutonomousDevice
     from iap_chatroom.providers.groq_provider import GroqProvider
 
     state_dir = STATE_BASE / caso
-    arranque.fijar_state_dir(state_dir)
+    startup.set_state_dir(state_dir)
 
     # (1) todos los providers pasan a ser el mismo Groq. Se parcha en el módulo
     #     de origen, así el `from ... import` del caso toma esto.

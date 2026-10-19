@@ -677,18 +677,18 @@ def test_agregado1_el_state_dir_pedido_es_el_que_queda(tmp_path, monkeypatch):
     pedido. Es la grieta que el CP0 encontró, medida de punta a punta.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    from iap_chatroom import arranque
+    from iap_chatroom import startup
     pedido = tmp_path / "s2_c0"
-    arranque.fijar_state_dir(pedido)
+    startup.set_state_dir(pedido)
     try:
         import iap_chatroom.api_routes as api_routes
         import importlib
         importlib.reload(api_routes)
-        m = arranque.monitor()
+        m = startup.monitor()
         assert m.state_dir == pedido
-        assert arranque.declarar()["coincide"] is True
+        assert startup.declare()["coincide"] is True
     finally:
-        arranque.fijar_state_dir(None)
+        startup.set_state_dir(None)
 
 
 # ───────────────────────────────────────────────────────────────────────────

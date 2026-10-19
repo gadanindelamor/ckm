@@ -25,7 +25,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
-from iap_chatroom import arranque                              # noqa: E402
+from iap_chatroom import startup                              # noqa: E402
 from iap_chatroom.ckm_monitor import _STATE_DIR, CKMMonitor    # noqa: E402
 
 TEXTOS = [
@@ -44,22 +44,22 @@ def _limpio(monkeypatch):
     directorio para todos los demás y los que vienen después medirían el suyo.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    arranque.fijar_state_dir(None)
+    startup.set_state_dir(None)
     yield
     monkeypatch.setattr(CKMMonitor, "_instance", None)
-    arranque.fijar_state_dir(None)
+    startup.set_state_dir(None)
 
 
 # ── el argumento ────────────────────────────────────────────────────────────
 
 def test_lee_la_bandera_separada() -> None:
-    assert arranque.leer_de_argv(["server.py", "--state-dir", "/tmp/x"]) == Path("/tmp/x")
-    assert arranque.state_dir_pedido() == Path("/tmp/x")
-    assert arranque.fue_pedido() is True
+    assert startup.read_from_argv(["server.py", "--state-dir", "/tmp/x"]) == Path("/tmp/x")
+    assert startup.requested_state_dir() == Path("/tmp/x")
+    assert startup.was_requested() is True
 
 
 def test_lee_la_bandera_con_igual() -> None:
-    assert arranque.leer_de_argv(["server.py", "--state-dir=/tmp/y"]) == Path("/tmp/y")
+    assert startup.read_from_argv(["server.py", "--state-dir=/tmp/y"]) == Path("/tmp/y")
 
 
 def test_sin_bandera_no_pide_nada() -> None:
@@ -68,9 +68,9 @@ def test_sin_bandera_no_pide_nada() -> None:
     is None`: alguien podría pedir justo el default, y el panel tiene que poder
     decir cuál de las dos cosas pasó.
     """
-    assert arranque.leer_de_argv(["server.py", "--port", "7860"]) is None
-    assert arranque.state_dir_pedido() is None
-    assert arranque.fue_pedido() is False
+    assert startup.read_from_argv(["server.py", "--port", "7860"]) is None
+    assert startup.requested_state_dir() is None
+    assert startup.was_requested() is False
 
 
 def test_la_bandera_sin_ruta_levanta() -> None:
@@ -81,12 +81,12 @@ def test_la_bandera_sin_ruta_levanta() -> None:
     """
     for argv in (["s", "--state-dir"], ["s", "--state-dir", "--port"], ["s", "--state-dir="]):
         with pytest.raises(ValueError, match="state-dir"):
-            arranque.leer_de_argv(argv)
+            startup.read_from_argv(argv)
 
 
 def test_lo_que_no_reconoce_no_lo_rompe() -> None:
     """No valida la línea de comandos del server: busca una bandera y nada más."""
-    assert arranque.leer_de_argv(
+    assert startup.read_from_argv(
         ["server.py", "--host", "0.0.0.0", "--state-dir", "/tmp/z", "--reload"]
     ) == Path("/tmp/z")
 
@@ -99,9 +99,9 @@ def test_con_argumento_el_monitor_escribe_ahi(tmp_path) -> None:
     ingesta de verdad y se mira que los archivos caigan ahí.
     """
     destino = tmp_path / "_state_de_un_vivo"
-    arranque.leer_de_argv(["server.py", "--state-dir", str(destino)])
+    startup.read_from_argv(["server.py", "--state-dir", str(destino)])
 
-    cm = arranque.monitor()
+    cm = startup.monitor()
     # **Esta aserción va antes del ingest a propósito, y es una guarda.** Si el
     # argumento se ignorara, `cm.state_dir` sería `iap_chatroom/_state/` y el
     # ingest de abajo escribiría en la traza de agosto. Cortar acá es lo que lo
@@ -131,24 +131,24 @@ def test_sin_argumento_queda_el_default_de_hoy() -> None:
 
     Así que se verifica el directorio y no la escritura, y queda declarado.
     """
-    cm = arranque.monitor()
+    cm = startup.monitor()
     assert cm.state_dir == _STATE_DIR
     assert cm.get_state()["state_dir"] == str(_STATE_DIR)
 
 
 def test_el_panel_lleva_el_state_dir(tmp_path) -> None:
     """Cada vivo deja dicho dónde escribió, sin deducirlo del comando."""
-    arranque.fijar_state_dir(tmp_path / "p")
-    cm = arranque.monitor()
+    startup.set_state_dir(tmp_path / "p")
+    cm = startup.monitor()
     assert cm.get_state()["state_dir"] == str(tmp_path / "p")
 
 
 # ── lo que el server declara ────────────────────────────────────────────────
 
 def test_declarar_dice_el_efectivo_y_el_pedido(tmp_path) -> None:
-    arranque.leer_de_argv(["server.py", "--state-dir", str(tmp_path / "d")])
-    arranque.monitor()
-    d = arranque.declarar()
+    startup.read_from_argv(["server.py", "--state-dir", str(tmp_path / "d")])
+    startup.monitor()
+    d = startup.declare()
     assert d["state_dir"] == str(tmp_path / "d")
     assert d["state_dir_pedido"] == str(tmp_path / "d")
     assert d["fue_pedido"] is True
@@ -162,9 +162,9 @@ def test_declarar_avisa_si_alguien_construyo_antes(tmp_path) -> None:
     `coincide` queda en False — que es el dato, no un detalle.
     """
     CKMMonitor(state_dir=tmp_path / "el_del_launcher")   # gana la carrera
-    arranque.leer_de_argv(["server.py", "--state-dir", str(tmp_path / "el_pedido")])
+    startup.read_from_argv(["server.py", "--state-dir", str(tmp_path / "el_pedido")])
 
-    d = arranque.declarar()
+    d = startup.declare()
     assert d["state_dir"] == str(tmp_path / "el_del_launcher")
     assert d["state_dir_pedido"] == str(tmp_path / "el_pedido")
     assert d["coincide"] is False
@@ -172,8 +172,8 @@ def test_declarar_avisa_si_alguien_construyo_antes(tmp_path) -> None:
 
 def test_sin_pedido_coincide_es_None_no_False() -> None:
     """`False` diría "no coincide"; sin pedido no hay con qué comparar."""
-    arranque.monitor()
-    assert arranque.declarar()["coincide"] is None
+    startup.monitor()
+    assert startup.declare()["coincide"] is None
 
 
 # ── el orden de las líneas, que ES el fix ───────────────────────────────────
@@ -191,7 +191,7 @@ def test_server_lee_el_argumento_antes_de_importar_mcp_server() -> None:
     estaban así.
     """
     src = (RAIZ / "iap_chatroom" / "server.py").read_text().splitlines()
-    i_lee = next(i for i, l in enumerate(src) if "arranque.leer_de_argv" in l)
+    i_lee = next(i for i, l in enumerate(src) if "startup.read_from_argv" in l)
     i_mcp = next(i for i, l in enumerate(src) if "from iap_chatroom.mcp_server import" in l)
     assert i_lee < i_mcp, (
         f"server.py lee el argumento en la línea {i_lee + 1} y importa "
@@ -215,4 +215,4 @@ def test_ningun_entry_point_construye_un_CKMMonitor_pelado() -> None:
             if not l.lstrip().startswith("#")
         )
         assert "CKMMonitor()" not in codigo, f"{nombre} construye un monitor pelado"
-        assert "arranque.monitor()" in codigo, f"{nombre} no usa arranque.monitor()"
+        assert "startup.monitor()" in codigo, f"{nombre} no usa startup.monitor()"

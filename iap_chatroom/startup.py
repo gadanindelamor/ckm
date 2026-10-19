@@ -1,5 +1,5 @@
 """
-arranque.py — el `state_dir` como **argumento de arranque explícito** del server
+startup.py — el `state_dir` como **argumento de arranque explícito** del server
 
 ### Por qué existe
 
@@ -26,7 +26,7 @@ arrastrar el resto.
 
 ### Sin argumento, el default de hoy
 
-`state_dir_pedido()` devuelve `None` y `CKMMonitor` usa `iap_chatroom/_state/`,
+`requested_state_dir()` devuelve `None` y `CKMMonitor` usa `iap_chatroom/_state/`,
 que es lo que usaba antes de esto. **Nada cambia para quien no pasa el
 argumento.**
 """
@@ -43,43 +43,43 @@ FLAG = "--state-dir"
 # `CKMMonitor` aplica su default. No se inicializa con el default acá, porque
 # entonces no se podría distinguir "me pidieron el default" de "no me pidieron
 # nada", y el panel tiene que poder decir cuál de las dos fue.
-_state_dir_pedido: Optional[Path] = None
-_fue_pedido: bool = False
+_requested_state_dir: Optional[Path] = None
+_was_requested: bool = False
 
 
-def fijar_state_dir(valor: "str | Path | None") -> Optional[Path]:
+def set_state_dir(valor: "str | Path | None") -> Optional[Path]:
     """
     Fija el `state_dir` pedido. Tiene que llamarse **antes** de que se importe
     `mcp_server` o `server`, o la instancia ya está construida.
 
-    Con `None` vuelve al default y `fue_pedido()` pasa a False: sirve para los
+    Con `None` vuelve al default y `was_requested()` pasa a False: sirve para los
     tests, que necesitan dejar el módulo como estaba.
     """
-    global _state_dir_pedido, _fue_pedido
+    global _requested_state_dir, _was_requested
     if valor is None:
-        _state_dir_pedido = None
-        _fue_pedido = False
+        _requested_state_dir = None
+        _was_requested = False
         return None
-    _state_dir_pedido = Path(valor)
-    _fue_pedido = True
-    return _state_dir_pedido
+    _requested_state_dir = Path(valor)
+    _was_requested = True
+    return _requested_state_dir
 
 
-def state_dir_pedido() -> Optional[Path]:
+def requested_state_dir() -> Optional[Path]:
     """El que se pidió, o `None` si nadie lo pidió."""
-    return _state_dir_pedido
+    return _requested_state_dir
 
 
-def fue_pedido() -> bool:
+def was_requested() -> bool:
     """
-    Si alguien lo pidió explícitamente. **Se distingue de `state_dir_pedido()
+    Si alguien lo pidió explícitamente. **Se distingue de `requested_state_dir()
     is None`** para el caso en que alguien pida justo el default: el panel dice
     "me lo pidieron" y no "estoy en el default porque nadie dijo nada".
     """
-    return _fue_pedido
+    return _was_requested
 
 
-def leer_de_argv(argv: Sequence[str]) -> Optional[Path]:
+def read_from_argv(argv: Sequence[str]) -> Optional[Path]:
     """
     Lee `--state-dir <ruta>` (o `--state-dir=<ruta>`) de `argv` y lo fija.
 
@@ -99,12 +99,12 @@ def leer_de_argv(argv: Sequence[str]) -> Optional[Path]:
                     f"{FLAG} sin ruta. Pedir el aislamiento y caer al default "
                     f"sin avisar es peor que no arrancar."
                 )
-            return fijar_state_dir(args[i + 1])
+            return set_state_dir(args[i + 1])
         if a.startswith(FLAG + "="):
             ruta = a.split("=", 1)[1]
             if not ruta:
                 raise ValueError(f"{FLAG}= sin ruta.")
-            return fijar_state_dir(ruta)
+            return set_state_dir(ruta)
     return None
 
 
@@ -122,10 +122,10 @@ def monitor():
     """
     from iap_chatroom.ckm_monitor import CKMMonitor
 
-    return CKMMonitor(state_dir=_state_dir_pedido)
+    return CKMMonitor(state_dir=_requested_state_dir)
 
 
-def declarar() -> dict:
+def declare() -> dict:
     """
     Lo que el server dice al arrancar y lo que va al panel de Monitor: **dónde
     está escribiendo este proceso**.
@@ -143,13 +143,13 @@ def declarar() -> dict:
     return {
         "state_dir": str(efectivo) if efectivo is not None else None,
         "state_dir_pedido": (
-            str(_state_dir_pedido) if _state_dir_pedido is not None else None
+            str(_requested_state_dir) if _requested_state_dir is not None else None
         ),
-        "fue_pedido": _fue_pedido,
+        "fue_pedido": _was_requested,
         # Si lo que corre coincide con lo que se pidió. False dice que alguien
         # construyó el monitor antes, y eso es un dato y no un detalle.
         "coincide": (
-            None if not _fue_pedido
-            else (efectivo is not None and Path(efectivo) == _state_dir_pedido)
+            None if not _was_requested
+            else (efectivo is not None and Path(efectivo) == _requested_state_dir)
         ),
     }

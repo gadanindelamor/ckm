@@ -12118,3 +12118,79 @@ total, y la extracción de la candidata el 14%.
 **La escala la elige delamor.** Acá no se eligió ninguna, y `services/` no se tocó.
 
 **A1.PAUSA.**
+
+## S2-C0 · Δ_r crudo — paso (1), la lectura, y **PARO ACÁ** — 2026-10-19 23:17 UTC
+
+*Claude Opus 5 (Code). Sólo lectura: no se tocó una línea. Suite: 755 / 7 xfailed / 0.
+**El paso (2) no se hizo**, por lo que sale de abajo.*
+
+### Las tres preguntas, con archivo y línea
+
+**1 · ¿Cuándo dispara COCO? Con D_ckm POR ENCIMA del umbral. No con el valor absoluto.**
+La clasificación es una cascada (`coco.py:634-642`):
+
+```
+634  if D_ckm is None or frac_rec is None:  return UNKNOWN
+636  if D_ckm < 0:                          return "stable"
+638  if D_ckm < self.threshold:             return "stable"
+640  if frac_rec < self.frac_rec_min:       return "deep"
+642                                         return "degrading"
+```
+
+y el STOP se aplica **sólo** en `degrading` o `deep` (`coco.py:305`, `stop_applied = True` en
+`:332`). `UNKNOWN` y `stable` no disparan. El valor absoluto **no aparece en ninguna parte**:
+`_alpha_for` (`:600-613`) normaliza D_ckm al rango `[threshold, 1.0]` y lo clampea, así que
+tampoco mira el signo.
+
+**2 · ¿Qué hace con D_ckm < 0? Lo llama `stable` explícitamente.** `coco.py:636`, con su
+comentario: *"campo expandido — acumulación suma atractores"*. O sea: **un campo que se
+expande no dispara nada, por construcción y declarado.**
+
+**3 · `calibrate` calibra sobre la W SOLA, sin Δ_r.** `calibrate.py:226` copia W,
+`:247` arma el extremo de colapso **desde esa copia**, `:248` toma `A0 = count_attractors(Wc)`
+y la grilla interpola entre las dos (`:249-253`). **Δ_r no entra en ningún punto del módulo**
+(no aparece el nombre). El baseline de COCO también es W sola (`coco.py:250`, `:292`).
+
+### Lo que esto implica, y es lo que te frena el paso (2)
+
+**Con Δ_r crudo y rechazos repetidos, COCO no puede disparar.** No es que "no dispare en esta
+corrida": es que el camino está cerrado por construcción. El CP1b midió que con Δ_r crudo y
+rechazos acumulando sobre los mismos pares D_ckm **se va a −1,63**, y `coco.py:636` manda todo
+D_ckm negativo a `stable`. Entre el paso 3 y el 10 de esa secuencia, **los siete valores son
+negativos**: ninguno llega a la cascada del umbral.
+
+Y con la otra secuencia del CP1b —10 pares **distintos**, sin repetir— el máximo que alcanzó
+D_ckm crudo fue **+0,200**, contra un umbral **calibrado de 0,2446** (y el default de módulo,
+0,40). **Tampoco dispara**, aunque ahí es por poco y no por construcción.
+
+**Dos consecuencias más, que no están en tus tres preguntas y creo que hacen falta antes de
+decidir:**
+
+1. **El cambio no es sólo de COCO: es del número que el canal muestra.** `_combine_W_Delta`
+   (`monitor_service.py:766`) es de donde salen `panel["D_ckm"]` y el `D_ckm` del panel del
+   canal. Con Δ_r crudo, el instrumento pasa a leer **−1,6 (expansión)** donde hoy lee
+   **+0,04 (degradación chica)** sobre la misma W y los mismos rechazos. Es coherente —queda
+   **una** cantidad, que es lo que buscás— pero la cantidad que queda es la que hoy **no
+   dispara nada**.
+2. **El criterio estructural de rebuild se apagaría.** `should_rebuild`
+   (`corpus_service.py:249`) pide **gradiente de D_ckm positivo sostenido 3 pasos**. Con Δ_r
+   crudo y rechazos repetidos la serie de D_ckm **baja** (−0,59 → −0,65 → −0,80 → −0,80 →
+   −1,55 → −1,62), así que el gradiente es negativo y **el criterio estructural dejaría de
+   emitir**. El rebuild seguiría saliendo por volumen (cada 10) y por tiempo, pero la Serie 2
+   perdería el criterio que mira el campo.
+
+### A1 — qué es verificable acá y qué no
+
+**Verificable, leído:** las tres respuestas, con línea. **Verificable, medido:** los números
+de D_ckm son los del CP1b (`d15ba96`), misma W (N = 19, sha `b76c88ce…`) y mismas secuencias.
+**Lo que NO afirmo:** que COCO "nunca" dispare con Δ_r crudo **en general**. Lo que está
+cerrado por construcción es el caso de **rechazos repetidos** (D_ckm negativo ⇒ `stable`); con
+suficientes pares **distintos** D_ckm crudo podría cruzar el umbral, y eso **no lo medí** —el
+CP1b llegó a +0,200 con 10 pares y no probé con más—.
+
+**PARO ACÁ, como pediste.** El paso (2) no se tocó. Lo que queda para que decidas: si el
+cambio va igual (y entonces COCO no dispara en el caso repetido, y el estructural se apaga), o
+si antes hay que mover algo más —el umbral, la clasificación del negativo, o qué cantidad
+mira cada uno—.
+
+**A1.PAUSA.**

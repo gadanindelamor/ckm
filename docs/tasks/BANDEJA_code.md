@@ -11933,3 +11933,42 @@ No toqué el Fix 4 (`AgentDeviceSkin`), que no está en el CP1. No elegí escala
 el CP1b, que va con su propia predicción. No unifiqué Monitor y COCO. No toqué el gate.
 
 **A1.PAUSA.**
+
+## S2-C0 — el reordenamiento de `calibrate` y los renombres — 2026-10-19 (corte por límite de sesión)
+
+*Claude Opus 5 (Code). **Suite: 755 pasan, 7 xfailed, 0 fallan.** Se corta acá por el límite
+de la sesión, con el árbol limpio y en verde.*
+
+**Hecho y commiteado:**
+1. `08b0430` — la TASK actualizada, copia byte a byte (mismo sha256).
+2. `1f7c8a3` — **`calibrate` corre ANTES del rebuild, sobre la W candidata.** `_compute` es
+   la mitad pura de `_rebuild`; `W_candidata()` devuelve en copia lo que el rebuild
+   instalaría; `motivo_no_rebuild()` escribe una sola vez la condición del salto. Sin salto
+   posible **no se calibra** y el panel lo dice con el motivo. El panel lleva los **dos
+   shas** —la candidata y la que estaba viva al calibrar—, que es lo que hace visible el
+   orden desde afuera, y **`bloqueante: True` + `duracion_s`**: en el salto `calibrate` corre
+   en el hilo del mensaje y el canal no atiende. 4 tests nuevos; uno falla si corre después
+   de instalar la W.
+3. `e724b4d` — `criterio_local` → `local_criterion` (y `CriterioLocal`,
+   `UmbralesCriterioLocal`), sin alias. **No se renombraron los datos de corridas pasadas**:
+   `vivo_03_criterio_local_log.json` queda, y al driver sólo se le movieron los imports.
+4. `f49adb2` — `arranque` → `startup`, **con su API** (`set_state_dir`, `read_from_argv`,
+   `requested_state_dir`, `was_requested`, `declare`). Decisión mía, declarada en el commit.
+
+**Lo que quedó a medias y está guardado, no perdido:** las **claves del panel del CP1 a
+inglés**. Está en `git stash@{0}` (`"S2-C0: claves del panel del CP1 a ingles - a medias"`).
+Llegó a **7 tests rojos de 755**, y los 7 son del mismo tipo: el barrido tradujo también
+claves que **no nacieron en el CP1** y que otros lugares siguen leyendo en castellano
+—`calibrate.py` devuelve `estado`/`valores`/`condiciones`, el panel de Monitor tiene
+`condicion_W`, el criterio local `umbrales_calibrados`, la declaración
+`parametros_del_servicio`—. **El arreglo es acotado y conocido:** publicar en inglés y
+**leer** esas claves como están, que es lo que ya se hizo con `calibrate`
+(`registro["estado"]` → `"state"` en el panel). No lo dejé a medias en el árbol: `git stash
+pop` y seguir desde ahí.
+
+**No arrancado:** el **CP1b**. No tiene ni predicción escrita.
+
+**A1 — lo que no puedo afirmar:** que el stash cierre con 755 en verde. Lo medido es 7 rojos
+y de qué tipo son; que el arreglo alcance **no está verificado**.
+
+**A1.PAUSA.**

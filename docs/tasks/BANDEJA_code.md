@@ -11972,3 +11972,55 @@ pop` y seguir desde ahí.
 y de qué tipo son; que el arreglo alcance **no está verificado**.
 
 **A1.PAUSA.**
+
+---
+
+## S2-C0 · CP1b — LA PREDICCIÓN, escrita antes de correr — 2026-10-19 22:57 UTC
+
+*Claude Opus 5 (Code). `TASK_iap_serie2_caso0_v1`, CP1b. Base: `8b7c57a` (las claves del panel
+en inglés, suite 755/0). **No se reescribe.** No se eligió escala: este CP mide.*
+
+### Qué voy a medir, declarado antes
+
+**El conjunto de mensajes es el del CP1:** los 8 textos de `tests/test_serie2_caso0_cp1.py`
+(`TEXTOS`), repetidos en ciclo hasta **45 mensajes**, alternando dos devices (`d1`/`d2`),
+que es exactamente la secuencia con la que el CP1 midió. El sha de la secuencia entera va en
+el REPORTE. Con esa W: **N = 18 nodos**, que es lo que el CP1 reportó.
+
+**Una secuencia fija de rechazos** sobre esa W —determinista, con seed declarada— y en cada
+paso el D_ckm de la forma canónica (1 − ln N_eff_t / ln N_eff_0, N_eff = 1/Σm², n_runs = 1000)
+bajo cuatro combinaciones:
+
+| | W_eff | quién la usa hoy |
+|---|---|---|
+| **A** | W + (Δ_r/max Δ_r) · media(W > 0) | **Monitor** (`_combine_W_Delta`) |
+| **B** | W + Δ_r **crudo** | **COCO** (`observe`) |
+| **C** | W + (Δ_r/max Δ_r) · media(\|W\| ≠ 0) | alternativa de la TASK |
+| **D** | W + (Δ_r/max Δ_r) | alternativa: normalizado y **sin** factor de W |
+
+Y **cuánto tarda `calibrate` en el salto** con esa W: varias corridas, mediana y rango, de
+las dos cosas que el canal bloquea —la extracción de la candidata y la calibración—, porque el
+`duration_s` del panel cubre las dos.
+
+### A1 — de dónde sale lo que predigo
+
+**Verificable:** las cuatro fórmulas salen del código leído en el CP0/CP1
+(`monitor_service.py:644-650`, `coco.py:280`); el N = 18 y el `D_ckm = 0.0882` son medición del
+CP1. **Peso del contexto:** vengo de dos CP donde subestimé el tamaño del efecto de un cambio
+de escala (`min_df`), así que el riesgo acá es **predecir de más**. **Lo que no puedo predecir:**
+la media de los pesos positivos de esta W, y por lo tanto el factor entre A y D.
+
+### Predicción
+
+| # | Predicción |
+|---|---|
+| 1 | **B (COCO, crudo) va a dominar.** Δ_r son enteros y W ∈ [−1,1]: con **un solo** rechazo el par rechazado pasa a ser el más fuerte de la matriz. Predigo que B se separa de A desde el **primer** paso y que su D_ckm llega a su valor extremo con **≤ 3 rechazos**, mientras A todavía se mueve poco. |
+| 2 | **A y C van a dar curvas parecidas, no iguales.** media(\|W\| ≠ 0) ≥ media(W > 0) cuando hay pesos negativos, así que C escala **más** que A. Predigo un factor **entre 1,0 y 2,0** entre las dos escalas y **la misma dirección**. |
+| 3 | **D (sin factor de W) queda entre A/C y B**, más cerca de A que de B: normaliza el máximo a 1, que es el orden de magnitud de W. |
+| 4 | **La dirección**: predigo D_ckm **creciendo** con los rechazos en las cuatro (más acoplamiento ⇒ menos órbitas ⇒ N_eff baja ⇒ D_ckm sube), **pero no monótona**: N_eff no es monótona y con 18 nodos los saltos son discretos. Predigo **al menos un paso que retrocede** en alguna de las cuatro. |
+| 5 | **Cuánto se mueve D_ckm dentro del ciclo**: con la escala actual (A) predigo un rango **chico**, entre **0,0 y 0,15**, sobre una secuencia de ~10 rechazos; con B, **más de 0,3**. Si A se mueve menos de 0,02, la lectura es que *dentro de un ciclo D_ckm con la escala de hoy casi no se mueve*, y eso es un resultado, no una falla del driver. |
+| 6 | **`calibrate`**: 5 puntos de grilla × `n_runs = 200` conteos sobre N = 18. Predigo **mediana entre 0,2 y 2 s**, rango dentro de ×2, y que **la extracción de la candidata es la parte chica** (< 0,1 s): lo que bloquea es el conteo de órbitas. |
+| 7 | **Lo que más probablemente me salga mal:** el punto 4. Si la secuencia de rechazos cae sobre pares que ya estaban acoplados, puede no mover N_eff en absoluto y las cuatro curvas quedar planas — y entonces lo que mediría es la secuencia, no la escala. Por eso la secuencia se declara y se elige **sobre pares no nulos y nulos a propósito**, mitad y mitad. |
+
+**No se elige escala en este CP.** La tabla y lo que no se pueda afirmar van al REPORTE; la
+escala la elige delamor.

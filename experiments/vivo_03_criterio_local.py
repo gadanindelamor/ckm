@@ -62,9 +62,9 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
 from iap_chatroom.autonomous_device import AutonomousDevice        # noqa: E402
-from iap_chatroom.criterio_local import (                          # noqa: E402
-    CriterioLocal,
-    UmbralesCriterioLocal,
+from iap_chatroom.local_criterion import (                          # noqa: E402
+    LocalCriterion,
+    LocalCriterionThresholds,
 )
 from iap_chatroom.providers.groq_provider import GroqProvider      # noqa: E402
 
@@ -88,8 +88,8 @@ SYSTEM_PROMPT = (
 )
 
 
-def _umbrales() -> UmbralesCriterioLocal:
-    return UmbralesCriterioLocal(piso_vueltas=PISO_VUELTAS)
+def _umbrales() -> LocalCriterionThresholds:
+    return LocalCriterionThresholds(piso_vueltas=PISO_VUELTAS)
 
 
 async def _estado_de_partida(url: str) -> dict:
@@ -118,11 +118,11 @@ async def main() -> dict:
             mcp_url=MCP_URL,
             poll_interval=POLL_INTERVAL,
             # uno por device: el estado del filtro es de cada uno
-            criterio_local=CriterioLocal(umbrales=_umbrales()),
+            local_criterion=LocalCriterion(umbrales=_umbrales()),
         )
         for i in range(N_DEVICES)
     ]
-    assert devices[0].criterio_local is not devices[1].criterio_local, \
+    assert devices[0].local_criterion is not devices[1].local_criterion, \
         "los dos devices comparten el filtro: el piso de uno resetearía al otro"
 
     errores_fatales = []
@@ -186,7 +186,7 @@ async def main() -> dict:
             "duration_s": DURATION,
             "gate_congelado_en": "f96c234",
             "system_prompt": SYSTEM_PROMPT,
-            "criterio_local": "ENCENDIDO",
+            "local_criterion": "ENCENDIDO",
             "umbrales": {
                 "dt_minimo_s": umb.dt_minimo_s,
                 "piso_vueltas": umb.piso_vueltas,

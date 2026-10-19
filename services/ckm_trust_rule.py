@@ -10,12 +10,12 @@ pasa sus elementos al engine y **no reimplementa ningún paso**.
 estado entre llamadas.
 
 **CP3 (13 oct, orden de delamor): ya lo llama alguien.** `iap_chatroom/
-criterio_local.py` es la primera instancia en producción: le pasa sus
+local_criterion.py` es la primera instancia en producción: le pasa sus
 casilleros y lee la `Decision`. El gate `f96c234` se sostuvo donde importa —las
 24 decisiones del vivo 03 y las 312 combinaciones del barrido dan lo mismo que
 antes—, y la única diferencia es un **rótulo** en la colisión piso-campo, que
 está declarada en el docstring de ese archivo y medida en
-`tests/test_criterio_local_cp3.py`.
+`tests/test_local_criterion_cp3.py`.
 
 ## La forma, con el nombre largo de cada letra
 
@@ -146,7 +146,7 @@ el contador lo pasa **quien llama**, en `trace_streak`. La ausencia del contador
 oct): el paso 2 **no aplica** y la duda **sube** — `ESCALATED`, con el marcador
 `FLOOR_UNKNOWN` y `record["floor_missing"]` diciendo cuál de los tres casos fue.
 
-El motivo es el mismo que `criterio_local` aplica con `tick=None` (9 oct): *"el
+El motivo es el mismo que `local_criterion` aplica con `tick=None` (9 oct): *"el
 filtro no se arroga el silencio sobre una dimensión que no observó"*. Dejar
 decidir a la traza cuando no se sabe cuántas veces ya decidió **es** el silencio
 absorbente de F1: el paso 2 se vuelve absorbente justo donde no hay con qué
@@ -183,7 +183,7 @@ Las dos son **reconstrucciones por prefijos**, no la historia de ningún log.
   es de la traza— y la duda sube (`REASON_TRACE_SHORT`). El `g` del paso 4 también
   lo recibe.
 - `capacity = None` → **no hay lugares que contar**. Es el caso de una sola decisión
-  (`criterio_local`, `should_rebuild`).
+  (`local_criterion`, `should_rebuild`).
 
 **Divergencia declarada:** `node_extractor._seleccionar` **conserva su copia de la
 exención** hasta el CP2 de `TASK_node_extractor_regla_v1`. Hasta entonces, el engine
@@ -213,7 +213,7 @@ from typing import Any, Callable, Optional
 
 # ── I1 — los cuatro orígenes. Toda decisión lleva el suyo, nunca implícito ────
 # Constantes `str` más tupla de válidos: la convención del repo
-# (`calibrate.ESTADOS`, `criterio_local.VIA_*`). El repo no usa `Enum`.
+# (`calibrate.ESTADOS`, `local_criterion.VIA_*`). El repo no usa `Enum`.
 FIELD     = "FIELD"       # f  — field criterion: lo decidió el campo (paso 1)
 TRACE     = "TRACE"       # T  — trace: lo decidió la selección anterior (paso 2)
 ESCALATED = "ESCALATED"   # ↑k — la duda subió al orden de arriba (paso 3)
@@ -635,7 +635,7 @@ class CkmTrustRule:
                 # La traza NO sigue decidiendo (delamor, 12 oct): sin saber
                 # cuántas veces ya decidió, dejarla decidir es arrogarse el
                 # silencio sobre lo que no se observó — el mismo criterio que
-                # `criterio_local` con `tick=None` (9 oct).
+                # `local_criterion` con `tick=None` (9 oct).
                 markers.append(FLOOR_UNKNOWN)
                 base_record["floor_missing"] = falta
             base_record["floor_reached"] = floor_reached

@@ -1,25 +1,25 @@
 """
-`CriterioLocal` expresado como **instancia** de `CkmTrustRule` — CP2
+`LocalCriterion` expresado como **instancia** de `CkmTrustRule` — CP2
 
-`TASK_ckm_trust_rule_v1`, CP2. **`iap_chatroom/criterio_local.py` NO se toca**: se
+`TASK_ckm_trust_rule_v1`, CP2. **`iap_chatroom/local_criterion.py` NO se toca**: se
 lo expresa en la forma, acá, y se compara contra sus propios registros.
 
-*(Vale en su marco: el CP3 —13 oct— sí lo tocó, y ahí `criterio_local` pasó a
+*(Vale en su marco: el CP3 —13 oct— sí lo tocó, y ahí `local_criterion` pasó a
 instanciar el engine. Este archivo queda como lo que midió el CP2, el mapeo
-escrito **afuera**. El replay del mismo log **por `criterio_local` mismo** está en
-`tests/test_criterio_local_cp3.py`.)*
+escrito **afuera**. El replay del mismo log **por `local_criterion` mismo** está en
+`tests/test_local_criterion_cp3.py`.)*
 
 Entrada: `experiments/vivo_03_criterio_local_log.json` — el vivo 03, **24
 registros** de 2 devices, `piso_vueltas = 6`, `calibrado: false`.
 
 ## El mapeo (CP0 del CP2, `c620d70`, aceptado por delamor)
 
-| casillero | qué es en `criterio_local` |
+| casillero | qué es en `local_criterion` |
 |---|---|
 | **C** | la vuelta. **Un** candidato: `"llamar"` |
-| **f** | `n_nuevos + nombrado` — `criterio_local.py:271-274` |
-| **κ** | **0**, `DECLARED` **por el mapeo**, no por `criterio_local`: sale de leer `if n_nuevos > 0` |
-| **ε** | `None` **declarado**: `criterio_local` no tiene ε |
+| **f** | `n_nuevos + nombrado` — `local_criterion.py:271-274` |
+| **κ** | **0**, `DECLARED` **por el mapeo**, no por `local_criterion`: sale de leer `if n_nuevos > 0` |
+| **ε** | `None` **declarado**: `local_criterion` no tiene ε |
 | **T** | **el silencio**, `frozenset()`. En la primera vuelta **no hay traza**: `None` |
 | **P** | `piso_vueltas`, leído del registro; `trace_streak` = `deltas.vueltas_sin_llamar` |
 | **g** | **no hay** `g` declarado. La auditoría **no es un `g`** (ver abajo) |
@@ -37,7 +37,7 @@ Se aplica como **overlay leído del registro** (`via == "auditoria"`), **sin
 re-sortear**: re-sortear haría que el test midiera el RNG y no el mapeo.
 
 **`tick=None` quedó alineado** por la decisión 5 del 12 oct (el piso no evaluable
-sube la duda, igual que `criterio_local` con `tick=None`), y **no es medible en
+sube la duda, igual que `local_criterion` con `tick=None`), y **no es medible en
 `vivo_03`**: 0 de 24.
 
 ## La predicción, escrita en `c620d70` ANTES de correr
@@ -78,21 +78,21 @@ def _regla_de(reg: dict, *, capacity_override=None) -> CkmTrustRule:
     return CkmTrustRule(
         order=ORDEN,
         params=RuleParams(
-            # κ = 0: lo declara el MAPEO, no criterio_local
+            # κ = 0: lo declara el MAPEO, no local_criterion
             cut=Threshold(value=0.0, produced_by_order="el mapeo del CP2",
                           provenance=DECLARED,
-                          source="sale de leer `if n_nuevos > 0` en criterio_local.py:273"),
-            # ε: criterio_local no tiene. None declarado, nunca 0 implícito
+                          source="sale de leer `if n_nuevos > 0` en local_criterion.py:273"),
+            # ε: local_criterion no tiene. None declarado, nunca 0 implícito
             tolerance=Threshold(value=None, produced_by_order="el mapeo del CP2",
                                 provenance=DECLARED,
-                                source="criterio_local no declara ε (TASK, 11 oct)"),
+                                source="local_criterion no declara ε (TASK, 11 oct)"),
             floor=Threshold(value=umb["piso_vueltas"], produced_by_order="b1",
                             provenance=DECLARED,
                             source="declarado en el log del vivo 03, calibrado: false"),
         ),
         field_criterion=lambda c: (reg["deltas"]["n_nuevos"]
                                    + int(bool(reg["deltas"]["nombrado"]))),
-        context=None,          # criterio_local no declara un g para el empate
+        context=None,          # local_criterion no declara un g para el empate
         escalate_to="b1 — el LLM",
     )
 
@@ -126,7 +126,7 @@ def _llamar(dec, reg: dict) -> bool:
 
 def test_24_de_24_bit_a_bit_en_llamar(registros) -> None:
     """**El resultado del CP2.** Mismas entradas, misma decisión `llamar`/`no
-    llamar` que `criterio_local`, registro por registro."""
+    llamar` que `local_criterion`, registro por registro."""
     difs = []
     for dev, reg in registros:
         dec = _decidir(reg)
@@ -152,7 +152,7 @@ def test_sin_el_overlay_la_UNICA_diferencia_es_la_auditoria(registros) -> None:
 
 def test_el_origen_por_motivo_es_el_predicho(registros) -> None:
     """
-    La predicción escrita en `c620d70` antes de correr. Donde `criterio_local` y la
+    La predicción escrita en `c620d70` antes de correr. Donde `local_criterion` y la
     forma difieren es acá —en el **origen**—, no en la decisión.
     """
     por_motivo: dict = {}
@@ -171,7 +171,7 @@ def test_el_origen_por_motivo_es_el_predicho(registros) -> None:
 
 def test_primera_vuelta_cae_por_FIELD_y_no_por_falta_de_traza(registros) -> None:
     """La diferencia que el mapeo propuesto no tenía. El módulo **no tiene el
-    concepto "primera vuelta"**: lo que `criterio_local` codifica como *"nunca
+    concepto "primera vuelta"**: lo que `local_criterion` codifica como *"nunca
     llamé"* es *"no hay traza"*, y con señal de campo la ausencia de traza es
     irrelevante."""
     primeras = [(dev, reg) for dev, reg in registros
@@ -181,7 +181,7 @@ def test_primera_vuelta_cae_por_FIELD_y_no_por_falta_de_traza(registros) -> None
         assert reg["deltas"]["n_nuevos"] + int(reg["deltas"]["nombrado"]) == 3
         dec = _decidir(reg)
         assert dec.origin == FIELD, "con f > κ el paso 2 ni se alcanza"
-        assert reg["via"] == "criterio"      # criterio_local también lo llama campo
+        assert reg["via"] == "criterio"      # local_criterion también lo llama campo
 
 
 # ── `field_inputs`: R conserva lo que la suma pierde ────────────────────────
@@ -198,7 +198,7 @@ def test_field_inputs_conserva_cual_de_los_dos_disparo(registros) -> None:
     assert len(con_nombrado) == 2
     assert all(r["motivo"] == "primera_vuelta" for r in con_nombrado), (
         "motivo=nombrado nunca aparece: los dos con nombrado=True son "
-        "primera_vuelta, que va antes en el orden de criterio_local"
+        "primera_vuelta, que va antes en el orden de local_criterion"
     )
 
 
@@ -237,7 +237,7 @@ def test_lo_que_vivo_03_no_puede_medir(registros) -> None:
     1. **`tick=None`: 0 de 24.** La diferencia quedó alineada por la decisión 5 y
        el log no tiene con qué medirla.
     2. **Ninguna colisión piso-vs-campo:** los dos `piso` tienen `f = 0`, así que
-       la diferencia de orden —`criterio_local` evalúa `tick`, `primera_vuelta` y
+       la diferencia de orden —`local_criterion` evalúa `tick`, `primera_vuelta` y
        el piso **antes** que el campo— no produce divergencia acá.
     3. **`motivo = nombrado`: 0 de 24.**
     """

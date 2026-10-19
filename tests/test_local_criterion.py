@@ -1,5 +1,5 @@
 """
-test_criterio_local.py — CP2b de TASK_canal_iap_clock_iniciativa_v2
+test_local_criterion.py — CP2b de TASK_canal_iap_clock_iniciativa_v2
 
 El criterio local: el filtro sin LLM que decide **si** se llama a D.
 
@@ -32,7 +32,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 from iap_chatroom.autonomous_device import AutonomousDevice           # noqa: E402
 from iap_chatroom.channel import ChatChannel                          # noqa: E402
-from iap_chatroom.criterio_local import (                             # noqa: E402
+from iap_chatroom.local_criterion import (                             # noqa: E402
     DECISION_SKIP,
     MOTIVO_AUDITORIA,
     MOTIVO_PISO,
@@ -41,8 +41,8 @@ from iap_chatroom.criterio_local import (                             # noqa: E4
     VIA_AUDITORIA,
     VIA_CRITERIO,
     VIA_PISO,
-    CriterioLocal,
-    UmbralesCriterioLocal,
+    LocalCriterion,
+    LocalCriterionThresholds,
     divergencia_auditoria,
     dt_desde,
 )
@@ -53,7 +53,7 @@ from tests.test_oda_continuo import ClientStub, ProviderStub, _publicar_sync
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def _piso_fuera_del_horizonte(**kw) -> CriterioLocal:
+def _piso_fuera_del_horizonte(**kw) -> LocalCriterion:
     """
     Un filtro cuyo piso está **más lejos que la ventana que se observa**.
 
@@ -71,14 +71,14 @@ def _piso_fuera_del_horizonte(**kw) -> CriterioLocal:
     """
     kw.setdefault("tasa_auditoria", 0.0)
     kw.setdefault("tasa_auditoria_pase", 0.0)
-    return CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=10 ** 9, **kw),
+    return LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=10 ** 9, **kw),
                          rng=random.Random(0))
 
 
-def _filtro(**kw) -> CriterioLocal:
+def _filtro(**kw) -> LocalCriterion:
     """Filtro con auditoría apagada y RNG sembrado, salvo que se pida otra cosa."""
     kw.setdefault("tasa_auditoria", 0.0)
-    return CriterioLocal(umbrales=UmbralesCriterioLocal(**kw),
+    return LocalCriterion(umbrales=LocalCriterionThresholds(**kw),
                          rng=random.Random(0))
 
 
@@ -160,7 +160,7 @@ def test_un_piso_fuera_del_horizonte_ES_absorbente() -> None:
     calibración, y es por qué los umbrales van declarados sin calibrar.
     """
     with pytest.raises(ValueError):
-        UmbralesCriterioLocal(piso_vueltas=0)   # por configuración, no se llega
+        LocalCriterionThresholds(piso_vueltas=0)   # por configuración, no se llega
 
     filtro = _piso_fuera_del_horizonte()
     regs = _silencio(filtro, 40)
@@ -187,8 +187,8 @@ def test_la_auditoria_sola_puede_no_llamar_nunca() -> None:
     )
     # piso fuera del horizonte: dentro de las 20 vueltas que se miran, el
     # piso no existe, y lo único que podría llamar es la auditoría
-    filtro = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_vueltas=10 ** 9, tasa_auditoria=0.1),
+    filtro = LocalCriterion(
+        umbrales=LocalCriterionThresholds(piso_vueltas=10 ** 9, tasa_auditoria=0.1),
         rng=random.Random(semilla),
     )
     regs = _silencio(filtro, 20)
@@ -224,7 +224,7 @@ def test_skip_no_es_OP_SILENCE_ni_UNKNOWN() -> None:
 def test_en_la_traza_del_device_el_skip_se_distingue(canal) -> None:
     """Y la distinción llega al log del device, no sólo a la constante."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=3))
+                  local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     tipos = {d["decision"] for d in dev.decisiones()}
@@ -255,7 +255,7 @@ def test_un_skip_no_publica_nada(canal) -> None:
     mecanismo, no corregido de paso.
     """
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=3))
+                  local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     skips = [d for d in dev.decisiones() if d["decision"] == DECISION_SKIP]
@@ -268,7 +268,7 @@ def test_un_skip_no_publica_nada(canal) -> None:
 def test_un_skip_no_gasta_una_llamada(canal) -> None:
     """Lo que el filtro es para: la vuelta que skipea no llama al LLM."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=3))
+                  local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     for d in dev.decisiones():
@@ -312,7 +312,7 @@ def test_la_via_dice_por_que_SI_se_llamo() -> None:
 def test_la_auditoria_queda_marcada_como_tal() -> None:
     """Una llamada de auditoría no se confunde con una del criterio."""
     # el piso puesto lejos para que no estorbe: eso sí es configuración válida
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=99,
+    f = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=99,
                                                      tasa_auditoria=1.0),
                       rng=random.Random(0))
     f.evaluar(tick=1, n_nuevos=0)                   # primera vuelta
@@ -325,7 +325,7 @@ def test_la_auditoria_queda_marcada_como_tal() -> None:
 
 def test_los_umbrales_nacen_sin_calibrar() -> None:
     """*"Los umbrales son de Calibración y no los inventa Code."*"""
-    assert UmbralesCriterioLocal().calibrado is False
+    assert LocalCriterionThresholds().calibrado is False
 
 
 def test_el_sin_calibrar_viaja_en_cada_registro() -> None:
@@ -338,7 +338,7 @@ def test_el_sin_calibrar_viaja_en_cada_registro() -> None:
 def test_el_panel_declara_los_umbrales_sin_calibrar(canal) -> None:
     """**Pedido de Opus:** umbrales declarados "no calibrados" **en el panel**."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=3))
+                  local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     panel = dev.panel_criterio()
@@ -346,7 +346,7 @@ def test_el_panel_declara_los_umbrales_sin_calibrar(canal) -> None:
     assert panel["calibrado"] is False
     assert panel["umbrales"]["piso_vueltas"] == 3
     assert panel["n_skips"] + panel["n_llamadas"] == panel["vueltas_evaluadas"]
-    assert dev.costo()["criterio_local"]["calibrado"] is False
+    assert dev.costo()["local_criterion"]["calibrado"] is False
 
 
 def test_sin_filtro_el_panel_es_None_no_un_panel_en_cero(canal) -> None:
@@ -357,7 +357,7 @@ def test_sin_filtro_el_panel_es_None_no_un_panel_en_cero(canal) -> None:
     dev = _device(ProviderStub(["OP_SILENCE"] * 50))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
     assert dev.panel_criterio() is None
-    assert dev.costo()["criterio_local"] is None
+    assert dev.costo()["local_criterion"] is None
 
 
 # ── los deltas: del reloj del canal, y ausentes los que no existen ──────────
@@ -421,7 +421,7 @@ def test_delta_mensajes_cuenta_solo_ajenos(canal) -> None:
     propios mensajes no pueden contar como mensajes nuevos.
     """
     dev = _device(ProviderStub(["INTERACT"] + ["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=99))
+                  local_criterion=_filtro(piso_vueltas=99))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     propios = [m for m in canal.messages if m.device_id == dev.device_id]
@@ -468,7 +468,7 @@ def test_la_divergencia_cuenta_lo_que_D_habria_hecho() -> None:
 
 # ── lo que el CP2b NO cambió ────────────────────────────────────────────────
 
-def test_sin_criterio_local_D_corre_en_cada_vuelta(canal) -> None:
+def test_sin_local_criterion_D_corre_en_cada_vuelta(canal) -> None:
     """
     El default es **sin filtro**: el comportamiento del CP2a y el de los dos
     vivos. Si el filtro entrara por default, la línea de base del vivo 02 (23
@@ -493,7 +493,7 @@ def test_los_deltas_NO_entran_al_prompt_del_gate(canal) -> None:
     que D los vea, se para y se reporta.
     """
     prov = ProviderStub(["OP_SILENCE"] * 50)
-    dev = _device(prov, criterio_local=_filtro(piso_vueltas=3))
+    dev = _device(prov, local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     import json
@@ -589,7 +589,7 @@ def test_una_cara_sin_datos_da_None_y_no_cero() -> None:
 def test_el_panel_lleva_las_dos_caras(canal) -> None:
     """Y las dos caras llegan al panel, que es donde se leen."""
     dev = _device(ProviderStub(["OP_SILENCE"] * 50),
-                  criterio_local=_filtro(piso_vueltas=3))
+                  local_criterion=_filtro(piso_vueltas=3))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 
     div = dev.panel_criterio()["divergencia_auditoria"]
@@ -602,7 +602,7 @@ def test_las_dos_tasas_van_declaradas_sin_calibrar() -> None:
     Opus (CP0): *"las dos van al azar, con la tasa declarada como 'no
     calibrada', igual que los umbrales."*
     """
-    u = UmbralesCriterioLocal()
+    u = LocalCriterionThresholds()
     assert u.tasa_auditoria == pytest.approx(0.1)
     assert u.tasa_auditoria_pase == pytest.approx(0.1)
     assert u.calibrado is False
@@ -610,8 +610,8 @@ def test_las_dos_tasas_van_declaradas_sin_calibrar() -> None:
     # aserción que había acá era `== 0.0 or "..." in r["umbrales"]`, que es
     # verdadera casi siempre: no podía fallar. Es el mismo patrón que vengo
     # sacando de los tests ajenos toda la sesión, esta vez mío.
-    f = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_vueltas=4, tasa_auditoria=0.3,
+    f = LocalCriterion(
+        umbrales=LocalCriterionThresholds(piso_vueltas=4, tasa_auditoria=0.3,
                                        tasa_auditoria_pase=0.7),
         rng=random.Random(0),
     )
@@ -634,8 +634,8 @@ def test_el_muestreo_del_pase_no_cuesta_una_llamada() -> None:
     son **las mismas**. Lo que cambia es cuántas quedan marcadas.
     """
     def correr(tasa_pase):
-        f = CriterioLocal(
-            umbrales=UmbralesCriterioLocal(piso_vueltas=3, tasa_auditoria=0.0,
+        f = LocalCriterion(
+            umbrales=LocalCriterionThresholds(piso_vueltas=3, tasa_auditoria=0.0,
                                            tasa_auditoria_pase=tasa_pase),
             rng=random.Random(7),
         )
@@ -663,7 +663,7 @@ def test_el_piso_cuenta_vueltas_y_el_nombre_lo_dice() -> None:
     Se verifica que cuenta **vueltas**: con el tick quieto —el mismo número en
     todas las evaluaciones— el piso igual dispara.
     """
-    assert not hasattr(UmbralesCriterioLocal(), "piso_ticks")
+    assert not hasattr(LocalCriterionThresholds(), "piso_ticks")
     f = _filtro(piso_vueltas=4)
     regs = [f.evaluar(tick=7, n_nuevos=0) for _ in range(12)]   # tick QUIETO
     assert any(r["motivo"] == MOTIVO_PISO for r in regs), \
@@ -678,8 +678,8 @@ def test_apagar_el_piso_no_es_una_configuracion_valida() -> None:
     """
     for v in (0, -1, -100):
         with pytest.raises(ValueError, match="piso_vueltas"):
-            UmbralesCriterioLocal(piso_vueltas=v)
-    assert UmbralesCriterioLocal(piso_vueltas=1).piso_vueltas == 1
+            LocalCriterionThresholds(piso_vueltas=v)
+    assert LocalCriterionThresholds(piso_vueltas=1).piso_vueltas == 1
 
 
 def test_publicar_exige_INTERACT_explicito(canal, capsys) -> None:
@@ -760,7 +760,7 @@ def test_el_panel_declara_si_el_piso_cupo_en_la_corrida() -> None:
 
     dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
                            system_prompt="s", poll_interval=0.0,
-                           criterio_local=_filtro(piso_vueltas=5))
+                           local_criterion=_filtro(piso_vueltas=5))
     # 4 vueltas de silencio: menos de las que el piso necesita
     dev._registros_criterio = _silencio(_filtro(piso_vueltas=5), 4)
     panel = dev.panel_criterio()
@@ -777,7 +777,7 @@ def test_sin_skips_el_horizonte_no_aplica() -> None:
     """`False` diría "el piso no cupo"; sin skips la pregunta no se hizo."""
     dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
                            system_prompt="s", poll_interval=0.0,
-                           criterio_local=_filtro(piso_vueltas=5))
+                           local_criterion=_filtro(piso_vueltas=5))
     f = _filtro(piso_vueltas=5)
     dev._registros_criterio = [f.evaluar(tick=i, n_nuevos=3) for i in range(1, 6)]
     assert dev.panel_criterio()["n_skips"] == 0
@@ -804,7 +804,7 @@ def test_vueltas_para_ver_el_piso_coincide_con_la_corrida(piso) -> None:
     )
     dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
                            system_prompt="s", poll_interval=0.0,
-                           criterio_local=_filtro(piso_vueltas=piso))
+                           local_criterion=_filtro(piso_vueltas=piso))
     dev._registros_criterio = _silencio(_filtro(piso_vueltas=piso), 1)
     assert dev.panel_criterio()["vueltas_para_ver_el_piso"] == primera
 
@@ -830,7 +830,7 @@ def test_el_piso_por_default_no_habria_disparado_en_un_vivo_como_el_02() -> None
 
     dev = AutonomousDevice(device_id="d", provider=ProviderStub([]),
                            system_prompt="s", poll_interval=0.0,
-                           criterio_local=_filtro(piso_vueltas=12))
+                           local_criterion=_filtro(piso_vueltas=12))
     dev._registros_criterio = regs
     panel = dev.panel_criterio()
     assert panel["piso_dentro_del_horizonte"] is False

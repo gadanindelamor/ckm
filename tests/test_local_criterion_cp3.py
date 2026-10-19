@@ -1,5 +1,5 @@
 """
-CP3 — `criterio_local` instancia el engine, y lo que cambia se mide
+CP3 — `local_criterion` instancia el engine, y lo que cambia se mide
 
 `TASK_ckm_trust_rule_v1`, CP3 (orden de delamor, 13 oct). El CP2 verificó el
 mapeo **sobre el vivo 03**: 24 registros, un corpus. Este archivo verifica lo
@@ -11,7 +11,7 @@ congelada** de la cascada que había antes del CP3.
 Regla de completitud del proyecto: *"una aserción que repite la fórmula del
 código no encuentra un off-by-one"*. Comparar el engine contra mi lectura de la
 cascada verificaría mi lectura. `_CASCADA_ANTES` es la cascada **tal cual
-estaba** en `60e21f5` (`iap_chatroom/criterio_local.py:252-282`), copiada sin
+estaba** en `60e21f5` (`iap_chatroom/local_criterion.py:252-282`), copiada sin
 tocar nada salvo sacarla del objeto: es el oráculo, no un resumen.
 
 El barrido recorre el producto de:
@@ -45,7 +45,7 @@ propio test y no en el barrido.
 
 El 60 es **del barrido**, no una tasa esperable: un tercio de las filas tiene
 `piso_vueltas = 1`, que sobre-representa la colisión. En `vivo_03` es **0 de
-24** (lo mide `test_criterio_local_como_instancia.py`).
+24** (lo mide `test_local_criterion_como_instancia.py`).
 
 ## El dominio: la equivalencia vale para `n_nuevos >= 0`
 
@@ -66,7 +66,7 @@ from typing import Optional
 
 import pytest
 
-from iap_chatroom.criterio_local import (
+from iap_chatroom.local_criterion import (
     MOTIVO_AUDITORIA,
     MOTIVO_MENSAJES,
     MOTIVO_NOMBRADO,
@@ -76,8 +76,8 @@ from iap_chatroom.criterio_local import (
     VIA_AUDITORIA,
     VIA_CRITERIO,
     VIA_PISO,
-    CriterioLocal,
-    UmbralesCriterioLocal,
+    LocalCriterion,
+    LocalCriterionThresholds,
 )
 
 
@@ -86,7 +86,7 @@ from iap_chatroom.criterio_local import (
 def _CASCADA_ANTES(*, tick, n_nuevos, nombrado, nunca_llamo,
                    vueltas_sin_llamar, piso_vueltas) -> tuple:
     """
-    `iap_chatroom/criterio_local.py:252-282` en `60e21f5`, con el sorteo de la
+    `iap_chatroom/local_criterion.py:252-282` en `60e21f5`, con el sorteo de la
     auditoría sacado (va en su propio test) y el estado pasado por argumento.
 
     Devuelve `(llamar, motivo, via)`.
@@ -112,10 +112,10 @@ def _CASCADA_ANTES(*, tick, n_nuevos, nombrado, nunca_llamo,
 
 def _ahora(*, tick, n_nuevos, nombrado, nunca_llamo,
            vueltas_sin_llamar, piso_vueltas) -> tuple:
-    """El `criterio_local` de hoy, con el estado interno **puesto a mano** para
+    """El `local_criterion` de hoy, con el estado interno **puesto a mano** para
     que las dos vean exactamente la misma entrada."""
-    f = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_vueltas=piso_vueltas,
+    f = LocalCriterion(
+        umbrales=LocalCriterionThresholds(piso_vueltas=piso_vueltas,
                                        tasa_auditoria=0.0,
                                        tasa_auditoria_pase=0.0),
         rng=random.Random(0),
@@ -235,8 +235,8 @@ def test_sin_colision_el_piso_sigue_rotulando_piso() -> None:
 def test_la_auditoria_sigue_fuera_de_la_forma_y_sortea_igual() -> None:
     """La auditoría **no es de la regla**: mide la regla. Se neutraliza en el
     barrido y se verifica acá, con la tasa en 1.0 y el piso lejos."""
-    f = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_vueltas=99, tasa_auditoria=1.0),
+    f = LocalCriterion(
+        umbrales=LocalCriterionThresholds(piso_vueltas=99, tasa_auditoria=1.0),
         rng=random.Random(0),
     )
     f.evaluar(tick=1, n_nuevos=0)                 # gasta la primera vuelta
@@ -256,8 +256,8 @@ def test_el_sorteo_no_se_corrio_de_lugar() -> None:
     compara contra el número de tiradas que la cascada hacía.
     """
     def corrida(seed):
-        f = CriterioLocal(
-            umbrales=UmbralesCriterioLocal(piso_vueltas=5, tasa_auditoria=0.3,
+        f = LocalCriterion(
+            umbrales=LocalCriterionThresholds(piso_vueltas=5, tasa_auditoria=0.3,
                                            tasa_auditoria_pase=0.5),
             rng=random.Random(seed),
         )
@@ -277,8 +277,8 @@ def test_el_sorteo_no_se_corrio_de_lugar() -> None:
     for _ in range(tiradas):
         testigo.random()
     # el RNG del filtro quedó exactamente donde el testigo
-    f = CriterioLocal(
-        umbrales=UmbralesCriterioLocal(piso_vueltas=5, tasa_auditoria=0.3,
+    f = LocalCriterion(
+        umbrales=LocalCriterionThresholds(piso_vueltas=5, tasa_auditoria=0.3,
                                        tasa_auditoria_pase=0.5),
         rng=random.Random(7),
     )
@@ -290,7 +290,7 @@ def test_el_sorteo_no_se_corrio_de_lugar() -> None:
 def test_el_registro_no_gano_ni_perdio_claves() -> None:
     """Gate `f96c234` sobre la **forma** del registro: las mismas claves que
     antes del CP3. La `Decision` del engine se lee y no se guarda."""
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=4,
+    f = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=4,
                                                      tasa_auditoria_pase=1.0))
     r = f.evaluar(tick=1, n_nuevos=0)             # llama: primera vuelta
     assert set(r) == {"llamar", "motivo", "via", "tick", "deltas",
@@ -317,7 +317,7 @@ def test_tick_None_ahora_entra_por_el_piso_y_no_por_un_if_previo() -> None:
     """
     from services.ckm_trust_rule import ESCALATED, FLOOR_UNKNOWN
 
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=4))
+    f = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=4))
     f.evaluar(tick=1, n_nuevos=0)                 # gasta la primera vuelta
     dec = f._regla(n_nuevos=0, nombrado=False).decide(
         ["llamar"], capacity=None, trace=frozenset(), trace_streak=None,
@@ -338,7 +338,7 @@ def test_el_piso_no_se_recalcula_fuera_del_engine() -> None:
     """
     from pathlib import Path
     texto = (Path(__file__).resolve().parent.parent
-             / "iap_chatroom" / "criterio_local.py").read_text()
+             / "iap_chatroom" / "local_criterion.py").read_text()
     assert "_vueltas_sin_llamar >= " not in texto
     assert "floor_reached" in texto
 
@@ -346,7 +346,7 @@ def test_el_piso_no_se_recalcula_fuera_del_engine() -> None:
 def test_sin_rotulo_no_se_inventa_un_motivo() -> None:
     """El mapeo se declara total. Si deja de serlo, lo dice en vez de rellenar:
     `AssertionError` con el origen, el motivo y el registro."""
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=4))
+    f = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=4))
     f._tick_ultima_llamada, f._vueltas_sin_llamar = 0, 1
 
     class _ReglaQueEscala:
@@ -363,13 +363,13 @@ def test_sin_rotulo_no_se_inventa_un_motivo() -> None:
         f.evaluar(tick=1, n_nuevos=0)
 
 
-# ── El vivo 03, replayado por `criterio_local` y no por el mapeo ────────────
+# ── El vivo 03, replayado por `local_criterion` y no por el mapeo ────────────
 
 def test_vivo_03_las_24_decisiones_siguen_iguales(tmp_path) -> None:
     """
     **La verificación mínima que pidió delamor (13 oct).** El CP2 ya había
     comparado el vivo 03 contra la forma, pero a través del **mapeo escrito en
-    el test**. Acá se replayan los 24 registros por `criterio_local` mismo, que
+    el test**. Acá se replayan los 24 registros por `local_criterion` mismo, que
     es lo que el CP3 cambió.
 
     El replay es **secuencial y con estado**: cada device corre sus vueltas en
@@ -414,8 +414,8 @@ def test_vivo_03_las_24_decisiones_siguen_iguales(tmp_path) -> None:
             else:
                 tiradas.append(1.0)                     # no disparó
         piso = regs[0]["umbrales"]["piso_vueltas"]
-        f = CriterioLocal(
-            umbrales=UmbralesCriterioLocal(piso_vueltas=piso),
+        f = LocalCriterion(
+            umbrales=LocalCriterionThresholds(piso_vueltas=piso),
             rng=_RngDelLog(tiradas),
         )
         for r in regs:
@@ -454,8 +454,8 @@ def test_tick_None_y_despues_un_tick_conocido_no_esta_en_el_barrido() -> None:
     """
     for piso in (3, 12):
         for n_tercera in (0, 2):
-            f = CriterioLocal(
-                umbrales=UmbralesCriterioLocal(piso_vueltas=piso,
+            f = LocalCriterion(
+                umbrales=LocalCriterionThresholds(piso_vueltas=piso,
                                                tasa_auditoria=0.0,
                                                tasa_auditoria_pase=0.0),
                 rng=random.Random(0),
@@ -503,8 +503,8 @@ def test_fuera_del_dominio_n_nuevos_negativo_la_decision_cambia() -> None:
     pasa `len(nuevos)`—, pero `evaluar` es pública y no lo valida.
     """
     def ahora(n, nom):
-        f = CriterioLocal(
-            umbrales=UmbralesCriterioLocal(piso_vueltas=9, tasa_auditoria=0.0,
+        f = LocalCriterion(
+            umbrales=LocalCriterionThresholds(piso_vueltas=9, tasa_auditoria=0.0,
                                            tasa_auditoria_pase=0.0),
             rng=random.Random(0),
         )
@@ -548,7 +548,7 @@ def test_el_raise_es_alcanzable_y_con_que() -> None:
     su entrada, así que la ruta existe. Se declara; no se tapa con un rótulo
     inventado, que es justo lo que el `raise` evita.
     """
-    f = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=9))
+    f = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=9))
     f._tick_ultima_llamada, f._vueltas_sin_llamar = 0, 1        # hay traza
     with pytest.raises(AssertionError, match="llamar sin rotulo"):
         f.evaluar(tick=5, n_nuevos=float("nan"))
@@ -556,6 +556,6 @@ def test_el_raise_es_alcanzable_y_con_que() -> None:
     # y la contracara: con una entrada del dominio no levanta nunca
     for n in (0, 1, 7):
         for nom in (False, True):
-            g = CriterioLocal(umbrales=UmbralesCriterioLocal(piso_vueltas=9))
+            g = LocalCriterion(umbrales=LocalCriterionThresholds(piso_vueltas=9))
             g._tick_ultima_llamada, g._vueltas_sin_llamar = 0, 1
             g.evaluar(tick=5, n_nuevos=n, nombrado=nom)         # no levanta

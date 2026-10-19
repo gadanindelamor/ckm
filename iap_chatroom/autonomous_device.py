@@ -24,9 +24,9 @@ from typing import Optional
 
 from fastmcp import Client
 
-from iap_chatroom.criterio_local import (
+from iap_chatroom.local_criterion import (
     DECISION_SKIP,
-    CriterioLocal,
+    LocalCriterion,
     divergencia_auditoria,
     dt_desde,
 )
@@ -164,7 +164,7 @@ class AutonomousDevice:
         mcp_url: str = "http://localhost:7860/mcp",
         poll_interval: float = 2.0,   # segundos entre vueltas del ciclo
         trigger_mode: str = "continuo",
-        criterio_local: Optional[CriterioLocal] = None,
+        local_criterion: Optional[LocalCriterion] = None,
     ):
         """
         `trigger_mode` admite **un solo valor: "continuo"** (CP2a, P11).
@@ -178,7 +178,7 @@ class AutonomousDevice:
         `poll_interval` es el ritmo de la vuelta, y hoy lo fija el device
         (TASK §1). No hay mínimo declarado ni WAIT: eso es Calibración.
 
-        **`criterio_local=None` es sin filtro** (CP2b): D en cada vuelta, que
+        **`local_criterion=None` es sin filtro** (CP2b): D en cada vuelta, que
         es el comportamiento del CP2a y el de los dos vivos. El default no se
         cambió a propósito: el filtro mueve **cuántas llamadas hace el device**,
         y con él puesto por default la línea de base del vivo 02 (23 llamadas,
@@ -214,7 +214,7 @@ class AutonomousDevice:
         self.mcp_url = mcp_url
         self.poll_interval = poll_interval
         self.trigger_mode = trigger_mode
-        self.criterio_local = criterio_local
+        self.local_criterion = local_criterion
         # registros del filtro, uno por vuelta que lo consulto
         self._registros_criterio: list[dict] = []
         self._history: list[dict] = []
@@ -806,13 +806,13 @@ class AutonomousDevice:
         #      `ChatChannel._ahora()`. Nunca el reloj del device
         #      (TASK §0.4).
         reg = None
-        if self.criterio_local is not None:
+        if self.local_criterion is not None:
             ajeno = self._history[-1] if self._history else None
             propio = (
                 observation["own_recent"][-1]
                 if observation["own_recent"] else None
             )
-            reg = self.criterio_local.evaluar(
+            reg = self.local_criterion.evaluar(
                 tick=clock.get("tick"),
                 # solo mensajes ajenos: el loop ya filtró los propios
                 n_nuevos=len(nuevos),
@@ -1042,7 +1042,7 @@ class AutonomousDevice:
             "vueltas_con_ventana_unknown": sum(
                 1 for x in ds if x.get("ventana") == "UNKNOWN"
             ),
-            "criterio_local": self.panel_criterio(),
+            "local_criterion": self.panel_criterio(),
         }
 
     def panel_criterio(self) -> Optional[dict]:
@@ -1061,10 +1061,10 @@ class AutonomousDevice:
         vuelta, que son los que llevan el motivo. El panel los agrega; los
         registros siguen estando, porque el agregado dice cuántos y no cuáles.
         """
-        if self.criterio_local is None:
+        if self.local_criterion is None:
             return None
         regs = self._registros_criterio
-        umb = self.criterio_local.umbrales
+        umb = self.local_criterion.umbrales
         skips = [r for r in regs if not r["llamar"]]
         return {
             "calibrado": umb.calibrado,

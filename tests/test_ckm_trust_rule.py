@@ -161,7 +161,7 @@ def test_piso_no_evaluable_la_traza_NO_sigue_decidiendo() -> None:
 
     Dejarla decidir sin saber cuántas veces ya decidió **es** el silencio
     absorbente de F1 — el paso 2 se vuelve absorbente justo donde no hay con qué
-    frenarlo. Mismo criterio que `criterio_local` con `tick=None` (9 oct): *"el
+    frenarlo. Mismo criterio que `local_criterion` con `tick=None` (9 oct): *"el
     filtro no se arroga el silencio sobre una dimensión que no observó"*.
 
     **Corrige lo que el CP1 había aprobado**, donde esto devolvía `TRACE`.
@@ -361,7 +361,7 @@ def test_CP4_la_constante_queda_y_el_engine_no_la_emite() -> None:
 
 def test_capacity_None_no_exime_el_empate() -> None:
     """T12: `None` es **no hay lugares que contar**, no "caben todos". Es el caso
-    de una sola decisión (`criterio_local`, `should_rebuild`)."""
+    de una sola decisión (`local_criterion`, `should_rebuild`)."""
     d = _regla(cut=0.50, tolerance=0.01, escalate_to="k3").decide(
         ["a", "b", "c"], capacity=None)
     assert d.origin == ESCALATED and "free_slots" not in d.record
@@ -429,7 +429,7 @@ def test_origin_fuera_de_ORIGINS_levanta() -> None:
 # La lista está **medida**, no supuesta: sale del inventario del REPORTE CP0 del
 # 12 oct, corriendo este mismo barrido. Y va en **tres partes**, porque un archivo
 # que sólo usa los nombres no es un corazón (sugerencia de delamor, 12 oct) y una
-# **instancia** tampoco lo es (CP3, 13 oct: `criterio_local` pasó de una a otra).
+# **instancia** tampoco lo es (CP3, 13 oct: `local_criterion` pasó de una a otra).
 
 NEEDLES = {
     "empate": ("TOL_EMPATE", "empate"),
@@ -455,7 +455,7 @@ CORAZONES_CONOCIDOS = {
 # prueba del límite del test.
 SOLO_TEXTO = {
     "iap_chatroom/autonomous_device.py":
-        "pasa piso_vueltas a CriterioLocal: es consumidor, no implementación",
+        "pasa piso_vueltas a LocalCriterion: es consumidor, no implementación",
 }
 
 # **Instancias**: le pasan sus casilleros al engine y **no reimplementan ningún
@@ -467,7 +467,7 @@ SOLO_TEXTO = {
 # un archivo **entre** acá viniendo de `CORAZONES_CONOCIDOS` es el resultado de
 # un alineamiento, y se ve en el diff de esta lista.
 INSTANCIAS = {
-    "iap_chatroom/criterio_local.py":
+    "iap_chatroom/local_criterion.py":
         "CP3: instancia CkmTrustRule. Conserva MOTIVO_/VIA_ como rótulos, "
         "leídos del registro de la Decision; el piso no se recalcula acá",
 }
@@ -529,7 +529,7 @@ def test_la_lista_congelada_no_mezcla_corazones_con_coincidencias() -> None:
 
 def test_el_falso_positivo_es_la_prueba_del_limite() -> None:
     """`autonomous_device.py` entra al barrido **sólo** por `piso_vueltas`, que
-    pasa a `CriterioLocal`. Es el límite textual, medido."""
+    pasa a `LocalCriterion`. Es el límite textual, medido."""
     hits = _barrido()["iap_chatroom/autonomous_device.py"]
     assert hits == {"piso": ["piso_vueltas"]}
 

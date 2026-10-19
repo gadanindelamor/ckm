@@ -66,7 +66,7 @@ de como era antes". Desde el CP3 **no decide**: arma su instancia de
 `services/ckm_trust_rule.py`.
 
 El mapeo es el del CP0 del CP2 (`c620d70`, aceptado por delamor) y verificado
-bit a bit en `tests/test_criterio_local_como_instancia.py` (24/24 sobre el vivo
+bit a bit en `tests/test_local_criterion_como_instancia.py` (24/24 sobre el vivo
 03). Aca va **tal cual**, mas la unica pieza que el CP2 no podia poner:
 
 - **`tick = None` entra por el piso.** El CP2 lo dejo declarado como alineado
@@ -91,7 +91,7 @@ que el engine nunca llega a evaluar el piso y el rotulo es
 `mensajes_nuevos`/`nombrado` / `VIA_CRITERIO`.
 
 - **No se pierde la decision: se pierde el rotulo.** `llamar` es la misma en ese
-  caso y en todos. Lo medido esta en `tests/test_criterio_local_cp3.py`, que
+  caso y en todos. Lo medido esta en `tests/test_local_criterion_cp3.py`, que
   barre el espacio de entradas **completo** (312 combinaciones) contra una copia
   congelada de la cascada anterior: 0 difieren en `llamar`, 60 en `motivo` y las
   mismas 60 en `via`, todas la colision.
@@ -176,7 +176,7 @@ VIA_AUDITORIA = "auditoria"
 # ── El mapeo a la forma (CP3). Los nombres del casillero, una sola vez ──────
 #
 # `TASK_ckm_trust_rule_v1`, CP0 del CP2 (`c620d70`). Lo que aca se declara es
-# **el mapeo**, no `criterio_local`: la kappa = 0 sale de leer `if n_nuevos > 0`,
+# **el mapeo**, no `local_criterion`: la kappa = 0 sale de leer `if n_nuevos > 0`,
 # y la epsilon no existe en este filtro, asi que va `None` **declarado**.
 ORDEN = "b0 — la vuelta del device"   # el orden donde rige esta instancia
 CANDIDATO = "llamar"                  # C: un solo candidato, la vuelta
@@ -186,7 +186,7 @@ _MAPEO = "el mapeo del CP2 (TASK_ckm_trust_rule_v1, c620d70)"
 
 
 @dataclass(frozen=True)
-class UmbralesCriterioLocal:
+class LocalCriterionThresholds:
     """
     Los umbrales del filtro. **`calibrado=False` por defecto, y ese False viaja
     en cada registro** — no en un comentario.
@@ -252,7 +252,7 @@ class UmbralesCriterioLocal:
 
 
 @dataclass
-class CriterioLocal:
+class LocalCriterion:
     """
     El filtro. Tiene estado: cuando fue la ultima llamada a D.
 
@@ -261,7 +261,7 @@ class CriterioLocal:
     otro: por eso el piso no es opcional.
     """
 
-    umbrales: UmbralesCriterioLocal = field(default_factory=UmbralesCriterioLocal)
+    umbrales: LocalCriterionThresholds = field(default_factory=LocalCriterionThresholds)
     # RNG inyectable: con la auditoria al azar y sin semilla, un test de
     # "el filtro llama alguna vez" saldria flaky y no distinguiria un filtro
     # absorbente de una tirada de moneda.
@@ -455,12 +455,12 @@ class CriterioLocal:
                 ),
                 tolerance=Threshold(
                     value=None, produced_by_order=_MAPEO, provenance=DECLARED,
-                    source="criterio_local no declara epsilon (TASK, 11 oct)",
+                    source="local_criterion no declara epsilon (TASK, 11 oct)",
                 ),
                 floor=Threshold(
                     value=umb.piso_vueltas, produced_by_order=_MAPEO,
                     provenance=DECLARED,
-                    source=("UmbralesCriterioLocal.piso_vueltas, "
+                    source=("LocalCriterionThresholds.piso_vueltas, "
                             f"calibrado={umb.calibrado}"),
                 ),
             ),

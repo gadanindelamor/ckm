@@ -21,7 +21,7 @@ O sea: **se calibraron contra una cantidad que ya no es la que se compara.** La
 forma lineal por conteo es `deprecated_d_ckm` desde el 5 oct 2026; lo que hoy
 entra al umbral es `d_ckm`, la forma logarítmica por masa de cuenca. Y `coco.py`
 **no tiene ninguna marca `calibrado=False`** —esas están en
-`UmbralesCriterioLocal` y en `ckm_landscape_config`—: lo que tiene es esta
+`LocalCriterionThresholds` y en `ckm_landscape_config`—: lo que tiene es esta
 declaración en su docstring, que es más fuerte y más precisa que una marca.
 
 No es una contradicción escondida: está escrita. Lo anoto acá porque es la
@@ -71,7 +71,7 @@ test que exige que nunca se confundan — es el mismo criterio que separó
 de otra meseta en `should_rebuild`.
 
 **Los nombres los decide delamor.** Estos son provisionales y coherentes con la
-marca `calibrado=False` que ya existe (`UmbralesCriterioLocal`,
+marca `calibrado=False` que ya existe (`LocalCriterionThresholds`,
 `ckm_landscape_config`).
 
 **Un cuarto estado está propuesto y NO implementado**: calibración existente

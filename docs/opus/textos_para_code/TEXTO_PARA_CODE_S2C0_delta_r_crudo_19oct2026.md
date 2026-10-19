@@ -13,8 +13,8 @@ Respondé con archivo y línea. Si de esto sale que con Δ_r crudo COCO nunca di
 
 **(2) El cambio, sólo si el (1) no lo frena.**
 - `_combine_W_Delta` (`monitor_service.py`) pasa a W + Δ_r crudo.
-- Cambiá el comentario del código y la línea de las DEFS v17 que dice "dos cantidades": ahora, con la misma W y los mismos rechazos, es **una** W_eff.
-- Re-corré el driver del CP1b para mostrar que la columna de Monitor da igual a la de COCO.
+- Cambiá el comentario del código y la línea de las DEFS v17 sobre Monitor/COCO: ahora **comparten la escala** (crudo) y **siguen siendo dos cantidades**, porque difieren en qué Δ y en el baseline (tu lectura). *[Corregido por Opus tras tu lectura: decía "una W_eff", y eso era falso.]*
+- Re-corré el driver del CP1b con la escala nueva y reportá cómo quedan Monitor y COCO (no tienen por qué dar igual: Δ y baseline siguen distintos).
 - Los tests que fijaban la escala vieja se reescriben, sin conservar la vieja.
 - Declaralo en el commit.
 

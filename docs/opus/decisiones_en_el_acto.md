@@ -157,3 +157,8 @@
 - **Rótulos en inglés** (delamor, 19 oct): *"no usemos más rótulos en español"*. Lo nuevo va en inglés. Si es sencillo, **refactor con cambio de nombre declarado**: `criterio_local` → `local_criterion` (`CriterioLocal` → `LocalCriterion`, `UmbralesCriterioLocal` → `LocalCriterionThresholds`) y `arranque` → `startup`. Sin alias ni compatibilidad hacia atrás (regla vigente). **También las claves del panel nacidas en el CP1 de S2-C0** pasan a inglés antes del vivo (delamor: *"sí, a inglés"*).
 
 *Última actualización: 19 oct 2026.*
+
+### 19 oct (noche) — escala de Δ_r, tras el CP1b (`d15ba96`)
+- **`calibrate` en el salto: 68 ms → sin sombra para S2-C0** (delamor: "4 ok"). La sombra sigue como propuesta.
+- **Δ_r no se normaliza por max Δ_r** (delamor: *"no normalizar. eso decido"*). Motivo leído en el CP1b: con `/max Δ_r` el D_ckm de Monitor no acumula dentro del ciclo; cuenta pares distintos, no cuánto se rechazó.
+- **Abierto (pregunta de Opus):** sin `/max`, ¿W + Δ_r crudo (lo de COCO, medido: −1,63 con repetición) o W + Δ_r · media(W>0) (no medido)? ¿Y Monitor y COCO pasan a la misma escala?

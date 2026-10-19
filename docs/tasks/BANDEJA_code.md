@@ -12194,3 +12194,119 @@ si antes hay que mover algo más —el umbral, la clasificación del negativo, o
 mira cada uno—.
 
 **A1.PAUSA.**
+
+## S2-C0 — las dos series de D_ckm, medidas mensaje por mensaje — 2026-10-19 23:54 UTC
+
+*Claude Opus 5 (Code). Driver: `experiments/driver_medir_dos_d_ckm.py`. JSONL:
+`experiments/medir_dos_d_ckm.jsonl` (70 líneas, una por mensaje). **Se mide, no se interpreta:
+acá no hay ninguna lectura de qué mide cada serie.** `services/` no se tocó; suite 755 / 7
+xfailed / 0.*
+
+### Lo primero, declarado y no al pie
+
+**La precondición del texto no está cumplida.** El paso (2) de Δ_r crudo —Monitor sin
+escalar— **no se hizo**: paré en el freno del paso (1) (`9a23477`). Así que esta corrida mide
+**el código como está hoy**: Monitor con Δ_r escalado, COCO con Δ_r crudo. delamor, 19 oct:
+*"medir hoy sirve como «antes»… con el mismo driver se mide de nuevo después del cambio"*.
+
+### Condiciones
+
+- **Canal real** (`ChatChannel`) con `CKMMonitor` como callback; Monitor y COCO conectados
+  como en el CP1. **Sin devices de IA ni providers:** los mensajes los escribe el driver.
+- **Mensajes:** los 8 `TEXTOS` del CP1 en ciclo, dos devices alternados, **70 mensajes**.
+  **sha256 de la secuencia: `13c56f8853ff…`**
+- **Parámetros declarados de la Serie 2:** primer W a los 30 mensajes de 2 devices,
+  `top_k = 20`, `min_df = 2`, rebuild cada 10, `n_runs = 1000`.
+- **Rechazos: los del camino real.** Salen de `MonitorService.evaluate` en cada mensaje. No
+  hay secuencia inventada. **`max Δ_r` llegó a 2.0** en toda la corrida.
+- **Estado propio:** `experiments/_state_medir_dos_dckm/`, aparte del de S2-C0, vaciado al
+  empezar.
+- **Lo de COCO va sólo al JSONL.** No se agregó nada de COCO al panel del canal.
+- **Privados que el driver lee** (declarado): `monitor._Delta_r` para la norma y el máximo;
+  `thermostat.history()[-1]`, `delta_state()` y `alpha_trajectory()`. Sólo lectura.
+
+### Qué pasó en la corrida
+
+**5 cambios de W** (n = 30, 40, 50, 60, 70) y **41 mensajes con panel** (el panel aparece
+recién en el 30, con el primer W). Ticks del canal: 0 → 8.
+
+**Calibración, por momento:**
+
+| n | estado | motivo | duración |
+|---|---|---|---|
+| 10 | `nulo_calibrado` | `corpus_en_acumulacion` | — |
+| 40 | `calibrado` | — | 0.0775 s |
+| 50 | `calibrado` | — | 0.0873 s |
+| 60 | `calibrado` | — | 0.0813 s |
+| 70 | `calibrado` | — | 0.0802 s |
+
+Umbrales que salieron: `D_CKM_THRESHOLD` 0.1536 / 0.2388 / 0.2381 / 0.1515 y `FRAC_REC_MIN`
+0.8321 / 0.7700 / 0.7710 / 0.8395. (En n = 10 y 20 el criterio de volumen levanta la señal con
+el corpus todavía en acumulación: no hay salto, no se calibra, y el panel lo dice.)
+
+### Las dos series, alineadas por mensaje
+
+`M` = la serie de Monitor, `C` = la serie de COCO. `‖Δr‖` es la norma de Δ_r de Monitor;
+`‖Δc‖` la de Δ_r_compresiones de COCO.
+
+| n | tick | w_sha | M.D_ckm | M.N_eff | M.N_eff₀ | ‖Δr‖ | maxΔr | C.D_ckm | C.N_eff | C.A0 | ‖Δc‖ | zona | disp |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 30 | 0 | e1f3f0f9 | 0.0000 | 3.808 | 3.81 | 2.45 | 1 | +0.1034 | 3.226 | 3.69 | 2.45 | stable | 0 |
+| 31–36 | 0–1 | e1f3f0f9 | 0.0000 | 3.808 | 3.81 | 2.45 | 1 | +0.1034 | 3.226 | 3.69 | 2.45 | stable | 0 |
+| 37 | 1 | e1f3f0f9 | +0.0769 | 3.436 | 3.81 | 4.24 | 1 | −0.1054 | 4.237 | 3.69 | 4.24 | stable | 0 |
+| 38–40 | 1–2 | e1f3f0f9 | +0.0264 | 3.676 | 3.81 | 6.00 | 2 | −0.2337 | 5.011 | 3.69 | 6.00 | stable | 0 |
+| 41–44 | 2–3 | 9d401f74 | 0.0000 | 3.939 | 3.94 | 0.00 | 0 | 0.0000 | 3.939 | 3.94 | 0.00 | stable | 0 |
+| 45 | 3 | 9d401f74 | −0.0098 | 3.992 | 3.94 | 3.46 | 1 | −0.1797 | 5.039 | 3.94 | 3.46 | stable | 0 |
+| 46–50 | 3–4 | 9d401f74 | +0.0427 | 3.715 | 3.94 | 4.24 | 1 | −0.0128 | 4.008 | 3.94 | 4.24 | stable | 0 |
+| 51–52 | 5 | 994e1cf2 | 0.0000 | 3.922 | 3.92 | 0.00 | 0 | 0.0000 | 3.922 | 3.92 | 0.00 | stable | 0 |
+| 53 | 5 | 994e1cf2 | −0.1361 | 4.724 | 3.92 | 4.47 | 1 | −0.1958 | 5.125 | 3.92 | 4.47 | stable | 0 |
+| 54–59 | 5–6 | 994e1cf2 | −0.0860 | 4.411 | 3.92 | 5.10 | 1 | +0.1114 | 3.368 | 3.92 | 5.10 | stable | 0 |
+| 60 | 6 | 72cccfa2 | −0.0991 | 4.491 | 3.92 | 6.16 | 1 | −0.0845 | 4.402 | 3.92 | 6.16 | stable | 0 |
+| 61 | 7 | 72cccfa2 | 0.0000 | 4.988 | 4.99 | 4.47 | 1 | −0.2088 | 5.469 | 4.08 | 4.47 | stable | 0 |
+| 62–67 | 7–8 | 72cccfa2 | +0.0562 | 4.557 | 4.99 | 5.10 | 1 | +0.0757 | 3.666 | 4.08 | 5.10 | stable | 0 |
+| 68 | 8 | 72cccfa2 | +0.0459 | 4.633 | 4.99 | 6.16 | 1 | −0.1095 | 4.757 | 4.08 | 6.16 | stable | 0 |
+| 69 | 8 | 72cccfa2 | +0.1545 | 3.891 | 4.99 | 7.87 | 2 | −0.0516 | 4.385 | 4.08 | 7.87 | stable | 0 |
+| 70 | 9 | 456c0870 | +0.1740 | 3.771 | 4.99 | 8.94 | 2 | +0.1067 | 3.510 | 4.08 | 8.94 | stable | 0 |
+
+*(Las filas iguales consecutivas se agruparon; el JSONL las tiene una por una.)*
+
+### Los conteos, sin lectura
+
+- **41 filas con las dos series.** En **25 de 41** el **signo** de las dos no coincide.
+- **Coinciden exactamente en 6**, y las 6 son filas con `‖Δ‖ = 0` (n = 41–44, 51–52): sin Δ,
+  las dos dan el mismo número.
+- **Rangos:** M entre **−0.1361 y +0.1740**; C entre **−0.2337 y +0.1114**. Máxima diferencia
+  entre las dos en un mismo mensaje: **0.2601**.
+- **Los baselines difieren en 41 de 41 filas**, salvo donde coinciden por construcción: al
+  nacer el ciclo con Δ = 0 (n = 41: 3.9387 y 3.9387; n = 51: 3.9221 y 3.9221) y distintos
+  cuando el baseline de Monitor se fija con Δ ya presente (n = 30: 3.808 / 3.6922; n = 61:
+  4.9877 / 4.0780).
+- **‖Δ_r‖ = ‖Δ_r_compresiones‖ en 41 de 41 filas.**
+- **COCO: zona `stable` en las 41 filas, 0 disparos en toda la corrida.**
+- **`max Δ_r` = 2.0** es el máximo que alcanzó el camino real en 70 mensajes.
+
+### Lo que se puede afirmar y lo que no
+
+**Se puede afirmar, de esta corrida:** los números de la tabla, con esa secuencia
+(`13c56f8853ff…`), esa W, `n_runs = 1000` y `seed = 0`; que hubo 5 cambios de W y 4
+calibraciones con resultado `calibrado` entre 78 y 87 ms; que COCO no disparó ninguna vez y
+estuvo en `stable` en todas las filas medidas; y que los dos baselines son distintos salvo al
+nacer el ciclo.
+
+**No se puede afirmar:**
+- **Nada sobre el vivo.** Los mensajes son 8 textos repetidos, escritos por el driver; no hay
+  devices decidiendo.
+- **La dispersión de estos números entre seeds no se midió.** Con N ≈ 19 y `n_runs = 1000` el
+  CP-E da 7–9% de dispersión entre seeds **en otros corpus**; acá no se repitió con otra seed,
+  así que las diferencias de tercer decimal no se sostienen.
+- **Nada sobre qué pasaría si COCO comprimiera.** Con 0 disparos, su Δ coincidió con el Δ_r de
+  Monitor en toda la corrida; el caso en que se separan **no se produjo**.
+- **Los tiempos de calibración son de esta máquina y de estas W** (N ≈ 19, `n_runs = 200`).
+
+**Y una tensión que no resuelvo acá, para que la resuelvas vos:** la restricción dice que el
+canal **no publica** lo de COCO. El bloque `coco` del panel del CP1 —que la condición 2 de la
+TASK pidió para poder **comprobar la conexión**— publica hoy `thresholds`, `mu_W`, `beta_c`,
+`triggers`, `last_evaluation_utc` y `w_eff`, aunque **no** su D_ckm, su N_eff ni su zona. No lo
+toqué. Si eso también es sensible, es un cambio aparte.
+
+**A1.PAUSA.**

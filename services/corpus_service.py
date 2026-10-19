@@ -44,7 +44,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from node_extractor import (NodeExtractorService, DECLARACION_REF, MIN_DF,
@@ -382,6 +382,22 @@ class CorpusService:
         except ValueError:
             return {"nodes": [], "pairs": {}, "node_freq": {}}
 
+    def motivo_no_rebuild(self, habilitar_primer_W: bool = True) -> Optional[str]:
+        """
+        Por qué un rebuild por decisión **no** ocurriría ahora, o `None` si
+        ocurriría.
+
+        Es la misma condición que aplica `rebuild_por_decision`, escrita una
+        sola vez: desde el 19 oct el canal la necesita **antes** del salto,
+        para saber si hay una W candidata que calibrar. Dos lugares con la
+        misma regla escrita a mano se separan el día que uno cambie.
+        """
+        if len(self._texts) < self.min_texts:
+            return "corpus_en_acumulacion"
+        if self._W is None and not habilitar_primer_W:
+            return "primer_W_no_habilitado"
+        return None
+
     def rebuild_por_decision(self, causa: str,
                              habilitar_primer_W: bool = True) -> dict:
         """
@@ -411,16 +427,11 @@ class CorpusService:
                 "rebuild_por_decision necesita una causa declarada: un rebuild "
                 "sin causa no es una decisión"
             )
-        if len(self._texts) < self.min_texts:
+        motivo = self.motivo_no_rebuild(habilitar_primer_W)
+        if motivo is not None:
             st = self.status()
             st["rebuild"] = False
-            st["motivo_no_rebuild"] = "corpus_en_acumulacion"
-            st["causa_pedida"] = causa
-            return st
-        if self._W is None and not habilitar_primer_W:
-            st = self.status()
-            st["rebuild"] = False
-            st["motivo_no_rebuild"] = "primer_W_no_habilitado"
+            st["motivo_no_rebuild"] = motivo
             st["causa_pedida"] = causa
             return st
         self._rebuild(causa=causa)
@@ -430,13 +441,19 @@ class CorpusService:
         st["causa"] = causa
         return st
 
-    def _rebuild(self, causa: Optional[str] = None) -> None:
+    def _calcular(self) -> Optional[Tuple[List[str], "np.ndarray", Dict]]:
         """
-        Reconstruye nodos y W desde todos los textos acumulados.
+        **Calcula la W que el próximo rebuild instalaría, sin instalar nada.**
 
-        `causa` llega sólo desde `rebuild_por_decision`. Sin ella el
-        `causal_event` es el de siempre, así que el rebuild por ingesta no
-        cambia de marca.
+        Es la mitad pura de `_rebuild`: misma extracción, mismo ruteo por
+        signo, misma normalización. No toca `self._nodes`, `self._W`, la
+        declaración, el registro del borde ni `w_version`. `None` si la
+        extracción no dio nodos.
+
+        Existe desde el 19 oct porque **`calibrate` corre antes del rebuild**,
+        sobre la W candidata (decisión de delamor: *"el punto es
+        `should_rebuild`… antes del rebuild, digamos"*). Para calibrar la W que
+        va a instalarse hay que poder tenerla **sin que esté viva**.
 
         Ruteo por texto:
           - sin marcador → pares suman a pos_counts
@@ -450,7 +467,7 @@ class CorpusService:
         nodes  = result["nodes"]
 
         if not nodes:
-            return
+            return None
 
         N        = len(nodes)
         node_idx = {n: i for i, n in enumerate(nodes)}
@@ -487,6 +504,36 @@ class CorpusService:
             W = raw   # todo ceros — corpus sin señal aún
 
         np.fill_diagonal(W, 0.0)
+        return nodes, W, result
+
+    def W_candidata(self) -> Optional["np.ndarray"]:
+        """
+        La W que el próximo rebuild instalaría. **Copia; la vigente no se
+        toca.** `None` si la extracción no daría nodos.
+
+        La usa el canal para calibrar **antes** del salto. Cuesta una
+        extracción entera —la misma que después hace el rebuild—, y eso queda
+        declarado acá en vez de escondido: el cálculo es determinista, así que
+        las dos dan la misma W; lo que se paga es hacerla dos veces.
+        """
+        calculada = self._calcular()
+        if calculada is None:
+            return None
+        return calculada[1].copy()
+
+    def _rebuild(self, causa: Optional[str] = None) -> None:
+        """
+        Reconstruye nodos y W desde todos los textos acumulados y **las
+        instala**.
+
+        El cálculo vive en `_calcular`; acá pasa a ser lo vigente. `causa`
+        llega sólo desde `rebuild_por_decision`. Sin ella el `causal_event` es
+        el de siempre, así que el rebuild por ingesta no cambia de marca.
+        """
+        calculada = self._calcular()
+        if calculada is None:
+            return
+        nodes, W, result = calculada
         self._nodes = nodes
         self._W     = W
         # La declaracion y el registro del borde DESCRIBEN LA W QUE ESTÁ VIVA,

@@ -575,6 +575,74 @@ def test_h_coco_no_sigue_con_el_0_40_del_modulo_despues_de_calibrar(
         assert coco["calibracion"]["estado"] == punto["estado"]
 
 
+def test_h_calibrate_corre_ANTES_de_instalar_la_W(canal_monitor):
+    """
+    **El orden** (delamor, 19 oct): decidido el rebuild, `calibrate` corre
+    sobre la **W candidata**, todavía dentro del ciclo i; recién después se
+    instala W.
+
+    Falla si `calibrate` corre después de instalar: ahí la W viva en el momento
+    de calibrar **sería** la nueva, y los dos shas del panel coincidirían. El
+    test exige las dos cosas: que al calibrar estuviera viva la **vieja**, y
+    que la candidata sea la que **quedó** instalada.
+    """
+    for i in range(45):
+        canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
+    punto = canal_monitor.get_state()["punto_calibrate"]
+    assert punto is not None and punto["estado"] != "nulo_calibrado"
+    assert punto["momento"] == "antes del rebuild, sobre la W candidata"
+    # la que se calibró es la que quedó instalada
+    assert punto["w_sha"] == canal_monitor._corpus.w_sha()
+    # y al calibrar estaba viva otra: si fueran iguales, habría corrido después
+    assert punto["w_sha_vigente_al_calibrar"] != punto["w_sha"]
+
+
+def test_h_sin_salto_no_se_calibra_y_se_ve_por_que(canal_monitor):
+    """
+    Con señal de rebuild pero sin salto posible —un solo device, el primer W
+    sin permiso— **no se calibra**, y el panel dice `nulo_calibrado` con el
+    motivo. No es "corrió y no separó".
+    """
+    for i in range(40):
+        canal_monitor.on_message(_Msg("solo_uno", TEXTOS[i % 8]))
+    punto = canal_monitor.get_state()["punto_calibrate"]
+    assert punto is not None
+    assert punto["estado"] == "nulo_calibrado"
+    assert punto["motivo"] == "primer_W_no_habilitado"
+    assert punto["valores"] == {}
+
+
+def test_h_el_panel_declara_cuanto_tardo_calibrate_y_que_bloquea(canal_monitor):
+    """
+    En el salto `calibrate` corre **en el hilo del mensaje**: mientras calibra,
+    el canal no atiende. Eso se declara, con el tiempo medido — es el insumo de
+    la propuesta de la sombra.
+    """
+    for i in range(45):
+        canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))
+    punto = canal_monitor.get_state()["punto_calibrate"]
+    assert punto["bloqueante"] is True
+    assert punto["duracion_s"] > 0
+
+
+def test_h_la_W_candidata_es_la_que_el_rebuild_instala(tmp_path):
+    """
+    `W_candidata()` no instala nada y acierta: lo que devuelve es,
+    byte a byte, lo que el rebuild deja vivo.
+    """
+    # `rebuild_suspendido=True` como el canal vivo: la ingesta no reconstruye,
+    # así que entre el primer W y el salto hay textos nuevos sin instalar.
+    corpus = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=3,
+                           rebuild_suspendido=True)
+    corpus.ingest(TEXTOS[:4])
+    sha_antes = corpus.w_sha()
+    corpus.ingest(TEXTOS[4:])
+    candidata = corpus.W_candidata()
+    assert corpus.w_sha() == sha_antes, "W_candidata() movió la W viva"
+    corpus.rebuild_por_decision("volumen")
+    assert np.array_equal(candidata, corpus.get_W())
+
+
 def test_h_calibrate_no_toca_la_W_viva(canal_monitor):
     for i in range(45):
         canal_monitor.on_message(_Msg("d1" if i % 2 else "d2", TEXTOS[i % 8]))

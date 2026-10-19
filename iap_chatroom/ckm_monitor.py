@@ -96,6 +96,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 _SERVICES_DIR = Path(__file__).resolve().parent.parent / "services"
@@ -107,7 +108,8 @@ from ckm_landscape_config import CKMlandscapeConfig  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
-from calibrate import calibrate  # noqa: E402
+from calibrate import calibrate, NULO_CALIBRADO  # noqa: E402
+from w_version import sha256_W  # noqa: E402
 from landscape_engine import D_CKM_FORMA  # noqa: E402
 from node_extractor import MIN_DF, PERFIL_ES_EN, DECLARACION_REF  # noqa: E402
 
@@ -447,13 +449,33 @@ class CKMMonitor:
         # ingesta; este no pasa por ahí.
         if self._last_rebuild_signal:
             sha_antes = self._corpus.w_sha()
+            permiso_primer_w = (
+                len(self._devices_seen) >= self._min_devices_primer_w
+            )
+            # ── `calibrate`, ANTES del rebuild (delamor, 19 oct) ───────────
+            # Sólo si el rebuild va a ocurrir: calibrar una W que no se va a
+            # instalar sería calibrar contra nada. El motivo lo da el corpus,
+            # que es quien tiene la condición.
+            motivo = self._corpus.motivo_no_rebuild(permiso_primer_w)
+            if motivo is None:
+                self._punto_calibrate = self._calibrar(clock)
+            else:
+                # **No se calibró, y se ve por qué.** No es "calibró y no
+                # separó" (`no_calibrado`): es que no hubo salto que calibrar.
+                self._punto_calibrate = {
+                    "existe": True,
+                    "implementado": True,
+                    "task": "TASK_calibrate_mecanismo_v1",
+                    "estado": NULO_CALIBRADO,
+                    "valores": {},
+                    "motivo": motivo,
+                    "momento": "antes del rebuild, sobre la W candidata",
+                }
             st = self._corpus.rebuild_por_decision(
                 self._last_rebuild_causa,
                 # **El mismo permiso que en la ingesta.** Sin esto, el criterio
                 # de volumen construía la primera W con un solo device.
-                habilitar_primer_W=(
-                    len(self._devices_seen) >= self._min_devices_primer_w
-                ),
+                habilitar_primer_W=permiso_primer_w,
             )
             self._ultimo_rebuild = {
                 "causa": self._last_rebuild_causa,
@@ -478,22 +500,10 @@ class CKMMonitor:
                 # mensaje se midió contra la W **anterior** al salto, así que
                 # pertenece a la meseta que se cierra y no a la que nace.
                 self._d_ckm_history = []
-                # ── `calibrate` CORRE ACÁ (CP1 (h) de la Serie 2) ────────
-                # Hasta el 18 oct este punto existía y **no hacía nada**
-                # (`"implementado": False`). Ahora: en cada rebuild se calibra
-                # sobre la W nueva y los umbrales que salgan son los que usa
-                # COCO **en el ciclo que nace**, no en el que se cierra —
-                # cambiarle el umbral a un COCO vivo lo volvería otro
-                # instrumento sin que el ciclo cambie.
-                #
-                # **Si no calibra, se ve que no calibró**: el registro entero
-                # va al panel y COCO sigue con lo que tenía, que puede ser el
-                # 0.40 del módulo. Lo que no pasa es que el 0.40 se presente
-                # como si alguien lo hubiera medido.
-                #
-                # Costo declarado: `n_runs` × los puntos de la grilla, un
-                # conteo de órbitas por punto, **por rebuild**.
-                self._punto_calibrate = self._calibrar(clock)
+                # (`calibrate` ya corrió, **arriba y antes** del rebuild,
+                # sobre la W candidata. Acá no queda nada de él: el 18 oct
+                # corría en este punto —después de instalar W— y eso era el
+                # camino de respaldo puesto como regla.)
             # La decisión queda en el jsonl **haya movido W o no** (CP2b): el
             # caso que no la mueve es justamente el que `w_version` no registra.
             self._ultimo_rebuild["registro"] = self._registrar_decision(
@@ -506,32 +516,65 @@ class CKMMonitor:
 
     def _calibrar(self, clock: "dict | None" = None) -> dict:
         """
-        Corre `calibrate` sobre la W nueva y deja los umbrales para el COCO
-        que nace con el ciclo siguiente.
+        Corre `calibrate` **sobre la W candidata, antes de instalarla**, y deja
+        los umbrales para el COCO que nace con el ciclo siguiente.
 
-        Devuelve lo que va al panel: el registro de `calibrate`
-        —`{valores, estado, condiciones}`— más de qué W salió y qué se hizo
-        con él. `estado` es uno de los tres de `calibrate.py`:
-        `calibrado` (separa), `no_calibrado` (corrió y no separa) o
-        `nulo_calibrado` (no se ejecutó, p. ej. sin W).
+        **Dónde va esto en el flujo** (delamor, 19 oct, corrigiendo la
+        condición 5 de la TASK): *"el punto es `should_rebuild`, allí… en ese
+        momento del flujo, allí se calibra; antes del rebuild, digamos"*.
+        Decidido el rebuild, se calibra la W que el rebuild **va a** instalar,
+        todavía dentro del ciclo i; recién después se instala y nace el COCO
+        del ciclo i+1 con esos umbrales. **Los números son los mismos** —es la
+        misma W—; lo que cambia es el orden, y el orden es el del diseño del 10
+        oct: la calibración pertenece al cierre del ciclo i, no a la apertura
+        del siguiente.
 
-        No instancia nada nuevo: usa `services/calibrate.py` donde está y le
-        pasa la W del corpus, que `calibrate` copia y no toca.
+        **Lo que esto NO es:** la sombra. El diseño confirmado el 10 oct
+        (`TASK_calibrate_mecanismo_v1`, punto 3) calibra **durante la meseta**
+        sobre una W candidata en sombra y compara el sha en el salto. S2-C0 va
+        **sin sombra** (delamor, 19 oct, opción B) y eso se declara: acá
+        `calibrate` corre **en el hilo del mensaje**, y mientras calibra **el
+        canal no atiende**. La sombra queda como propuesta.
+
+        Devuelve lo que va al panel. `estado` es uno de los tres de
+        `calibrate.py`: `calibrado` (separa), `no_calibrado` (corrió y no
+        separa) o `nulo_calibrado` (no se ejecutó). Además lleva dos shas que
+        son los que permiten ver el orden desde afuera: el de la **candidata**
+        (`w_sha`) y el de la que estaba **viva al calibrar**
+        (`w_sha_vigente_al_calibrar`). Si fueran iguales habiendo cambiado W,
+        la calibración habría corrido después de instalar.
+
+        No instancia nada nuevo: usa `services/calibrate.py` donde está, y le
+        pasa una copia que `calibrate` vuelve a copiar y no toca.
         """
-        W = self._corpus.get_W()
-        registro = calibrate(W, w_sha=self._corpus.w_sha(), clock=clock)
+        t0 = time.monotonic()
+        sha_vigente = self._corpus.w_sha()
+        W = self._corpus.W_candidata()
+        sha_candidata = sha256_W(W) if W is not None else None
+        registro = calibrate(W, w_sha=sha_candidata, clock=clock)
         self._monitor.fijar_umbrales_coco(registro.get("valores"), registro)
         return {
             "existe": True,
             "implementado": True,
             "task": "TASK_calibrate_mecanismo_v1",
-            "w_sha": self._corpus.w_sha(),
+            # La W **candidata**: la que se calibró y la que el rebuild
+            # instala a continuación.
+            "w_sha": sha_candidata,
+            # La que estaba viva **en el momento de calibrar**. Es el dato que
+            # hace visible el orden.
+            "w_sha_vigente_al_calibrar": sha_vigente,
+            "momento": "antes del rebuild, sobre la W candidata",
             "estado": registro["estado"],
             "valores": registro.get("valores") or {},
             "condiciones": registro.get("condiciones"),
             # Qué se hizo con el resultado: los umbrales entran en el COCO del
             # ciclo SIGUIENTE, no en el que está corriendo.
             "aplicado_a": "el COCO del proximo ciclo",
+            # **Cuánto tardó, medido.** Corre en el hilo del mensaje: esto es
+            # el tiempo que el canal no atendió. Va al panel porque es el
+            # insumo de la propuesta de la sombra.
+            "duracion_s": round(time.monotonic() - t0, 4),
+            "bloqueante": True,
         }
 
     def _cargar_rebuild_state(self) -> None:

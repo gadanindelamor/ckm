@@ -184,3 +184,4 @@
 - **No hay checkpoints** (delamor): *"una vez arreglado lo de los json al mismo dir, todos juntos, con version manager y todos los logs… allí se dispara el caso con su test unitario, va vivo 3"*. Reemplaza el orden "primero CP3, luego CP2 y fixes".
 - **Durante el vivo, sin tareas ni intervenciones** (delamor): *"no hay más tareas, ni intervenciones, durante el VIVO 3"*.
 - **Nombre del caso:** técnico **`serie2_caso0`** (con vocales, delamor; antes "S2-C0"); apodo **"Cimientos"** (para delamor; nunca en prompts). **Sin agentes:** devices genuinos, sin `AgentDeviceSkin` (delamor).
+- **Consigna parcial por device** (delamor): *"igual que en los casos de IAP serie 1, cada device recibe su consigna parcial"*. Cada uno ve sólo su perspectiva y no hay coordinador (*"no es este caso"*). Dirección: *"hacia una situación de interacción de agentes, más que una juntada de amigos en un cyber café"*.

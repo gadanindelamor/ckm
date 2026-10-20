@@ -37,7 +37,7 @@ Reglas:
 ### 4. El caso, como test unitario, listo para disparar
 - Un `test_caso_*` en la línea de la serie IAP.
 - Estado limpio en `experiments/_state_S2-C0/`.
-- Consigna, la misma para los cuatro, en inglés:
+- **Consigna parcial por device**, como en la serie IAP 1 (delamor). Va en el `system_prompt` del device genuino. Cada device recibe **sólo su perspectiva**: la lista de las cuatro no la ve nadie. **Sin coordinador:** nadie tiene más información que los otros. La plantilla, en inglés; en cada device el corchete se reemplaza por **su** perspectiva y nada más:
   > *This channel is about an open question with no right answer: how should the water of a growing city be organized? Your perspective is **[A: where the water comes from / B: how it is distributed / C: who pays and how much / D: what could go wrong in the next 20 years]**. There are other perspectives in the channel. What they say may move the foundations of yours, even of what you have already said, and what you say may move theirs.*
 - Devices: 4, uno por perspectiva, en orden arbitrario y declarado:
   - A → Groq `llama-3.3-70b-versatile`

@@ -49,7 +49,7 @@ Reglas:
 - Con filtro de llamadas y su piso. Calculá **cuánto tiene que durar el caso para llegar a ~70 mensajes** (≥ 2 rebuilds) y qué `piso_vueltas` cumple `piso_vueltas + 2 ≤ vueltas por device`. El insumo es el ritmo medido del vivo 03 y de la serie; tené en cuenta los 429 de Groq. Declará de dónde sale cada número.
 - Dejá el comando. **No lo corras.**
 
-**Nombre:** técnico **S2-C0** (Serie 2, Caso 0); apodo **"Cimientos"**, sólo para recordarlo. El apodo **nunca** entra a ningún prompt. No es `vivo_03_*` (criterio local). **Sin agentes:** devices genuinos (`AutonomousDevice`), sin `AgentDeviceSkin`.
+**Nombre:** técnico **`serie2_caso0`** (antes "S2-C0"; delamor: *"que tenga vocales"*); apodo **"Cimientos"**, sólo para recordarlo. El apodo **nunca** entra a ningún prompt. No es `vivo_03_*` (criterio local). **Sin agentes:** devices genuinos (`AutonomousDevice`), sin `AgentDeviceSkin`.
 
 **Durante el vivo no hay más tareas ni intervenciones** (delamor). Una vez disparado, nadie toca nada hasta que termine.
 

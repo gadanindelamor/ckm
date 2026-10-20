@@ -322,6 +322,83 @@ def test_los_mensajes_SYSTEM_no_cuentan_para_el_objetivo():
         CKMMonitor._instance, ChatChannel._instance = anterior_m, anterior_c
 
 
+# ── el modo de ejecución ─────────────────────────────────────────────────────
+
+def test_el_modo_de_ejecucion_esta_declarado_y_el_default_es_zero_shot(caso):
+    """
+    La convención de la serie 1 (*"Modo de ejecución: ZERO_SHOT por run"*).
+    **El modo es la decisión de limpiar o no el `state_dir`**, y el default no
+    puede ser acumular: el plan es volver a ejecutar el caso hasta que COCO se
+    conecte, y un arrastre silencioso haría que W abarcara dos intentos sin
+    que el log lo dijera.
+    """
+    assert caso.MODO_ZERO_SHOT == "ZERO_SHOT"
+    assert caso.MODO_CONTINUA == "CONTINUA"
+    assert caso.MODO_POR_DEFAULT == caso.MODO_ZERO_SHOT
+
+
+def test_zero_shot_aborta_si_el_corpus_no_esta_en_cero(caso):
+    """
+    **La exigencia, no la bandera.** Un `--reset` que alguien se olvida de
+    pasar deja el intento 2 corriendo sobre el corpus del 1; esto lo frena.
+    """
+    partida = {"monitor_state": {"corpus_size": 18}}
+    aborto = caso._verificar_modo(caso.MODO_ZERO_SHOT, partida)
+    assert aborto is not None, "ZERO_SHOT con corpus 18 tiene que abortar"
+    assert "ABORTADO" in aborto["que_es"]
+    assert aborto["corpus_de_partida"] == 18
+    assert aborto["modo_de_ejecucion"] == caso.MODO_ZERO_SHOT
+
+
+def test_zero_shot_con_corpus_en_cero_sigue(caso):
+    assert caso._verificar_modo(
+        caso.MODO_ZERO_SHOT, {"monitor_state": {"corpus_size": 0}}
+    ) is None
+
+
+def test_continua_no_aborta_nunca_y_declara_de_cuanto_arranco(caso):
+    """
+    `CONTINUA` es una **decisión declarada**, no "lo mismo sin reset". No
+    aborta; lo que tiene que pasar es que el corpus de partida quede en el log.
+    """
+    assert caso._verificar_modo(
+        caso.MODO_CONTINUA, {"monitor_state": {"corpus_size": 18}}
+    ) is None
+    cuerpo = CASO_PATH.read_text().split('"""', 2)[2]
+    assert '"modo_de_ejecucion": modo' in cuerpo
+    assert '"corpus_de_partida": partida["monitor_state"]["corpus_size"]' in cuerpo
+
+
+def test_el_aborto_dice_que_hay_que_reiniciar_el_server(caso):
+    """
+    Lo que hace que esto no sea una formalidad: **`--reset` no vacía el corpus
+    en memoria**, que `CorpusService` cargó al arrancar `server.py`. Un reset
+    sin reinicio se lee como hecho y no lo está. El aborto tiene que decirlo,
+    porque es el paso que se olvida.
+    """
+    aborto = caso._verificar_modo(
+        caso.MODO_ZERO_SHOT, {"monitor_state": {"corpus_size": 5}}
+    )
+    pasos = " ".join(aborto["como_se_arregla"]).upper()
+    assert "REINICIAR EL SERVER" in pasos
+    assert "--RESET" in pasos
+    assert caso.MODO_CONTINUA in pasos
+
+
+def test_el_modo_se_verifica_sin_tocar_el_canal(caso):
+    """
+    La verificación es sobre el `estado_de_partida` **ya leído por MCP**: una
+    función pura sobre ese dict. No publica, no se une al canal y no llama a
+    ningún provider — un aborto por modo no puede dejar rastro en el corpus.
+    """
+    import inspect
+
+    fuente = inspect.getsource(caso._verificar_modo)
+    for prohibido in ("publish", "send_message", "join_channel", "await",
+                      "Client", "complete("):
+        assert prohibido not in fuente, f"_verificar_modo hace {prohibido}"
+
+
 # ── el state_dir y el comando ────────────────────────────────────────────────
 
 def test_el_caso_pasa_el_state_dir_y_nada_mas(caso):

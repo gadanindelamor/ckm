@@ -27,6 +27,32 @@ Dos procesos, en este orden:
 tocar el canal. `--reset` preserva el estado anterior en `process/` con
 timestamp —no borra— y sale.
 
+### Modo de ejecución: ZERO_SHOT por intento
+
+La convención de la serie 1, que delamor volvió a pedir: **el modo ES la
+decisión de limpiar o no el `state_dir`**, declarada en el log al lado del
+corpus de partida.
+
+Hace falta porque el plan es **volver a ejecutar el caso hasta que COCO se
+conecte**. Sin modo, el intento 2 corre sobre el corpus del 1 — y si el
+primero deja 18 textos y el segundo agrega 15, W nace sobre un corpus que
+abarca dos corridas sin que el log lo diga. Es F3a otra vez.
+
+`ZERO_SHOT` es el default y **aborta si el corpus no está en 0**, sin tocar el
+canal. La verificación es por MCP y no por el sistema de archivos, porque es
+lo único que atraviesa los dos procesos: **`--reset` mueve los archivos pero
+no vacía el corpus en memoria**, que `CorpusService` cargó cuando arrancó
+`server.py` (documentado desde el Caso 0.4a, y sigue siendo así). Entonces un
+segundo intento son **tres** cosas:
+
+    # 1) preservar lo del intento anterior (no borra: mueve a process/)
+    PYTHONPATH=/workspaces/ckm python3 iap_chatroom/tests/test_caso_serie2_caso0.py --reset
+    # 2) REINICIAR EL SERVER — sin esto el corpus sigue en memoria
+    # 3) y disparar de nuevo
+
+Para acumular a propósito: `--modo CONTINUA`. No aborta y **queda declarado en
+el log**. Lo que no puede pasar es que acumule sin decirlo.
+
 **Durante el vivo no hay más tareas ni intervenciones** (delamor). Una vez
 disparado, nadie toca nada hasta que termine.
 
@@ -209,6 +235,28 @@ MCP_URL = "http://localhost:7860/mcp"
 STATE_DIR = RAIZ / "experiments" / "_state_S2-C0"
 
 NOMBRE = "serie2_caso0"
+
+# ── EL MODO DE EJECUCIÓN ────────────────────────────────────────────────────
+#
+# La convención de la serie 1 (*"Modo de ejecución: ZERO_SHOT por run"*, ver
+# `process/iap_series_freeze_20261008/tests/test_caso_06.py`), que delamor
+# volvió a pedir el 20 oct: **el modo ES la decisión de limpiar o no el
+# `state_dir`**, declarada, y no una bandera que alguien tiene que acordarse
+# de pasar.
+#
+# Hace falta porque el plan de este caso es **volver a ejecutarlo hasta que
+# COCO se conecte** (delamor). Sin modo, el intento 2 corre sobre el corpus
+# del 1: si el primero deja 18 textos y el segundo agrega 15, el corpus llega
+# a 33, W nace y COCO se conecta — **sobre una W que abarca dos corridas**, y
+# el log no lo diría. Es el estado acumulándose entre vivos sin declararse,
+# que es exactamente lo que F3a vino a cerrar.
+#
+# `ZERO_SHOT`: cada intento arranca de cero. Es el default.
+# `CONTINUA`: el intento arranca sobre lo que dejó el anterior, **y el log lo
+# dice**. No es "lo mismo sin reset": es una decisión declarada.
+MODO_ZERO_SHOT = "ZERO_SHOT"
+MODO_CONTINUA = "CONTINUA"
+MODO_POR_DEFAULT = MODO_ZERO_SHOT
 
 # ── los números, todos declarados arriba en el docstring ────────────────────
 POLL_INTERVAL = 5.0      # el medido en el vivo 03
@@ -403,7 +451,50 @@ async def estado_de_partida() -> dict:
 
 # ── el caso ─────────────────────────────────────────────────────────────────
 
-async def correr() -> dict:
+def _verificar_modo(modo: str, partida: dict) -> "dict | None":
+    """
+    Que el modo declarado sea el modo real. **`None` si lo es**; si no, el
+    dict con el que el caso aborta.
+
+    **Por qué se verifica acá y no se resuelve con `--reset`.** `--reset`
+    mueve los archivos, pero **no vacía el corpus en memoria**: lo cargó
+    `CorpusService` cuando arrancó `server.py`, y el caso corre en otro
+    proceso. Está documentado desde el Caso 0.4a y sigue siendo así. Así que
+    un `--reset` sin reiniciar el server deja el corpus intacto y el reset se
+    lee como hecho.
+
+    Lo único que atraviesa los dos procesos es **preguntarle al server cuánto
+    tiene**, que es lo que `estado_de_partida()` ya hace por MCP. Con eso,
+    `ZERO_SHOT` con corpus > 0 **aborta**: no hay forma de que un ZERO_SHOT
+    corra en silencio sobre un estado sucio.
+
+    `CONTINUA` no aborta nunca: declara de cuánto arrancó, que es su punto.
+    """
+    corpus = partida["monitor_state"]["corpus_size"]
+    if modo == MODO_CONTINUA:
+        return None
+    if corpus == 0:
+        return None
+    return {
+        "que_es": f"ESTO MIDE — {NOMBRE}, ABORTADO POR EL MODO",
+        "modo_de_ejecucion": modo,
+        "corpus_de_partida": corpus,
+        "motivo": (
+            f"modo {modo} con corpus_size={corpus}. Un ZERO_SHOT no corre "
+            f"sobre un estado sucio sin decirlo."
+        ),
+        "como_se_arregla": [
+            f"1) preservar el estado: python3 {Path(__file__).name} --reset",
+            "2) REINICIAR EL SERVER: --reset mueve los archivos pero no vacia "
+            "el corpus en memoria, que CorpusService cargo al arrancar "
+            "server.py (documentado desde el Caso 0.4a)",
+            f"3) o declarar la acumulacion: --modo {MODO_CONTINUA}",
+        ],
+        "estado_de_partida_leido_por_MCP": partida,
+    }
+
+
+async def correr(modo: str = MODO_POR_DEFAULT) -> dict:
     pre = await preflight()
     imprimir_preflight(pre)
     if not pre["todos_responden"]:
@@ -416,7 +507,16 @@ async def correr() -> dict:
         }
 
     partida = await estado_de_partida()
+    aborto = _verificar_modo(modo, partida)
+    if aborto is not None:
+        print(f"\n{aborto['que_es']}")
+        print(f"  {aborto['motivo']}")
+        for linea in aborto["como_se_arregla"]:
+            print(f"  {linea}")
+        return aborto
+
     print(f"\n=== {NOMBRE} — 4 devices, sin seed, {DURATION:.0f}s ===")
+    print(f"modo de ejecucion = {modo}")
     print(f"state_dir = {STATE_DIR}")
     print(f"corpus de partida = {partida['monitor_state']['corpus_size']} textos, "
           f"{partida['mensajes_en_el_canal']} mensajes en el canal")
@@ -464,6 +564,11 @@ async def correr() -> dict:
         "estado_de_partida_leido_por_MCP": partida,
         "declarado": {
             "nombre_tecnico": NOMBRE,
+            # **El modo, al lado del corpus de partida.** Los dos juntos son
+            # lo que permite leer un intento: el modo dice con qué intención
+            # se arrancó, el corpus dice de dónde arrancó de hecho.
+            "modo_de_ejecucion": modo,
+            "corpus_de_partida": partida["monitor_state"]["corpus_size"],
             "sin_seed": True,
             "sin_agentes": True,
             "sin_coordinador": True,
@@ -568,6 +673,11 @@ if __name__ == "__main__":
                         help="sólo verifica los cuatro modelos y sale")
     parser.add_argument("--reset", action="store_true",
                         help="preserva el estado anterior en process/ y sale")
+    parser.add_argument("--modo", default=MODO_POR_DEFAULT,
+                        choices=[MODO_ZERO_SHOT, MODO_CONTINUA],
+                        help=f"modo de ejecucion (default: {MODO_POR_DEFAULT}). "
+                             f"{MODO_ZERO_SHOT} aborta si el corpus no esta "
+                             f"en 0; {MODO_CONTINUA} declara la acumulacion.")
     parser.add_argument("salida", nargs="?", default=None,
                         help="JSON de salida")
     args = parser.parse_args()
@@ -583,7 +693,7 @@ if __name__ == "__main__":
     salida = (Path(args.salida) if args.salida
               else RAIZ / f"experiments/{NOMBRE}_log.json")
     try:
-        res = asyncio.run(correr())
+        res = asyncio.run(correr(modo=args.modo))
     except BaseException as e:               # noqa: BLE001 — se reporta entero
         res = {
             "que_es": f"ESTO MIDE — {NOMBRE}, ABORTADO",

@@ -715,7 +715,7 @@ D_ckm_monitor ← MonitorService panel, herramienta de observación
 
 Ambas usan la misma fórmula `(A0 − A_actual) / A0` pero operan sobre rutas distintas:
 
-- **`D_ckm_monitor`**: opera sobre `W + Δ_r_pares`, con `_combine_W_Delta` normalizando `Δ_r / max(Δ_r)`. **Post-D3 es ciego a las compresiones de COCO porque nunca recibe ese objeto** — separación, no cancelación (ver Modelo Conceptual y §9). *Registro histórico, pre-D3: cuando COCO escribía sobre el Δ_r de Monitor, la normalización cancelaba el escalar uniforme `α·Δ_r` por construcción — verificado, valor idéntico (0.8857) en 19 evaluaciones consecutivas con Δ_r diferente en 14 órdenes de magnitud; cancelación exacta, no aproximada. La normalización sigue en el código; lo que ya no llega es el escalar.*
+- **`D_ckm_monitor`** *(v17, 19 oct: **ya no normaliza**; desde `f684aee`, `_combine_W_Delta` = W + Δ_r crudo, decisión de delamor tras el CP1b; ver Modelo Conceptual v17)*: opera sobre `W + Δ_r_pares`, con `_combine_W_Delta` normalizando `Δ_r / max(Δ_r)`. **Post-D3 es ciego a las compresiones de COCO porque nunca recibe ese objeto** — separación, no cancelación (ver Modelo Conceptual y §9). *Registro histórico, pre-D3: cuando COCO escribía sobre el Δ_r de Monitor, la normalización cancelaba el escalar uniforme `α·Δ_r` por construcción — verificado, valor idéntico (0.8857) en 19 evaluaciones consecutivas con Δ_r diferente en 14 órdenes de magnitud; cancelación exacta, no aproximada. La normalización sigue en el código; lo que ya no llega es el escalar.*
 
 - **`D_ckm_coco`**: opera sobre W_eff con Δ_r sin normalización interna relativa — refleja el efecto real de OPERADOR_STOP_COCO sobre el campo navegable.
 
@@ -855,6 +855,15 @@ Si D_ckm > D_CKM_THRESHOLD:
 *Post-D3 (Sep 2026): OPERADOR_STOP_COCO opera sobre `Δ_r_compresiones` — el objeto propio de COCO. No modifica `Δ_r_pares` de Monitor.*
 
 `_alpha_for` monotónicamente decreciente: **verificado** 43/43 tests. *(v15: `d_ckm_threshold`, `alpha_star` y `frac_rec_min` están **no recalibrados** sobre la escala log de D_ckm; son de Calibración — §10.)*
+
+> **v17 (20 oct) — cómo se calibra COCO, leído en el código** (`services/coco.py`, `services/calibrate.py`, `iap_chatroom/ckm_monitor.py`).
+> - **`calibrate` calibra dos umbrales y nada más:** `D_CKM_THRESHOLD`, a partir del cual dispara, y `FRAC_REC_MIN`, que separa degrading de deep. Los mide sobre **W sola**, a lo largo de W_λ = (1 − λ)·W + λ·W_colapso, y toma el punto medio del salto. **α no se calibra**: no aparece en `calibrate.py`.
+> - **Zona** (`_classify_zone`): si D_ckm < umbral, o es negativo, la zona es *stable*. Si no, con frac_rec < `FRAC_REC_MIN` es *deep*; con frac_rec ≥ `FRAC_REC_MIN` es *degrading*. El operador de compresión actúa en degrading y en deep.
+> - **α se estima en cada compresión**, en dos partes:
+>   1. **Por D_ckm** (`_alpha_for`, `coco.py:600`): α = ALPHA_MAX + (ALPHA_MIN − ALPHA_MAX) · clip((D_ckm − umbral)/(1 − umbral), 0, 1). Da α = 0,30 cuando D_ckm está en el umbral y α = 0,05 cuando D_ckm vale 1. El umbral es el calibrado, así que `calibrate` mueve a α **indirectamente**. Comprobado contra la corrida "después" (`f684aee`): en n=48, D_ckm = 0,2103 y umbral = 0,1536 dan α = 0,2833, que es lo que la corrida registró.
+>   2. **Endógena** (`_landscape_component`, `coco.py:556`): **−γ · media(ΔA/α)** sobre las últimas 5 compresiones; el resultado se recorta a [ALPHA_MIN, ALPHA_MAX]. Corre sólo con `track_landscape=True`, que **está activo en el canal** (`ckm_monitor.py:267`), y sólo con ≥ 2 compresiones previas; sin eso, vale 0. Con γ = 0,01 la corrección es chica. **No está medido** cuánto mueve α en la práctica: en las corridas hubo una sola compresión.
+> - **Fijas, no recalibradas:** `ALPHA_MIN` = 0,05, `ALPHA_MAX` = 0,30, `ALPHA_STAR` = 0,10 (sólo con α dinámico apagado), γ = 0,01. Los α salen del sweep `REG_destruccion_recuperacion_v1` (AMP=40), sobre la forma de D_ckm por conteo. Sobre γ el código sólo dice *"conservador por default"*.
+> - **Abierto, sin cambio:** los umbrales se calibran interpolando W hacia el colapso, mientras que COCO los cruza sobre W + Δ. La referencia es la misma (A0 sobre W sola); el camino, distinto. Se mira en el vivo.
 
 **Armstrong in-vivo** (verificado): OPERADOR_STOP_COCO aplicado 20/20 veces, α ∈ [0.05, 0.30]. *(v15 — MAPA_REG_corpus_v4, REG_armstrong_stop_coco_v1 §Réplica: "in-vivo" es un pipeline MonitorService + COCO **en un script de test**, no el canal. Con **seed 123**, única variable cambiada, da **3/20**, no 20/20. El mecanismo replica (α en rango, Δ_A > 0); el conteo de aplicaciones no: depende de dónde cae una estimación ruidosa respecto de un umbral fijo.)*
 

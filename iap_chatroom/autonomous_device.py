@@ -20,10 +20,12 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from pathlib import Path
 from typing import Optional
 
 from fastmcp import Client
 
+from iap_chatroom import run_store
 from iap_chatroom.local_criterion import (
     DECISION_SKIP,
     LocalCriterion,
@@ -101,22 +103,33 @@ Respond with exactly one word: INTERACT or OP_SILENCE."""
 #  2. **El tick y el silencio están en la observación, no en la pregunta.**
 #     El canal no calcula Δt por el device: le da el tick y los timestamps, y
 #     evaluar el tiempo es parte de decidir (TASK §1, fase D).
-#  3. **Puede no haber mensaje nuevo.** `Incoming: (ninguno)` es el silencio, y
+#  3. **Puede no haber mensaje nuevo.** `Incoming: (none)` es el silencio, y
 #     es un dato de la observación como cualquier otro. El device decide igual.
 #
 # Lo que NO dice, a propósito: no sugiere qué hacer con el silencio, ni que
 # hablar sea mejor que callar, ni que un Δt grande pida acción. Free will
 # (TRUST): *"No one is obligated to participate."*
+#
+# **Los nombres de los placeholders también están en inglés** (punto 1 de
+# `serie2_caso0`). Un placeholder se reemplaza antes de que el modelo lea el
+# prompt, así que `{reloj}` no le llegaba — pero la plantilla **es** el texto
+# fuente de lo que el modelo lee, y un audit que tenga que excusar la plantilla
+# deja de ser el audit de lo que llega. `reloj` → `clock_source`,
+# `periodo_s` → `tick_period_s`, `tick_anterior` → `previous_tick`,
+# `n_nuevos` → `n_new`. Sin alias: los nombres de las claves del `.format` de
+# `_decide` cambiaron con ellos. Las claves de la **observación**
+# (`observation["n_nuevos"]`, `clock["reloj"]`) no se tocan: son del canal y de
+# la traza, y el modelo no las ve.
 GATE_PROMPT_CONTINUO = """Field state:
 D_ckm={d_ckm} | temp_signal={temp} | c_S={c_s} | fi={fi} | Delta_r={delta_r}
 
-Channel clock: tick={tick} (clock source: {reloj}, tick period: {periodo_s}s)
-Your last turn observed tick {tick_anterior}.
+Channel clock: tick={tick} (clock source: {clock_source}, tick period: {tick_period_s}s)
+Your last turn observed tick {previous_tick}.
 
 Recent messages (channel timestamps, UTC):
 {history}
 
-New since your last turn: {n_nuevos}
+New since your last turn: {n_new}
 Incoming: {incoming}
 
 You are not obligated to act. Respond with exactly one word:
@@ -165,6 +178,7 @@ class AutonomousDevice:
         poll_interval: float = 2.0,   # segundos entre vueltas del ciclo
         trigger_mode: str = "continuo",
         local_criterion: Optional[LocalCriterion] = None,
+        state_dir: "str | Path | None" = None,
     ):
         """
         `trigger_mode` admite **un solo valor: "continuo"** (CP2a, P11).
@@ -200,6 +214,22 @@ class AutonomousDevice:
         poder compararlo contra ese número cuando exista; si el provider
         devuelve 429, queda marcado `rate_limit: True` en la traza de la
         vuelta, que es la medición de que el ritmo no entró.
+
+        **`state_dir` es dónde el device escribe lo suyo** (punto 3 de
+        `serie2_caso0`): la traza de decisiones, los registros del filtro y
+        todos los logs, **en el mismo directorio** que el corpus y la
+        trayectoria de Monitor. Append-only y durante la corrida.
+
+        Hace falta como parámetro porque el device corre en **otro proceso**
+        que el server: en el del driver no hay `CKMMonitor` que haya declarado
+        el directorio, así que no hay de dónde heredarlo. Lo único que el
+        driver hace es pasarlo — la lógica de qué se escribe y cuándo está
+        acá, que es lo que delamor pide con *"sin lógica en los drivers"*.
+
+        `None` es "nadie lo pidió": se usa el del proceso si alguien lo fijó
+        (en un test que corre device y monitor juntos, el del monitor), y si
+        nadie lo fijó **no se escribe nada**. Un device de un test unitario no
+        deja archivos por ahí.
         """
         if trigger_mode != "continuo":
             raise ValueError(
@@ -215,6 +245,9 @@ class AutonomousDevice:
         self.poll_interval = poll_interval
         self.trigger_mode = trigger_mode
         self.local_criterion = local_criterion
+        # Dónde escribe este device. Ver el docstring: `None` es "nadie lo
+        # pidió" y entonces se usa el del proceso, que puede no haber ninguno.
+        self._state_dir = Path(state_dir) if state_dir is not None else None
         # registros del filtro, uno por vuelta que lo consulto
         self._registros_criterio: list[dict] = []
         self._history: list[dict] = []
@@ -246,6 +279,30 @@ class AutonomousDevice:
         # corra: sin corrida no hay ritmo que medir, y eso es UNKNOWN, no 0.
         self._t_inicio: Optional[float] = None
         self._t_fin: Optional[float] = None
+
+    def _escribir(self, archivo: str, registro: dict) -> bool:
+        """
+        Una línea en el `state_dir` de este device. **True si se escribió.**
+
+        Agrega quién, con qué provider y con qué modelo: un archivo del
+        directorio de la corrida tiene que poder leerse solo, y con cuatro
+        devices escribiendo en el mismo directorio la línea sin `device_id` no
+        dice de quién es.
+
+        El `state_dir` se pasa en cada llamada y no se fija en el módulo: dos
+        devices del mismo proceso pueden tener directorios distintos, y que
+        uno fijara el del otro es el acople que esto evita.
+        """
+        return run_store.append(
+            archivo,
+            {
+                "device_id": self.device_id,
+                "provider": getattr(self.provider, "name", None),
+                "model": getattr(self.provider, "model", None),
+                **registro,
+            },
+            state_dir_propio=self._state_dir,
+        )
 
     def _to_chat_messages(self) -> list[ChatMessage]:
         chat: list[ChatMessage] = [{"role": "system", "content": self.system_prompt}]
@@ -296,6 +353,13 @@ class AutonomousDevice:
             })
             self._log(f"ERROR_PROVIDER({fase}): {type(e).__name__}"
                       + (" [RATE_LIMIT]" if rate_limit else ""))
+            # **Y a disco en el momento** (punto 3). Hasta acá los errores del
+            # provider sobrevivían sólo si el driver llegaba a volcar
+            # `costo()`: un vivo cortado por un 429 perdía justo el registro
+            # del 429 que lo cortó.
+            self._escribir(run_store.DEVICE_LOG,
+                           {"event": "provider_error",
+                            **self._errores_llm[-1]})
             return None
 
     async def _generate(self) -> Optional[str]:
@@ -341,6 +405,8 @@ class AutonomousDevice:
                 "provider": getattr(self.provider, "name", None),
                 "model": getattr(self.provider, "model", None),
             })
+            self._escribir(run_store.DEVICE_LOG,
+                           {"event": "unreadable", **self._ilegibles[-1]})
             return None
         return text
 
@@ -359,7 +425,7 @@ class AutonomousDevice:
         y el resto de las métricas en None — observación válida, no error.
 
         **`message=None` es el silencio** (CP2a, T5): en el ODA continuo la
-        vuelta corre haya o no mensaje nuevo, y "ninguno" es un dato de la
+        vuelta corre haya o no mensaje nuevo, y "(none)" es un dato de la
         observación como cualquier otro. La firma quedó compatible con la de
         antes, que exigía el mensaje.
 
@@ -415,7 +481,7 @@ class AutonomousDevice:
         `duration`. El texto del gate está **declarado para que delamor lo lea
         antes de la corrida viva**: cambia lo que el device puede decidir.
 
-        **Puede no haber mensaje nuevo.** `Incoming: (ninguno)` es el silencio,
+        **Puede no haber mensaje nuevo.** `Incoming: (none)` es el silencio,
         y el device decide igual. Los Δt no vienen calculados: están el tick
         actual, el de su vuelta anterior y los timestamps, y evaluarlos es
         parte de decidir.
@@ -446,7 +512,10 @@ class AutonomousDevice:
         incoming = (
             f'{trigger.get("device_id", "unknown")}: "{trigger.get("text", "")}"'
             if trigger is not None
-            else "(ninguno)"
+            # **En inglés porque llega al modelo** (`serie2_caso0`): es el
+            # texto que el gate muestra cuando la vuelta corrió en silencio, y
+            # era la única palabra en castellano del prompt escrita acá.
+            else "(none)"
         )
 
         gate_prompt = GATE_PROMPT_CONTINUO.format(
@@ -456,11 +525,15 @@ class AutonomousDevice:
             fi=field.get("fi"),
             delta_r=field.get("Delta_r"),
             tick=clock.get("tick"),
-            reloj=clock.get("reloj", "desconocido"),
-            periodo_s=clock.get("periodo_s"),
-            tick_anterior=observation.get("tick_anterior"),
+            # Sin reloj declarado, **UNKNOWN**: es el marcador de ausencia
+            # que el resto del prompt ya usa (`temp`, los timestamps del
+            # historial), y está en inglés porque esto lo lee el modelo. Era
+            # `"desconocido"`.
+            clock_source=clock.get("reloj", "UNKNOWN"),
+            tick_period_s=clock.get("periodo_s"),
+            previous_tick=observation.get("tick_anterior"),
             history=history_text,
-            n_nuevos=observation.get("n_nuevos", 0),
+            n_new=observation.get("n_nuevos", 0),
             incoming=incoming,
         )
 
@@ -509,6 +582,8 @@ class AutonomousDevice:
             "provider": getattr(self.provider, "name", None),
             "model": getattr(self.provider, "model", None),
         })
+        self._escribir(run_store.DEVICE_LOG,
+                       {"event": "unreadable", **self._ilegibles[-1]})
         return DECISION_UNKNOWN
 
     async def _interact(self, client: Client, decision: str, observation: dict) -> dict:
@@ -627,12 +702,33 @@ class AutonomousDevice:
             return None
 
     def _log(self, decision: str, field_state: Optional[dict] = None) -> None:
+        """
+        El log del device. **Va a la consola y al `state_dir`** (punto 3:
+        *"todos los logs"*).
+
+        Antes era sólo un `print`: lo que se veía en la consola del vivo no
+        quedaba en ninguna parte, y el log de la corrida era lo que hubiera
+        quedado en el scrollback de quien la lanzó.
+
+        `field_state=None` se escribe como `None` y no como un panel vacío: una
+        decisión que se tomó sin mirar el campo y una que lo miró y lo encontró
+        en cero son dos cosas distintas.
+        """
         if field_state is not None:
             d_ckm = field_state.get("D_ckm")
             temp = field_state.get("temp_signal", "UNKNOWN")
             print(f"[{self.device_id}] {decision} (D_ckm={d_ckm}, temp={temp})")
         else:
+            d_ckm = temp = None
             print(f"[{self.device_id}] {decision}")
+        self._escribir(run_store.DEVICE_LOG, {
+            "event": "decision",
+            "decision": decision,
+            "D_ckm": d_ckm,
+            "temp_signal": temp,
+            # True cuando la decisión se tomó sin panel delante.
+            "field_absent": field_state is None,
+        })
 
     async def run(self, duration: float = 60.0) -> None:
         """
@@ -696,6 +792,17 @@ class AutonomousDevice:
             start = time.monotonic()
             self._t_inicio = start
             vuelta = 0
+            # **Que el archivo diga cuándo empezó y con qué.** Sin esta línea,
+            # un `device_log.jsonl` que arranca en la vuelta 3 no se distingue
+            # de uno que perdió las dos primeras.
+            self._escribir(run_store.DEVICE_LOG, {
+                "event": "run_start",
+                "duration_s": duration,
+                "poll_interval_s": self.poll_interval,
+                "trigger_mode": self.trigger_mode,
+                "local_criterion": self.local_criterion is not None,
+                "mcp_url": self.mcp_url,
+            })
 
             while time.monotonic() - start < duration and not self._se_fue:
                 vuelta += 1
@@ -715,15 +822,49 @@ class AutonomousDevice:
                     # Se registra como lo que es —una oportunidad que se
                     # terminó— y no como un error del provider ni como un
                     # silencio decidido. Las tres cosas son distintas.
+                    # **Las mismas claves que una vuelta completa.**
+                    #
+                    # Tenía siete de las veintiuna, y los consumidores de
+                    # `decisiones()` leen las otras: `sum(d["n_nuevos"])`,
+                    # `all(d["llamadas_llm"] == 1)`, `d.get("ventana")`. Con
+                    # esa fila adentro, cada uno de esos levanta `KeyError`.
+                    #
+                    # **No lo vi antes porque esta rama casi nunca corría**: el
+                    # corte por fin de caso pide que la vuelta tarde más que lo
+                    # que queda, y con los stubs una vuelta era tan rápida que
+                    # no llegaba. Lo destapó el punto 3: con las escrituras
+                    # puestas la vuelta tarda lo suficiente, y
+                    # `test_un_mensaje_sellado_en_el_corte_no_se_pierde` falló
+                    # 2 de 6 corridas. Medido también al revés: en HEAD, 8 de 8
+                    # verdes. **El defecto es anterior; el disparador es mío.**
+                    #
+                    # Lo que no se sabe va `None`, declarado, y no 0: la vuelta
+                    # se cortó en algún punto que no se registró, así que
+                    # "cuántos mensajes nuevos vio" y "cuántas llamadas hizo"
+                    # son UNKNOWN. Ponerles 0 diría que observó y no vio nada,
+                    # y que no llamó — dos afirmaciones que nadie midió.
                     self._decisiones.append({
                         "vuelta": vuelta,
                         "tick": tick_observacion,
-                        "decision": DECISION_END_OF_CASE,
-                        "trigger_mode": self.trigger_mode,
-                        "action_result": "did_not_happen: end of case",
                         "tick_observation": tick_observacion,
                         "tick_action": None,
+                        "action_result": "did_not_happen: end of case",
+                        "tick_anterior": self._tick_anterior,
+                        "reloj": None,
+                        "n_nuevos": None,
+                        "trigger": None,
+                        "decision": DECISION_END_OF_CASE,
+                        "trigger_mode": self.trigger_mode,
+                        "criterio_motivo": None,
+                        "criterio_via": None,
+                        "umbrales_calibrados": None,
+                        "ventana": "UNKNOWN",
+                        "llamadas_llm": None,
+                        "errores_llm": None,
+                        "ilegibles": None,
                     })
+                    self._escribir(run_store.DEVICE_DECISIONS,
+                                   self._decisiones[-1])
                     self._cut_by_end_of_case = True
                     break
 
@@ -739,6 +880,17 @@ class AutonomousDevice:
                     "leave_channel", {"device_id": self.device_id}
                 )
                 assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+
+            # **El cierre, con el costo adentro.** El driver también lo vuelca,
+            # y eso **no es redundante**: el del driver sale de un proceso que
+            # pudo no llegar al final. Éste lo escribe el device, en el mismo
+            # directorio que todo lo demás.
+            self._escribir(run_store.DEVICE_LOG, {
+                "event": "run_end",
+                "left_by_own_decision": self._se_fue,
+                "cut_by_end_of_case": self._cut_by_end_of_case,
+                "costo": self.costo(),
+            })
 
 
     async def _one_turn(self, client, vuelta: int, since):
@@ -791,7 +943,7 @@ class AutonomousDevice:
 
         # (3) O — una observación por vuelta, con el clock adentro. El
         #     trigger es el último mensaje nuevo, o None si hubo
-        #     silencio: "ninguno" es el dato.
+        #     silencio: "(none)" es el dato.
         observation = await self._observe(
             client, nuevos[-1] if nuevos else None, clock=clock
         )
@@ -832,6 +984,17 @@ class AutonomousDevice:
             )
             reg["vuelta"] = vuelta
             self._registros_criterio.append(reg)
+            # **A disco en la vuelta** (punto 3). El registro lleva el motivo
+            # de cada skip, que es lo único que distingue un silencio decidido
+            # de un silencio que el filtro produjo; vivía sólo en memoria.
+            #
+            # Se escribe acá y no después de D a propósito: la copia de
+            # `reg` que el archivo guarda es **la de antes de que D decida**,
+            # y la decisión ya está en `device_decisions.jsonl` con su vuelta.
+            # Escribirlo después haría que un corte entre el filtro y D
+            # perdiera el registro del filtro, que es el que dice por qué se
+            # llamó.
+            self._escribir(run_store.CALL_FILTER_RECORDS, reg)
 
         # (4) D — UNA decisión por vuelta, con todo lo de arriba
         llamadas_antes = self._llamadas_llm
@@ -890,6 +1053,7 @@ class AutonomousDevice:
             "errores_llm": len(self._errores_llm) - errores_antes,
             "ilegibles": len(self._ilegibles) - ilegibles_antes,
         })
+        self._escribir(run_store.DEVICE_DECISIONS, self._decisiones[-1])
 
         self._tick_anterior = clock.get("tick", -1)
         since = proximo_since
@@ -1034,6 +1198,18 @@ class AutonomousDevice:
             "errores_rate_limit": sum(
                 1 for e in self._errores_llm if e.get("rate_limit")
             ),
+            # **Dónde escribió este device, y si alguna línea no entró**
+            # (punto 3). `state_dir` es el efectivo, no el pedido: si el
+            # device no recibió ninguno usa el del proceso, y el panel tiene
+            # que decir el real. `None` es "no escribió en ninguna parte", que
+            # es un estado válido —un test unitario— y no un detalle.
+            "state_dir": str(self._state_dir) if self._state_dir is not None
+            else (str(run_store.state_dir()) if run_store.state_dir() else None),
+            # Las escrituras que fallaron. **0 es un valor**: una lista vacía
+            # dice que todo lo que se quiso escribir se escribió, y no que
+            # nadie miró.
+            "write_failures": len(run_store.failures()),
+            "write_failures_detail": run_store.failures()[:5],
             "ritmo_declarado": self.ritmo_declarado(),
             "ritmo_observado": self.ritmo_observado(),
             "decisiones_por_tipo": {

@@ -128,7 +128,7 @@ def test_el_t0_del_canal_tambien_es_de_pared(canal) -> None:
 
 def test_el_clock_declara_su_reloj(canal) -> None:
     c = canal.get_clock()
-    assert c["reloj"] == RELOJ_CANAL == "canal"
+    assert c["reloj"] == RELOJ_CANAL == "channel"
     assert c["periodo_s"] == TICK_PERIODO_S
     assert set(c) >= {"tick", "t", "reloj", "periodo_s", "t0"}
 
@@ -191,12 +191,22 @@ def test_el_clock_no_calcula_nada_por_el_device(canal) -> None:
 
 # ── get_messages sigue igual que antes ─────────────────────────────────────
 
-def test_get_messages_sigue_funcionando_igual(canal) -> None:
-    """El CP1 no toca el `since` del device: eso es el CP2."""
+def test_get_messages_sigue_funcionando_igual(canal, tmp_path) -> None:
+    """
+    El CP1 no toca el `since` del device: eso es el CP2.
+
+    `tmp_path` y `run_store.set_state_dir` desde el punto 3: **importar
+    `mcp_server` construye el `CKMMonitor` por default**, y ése apunta el
+    `state_dir` del proceso a `iap_chatroom/_state/` —la traza de agosto—, así
+    que los dos `publish` de abajo escribían ahí. Lo encontró el guardia de
+    `conftest.py`, en su segunda versión.
+    """
     import asyncio
     from iap_chatroom import mcp_server
+    from iap_chatroom import run_store
 
     monkeypatch_canal = mcp_server.channel
+    run_store.set_state_dir(tmp_path / "state")
     mcp_server.channel = canal
     try:
         asyncio.run(canal.publish("d0", "AI", "uno"))
@@ -240,10 +250,10 @@ def test_la_config_registra_el_tick_con_su_reloj() -> None:
     cfg = CKMlandscapeConfig(sampling_mode="uniform")
     assert cfg.tick is None, "sin canal no hay tick, y eso es UNKNOWN, no 0"
     assert cfg.tick_reloj is None
-    cfg.registrar_tick(7, "canal")
-    assert cfg.tick == 7 and cfg.tick_reloj == "canal"
+    cfg.registrar_tick(7, "channel")
+    assert cfg.tick == 7 and cfg.tick_reloj == "channel"
     assert cfg.panel()["tick"] == 7
-    assert cfg.panel()["tick_reloj"] == "canal"
+    assert cfg.panel()["tick_reloj"] == "channel"
 
 
 def test_registrar_tick_no_abre_ciclos(W_corpus) -> None:
@@ -251,7 +261,7 @@ def test_registrar_tick_no_abre_ciclos(W_corpus) -> None:
     cfg = CKMlandscapeConfig.create(W_corpus, sampling_mode="uniform")
     antes = len(cfg.ciclos)
     for t in range(5):
-        cfg.registrar_tick(t, "canal")
+        cfg.registrar_tick(t, "channel")
     assert len(cfg.ciclos) == antes, "un tick no puede abrir un ciclo"
     assert cfg.tick == 4
 
@@ -288,8 +298,8 @@ def test_monitor_anota_el_tick_que_le_dan(W_corpus, tmp_path) -> None:
     assert cfg.tick is None, "sin clock el tick queda UNKNOWN, no 0"
 
     m.evaluate("gun control laws reduce violence",
-               clock={"tick": 42, "reloj": "canal"})
-    assert cfg.tick == 42 and cfg.tick_reloj == "canal"
+               clock={"tick": 42, "reloj": "channel"})
+    assert cfg.tick == 42 and cfg.tick_reloj == "channel"
 
 
 @pytest.fixture(scope="module")

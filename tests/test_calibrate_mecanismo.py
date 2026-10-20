@@ -258,8 +258,8 @@ def test_sin_clock_el_reloj_queda_desconocido_y_no_se_inventa() -> None:
     assert r["condiciones"]["t"] is None
 
     r2 = calibrate(_W_con_tension(), w_sha="x", n_runs=N_RUNS_TEST,
-                   clock={"reloj": "canal", "t": 123.0})
-    assert r2["condiciones"]["reloj"] == "canal"
+                   clock={"reloj": "channel", "t": 123.0})
+    assert r2["condiciones"]["reloj"] == "channel"
     assert r2["condiciones"]["t"] == 123.0
 
 

@@ -121,7 +121,7 @@ def _publicar_sync(canal, device_id: str, text: str) -> None:
     canal.messages.append(Message(
         device_id=device_id, device_type="AI", text=text,
         timestamp=datetime.fromtimestamp(ahora, timezone.utc).isoformat(),
-        tick=canal.tick(), reloj="canal",
+        tick=canal.tick(), reloj="channel",
     ))
 
 
@@ -458,7 +458,7 @@ def test_un_mensaje_entre_get_clock_y_get_messages_no_se_pierde(canal) -> None:
         canal.messages.append(Message(
             device_id="otro", device_type="AI", text="en el medio",
             timestamp=datetime.fromtimestamp(ahora, timezone.utc).isoformat(),
-            tick=canal.tick(), reloj="canal",
+            tick=canal.tick(), reloj="channel",
         ))
 
     client.publicados_entre = publicar_en_el_medio

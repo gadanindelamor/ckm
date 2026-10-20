@@ -12,7 +12,7 @@ delamor, 8 oct):
      mensajes. Una sola fuente: `_ahora()`.
   2. La Config **registra** el tick vigente; Monitor lo anota. El canal **no
      lee la Config** — la dependencia no se invierte.
-  3. **Cada tiempo declara de qué reloj viene.** Acá, `reloj="canal"`.
+  3. **Cada tiempo declara de qué reloj viene.** Acá, `reloj="channel"`.
 
 Por qué hace falta: `message_id = "msg-{index}"` ya es monótono, pero avanza
 sólo cuando hay un mensaje. El CLOCK avanza con el canal callado, y eso es el
@@ -29,6 +29,8 @@ from typing import Callable, List, Literal, Optional
 
 from fastapi import WebSocket
 
+from iap_chatroom import run_store
+
 # Período del tick, en segundos. **Declarado, no calibrado**: es el grano con
 # el que el canal nombra el tiempo, y cambiarlo cambia la numeración de los
 # ticks. Los umbrales de decisión son de Calibración y no viven acá.
@@ -36,7 +38,28 @@ TICK_PERIODO_S = 1.0
 
 # De qué reloj viene cada tiempo que el canal produce (decisión 3). El canal
 # sella todo con el suyo: no mezcla el del device ni el del proceso de Monitor.
-RELOJ_CANAL = "canal"
+#
+# **El valor está en inglés porque llega al modelo.** Entra al prompt del gate
+# como `clock source: channel` (`autonomous_device.GATE_PROMPT_CONTINUO`), y la
+# regla del caso `serie2_caso0` es que nada de lo que el LLM lee esté en
+# castellano: CKM todavía no es bilingüe, y cada caso va en un solo idioma. Era
+# `"canal"`, y ésa era la única palabra en castellano que el gate mostraba sin
+# que nadie la hubiera escrito en un prompt.
+RELOJ_CANAL = "channel"
+
+
+def message_id(index: int) -> str:
+    """
+    El id de un mensaje del canal, a partir de su posición en el historial.
+
+    **Está acá y no en `mcp_server`** porque ahora lo usan los dos: la tool
+    `get_messages` para armar el dict que el device lee, y `publish` para
+    escribir la línea de `channel_messages.jsonl`. Con la fórmula repetida, el
+    id del archivo y el id que el device vio podían separarse sin que nada lo
+    dijera — y el id es justo lo que ata una línea del archivo a una decisión
+    de la traza.
+    """
+    return f"msg-{index}"
 
 
 @dataclass
@@ -140,6 +163,11 @@ class ChatChannel:
                 ),
             })
             self._ultimo_tick_visto = t
+            # **Y a disco, en el mismo tick** (punto 3). El log de ticks era lo
+            # único que medía el silencio y vivía sólo en memoria: un corte se
+            # llevaba la medición del silencio, que es la que no se puede
+            # reconstruir desde los mensajes.
+            run_store.append(run_store.CHANNEL_TICKS, self._clock_log[-1])
         return {
             "tick": t,
             "t": ahora,
@@ -217,6 +245,8 @@ class ChatChannel:
                 "length": len(text) if text is not None else None,
                 "received": repr(text)[:80],
             })
+            run_store.append(run_store.REJECTED_ATTEMPTS,
+                             self._rejected_attempts[-1])
             return None
 
         ahora = self._ahora()
@@ -229,6 +259,13 @@ class ChatChannel:
             reloj=RELOJ_CANAL,
         )
         self.messages.append(message)
+        # **El mensaje a disco, con el texto entero y su id** (punto 3), antes
+        # de los subscribers y de los callbacks: si un callback levanta, el
+        # mensaje ya ocurrió y tiene que estar escrito. El id sale de
+        # `message_id`, el mismo que el device ve por `get_messages`.
+        registro = message.to_dict()
+        registro["message_id"] = message_id(len(self.messages) - 1)
+        run_store.append(run_store.CHANNEL_MESSAGES, registro)
 
         payload = json.dumps(message.to_dict())
         stale: List[WebSocket] = []

@@ -580,11 +580,11 @@ def test_cp2b_una_decision_sin_cambio_de_W_queda_en_el_jsonl(monitor) -> None:
 
     # el registro lo escribe el camino del monitor, así que se invoca derecho
     reg = cm._registrar_decision("volumen", st, sha, {"t": 1.0, "tick": 7,
-                                                      "reloj": "canal"})
+                                                      "reloj": "channel"})
     assert reg["w_cambio"] is False, "no se declaró que W no se movió"
     assert reg["w_sha_antes"] == reg["w_sha_despues"] == sha
     assert reg["ocurrio"] is True, "la decisión sí se tomó"
-    assert reg["reloj"] == "canal", "el reloj tiene que ser el del canal"
+    assert reg["reloj"] == "channel", "el reloj tiene que ser el del canal"
 
     # y `w_version` no registró nada nuevo: por eso hace falta el jsonl
     assert len(cm._corpus._w_versions.history()) == n_versiones_antes
@@ -606,7 +606,7 @@ def test_cp2b_la_decision_con_salto_queda_con_w_cambio_true(monitor) -> None:
     assert d[-1]["causa"] == "volumen"
     assert d[-1]["w_cambio"] is True
     assert d[-1]["w_sha_antes"] != d[-1]["w_sha_despues"]
-    assert d[-1]["reloj"] == "canal", "no se usó el reloj del canal"
+    assert d[-1]["reloj"] == "channel", "no se usó el reloj del canal"
     assert d[-1]["n_puntos_d_ckm"] is not None
 
 

@@ -12311,7 +12311,7 @@ toqué. Si eso también es sensible, es un cambio aparte.
 
 **A1.PAUSA.**
 
-## S2-C0 — paso (2) aplicado, y las dos corridas alineadas — 2026-10-20 00:19 UTC
+## S2-C0 — paso (2) aplicado, y las dos corridas alineadas — 2026-10-20 00:06 UTC
 
 *Claude Opus 5 (Code). Freno levantado por delamor (*"que COCO no dispare con Δ_r crudo
 repetido se registra como hecho, no frena"*). **Se mide, no se interpreta: acá no hay lectura

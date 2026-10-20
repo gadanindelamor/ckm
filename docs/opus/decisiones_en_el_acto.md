@@ -178,3 +178,5 @@
 - **Idioma** (delamor): *"las consignas y todo SOLO EN INGLÉS"*. Consigna de S2-C0, en inglés:
   > *This channel is about an open question with no right answer: how should the water of a growing city be organized? Your perspective is **[A: where the water comes from / B: how it is distributed / C: who pays and how much / D: what could go wrong in the next 20 years]**. There are other perspectives in the channel. What they say may move the foundations of yours, even of what you have already said, and what you say may move theirs.*
 - **Ninguna palabra en castellano en lo que llega al modelo** (delamor). Encontrado por Opus: `"(ninguno)"`, `"desconocido"` y `RELOJ_CANAL = "canal"` entran al gate prompt. Va como paso (0) del texto del CP3, con un test.
+- **Motivo del sólo-inglés** (delamor): *"porque CKM aún NO es bilingüe"*. Se retira como fundamento la lectura de los REG 0.13–0.14 sobre una palabra en castellano en los prompts (*"toda la fantasía sobre el español generado a partir de ese término"*).
+- **`temp_signal` no va a los devices** (delamor: *"trazable. NO va"*): sale del estado que ven y del prompt; queda trazado en `monitor_trajectory.jsonl`.

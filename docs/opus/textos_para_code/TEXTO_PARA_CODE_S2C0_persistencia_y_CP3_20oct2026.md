@@ -6,12 +6,14 @@ Vale lo de siempre: no se toca el vivo hasta que delamor lo corra, sin alias, si
 
 **Orden (delamor): primero CP3, luego CP2 y fixes.** Lo del CP2 ya está cubierto por tests y por la medición del 19 oct (COCO conectado y evaluando, primer W a los 30, ODA con canal en silencio, corte al fin del caso); se retoma después del vivo.
 
-**(0) Antes del CP3: ninguna palabra en castellano en lo que llega al modelo** (delamor: *"las consignas y todo SÓLO EN INGLÉS… ninguna palabrita perdida en español"*). En la serie 0.13–0.14 una sola palabra en castellano en los prompts pesó en el idioma de los mensajes.
+**(0) Antes del CP3: ninguna palabra en castellano en lo que llega al modelo** (delamor: *"las consignas y todo SÓLO EN INGLÉS… ninguna palabrita perdida en español"*). **Motivo (delamor): CKM aún no es bilingüe.** No es por la "hipótesis de la palabra-semilla" de los REG 0.13–0.14: esa lectura no se usa.
 - Auditá **todo lo que recibe el LLM**: system prompt, `GATE_PROMPT_CONTINUO` ya formateado, el historial (incluidos los eventos SYSTEM), el estado del campo que entra al prompt, los fallbacks y cualquier valor que se inserte en el texto.
 - Opus ya encontró tres en `autonomous_device.py`: `"(ninguno)"` (l. 449), `"desconocido"` (fallback de `reloj`, l. 453) y el valor `RELOJ_CANAL = "canal"` (`channel.py:39`), que aparece en el prompt como *"clock source: canal"*. Puede haber más.
 - Pasalos a inglés, declarados y sin alias.
 - **Test:** renderizá el prompt completo en sus variantes (con trigger y sin trigger, con campo y sin campo, con reloj UNKNOWN) y verificá que no tenga palabras en castellano (diacríticos españoles y un listado de palabras funcionales).
 - Lo que el modelo no ve (comentarios, docstrings, logs internos) no entra en este paso.
+
+**(0b) `temp_signal` no va a los devices** (delamor: *"trazable. NO va"*). Sale de COCO (`ckm_monitor.py:711-712`) y hoy entra a `get_state()` / `get_monitor_state` y al gate prompt (*"temp_signal=…"*). Hay que sacarlo de lo que ven los devices: del estado y del prompt. **Sigue trazado** en `monitor_trajectory.jsonl` (`panel["thermostat"]`). Test: ni el estado que recibe un device ni el prompt renderizado contienen `temp_signal`.
 
 **(1) PRIMERO CP3 (delamor) — preparar el vivo, sin correrlo.** Con lo que hay hoy: lo de COCO ya queda en `monitor_trajectory.jsonl` del `state_dir`, y eso alcanza para el objetivo. Los mensajes y la traza de los devices hoy viven en memoria: **declaralo** en el reporte (qué se guarda y qué no con el código de hoy). No agregues lógica en el driver para guardarlos.
 - Estado en `experiments/_state_S2-C0/`, limpio.

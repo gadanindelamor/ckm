@@ -42,6 +42,7 @@ Reglas:
   - **sin explicación de los campos de CKM** en el system prompt, como en 0.4a (delamor, para este caso);
   - gate y generación: los del código;
   - device ids neutros, en inglés.
+  - **sin seed** (decisión de Opus, por delegación de delamor: *"no, siempre que no obstaculice el objetivo"*): no hay `seed_human`; el corpus arranca sólo con lo que publiquen los devices. El ODA continuo permite que un device hable primero (`test_iniciativa_el_diseno_permite_hablar_primero`). **Riesgo, declarado:** si el caso no llega a 30 mensajes, no hay primer W, COCO no nace y el objetivo no se cumple. En ese caso, lo primero a ajustar en el próximo intento es poner un seed.
 - **Consigna parcial por device**, como en la serie IAP 1 (delamor). Va en el `system_prompt` del device genuino. Cada device recibe **sólo su perspectiva**: la lista de las cuatro no la ve nadie. **Sin coordinador:** nadie tiene más información que los otros. La plantilla, en inglés; en cada device el corchete se reemplaza por **su** perspectiva y nada más:
   > *This channel is about an open question with no right answer: how should the water of a growing city be organized? Your perspective is **[A: where the water comes from / B: how it is distributed / C: who pays and how much / D: what could go wrong in the next 20 years]**. There are other perspectives in the channel. What they say may move the foundations of yours, even of what you have already said, and what you say may move theirs.*
 - Devices: 4, uno por perspectiva, en orden arbitrario y declarado:

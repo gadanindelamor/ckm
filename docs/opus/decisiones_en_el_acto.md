@@ -187,3 +187,4 @@
 - **Consigna parcial por device** (delamor): *"igual que en los casos de IAP serie 1, cada device recibe su consigna parcial"*. Cada uno ve sólo su perspectiva y no hay coordinador (*"no es este caso"*). Dirección: *"hacia una situación de interacción de agentes, más que una juntada de amigos en un cyber café"*.
 - **System prompt sin explicación de los campos de CKM** en `serie2_caso0` (delamor: *"no, aún"*). **Es definición por caso: Opus lo vuelve a preguntar en el próximo caso.**
 - **Objetivo, reiterado** (delamor): *"erradicar el sesgo del paper"*: la expresión heredada "COCO no se conectó nunca a un vivo de IAP".
+- **Sin seed** en `serie2_caso0` (Opus, por delegación de delamor: *"como lo consideres… no, siempre que no obstaculice el objetivo"*). Riesgo: < 30 mensajes ⇒ COCO no nace. Si pasa, el seed es lo primero a ajustar.

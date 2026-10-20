@@ -168,26 +168,33 @@ def test_a_beta_c_infinito_se_muestra_y_no_se_oculta(monitor_con_coco):
     assert panel["coco"]["mu_W"] < 0
 
 
-def test_agregado3_las_dos_W_eff_quedan_declaradas(monitor_con_coco):
-    """
-    Agregado 3 de delamor: COCO mide sobre `W + Δ_r` **crudo** y Monitor sobre
-    `W + Δ_r` **escalado**. No se unifican; se declaran.
-    """
-    panel = monitor_con_coco.evaluate("gun violence", device_id="d1")
-    w_eff = panel["coco"]["w_eff"]
-    assert w_eff["same"] is False
-    assert "crudo" in w_eff["coco"]
-    assert "media(W>0)" in w_eff["monitor"]
-    assert w_eff["baseline_coco"] != w_eff["baseline_monitor"]
-
-
-def test_agregado3_la_diferencia_declarada_es_real_y_no_solo_un_texto(
+def test_agregado3_la_W_eff_es_UNA_y_el_baseline_sigue_siendo_dos(
     monitor_con_coco,
 ):
     """
-    Que el panel lo diga no alcanza: con Δ_r no nulo, las dos W_eff tienen que
-    **diferir de verdad**. Si alguien unificara las escalas sin tocar el texto,
-    este test se cae.
+    **Se dio vuelta el 19 oct.** Este test afirmaba que las dos W_eff eran
+    distintas —COCO cruda, Monitor escalada— y que eso se declaraba. Después
+    del CP1b, delamor decidió que **Δ_r no se normaliza**, así que con la misma
+    W y los mismos rechazos **es una sola W_eff**, y lo que el panel declara es
+    eso. **No se conserva la escala vieja**: lo que sigue siendo dos es el
+    **baseline**.
+    """
+    panel = monitor_con_coco.evaluate("gun violence", device_id="d1")
+    w_eff = panel["coco"]["w_eff"]
+    assert w_eff["same"] is True
+    assert "crudo" in w_eff["coco"] and "crudo" in w_eff["monitor"]
+    assert "media(W>0)" not in w_eff["monitor"], "volvió la escala vieja"
+    assert w_eff["baseline_coco"] != w_eff["baseline_monitor"]
+
+
+def test_agregado3_la_igualdad_es_real_y_no_solo_un_texto(monitor_con_coco):
+    """
+    Que el panel diga `same: True` no alcanza: con Δ_r no nulo las dos W_eff
+    tienen que ser **la misma matriz**, bit a bit. Si alguien volviera a
+    escalar Δ_r en Monitor sin tocar el texto del panel, este test se cae.
+
+    (Antes del 19 oct este test afirmaba lo contrario: que diferían. La escala
+    vieja no se conserva en ninguna parte.)
     """
     m = monitor_con_coco
     W = m.corpus.get_W()
@@ -195,7 +202,12 @@ def test_agregado3_la_diferencia_declarada_es_real_y_no_solo_un_texto(
     m._Delta_r[0, 1] = m._Delta_r[1, 0] = 3.0
     w_eff_monitor = m._combine_W_Delta(W, m._Delta_r)
     w_eff_coco = W + m._Delta_r
-    assert not np.allclose(w_eff_monitor, w_eff_coco)
+    assert np.array_equal(w_eff_monitor, w_eff_coco)
+    # y el máximo lo pone Δ_r, no W: con 3 rechazos el par rechazado queda en
+    # `W[0,1] + 3` y es el acoplamiento más fuerte de la matriz, por encima del
+    # máximo de W, que es 1 por normalización. Es la cantidad, no un efecto.
+    assert float(np.abs(w_eff_monitor).max()) == float(W[0, 1]) + 3.0
+    assert float(np.abs(W).max()) <= 1.0
 
 
 # ───────────────────────────────────────────────────────────────────────────

@@ -12310,3 +12310,83 @@ TASK pidió para poder **comprobar la conexión**— publica hoy `thresholds`, `
 toqué. Si eso también es sensible, es un cambio aparte.
 
 **A1.PAUSA.**
+
+## S2-C0 — paso (2) aplicado, y las dos corridas alineadas — 2026-10-20 00:19 UTC
+
+*Claude Opus 5 (Code). Freno levantado por delamor (*"que COCO no dispare con Δ_r crudo
+repetido se registra como hecho, no frena"*). **Se mide, no se interpreta: acá no hay lectura
+de qué mide cada serie.** Suite: **755 pasan, 7 xfailed, 0 fallan.***
+
+### El cambio
+
+`_combine_W_Delta` (`monitor_service.py`) pasa a **`W + Δ_r` crudo**: sin `/max Δ_r` y sin
+factor de W. **No queda nada de la escala vieja** —ni flag, ni alias, ni rama—; lo medido bajo
+ella se reproduce desde `process/`, no desde el código. Movidos con el cambio: el docstring de
+`_combine_W_Delta` y el de `_D_ckm`, el bloque `w_eff` del panel (`same: True`), la línea de
+**DEFS v17** que decía *"dos cantidades"* —ahora dice **una W_eff, dos baselines**— y los dos
+tests que fijaban la escala vieja, **reescritos al revés** (uno exige que las dos W_eff sean
+la misma matriz bit a bit, y que el máximo de W_eff lo ponga Δ_r y no W).
+
+El driver del CP1b además **dejó de copiar** `_combine_W_Delta`: ahora llama a la función del
+código, así que la columna de Monitor no puede quedar desactualizada sin que se note.
+
+### Driver del CP1b, re-corrido: la columna de Monitor **es** la de COCO
+
+| escala | `sin_repeticion` | `con_repeticion` |
+|---|---|---|
+| **A** Monitor (del código) | +0.0255 … **+0.2004** | +0.0255 +0.0695 +0.0405 −0.5899 … **−1.6248** |
+| **B** COCO crudo | +0.0255 … **+0.2004** | +0.0255 +0.0695 +0.0405 −0.5899 … **−1.6248** |
+| **C** `(Δ/maxΔ)·media(\|W\|≠0)` — con esta W, la escala que Monitor tenía hasta ayer | +0.0212 … +0.1674 | +0.0212 … +0.0390 |
+| **D** `Δ/maxΔ` | = B | +0.0255 … +0.0490 |
+
+**A = B en los 20 pasos de las dos secuencias**, dígito por dígito.
+
+### Las dos corridas del canal, alineadas por mensaje
+
+Misma secuencia (**sha `13c56f8853ff…`**, 70 mensajes, 8 textos del CP1, dos devices), mismo
+`state_dir`, 5 cambios de W en las dos, 41 mensajes con panel.
+**`experiments/medir_dos_d_ckm_antes.jsonl`** y **`…_despues.jsonl`**, una línea por mensaje.
+
+| | antes | después |
+|---|---|---|
+| filas con las dos series | 41 | 41 |
+| **N_eff de las dos series igual** (±1e-4) | **6 de 41** | **39 de 41** |
+| **signo de D_ckm distinto** | **25 de 41** | **12 de 41** |
+| D_ckm **idéntico** | 6 de 41 | **18 de 41** |
+| máxima diferencia \|M − C\| en un mensaje | 0.2601 | 0.2416 |
+| rango de la serie de Monitor | −0.1361 … +0.1740 | **−0.5487 … +0.2694** |
+| rango de la serie de COCO | −0.2337 … +0.1114 | −0.3993 … +0.2103 |
+| ‖Δ_r‖ = ‖Δ_r_compresiones‖ | 41 de 41 | **38 de 41** |
+| `max Δ_r` alcanzado | 2.0 | **3.0** |
+| zonas de COCO | `stable` × 41 | `stable` × 40, **`deep` × 1** |
+| **disparos de COCO** | **0** | **1** (n = 48, α = 0.2833) |
+| calibraciones en los rebuilds | `nulo_calibrado` (n=30) + 4 × `calibrado` | igual, **mismos umbrales**: 0.1536 / 0.2388 / 0.2381 / 0.1515 |
+
+**Las filas donde las dos series siguen distintas en el "después"** son las 23 en que los
+baselines difieren: n = 30–40 (N_eff₀ 3.23 vs A0 3.69), n = 49–50 (después del STOP) y
+n = 61–70 (5.47 vs 4.08). En n = 41–48 y 51–60 —donde el ciclo nació con Δ = 0— las dos dan
+**el mismo número**.
+
+**Lo que pasó en n = 48, y antes no había pasado nunca:** COCO entró en zona `deep` y **aplicó
+STOP** (α = 0.2833). A partir de ahí su Δ deja de coincidir con el Δ_r de Monitor: n = 49
+‖Δ_r‖ = 7.75 contra ‖Δ_c‖ = 4.90; n = 50, 9.49 contra 6.52. Son las 3 filas de 41 en que las
+normas difieren, y las 2 filas en que N_eff difiere.
+
+### Lo que se puede afirmar y lo que no
+
+**Se puede afirmar:** los números de las dos tablas, con esa secuencia, esas W, `n_runs = 1000`
+y `seed = 0`; que el driver del CP1b da A = B exacto; que en el "después" las dos series dan el
+mismo N_eff en 39 de 41 filas y el mismo D_ckm en 18; que COCO disparó una vez, en n = 48; y
+que los umbrales calibrados salieron iguales en las dos corridas (la calibración es sobre W
+sola y el cambio no la toca).
+
+**No se puede afirmar:**
+- **Nada sobre el vivo:** 8 textos repetidos escritos por el driver, sin devices decidiendo.
+- **La dispersión entre seeds no se midió** en ninguna de las dos corridas: las diferencias de
+  tercer decimal no se sostienen.
+- **Nada sobre por qué COCO disparó en el "después" y no en el "antes"** más allá de que los
+  números son los que están en la tabla. No lo repetí con otra seed ni con otra secuencia.
+- **Los tiempos de calibración** (78–202 ms) son de esta máquina y estas W.
+- **`max Δ_r` = 3** es lo que alcanzó el camino real en 70 mensajes; no es una cota.
+
+**A1.PAUSA.**

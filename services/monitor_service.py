@@ -481,12 +481,14 @@ class MonitorService:
                 "calibrated": bool(self._coco_thresholds),
             },
             "calibration": self._coco_calibration,
-            # Agregado 3 de delamor: las dos cantidades, declaradas.
+            # Agregado 3 de delamor: de que W_eff mide cada uno. Desde el
+            # 19 oct es **una sola** (decision de delamor tras el CP1b: Delta_r
+            # no se normaliza). Lo que sigue siendo distinto es el baseline
+            # -- y el Delta, en cuanto COCO comprima.
             "w_eff": {
                 "coco": "W + Delta_r crudo (coco.observe)",
-                "monitor": ("W + (Delta_r/max Delta_r) * media(W>0) "
-                            "(_combine_W_Delta)"),
-                "same": False,
+                "monitor": "W + Delta_r crudo (_combine_W_Delta)",
+                "same": True,
                 "baseline_coco": "W sola, fijado al nacer el ciclo, no se resetea",
                 "baseline_monitor": ("W_eff de Monitor, fijado en la primera "
                                      "evaluacion con corpus establecido, se "
@@ -765,28 +767,36 @@ class MonitorService:
 
     def _combine_W_Delta(self, W: np.ndarray, Delta: np.ndarray) -> np.ndarray:
         """
-        Combina W y Delta_r en escalas compatibles.
+        **W_eff = W + Δ_r, crudo.** Sin dividir por `max Δ_r` y sin ningún
+        factor de W.
 
-        W ∈ [−1, +1] (normalizado por CorpusService: (pos − neg)/max|·|).
-        Delta_r ∈ [0, ∞) (conteos enteros de rechazos).
+        **Decisión de delamor, 19 oct, después del CP1b:** *"dividir por el
+        máximo re-escala, y lo único que cancela es la acumulación"*. Es la
+        misma combinación que usa COCO (`coco.observe`), así que con la misma W
+        y los mismos rechazos **es una sola W_eff**.
 
-        Normalización: Delta_r / max(Delta_r) → [0,1],
-        luego escala por la media de los pesos POSITIVOS de W para
-        preservar magnitud relativa. Si Delta es cero (inicio de sesión),
-        devuelve W sin modificar.
+        **Lo que había antes y por qué se fue.** Hasta el 19 oct esto era
+        `W + (Δ_r/max Δ_r) · media(W > 0)`: normalizaba Δ_r por su máximo y lo
+        escalaba por la media de los pesos positivos de W. El propio docstring
+        decía que la escala *"es una elección, no una consecuencia del rango de
+        W"*. El CP1b lo midió sobre la W del CP1 y una secuencia fija de
+        rechazos: con Δ_r acumulando sobre los mismos pares, la forma vieja
+        **cicla** entre +0,017 y +0,039 y vuelve —el rechazo nuevo no suma,
+        porque al crecer `max Δ_r` se re-escala todo— mientras la cruda llega a
+        −1,63. Lo que la normalización cancelaba era la **acumulación**.
+        **No queda compatibilidad hacia atrás:** lo medido bajo la forma vieja
+        se reproduce desde su copia congelada en `process/`, no desde acá.
 
-        La escala usa solo W>0 — no |W| ni todos los no-cero. Data de
-        cuando W era positiva y `W_nonzero` y `W>0` eran el mismo conjunto.
-        Se mantiene el comportamiento; queda dicho que es una elección,
-        no una consecuencia del rango de W.
+        W ∈ [−1, +1] (normalizado por CorpusService: (pos − neg)/max|·|) y
+        Δ_r ∈ [0, ∞) son **conteos enteros**, así que con pocos rechazos Δ_r
+        domina el orden de magnitud de W. **Eso ahora es la cantidad, no un
+        efecto a corregir.**
+
+        Con Δ en cero devuelve W, igual que antes.
         """
-        delta_max = Delta.max()
-        if delta_max == 0:
+        if Delta.max() == 0:
             return W
-        W_nonzero = W[W > 0]
-        scale = W_nonzero.mean() if len(W_nonzero) > 0 else 1.0
-        Delta_norm = (Delta / delta_max) * scale
-        return W + Delta_norm
+        return W + Delta
 
     def _rejected_pairs(self, sigma_p: np.ndarray, sigma_r: np.ndarray):
         """Pares que sigma_prompt declaró activos pero relax expulsó."""
@@ -821,9 +831,14 @@ class MonitorService:
         sale A0.
 
         A0 se fija en la primera llamada con corpus establecido (mode !=
-        accumulation), se cuenta sobre _combine_W_Delta(W, Delta_r) — escala
-        compatible W + Delta_r — y se resetea cuando W cambia. COCO fija el
-        suyo sobre W sola y no lo resetea: una cantidad, dos baselines.
+        accumulation), se cuenta sobre _combine_W_Delta(W, Delta_r) — desde el
+        19 oct, W + Delta_r **crudo**, la misma combinacion que COCO — y se
+        resetea cuando W cambia. COCO fija el suyo sobre W sola y no lo
+        resetea.
+
+        **Lo que queda sin unificar, y es lo unico:** de donde sale el
+        baseline. La W_eff ya es una sola (decision de delamor, 19 oct, tras
+        el CP1b); el Delta tambien, mientras COCO no comprima. El baseline, no.
         """
         Delta    = self._Delta_r if self._Delta_r is not None else np.zeros_like(W)
         W_eff    = self._combine_W_Delta(W, Delta)

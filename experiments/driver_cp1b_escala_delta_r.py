@@ -8,9 +8,12 @@ driver_cp1b_escala_delta_r.py — CP1b de `TASK_iap_serie2_caso0_v1`
 **Las cuatro combinaciones** (las dos que el código usa hoy, más las dos
 alternativas que lista la TASK):
 
-    A  W + (Δ_r / max Δ_r) · media(W > 0)     ← Monitor, `_combine_W_Delta`
+    A  `MonitorService._combine_W_Delta`      ← Monitor, la del codigo
+       (hasta el 19 oct: W + (Δ_r/max Δ_r)·media(W>0);
+        desde el 19 oct: W + Δ_r crudo)
     B  W + Δ_r   (crudo)                      ← COCO, `observe`
-    C  W + (Δ_r / max Δ_r) · media(|W| ≠ 0)   ← alternativa
+    C  W + (Δ_r / max Δ_r) · media(|W| ≠ 0)   ← alternativa, y con una W sin
+       pesos negativos es **la escala que Monitor tenía hasta el 19 oct**
     D  W + (Δ_r / max Δ_r)                    ← alternativa, sin factor de W
 
 **No elige escala.** Mide, reporta y la elige delamor.
@@ -42,6 +45,7 @@ sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "services"))
 
 from corpus_service import CorpusService          # noqa: E402
+from monitor_service import MonitorService        # noqa: E402
 from landscape_engine import basin_masses, n_eff   # noqa: E402
 from node_extractor import MIN_DF                  # noqa: E402
 from calibrate import calibrate                    # noqa: E402
@@ -79,14 +83,17 @@ def sha_de_la_secuencia(seq) -> str:
 
 # ── las cuatro escalas ──────────────────────────────────────────────────────
 
+# **Monitor, llamado de verdad.** Hasta el 19 oct acá había una copia literal
+# de `_combine_W_Delta`; desde el cambio a Δ_r crudo, la copia podía quedar
+# desactualizada sin que nada avisara y el driver mostraría una igualdad que no
+# existe. Ahora la columna de Monitor sale de **la función del código**, con una
+# instancia de `MonitorService` armada sobre el mismo corpus.
+_MONITOR = None
+
+
 def escala_A(W, D):
-    """Monitor, hoy. Copia literal de `_combine_W_Delta`."""
-    dmax = D.max()
-    if dmax == 0:
-        return W
-    pos = W[W > 0]
-    factor = pos.mean() if len(pos) else 1.0
-    return W + (D / dmax) * factor
+    """Monitor: `MonitorService._combine_W_Delta`, la del código."""
+    return _MONITOR._combine_W_Delta(W, D)
 
 
 def escala_B(W, D):
@@ -113,7 +120,7 @@ def escala_D(W, D):
 
 
 ESCALAS = {
-    "A_monitor_media_W_pos": escala_A,
+    "A_monitor_del_codigo": escala_A,
     "B_coco_crudo": escala_B,
     "C_media_abs_W_no_nula": escala_C,
     "D_sin_factor_de_W": escala_D,
@@ -174,6 +181,11 @@ def main() -> None:
     W = corpus.get_W()
     assert W is not None, "sin W no hay nada que medir"
     N = W.shape[0]
+
+    # La instancia que presta `_combine_W_Delta`. No se la usa para evaluar:
+    # sólo para que la columna de Monitor sea la del código y no una copia.
+    global _MONITOR
+    _MONITOR = MonitorService(corpus, storage_path=str(tmp / "m.jsonl"))
 
     distintos = pares_de_rechazo(W, N_RECHAZOS, SEED_RECHAZOS)
     # **Dos secuencias, y la segunda es la que importa para separar B de D.**

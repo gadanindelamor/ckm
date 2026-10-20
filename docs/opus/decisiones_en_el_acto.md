@@ -182,3 +182,4 @@
 - **Lo que no va al device es el β de device** (delamor: *"lo que NO VA AL DEVICE es β de device"*). `temp_signal` va al canal y queda como está. *Opus había leído "temp_signal no va": se retira.* Según la lectura, β_i ya no llega (vive en `panel["thermostat"]["beta"]`, fuera de `get_state()`): se verifica con un test.
   - Precisión (delamor): *"o inglés o español"*: un solo idioma por caso, nunca mezclados. S2-C0 va en inglés.
 - **No hay checkpoints** (delamor): *"una vez arreglado lo de los json al mismo dir, todos juntos, con version manager y todos los logs… allí se dispara el caso con su test unitario, va vivo 3"*. Reemplaza el orden "primero CP3, luego CP2 y fixes".
+- **Durante el vivo, sin tareas ni intervenciones** (delamor): *"no hay más tareas, ni intervenciones, durante el VIVO 3"*.

@@ -51,4 +51,6 @@ Reglas:
 
 **Nombre:** delamor lo llama "vivo 3", pero ya existe `vivo_03_*` (criterio local). Proponé un nombre que no choque y declaralo.
 
+**Durante el vivo no hay más tareas ni intervenciones** (delamor). Una vez disparado, nadie toca nada hasta que termine.
+
 Al terminar: commits, estado de los tests y avisá para el push.

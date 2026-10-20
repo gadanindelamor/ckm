@@ -112,7 +112,7 @@ from calibrate import calibrate, NULO_CALIBRADO  # noqa: E402
 from w_version import sha256_W  # noqa: E402
 from landscape_engine import D_CKM_FORMA  # noqa: E402
 from node_extractor import MIN_DF, PERFIL_ES_EN, DECLARACION_REF  # noqa: E402
-
+from iap_chatroom import run_store  # noqa: E402
 from iap_chatroom.channel import ChatChannel  # noqa: E402
 
 _STATE_DIR = Path(__file__).resolve().parent / "_state"
@@ -210,6 +210,14 @@ class CKMMonitor:
         state = Path(state_dir) if state_dir is not None else _STATE_DIR
         state.mkdir(parents=True, exist_ok=True)
         self._state_dir = state
+        # **El directorio de la corrida, declarado una sola vez** (punto 3 de
+        # `serie2_caso0`). Desde acá lo leen `ChatChannel` —que se construye
+        # antes que este monitor y no podría recibirlo por parámetro— y
+        # cualquier otra parte de IAP que escriba lo suyo. Si cada uno
+        # resolviera su propio directorio, podrían quedar distintos y el log de
+        # un vivo quedaría repartido sin que nada lo dijera, que es el problema
+        # que F3a ya había encontrado una vez.
+        run_store.set_state_dir(state)
         _monitor_jsonl_path = str(state / "monitor_trajectory.jsonl")
         # ── CP2b: la decisión de rebuild, persistida ───────────────────────
         # **Dos archivos y dos mecanismos, los mismos que ya usa este

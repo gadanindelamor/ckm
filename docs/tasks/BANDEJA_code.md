@@ -12390,3 +12390,63 @@ sola y el cambio no la toca).
 - **`max Δ_r` = 3** es lo que alcanzó el camino real en 70 mensajes; no es una cota.
 
 **A1.PAUSA.**
+
+## S2-C0 — por qué camino llega a COCO un cambio de Monitor — 2026-10-20 00:17 UTC
+
+*Claude Opus 5 (Code). **Sólo lectura: no se tocó una línea.** Va sin lectura de qué significa:
+sólo el camino y las filas. Pregunta de delamor: el paso (2) tocó sólo `_combine_W_Delta`, y en
+el "después" COCO disparó una vez (n = 48, zona `deep`); en el "antes", ninguna.*
+
+### El camino, con archivo y línea
+
+El cambio no entra a COCO por su fórmula: entra por **su insumo**.
+
+| | |
+|---|---|
+| `monitor_service.py:250` | `W_eff_prompt = self._combine_W_Delta(W, self._Delta_r)` ← **la función que cambió** |
+| `:254-256` | la órbita **se relaja sobre esa W_eff**: `_relax_orbit(sigma_prompt.copy(), W_eff_prompt)` |
+| `:257-259` | de las fases de esa órbita salen `aceptados, expulsados, torsion` (`pares_por_orbita`) |
+| `:272-274` | **los expulsados son los que incrementan Δ_r**: `self._Delta_r[i,j] += 1` |
+| `:367` | `ts = self._thermostat.observe(self._Delta_r)` — Monitor le pasa **su** Δ_r a COCO |
+| `coco.py:276` | COCO incorpora el **incremento**: `self._Delta = self._Delta + (Delta_new - self._Delta_leido)` |
+| `coco.py:280`, `:284` | `W_eff = self.W + self._Delta`; `A_current = self._count_attractors(W_eff)` |
+| `coco.py:634-642` | de ahí su D_ckm, su `frac_rec` y su **zona** |
+
+Cambiar `_combine_W_Delta` cambia **sobre qué W relaja el prompt**; eso cambia **qué pares se
+expulsan**; y los expulsados **son** Δ_r, que es lo único que COCO recibe de Monitor.
+
+### Dónde empiezan a diferir las dos corridas, para COCO
+
+Mismo `w_sha` en las 41 filas con panel, mismos rebuilds (n = 30, 40, 50, 60, 70) y **mismo
+A0** en todas. Lo que difiere es **Δ_r**.
+
+| n | w_sha | reb | ‖Δ_r‖ antes | ‖Δ_r‖ después | n_rejected a/d | A0 | zona a/d | disparos a/d |
+|---|---|---|---|---|---|---|---|---|
+| 30–33 | e1f3f0f9 | SI (30) | 2.449 | 2.449 | 3/3 y 0/0 | 3.6922 | stable / stable | 0 / 0 |
+| **34** | e1f3f0f9 | | 2.449 | **4.899** | **0 / 9** | 3.6922 | stable / stable | 0 / 0 |
+| 36 | e1f3f0f9 | | 2.449 | 6.000 | 0 / 6 | 3.6922 | stable / stable | 0 / 0 |
+| 40 | 9d401f74 | SI | 6.000 | 8.485 | 0 / 0 | 3.6922 | stable / stable | 0 / 0 |
+| 41–45 | 9d401f74 | | iguales | iguales | iguales | 3.9387 | stable / stable | 0 / 0 |
+| 46 | 9d401f74 | | 4.243 | 4.690 | 3 / 5 | 3.9387 | stable / stable | 0 / 0 |
+| **48** | 9d401f74 | | 4.243 | **6.000** | 0 / 7 | 3.9387 | stable / **deep** | 0 / **1** |
+| 49 | 9d401f74 | | 4.243 | 7.746 | 0 / 10 | 3.9387 | stable / stable | 0 / 1 |
+
+**Primera diferencia: n = 34.** Con la misma W, el mismo ciclo y el mismo A0, el "antes" no
+expulsó ningún par nuevo y el "después" expulsó 9. Desde ahí los dos Δ_r divergen y no vuelven
+a juntarse hasta el reset de W (n = 41, los dos en 0).
+
+**La cascada de n = 48, como aritmética de lo registrado.** Umbrales vigentes en ese ciclo: los
+de la calibración de n = 40 (`D_CKM_THRESHOLD = 0.1536`, `FRAC_REC_MIN = 0.8321`).
+`D_ckm = 0.2103` ≥ 0.1536 → no `stable`; `frac_rec = 2.9523 / 3.9387 = 0.7496` < 0.8321 →
+**`deep`** → STOP con α = 0.2833. En la misma fila ‖Δ_r‖ = 6.000 y
+‖Δ_r_compresiones‖ = **1.700**: la compresión ya ocurrió.
+
+### Lo que no se puede afirmar
+
+**Que el disparo de n = 48 sea atribuible al cambio.** El camino del código está establecido y
+la divergencia del insumo está medida, pero con **una** corrida de cada lado, **una** seed y
+**una** secuencia no se puede separar el efecto del cambio del ruido del muestreo. Para
+afirmarlo haría falta repetir las dos corridas con varias seeds y ver si el disparo aparece o
+no.
+
+**A1.PAUSA.**

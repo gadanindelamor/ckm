@@ -544,6 +544,60 @@ def test_g_una_accion_que_el_canal_no_acepta_se_registra_como_no_ocurrida(canal)
     assert rechazadas
 
 
+def test_g_el_motivo_del_rechazo_llega_a_la_traza_y_no_queda_en_None(
+    canal, monkeypatch, tmp_path
+):
+    """
+    **El rechazo tiene que llegar con su motivo, y el stub tiene que ser el de
+    la tool de verdad.**
+
+    El test de arriba usa un stub que devuelve `{"ok": False, "reason":
+    "empty_text"}`, y **la tool real devolvía `{"ok": False, "motivo":
+    "texto_vacio"}`**. `_interact` lee `datos.get("reason")`, así que contra
+    el canal real el registro quedaba `did_not_happen: None`: la acción se
+    marcaba como no ocurrida y el motivo se perdía — justo lo que el registro
+    del rechazo vino a conservar. El stub y la tool habían divergido en
+    silencio, y el test pasaba por el stub.
+
+    Acá la carga útil **sale de la tool**, no de un literal, y después se le
+    da al device. Si vuelven a separarse, esto falla.
+    """
+    import asyncio
+
+    from iap_chatroom import mcp_server as mod_mcp
+    from iap_chatroom import run_store
+
+    # **Importar `mcp_server` construye el `CKMMonitor` por default**, y ése
+    # fija el `state_dir` del proceso en `iap_chatroom/_state/` — el corpus de
+    # agosto, que es traza y no se toca. Sin esta línea, el canal y el device
+    # de este test escriben ahí: me pasó, y aparecieron cinco archivos nuevos
+    # en el `_state` del repo. El guardia de `conftest.py` ahora lo agarra.
+    run_store.set_state_dir(tmp_path / "state")
+
+    monkeypatch.setattr(mod_mcp, "channel", canal)
+    mod_mcp.device_manager.register(device_id="dev", device_type="AI")
+    payload = asyncio.run(mod_mcp.send_message(device_id="dev", text="   "))
+
+    assert payload["ok"] is False
+    assert payload["reason"] == "empty_text", payload
+    assert "motivo" not in payload, "quedó la clave que nadie lee"
+
+    class ClientConLaTool(ClientStub):
+        async def call_tool(self, nombre, args=None):
+            if nombre == "send_message":
+                return type("_R", (), {"data": payload})()
+            return await super().call_tool(nombre, args)
+
+    dev = _device(ProviderStub(["INTERACT", "algo"]))
+    _correr(dev, ClientConLaTool(canal), duration=0.05)
+    rechazadas = [d for d in dev.decisiones()
+                  if (d.get("action_result") or "").startswith("did_not_happen")]
+    assert rechazadas, "el rechazo no quedó registrado"
+    assert rechazadas[0]["action_result"] == "did_not_happen: empty_text", (
+        rechazadas[0]["action_result"]
+    )
+
+
 # ───────────────────────────────────────────────────────────────────────────
 # (h) `calibrate` en el punto de rebuild
 # ───────────────────────────────────────────────────────────────────────────

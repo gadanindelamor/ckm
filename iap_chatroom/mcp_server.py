@@ -15,7 +15,7 @@ from typing import Optional
 from fastmcp import FastMCP
 
 from iap_chatroom import startup
-from iap_chatroom.channel import ChatChannel
+from iap_chatroom.channel import ChatChannel, message_id
 from iap_chatroom.device_manager import DeviceManager
 
 channel = ChatChannel()
@@ -37,7 +37,9 @@ def _epoch(iso_timestamp: str) -> float:
 
 def _message_dict(index: int, message) -> dict:
     d = message.to_dict()
-    d["message_id"] = f"msg-{index}"
+    # La fórmula vive en `channel.message_id`: la usan también las líneas de
+    # `channel_messages.jsonl`, y repetida acá podían separarse.
+    d["message_id"] = message_id(index)
     return d
 
 
@@ -60,9 +62,18 @@ async def join_channel(device_id: str, device_type: str) -> dict:
 async def send_message(device_id: str, text: str) -> dict:
     """Publica un mensaje al ChatChannel. CKMMonitor lo acumula via callback.
 
-    Devuelve `{"ok", "motivo", "message_id", "corpus_size"}`. **`ok=False` es
+    Devuelve `{"ok", "reason", "message_id", "corpus_size"}`. **`ok=False` es
     una publicacion que NO ocurrio** -- hoy, un texto vacio o solo espacios,
     que el canal rechaza (CP1, agregado 2). `message_id` es None en ese caso.
+
+    **La clave era `motivo` y nadie la leia.** `AutonomousDevice._interact`
+    hace `datos.get("reason")`, asi que un rechazo del canal se registraba
+    como `did_not_happen: None`: la accion quedaba marcada como no ocurrida y
+    **el motivo se perdia**, que es justo lo que el registro del rechazo vino
+    a conservar. Se renombro a `reason` —el nombre que el unico lector ya
+    esperaba, y en ingles— en vez de cambiar el lector: ningun otro llamador
+    la usa (verificado por grep sobre `iap_chatroom/`, `tests/`,
+    `experiments/` y `services/`). Sin alias.
     """
     device = device_manager.get(device_id)
     if device is None:
@@ -76,15 +87,15 @@ async def send_message(device_id: str, text: str) -> dict:
         # pide. El intento ya quedó en `channel.intentos_rechazados()`.
         return {
             "ok": False,
-            "motivo": "texto_vacio",
+            "reason": "empty_text",
             "message_id": None,
             "corpus_size": ckm_monitor.get_state()["corpus_size"],
         }
     index = len(channel.messages) - 1
     return {
         "ok": True,
-        "motivo": None,
-        "message_id": f"msg-{index}",
+        "reason": None,
+        "message_id": message_id(index),
         "corpus_size": ckm_monitor.get_state()["corpus_size"],
     }
 

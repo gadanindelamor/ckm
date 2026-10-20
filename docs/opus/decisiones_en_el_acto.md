@@ -181,3 +181,4 @@
 - **Motivo del sólo-inglés** (delamor): *"porque CKM aún NO es bilingüe"*. Se retira como fundamento la lectura de los REG 0.13–0.14 sobre una palabra en castellano en los prompts (*"toda la fantasía sobre el español generado a partir de ese término"*).
 - **Lo que no va al device es el β de device** (delamor: *"lo que NO VA AL DEVICE es β de device"*). `temp_signal` va al canal y queda como está. *Opus había leído "temp_signal no va": se retira.* Según la lectura, β_i ya no llega (vive en `panel["thermostat"]["beta"]`, fuera de `get_state()`): se verifica con un test.
   - Precisión (delamor): *"o inglés o español"*: un solo idioma por caso, nunca mezclados. S2-C0 va en inglés.
+- **No hay checkpoints** (delamor): *"una vez arreglado lo de los json al mismo dir, todos juntos, con version manager y todos los logs… allí se dispara el caso con su test unitario, va vivo 3"*. Reemplaza el orden "primero CP3, luego CP2 y fixes".

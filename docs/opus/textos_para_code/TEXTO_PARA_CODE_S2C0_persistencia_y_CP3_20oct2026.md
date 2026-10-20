@@ -1,3 +1,5 @@
+**NO SE PEGA — reemplazado por `TEXTO_PARA_CODE_S2C0_vivo_sin_checkpoints_20oct2026.md`.**
+
 DELAMOR A CODE (texto de Opus):
 
 Vale lo de siempre: no se toca el vivo hasta que delamor lo corra, sin alias, sin compatibilidad hacia atrás, y la suite cierra en verde.

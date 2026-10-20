@@ -21,3 +21,18 @@ Sombra de `calibrate` (propuesta), coordinar REG/BANDEJA/decisiones, mail IAC, C
 
 ## 5. Lateral
 Investigación sobre *"Neural Networks Are Already Clean"* (Cammarata, Goodfire, 15 oct): informe en el chat. Ensayo original no leído directo. Sin acción sobre CKM.
+
+---
+## Actualización (19→20 oct, noche) — hasta `c85ea97`, 755/7/0
+- **Claves del panel CP1 en inglés** (`8b7c57a`); heredadas en castellano listadas por módulo como pendientes. Stash resuelto.
+- **CP1b** (`88d31fc`, `d15ba96`): con `/max Δ_r` Monitor y COCO diferían en signo; la normalización cancelaba la acumulación. `calibrate` en el salto: ~68 ms → **sin sombra para S2-C0**.
+- **Decisión de delamor: Δ_r no se normaliza, como en COCO** (`f684aee`). Misma fórmula, distintos insumos: siguen distintos el Δ (COCO comprime al STOP) y el baseline.
+- **Sin interpretaciones** (delamor): se mide qué miden, no se decide. Corridas "antes/después" (`b303613`, `f684aee`; `experiments/medir_dos_d_ckm_{antes,despues}.jsonl`): después, COCO disparó 1 vez (n=48). Camino (`c85ea97`): el cambio llega a COCO por su insumo (pares expulsados → Δ_r), primera diferencia n=34. No atribuible: una corrida por lado.
+- **Abierto, anotado sin cambiar nada:** `calibrate` calibra sobre W sola por interpolación; COCO cruza con W + Δ_r. Misma referencia (A0 sobre W), distinto camino. Se mira en el vivo.
+- El canal **no publica** lo de COCO (información sensible, delamor). Pendiente hablar: qué puede entender un device de D_ckm.
+- `w_eff.same: True` fijo en el panel (`monitor_service.py:491`) = "misma fórmula"; desde el primer STOP las matrices difieren. Menor.
+
+## Para el diseño del vivo (Code libre hasta cerrarlo conceptualmente)
+- Ensayo (CP2, sin IA, por script) y vivo (CP3) son dos; la medición de hoy cubre buena parte del CP2 (falta verificar canal en silencio y corte al final).
+- **Consigna: delamor elige** (a) nada, (b) tema abierto sin respuesta correcta, (c) tarea con resultado.
+- **Duración:** ≥ 50 mensajes (≥ 2 rebuilds), mejor ~70; a tiempo con el ritmo del vivo 03 → `piso_vueltas` (`piso_vueltas + 2 ≤ vueltas por device`).

@@ -167,3 +167,6 @@
 
 ### 20 oct
 - **Consigna de S2-C0: opción (b)** (delamor): un tema abierto, sin respuesta correcta. Da vocabulario común sin fijar destino. El tema concreto, a proponer.
+- **Persistencia en IAP, no en los drivers** (delamor): mensajes del canal, intentos rechazados y traza de decisiones de cada device los escribe **IAP** en el mismo `state_dir` privado, junto a `corpus_state.json`, `monitor_trajectory.jsonl` y el resto. *"Los drivers saben más que el canal IAP; así que primero a IAP… que no quede lógica en los drivers."* Los drivers no se revisan ahora: después del vivo.
+- **Objetivo declarado de S2-C0 CP3 — sesgo declarado** (delamor, *"lo declaro nuevamente"*): terminar con la expresión **"COCO no se conectó nunca a un vivo de IAP"**. Por límites: **que suceda**. Así desaparece esa herencia; todo lo demás queda como está.
+- **CP2 se da por cubierto** (tests + medición del 19 oct): COCO conectado y evaluando, primer W a los 30, ODA con canal en silencio, corte al fin del caso.

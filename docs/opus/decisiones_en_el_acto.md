@@ -183,3 +183,4 @@
   - Precisión (delamor): *"o inglés o español"*: un solo idioma por caso, nunca mezclados. S2-C0 va en inglés.
 - **No hay checkpoints** (delamor): *"una vez arreglado lo de los json al mismo dir, todos juntos, con version manager y todos los logs… allí se dispara el caso con su test unitario, va vivo 3"*. Reemplaza el orden "primero CP3, luego CP2 y fixes".
 - **Durante el vivo, sin tareas ni intervenciones** (delamor): *"no hay más tareas, ni intervenciones, durante el VIVO 3"*.
+- **Nombre del caso:** técnico **S2-C0**; apodo **"Cimientos"** (para delamor; nunca en prompts). **Sin agentes:** devices genuinos, sin `AgentDeviceSkin` (delamor).

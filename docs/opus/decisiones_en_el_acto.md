@@ -180,3 +180,4 @@
 - **Ninguna palabra en castellano en lo que llega al modelo** (delamor). Encontrado por Opus: `"(ninguno)"`, `"desconocido"` y `RELOJ_CANAL = "canal"` entran al gate prompt. Va como paso (0) del texto del CP3, con un test.
 - **Motivo del sólo-inglés** (delamor): *"porque CKM aún NO es bilingüe"*. Se retira como fundamento la lectura de los REG 0.13–0.14 sobre una palabra en castellano en los prompts (*"toda la fantasía sobre el español generado a partir de ese término"*).
 - **`temp_signal` no va a los devices** (delamor: *"trazable. NO va"*): sale del estado que ven y del prompt; queda trazado en `monitor_trajectory.jsonl`.
+  - Precisión (delamor): *"o inglés o español"*: un solo idioma por caso, nunca mezclados. S2-C0 va en inglés.

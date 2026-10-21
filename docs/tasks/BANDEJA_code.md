@@ -12530,3 +12530,106 @@ causa **sí** quede escrita.
 Items **6** (ZERO_SHOT: `--reset`, reinicio del server, y verificar que los 13 textos del intento
 1 queden en `process/`) y **7** (la lectura de qué hace `CONTINUA`, archivo por archivo y con el
 canal). **A1.PAUSA.**
+
+---
+## S2-C0 intento 2 · parte B cerrada — items 6 y 7, y el techo de Groq contra el razonamiento. A1.PAUSA — 2026-10-21 05:22 UTC
+
+*Claude Opus 5 (Code, Codespace). **El intento 2 no se corrió.** El server quedó arriba y limpio.*
+
+### Item 6 — ZERO_SHOT: estado preservado y verificado
+
+`--reset` movió **8 archivos** a `process/` con timestamp `1792559911` (los otros 3 de
+`ARCHIVOS_DE_ESTADO` no existían: `corpus_G_state.json`, `monitor_trajectory.jsonl`,
+`rejected_attempts.jsonl`). `experiments/_state_S2-C0/` quedó **vacío**.
+
+**Los 13 textos, verificados por contenido y no por presencia del archivo:**
+
+| | antes del reset | en `process/` |
+|---|---|---|
+| `channel_messages.jsonl` | 17 líneas, 13 de device, 4 SYSTEM | **iguales** |
+| `corpus_state.json` → `texts` | 13 | **13** |
+| `sha256` de los `texts` | `b1f3f51b…4432a4` | **el mismo** |
+| primer texto | `'2'` | `'2'` |
+
+Y los textos **también están en git**: `experiments/serie2_caso0_log.json` (commiteado) los lleva
+adentro. Los 8 `.bak` quedan **sin trackear**, como el `_state_` del que salieron.
+
+**Server reiniciado y leído por MCP:** `corpus_size = 0`, mensajes en el canal `0`,
+`coco: {"connected": null, "reason": "no evaluation yet"}`, reloj del canal corriendo. Con eso
+`_verificar_modo` **no aborta** y el ZERO_SHOT del intento 2 arranca de cero de verdad.
+El server corre en background (tarea `b27l6a3a6`, `:7860`), y se baja con `TaskStop`.
+**delamor abrió la UI de IAP contra ese server**: si se publica un mensaje desde la UI el corpus
+deja de estar en 0 y el ZERO_SHOT aborta — que es lo que tiene que pasar.
+
+### Item 7 — qué hace `CONTINUA`, sin cambiar nada
+
+#### (a) archivo por archivo
+
+| archivo | qué hace | dónde |
+|---|---|---|
+| `corpus_state.json` | **suma**: `_load()` repone los 13 textos y la ingesta sigue desde ahí; el archivo se reescribe entero. **Ninguna marca de a qué intento pertenece cada texto** | `corpus_service.py:144-145`, `:617-628`, `:616` |
+| `corpus_G_state.json` | mismo mecanismo, segundo `CorpusService`. Hoy **no existe**: arranca vacío | `ckm_monitor.py:253` |
+| `monitor_trajectory.jsonl` | **append**. Hoy **no existe** en el `state_dir` | `ckm_monitor.py:221` |
+| `rebuild_decisions.jsonl` | **append-only**: las 8 líneas del intento 1 quedan y las nuevas se suman. La línea trae `series`/`case` pero **no** cuál intento | `ckm_monitor.py:60` |
+| `rebuild_state.json` | se **sobreescribe** al guardar; al arrancar se **restaura o se descarta** según `w_sha` | `ckm_monitor.py:523`, `:588-631` |
+| los 6 de `run_store` | **append**, modo `"a"`, **sin marca de corrida**: se **mezclan** las líneas de los dos intentos y lo único que las separa es el timestamp | `run_store.py:195` |
+
+**Dos cosas medidas, no deducidas:**
+
+1. **Los contadores del rebuild pasan de un intento al otro.** El archivo preservado dice
+   `{"w_sha": null, "ciclos_sin_rebuild": 17, "textos_desde_rebuild": 17}`. El guard de *"los
+   contadores de una meseta no pasan a otra"* compara `w_sha` guardado con el del corpus: como W
+   nunca nació, los dos son `None`, **son iguales, y los contadores se restauran**. "Sin W" es
+   igual a "sin W". Consecuencia: el intento 2 arrancaría con `textos_desde_rebuild = 18` en su
+   primer mensaje, o sea el criterio de **volumen votando desde el primer mensaje** — igual que ya
+   votaba en el intento 1 desde el mensaje 10, y bloqueado por `corpus_en_acumulacion` hasta los
+   30. **No cambia el resultado; cambia lo que el panel declara.**
+   Y de paso, lo que muestra el archivo: `textos_desde_rebuild = 17` = `message_count` (13 de
+   device **más los 4 SYSTEM**). El contador se incrementa por mensaje (`ckm_monitor.py:394`), no
+   por texto del corpus.
+2. **Los `message_id` se duplican.** `publish` los saca de la posición en el historial **en
+   memoria** (`message_id(len(self.messages) - 1)`, `channel.py:51-62`, `:267`). Con el server
+   reiniciado el historial arranca vacío, así que el intento 2 vuelve a escribir `msg-0`,
+   `msg-1`, … en el **mismo** `channel_messages.jsonl` que ya tiene `msg-0`…`msg-16`. El id deja
+   de atar una línea del archivo a una decisión de la traza, que es para lo que existe según su
+   propio docstring.
+
+#### (b) el canal — sí, es lo segundo: dos memorias distintas
+
+`ChatChannel.__init__` pone `self.messages = []` (`channel.py:94`) y **nada en producción lee**
+`channel_messages.jsonl`: `run_store.read` sólo aparece en `tests/`. Así que con el server
+reiniciado el **canal arranca vacío** mientras el **corpus tiene los 13 textos**. Los devices del
+intento 2 —instancias nuevas— no verían una palabra de lo dicho en el intento 1, y W, si naciera,
+se construiría sobre textos que **ningún device presente leyó**.
+
+Y sin reiniciar el server el problema es el otro: el corpus en memoria no se vacía, y eso es lo
+que `_verificar_modo` ya documenta.
+
+### El techo de 512 contra el razonamiento de Groq (3 llamadas, no el vivo)
+
+Prompt real del generate (`_to_chat_messages()`: system prompt del caso + ventana de 10 mensajes
+de ~80 palabras). Script: `/tmp/claude-1000/-workspaces-ckm/120fc54d-0caa-4359-9a89-c839ab95edda/scratchpad/chequeo_techo_groq.py`
+
+| modelo | `finish_reason` | completion | de eso, razonamiento | texto devuelto |
+|---|---|---|---|---|
+| `openai/gpt-oss-120b` | `stop` | 329 / 512 | **221** | 73 palabras |
+| `openai/gpt-oss-20b` | `stop` | 197 / 512 | 93 | 68 palabras |
+| `qwen/qwen3.8-27b` | `stop` | 6 / 512 | — (no lo informa) | **1 palabra** |
+
+**Ninguno truncó y ninguno devolvió vacío: 512 entra.** El más apretado es el 120b con **64% del
+techo**, y **dos tercios de lo que gasta es razonamiento** (221 de 329). Margen: 183 tokens. Si un
+device no respeta el pedido y escribe largo, el margen se come por el lado del texto y el chequeo
+de truncamiento avisa — no se corta en silencio. **No propongo cambiar el techo.**
+
+**Lo que apareció sin buscarlo, y es del modelo.** `qwen` contestó **`OP_SILENCE`** al prompt del
+generate. No es truncamiento: `completion_tokens: 6`, `finish_reason: stop`. El prompt del
+generate es **sólo** system + ventana del canal —no lleva ninguna instrucción de *"escribí tu
+mensaje ahora"*—, así que la única mención de `OP_SILENCE` que el modelo tiene delante es la del
+bloque común, y la devuelve como mensaje. Y `_generate` sólo rechaza el vacío (no filtra
+contenido, por decisión declarada), así que **en el vivo eso se publicaría y entraría al corpus
+como un texto**, igual que el `'2'` del intento 1 (REG §6). n = 1 por modelo. No toqué nada.
+
+### Estado
+
+Parte B cerrada. El intento 2 **espera la orden de delamor**; el server está arriba y en 0.
+**A1.PAUSA.**

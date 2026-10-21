@@ -5,6 +5,12 @@
 - **COCO se conectó en el intento 2 de `serie2_caso0`** (`8e5a77f`): 51 evaluaciones recibidas, 80 textos de device, 6 versiones de W, 0 `413`. Objetivo cumplido. Detalle y huecos en `decisiones_en_el_acto.md` (21 oct, noche) y en `docs/REG_borrador_serie2_caso0_intento2.md`.
 - P12 cerrada: `ea9224b` revertido (`67e340a`), gate con el mismo sha. Ventana del gate: queda en 4 (delamor).
 - Para delamor: ¿el REG del intento 2 pasa a `registers/`? Abierto (Opus): techo por modelo para `gpt-oss-20b`.
+- REG del intento 2 en `registers/REG_iap_serie2_caso0_intento2_v1.md` (`c9ed98a`). Opus verificó contra el log: 51 evaluaciones, `w_matches`, corpus 80, ZERO_SHOT, 1204 s, sin errores fatales, μ_W = 0,269 (β_c finito). No verificado por Opus: el `LEAVE` de `device_d`, los 0 `413`, los 17 truncamientos.
+
+### Próximo paso: el paper
+Retirar la frase heredada de COCO del borrador v29 (`docs/opus/PAPER_Landscape_Driven_Device_v29_borrador_opus.md`), **sin reemplazo** (delamor, 21 oct). Aparece **tres veces**: líneas **144**, **281** y **668** (*"never connected to the live IAP channel"*). Antes de tocar, preguntarle a delamor: (1) ¿versión nueva (v30 borrador) o editar el v29?; (2) ¿sólo esas tres, o revisar también rastros que suponen la ausencia sin nombrarla?
+Después, sin apuro (sólo si hay otro vivo): techo de Groq por modelo, cuota de Gemini, calibración `sin_separacion` (REG intento 2, §7).
+
 - **Lo de abajo (§0 en adelante) es de antes del intento 2.**
 
 ## 0. Al cortar (actualizado al cierre, 21 oct)

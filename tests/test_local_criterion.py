@@ -422,12 +422,12 @@ def test_delta_mensajes_cuenta_solo_ajenos(canal) -> None:
 
     **El stub lleva un mensaje de verdad en el segundo lugar** (21 oct 2026):
     la primera respuesta la consume `_decide` y la segunda `_generate`, así que
-    con `["INTERACT"] + ["OP_SILENCE"] * 50` lo que se publicaba era **la
-    palabra `OP_SILENCE` como texto del mensaje**. Desde que `_generate`
-    descarta las palabras del protocolo (`PALABRAS_DEL_PROTOCOLO`), eso ya no
-    se publica y este test se quedaba sin publicación — que es lo que su propio
-    `assert propios` encontró. Lo que el test mide no cambió: necesita que el
-    device **publique algo**, y el contenido le es indiferente.
+    con `["INTERACT"] + ["OP_SILENCE"] * 50` lo que este test publicaba era
+    **la palabra `OP_SILENCE` como texto del mensaje**. Eso era un defecto del
+    test —el mismo que ya estaba anotado en
+    `tests/test_generacion_vacia._una_vuelta`— y **queda arreglado igual**: lo
+    que el test mide no cambió, necesita que el device **publique algo** y el
+    contenido le es indiferente.
     """
     dev = _device(ProviderStub(["INTERACT", "un mensaje de verdad"]
                                + ["OP_SILENCE"] * 50),

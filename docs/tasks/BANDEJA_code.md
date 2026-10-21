@@ -12834,3 +12834,74 @@ no se toca sin verificar (su propia regla). Code no decide esto (§5).
   parecido: el no-mensaje que no es del vocabulario.
 
 **Esperando respuesta. No avanzo con nada de IAP mientras.**
+
+---
+## REPORTE P12 — `ea9224b` revertido, las dos mitades. A1.PAUSA — 2026-10-21 19:22 UTC
+
+*Claude Opus 5 (Code). Respuesta de delamor: *"revertir las dos. confirmo"* (`da4faa6`).
+Revertido **a mano**, no con `git revert` del commit entero, porque `ea9224b` también trae
+cosas que se quedan. **El intento 2 no se corrió.***
+
+### Qué se revirtió
+
+Con el diff de `ea9224b` aplicado **al revés** sobre los tres archivos de código, y después
+verificado contra `ea9224b~1`:
+
+| archivo | diff contra `ea9224b~1` |
+|---|---|
+| `iap_chatroom/autonomous_device.py` | **0 líneas** antes de agregar los comentarios; 16 después (los dos comentarios pedidos) |
+| `iap_chatroom/run_store.py` | **0 líneas** — idéntico a antes de `ea9224b` |
+| `tests/test_generacion_vacia.py` | **0 líneas** — los 10 tests (13 casos con las parametrizaciones) salieron |
+
+**(a)** `PEDIDO_GENERATE` y su línea en `_to_chat_messages`: el prompt del generate vuelve a ser
+**el system prompt y el historial, y nada más**.
+**(b)** La guarda de `_generate`, el `op_silence_in_generate`, el `action_result`
+`"no_action: op_silence in generate"` y su rama en `_interact`, el atributo que las unía, la
+línea de `DEVICE_LOG` en `run_store.py`, y la constante compartida: **el gate vuelve a tener la
+tupla literal adentro**.
+
+### El gate, byte a byte
+
+Verificado **dos veces**: después de revertir y otra vez **justo antes del commit**, a pedido de
+delamor (los comentarios van en `_generate` y `_to_chat_messages`, no en el gate).
+
+```
+sha256 del gate antes de ea9224b : 951d56f6fd860eebc9f5360161f25302a4a65d94a08ad03f9aaebd10f63b158f
+sha256 del gate ahora            : 951d56f6fd860eebc9f5360161f25302a4a65d94a08ad03f9aaebd10f63b158f
+idéntico: True (5744 bytes) · el gate no menciona ea9224b ni P12
+```
+
+El tramo comparado es de `async def _decide(` a `async def _interact(`. El gate está **congelado
+por delamor desde el 9 oct** (`f96c234`) y `ea9224b` lo había tocado al compartir la constante;
+hoy vuelve a estar como estaba.
+
+### Qué se quedó
+
+- **El arreglo de `test_delta_mensajes_cuenta_solo_ajenos`** (un mensaje de verdad en el stub):
+  era un defecto del test **con guarda o sin ella**. Le corregí el docstring, que citaba la
+  constante revertida —habría quedado una referencia a algo que ya no existe— y ahora apunta al
+  lugar donde el patrón ya estaba anotado (`test_generacion_vacia._una_vuelta`). **Sin nombres
+  nuevos.**
+- **La traza:** lo de `ea9224b` en esta BANDEJA (3 menciones) y en
+  `docs/opus/ESTADO_al_cortar_21oct2026.md`. No se reescribe.
+- **Los docstrings** de `_generate` y `_to_chat_messages` vuelven a decir lo que hacen, y cada uno
+  lleva un comentario breve con de dónde vino y por qué se revirtió: `ea9224b`, P12, y **0
+  palabras del protocolo en 11 llamadas con el prompt sin tocar**.
+
+### La suite
+
+**843 passed, 7 xfailed, 0 failed** (89 s). Son los 855 de hoy menos los 12 casos revertidos.
+
+Corrida **dos veces**: la primera arrancó antes de que editara el docstring del test, así que la
+volví a correr entera para que el número no lleve asterisco. Las dos dieron 843.
+Y la intermitente de `test_oda_continuo.py` **no apareció** en ninguna de las dos (va 1 falla en
+5 corridas completas).
+
+### El punto ciego, como siempre
+
+**Los `test_caso_*` de `iap_chatroom/tests/` no los colecta pytest** (`testpaths = ["tests"]`):
+correrlos es disparar el vivo. Los 843 **no dicen nada** de ellos. Y nada de esto se midió en el
+vivo: el generate con el canal, el Monitor y el corpus reales sigue sin medirse.
+
+**A1.PAUSA.** El intento 2 espera la orden de delamor; antes hay que levantar el server con
+`--state-dir experiments/_state_S2-C0` y confirmar `corpus_size = 0`.

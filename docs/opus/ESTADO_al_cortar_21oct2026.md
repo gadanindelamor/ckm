@@ -1,6 +1,12 @@
 # Estado al cortar — 21 oct 2026
 *Opus 5.5 para la próxima instancia. Reemplaza a `ESTADO_al_cortar_20oct2026.md`. Decisiones con cita: `decisiones_en_el_acto.md` (desde el 19 oct; lo anterior en `decisiones_en_el_acto_13a15oct2026.md`).*
 
+## −1. Lo último (21 oct, noche)
+- **COCO se conectó en el intento 2 de `serie2_caso0`** (`8e5a77f`): 51 evaluaciones recibidas, 80 textos de device, 6 versiones de W, 0 `413`. Objetivo cumplido. Detalle y huecos en `decisiones_en_el_acto.md` (21 oct, noche) y en `docs/REG_borrador_serie2_caso0_intento2.md`.
+- P12 cerrada: `ea9224b` revertido (`67e340a`), gate con el mismo sha. Ventana del gate: queda en 4 (delamor).
+- Para delamor: ¿el REG del intento 2 pasa a `registers/`? Abierto (Opus): techo por modelo para `gpt-oss-20b`.
+- **Lo de abajo (§0 en adelante) es de antes del intento 2.**
+
 ## 0. Al cortar (actualizado al cierre, 21 oct)
 - **El Codespace llegó al 100 % del límite.** Code alcanzó a pushear `ea9224b`: hecho con el **primer** texto de Opus (pedido en el generate + palabra del protocolo no se publica, registrada como `OP_SILENCE` con `op_silence_in_generate`). Contradice tres decisiones posteriores de delamor (sin nomenclatura nueva, sólo si es necesario, ojo con UNKNOWN). Origen: error de Opus (tres textos seguidos). **Decidir con delamor, verificando antes, si se conserva o se revierte.** Falta: la suite completa después del arreglo del test; el paso 1 (prompt sin tocar, 3 llamadas por modelo). Detalle en la BANDEJA, entrada 2026-10-21 05:40 UTC.
 - **Nada se toca en servicios ni IAP sin verificar antes** (delamor). La propuesta de Opus sobre `OP_SILENCE` en el generate es **lectura, no orden**. El pedido *"Please write your message…"* **no hace falta** según las definiciones (`BLOQUE_COMUN`, convención de chat); si Code lo agregó, se verifica antes de decidir si se saca.

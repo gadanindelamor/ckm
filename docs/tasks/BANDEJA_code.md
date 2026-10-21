@@ -12450,3 +12450,83 @@ afirmarlo haría falta repetir las dos corridas con varias seeds y ver si el dis
 no.
 
 **A1.PAUSA.**
+
+---
+## S2-C0 intento 2 · parte B, items 1–4 y T5 — REPORTE, y B.5: la causa del `McpError`. A1.PAUSA — 2026-10-21 05:13 UTC
+
+*Claude Opus 5 (Code, Codespace). Texto: `docs/opus/textos_para_code/TEXTO_PARA_CODE_intento2_21oct2026.md`
+parte B, con las decisiones T1–T7 de Opus. **El intento 2 no se corrió.***
+
+### Lo hecho, en dos commits
+
+`ce40d47` — **el sesgo declarado** (items 1–4 + T1), con su objetivo: volumen para que nazca el
+primer W. `060ac44` — **el registro** de la causa interna (T5). `tests/`: **843 passed, 7 xfailed**.
+
+| | antes | ahora | de dónde sale |
+|---|---|---|---|
+| `GroqProvider` | `max_tokens = 4096` local | `MAX_TOKENS = 512` declarado | el 429 por **OTPM** `Limit 1000, Requested 1246` |
+| gate | `history[-10:]` | `VENTANA_GATE = 4` | los **68** errores del provider fueron **todos** de `fase: decide` |
+| generate | **sin ventana**: `self._history` entero | `VENTANA_GENERATE = 10` | ~7–8k tokens al final del caso, con el corpus llegando a 30 |
+| consigna | sin pedido | *"Please keep your messages short if you can: a few sentences, around 80 words or fewer."* | el 413, que es de entrada |
+| `DURATION` | 600 s (p ≈ 0.15) | 1200 s (p ≈ 0.075) | con mensajes cortos la duración vuelve a comprar textos |
+
+**La expectativa, dicha donde se va a leer** (commit, docstring del provider y el ESTADO): el
+techo de Groq cierra **1** de los 69 UNKNOWN. Los **61 `413`** son de **entrada** — `TPM 8000`
+contra Requested mediana **14326** en los dos `gpt-oss`, `ITPM 7000` contra **13137** en qwen —;
+bajar 4096 → 512 resta 3584 del lado de la salida. Los cierran la ventana y el pedido. Y el OTPM
+es **por minuto**: ningún valor de `max_tokens` lo hace desaparecer, acota cuántas llamadas con
+generación entran en un minuto.
+
+**El riesgo declarado:** las dos ventanas son **por cantidad, no por tokens**. Si los modelos no
+respetan el pedido, el largo vuelve a crecer y el 413 con él. La constante no lo acota; lo acota
+el pedido, que es del modelo.
+
+### B.5 — el `McpError` de `device_d`, leído
+
+**Dónde murió.** `device_d` escribió `run_start` (08:26:43) y **no** `run_end`; su último evento
+es 08:33:26, y el caso siguió hasta 08:36:47. **62 vueltas de 115** (403 s de 605). La entrada
+única de `errores_fatales` del log del driver:
+
+```
+McpError: Timed out while waiting for response
+  File "autonomous_device.py", line 774, in run
+    async with Client(self.mcp_url) as client:
+  File "fastmcp/client/client.py", line 538, in __aexit__   →  _disconnect  →  _session_runner
+```
+
+**Lo que sí se puede afirmar:** la sesión MCP de `device_d` quedó sin respuesta, y lo que se
+levantó —y lo que el driver registró— fue el **cierre** del cliente expirando.
+
+**Lo que no se puede afirmar, y por qué.** La excepción de **adentro** del `async with` no está
+en el registro. No es que no haya existido: el traceback guardado **no tiene cadena**, y eso es
+`exceptiongroup/_catch.py:39`, `raise unhandled from exc.__cause__` — con `__cause__` en `None`
+eso es `raise ... from None`, que **suprime el contexto**. Así que no se puede decir qué llamada
+MCP de la vuelta 62 lo disparó, ni si el cuerpo falló primero o si el cuerpo terminó y sólo falló
+el cierre. **Mirar `__cause__` o `__context__` desde afuera no la recupera.**
+
+**Tres descartes, medidos, para que el hueco quede acotado:**
+
+1. **No fue el camino normal de salida.** Si el `while` hubiera terminado por `duration`, o si el
+   device hubiera decidido `LEAVE`, el código escribe `run_end` en los dos casos. No está.
+2. **No fue un error del provider.** Los 12 de `device_d` están todos registrados como
+   `provider_error` y **no se propagan** (`_llamar_llm` devuelve `None`).
+3. **No fue el corte por fin de caso.** Ésa rama escribe su fila con `DECISION_END_OF_CASE`, y
+   `device_d` no la tiene — se fue 3 minutos antes del fin.
+
+Queda como hipótesis **no verificada**: una llamada MCP del cuerpo (las de `_one_turn`, que no
+están envueltas en nada) expiró, y el cierre expiró detrás. No se arregló nada.
+
+### T5 — el registro, que es lo único que cambió de esto
+
+`run_exception_inside_client` en `device_log.jsonl`: tipo, mensaje (1000 caracteres, no 300 — el
+hueco 5 del REG es justamente que el corte se lleva la prueba) y **traceback entero**, escrito
+**cuando pasa**, y `raise` después. El comportamiento no cambia: al driver le sigue llegando la
+misma excepción. El test replica las dos mitades —el cuerpo que falla y el cierre que falla **con
+`from None`**— y verifica que lo que llega al driver **no** mencione la causa de adentro y que la
+causa **sí** quede escrita.
+
+### Lo que falta de la parte B
+
+Items **6** (ZERO_SHOT: `--reset`, reinicio del server, y verificar que los 13 textos del intento
+1 queden en `process/`) y **7** (la lectura de qué hace `CONTINUA`, archivo por archivo y con el
+canal). **A1.PAUSA.**

@@ -12905,3 +12905,99 @@ vivo: el generate con el canal, el Monitor y el corpus reales sigue sin medirse.
 
 **A1.PAUSA.** El intento 2 espera la orden de delamor; antes hay que levantar el server con
 `--state-dir experiments/_state_S2-C0` y confirmar `corpus_size = 0`.
+
+---
+## S2-C0 intento 2 — CORRIDO. **COCO se conectó.** A1.PAUSA — 2026-10-21 19:52 UTC
+
+*Claude Opus 5 (Code). Por orden explícita de delamor. `ZERO_SHOT`, 1204,33 s,
+código `346e897`. Sin intervenciones durante el vivo: lancé en background y leí el resumen.*
+
+### El objetivo: cumplido
+
+```
+coco.connected             : true
+coco.n_evaluations_received: 51
+coco.generation            : 5
+coco.w_version_id          : c049d2e893ffcaa3…  (= w_version_id_monitor, w_matches: true)
+coco.triggers              : 0
+```
+
+**Lo que lo afirma es `n_evaluations_received = 51`**, no `connected: true` solo. **Por qué llegó:
+80 textos de device contra los 30 del primer W** (en el intento 1 fueron 13).
+
+### Los números, sin interpretar
+
+| | intento 1 | intento 2 |
+|---|---|---|
+| duración | 605 s | **1204 s** |
+| textos de device | 13 | **80** |
+| `message_count` | 17 | 84 (80 + 4 joins SYSTEM) |
+| versiones de W | 0 | **6** (el primero a los 30; rebuilds por volumen a 40, 50, 60, 70, 80) |
+| `413` (tamaño de entrada) | **61** | **0** |
+| errores del provider | 69 UNKNOWN | 71 (69 cuota de Gemini, 1 `503`, 1 `429 TPM`) |
+| `D_ckm` final | `None` | **−0,0029** (`TOO_COLD`) |
+| COCO | `connected: null` | **`true`, 51 evaluaciones** |
+
+Campo final: 20 nodos, `c_S = 0,269147`, `beta_c = 0,371544` (`beta_c_infinite: false`),
+`N_eff = 2,0321`. Umbrales de COCO: **`calibrated: false`**, `estado: no_calibrado`,
+`causa: "sin_separacion"` (`d_max = 0.0`, `curva_monotona: false`). `triggers: 0`.
+
+Por device — 616 vueltas, 302 llamadas, **88 INTERACT y 80 publicados**:
+
+| device | modelo | vueltas | llamadas | decisiones | 429 |
+|---|---|---|---|---|---|
+| A | `gpt-oss-120b` | 200 | 103 | INTERACT 41 · OP_SILENCE 21 · SKIP 138 | 1 |
+| B | `gemini-2.5-flash` | 219 | 89 | INTERACT 11 · OP_SILENCE 1 · SKIP 141 · **UNKNOWN 66** | **69** |
+| C | `gpt-oss-20b` | 189 | 98 | INTERACT 32 · OP_SILENCE 20 · UNKNOWN 14 · SKIP 123 | 0 |
+| D | `qwen3.8-27b` | **8** | 12 | INTERACT 4 · OP_SILENCE 3 · **LEAVE 1** | 0 |
+
+### Dos cosas que pasaron por primera vez
+
+1. **`device_d` se fue por decisión propia.** `LEAVE` en su vuelta 8, tick 75, después de publicar
+   4 mensajes: `left_by_own_decision: true`, `cut_by_end_of_case: false`, **sin error y sin
+   excepción**. Primera vez en la serie que un device usa esa primitiva en un vivo. Por qué, no se
+   midió: es del modelo.
+2. **`errores_fatales` vacío y `run_exception_inside_client` ninguno.** El `McpError` del intento 1
+   no se repitió, y el registro que se agregó para capturarlo no tuvo nada que escribir.
+
+### El otro lado del techo de 512, medido
+
+**Los 61 `413` del intento 1 desaparecieron: cero.** Y apareció lo que el techo declaraba como
+riesgo: **17 truncamientos**, los 17 de `gpt-oss-20b`, impresos por el chequeo del provider. Device
+C tiene **exactamente 17** respuestas no usables —14 `respuesta_ilegible` en `decide`, 3
+`generacion_vacia` en `generate`— y **las 17 con `largo: 0`**: la respuesta llegó **vacía**. Con el
+techo en 512 y un modelo que razona, el razonamiento se come el presupuesto y el contenido no
+llega. **17 de 98 llamadas de ese device (17 %).**
+
+**El margen que declaré —512 ≈ 4,7× las ~110 palabras del pedido— no contempló el razonamiento
+bajo el prompt del vivo**, que es más largo que el de la verificación de una llamada. El chequeo
+avisó 17 veces, así que no se cortó en silencio; pero el número lo puse yo y quedó corto para ese
+modelo. Subirlo reabre el OTPM de qwen (`Limit 1000`) por el otro lado: **el techo por modelo** es
+la forma que el instrumento pide, y es una decisión, no un ajuste — no la tomo.
+
+### Huecos del instrumento, anotados sin corregir
+
+1. **`canal.n_mensajes` del log del driver dice 20 y el canal tuvo 84.**
+   `get_messages(since=None)` devuelve **los últimos 20 por diseño** (`mcp_server.py:127-131`) y el
+   driver guarda esa lectura como si fuera el canal entero. El total está en `message_count` y en
+   `channel_messages.jsonl` (84 líneas). En el intento 1 no se vio porque el canal tuvo 17.
+2. **El aviso de truncamiento es un `print`, no un registro**: los 17 están en el stdout del driver
+   y **no** en el `state_dir`. Si nadie guarda la consola, queda una respuesta vacía sin causa.
+3. **`series`/`case` siguen sin estar en `monitor_trajectory.jsonl`** (claves: `device_id`,
+   `panel`, `t`, `text`). Es el hueco 2 del intento 1, sin cambio.
+
+### Lo que este reporte NO dice
+
+Los umbrales de COCO **no están calibrados** (`calibrated: false`), así que los `0 triggers` no se
+leen como "no había nada que disparar". No mido `p` limpio (el SKIP es del filtro y los 66 UNKNOWN
+de B son cuota). **Una corrida: nada acá es replicación.**
+
+### Datos y cierre
+
+- `experiments/serie2_caso0_intento2_log.json` (727K, commiteado), como el del intento 1. El log
+  del intento 1 **no se tocó**.
+- `experiments/_state_S2-C0/` (10 archivos) **no se commitea**.
+- **REG borrador afuera de `registers/`** (Clase R): `docs/REG_borrador_serie2_caso0_intento2.md`.
+- **Server apagado** al cerrar.
+
+**A1.PAUSA.**

@@ -1,6 +1,14 @@
 # Estado al cortar — 21 oct 2026
 *Opus 5.5 para la próxima instancia. Reemplaza a `ESTADO_al_cortar_20oct2026.md`. Decisiones con cita: `decisiones_en_el_acto.md` (desde el 19 oct; lo anterior en `decisiones_en_el_acto_13a15oct2026.md`).*
 
+## 0. Al cortar (actualizado al cierre, 21 oct)
+- **El Codespace llegó al 100 % del límite** y se cerró. Lo último de Code **puede no estar pusheado**: la re-verificación de los cuatro modelos y un cambio al prompt del generate (*"con el prompt nuevo"*). Code lo hizo con un texto que Opus ya había reemplazado (error de Opus: tres textos seguidos para la misma pausa). Al volver: que Code diga qué tiene sin pushear y lo pushee **sin seguir**.
+- **Nada se toca en servicios ni IAP sin verificar antes** (delamor). La propuesta de Opus sobre `OP_SILENCE` en el generate es **lectura, no orden**. El pedido *"Please write your message…"* **no hace falta** según las definiciones (`BLOQUE_COMUN`, convención de chat); si Code lo agregó, se verifica antes de decidir si se saca.
+- **Verificar lo de Code con la política de tests** (lista en `decisiones_en_el_acto.md`): completitud, predicción antes del arreglo, suite entera, `test_caso_*` no pytest, stubs antes del vivo, `None` ≠ `UNKNOWN`.
+- **Pregunta abierta para delamor:** la ventana del gate en 4, ¿sigue? El gate estaba **congelado en `f96c234`** por delamor (9 oct) y Opus no lo citó al proponerla.
+- El server de Code (`:7860`, corpus 0) murió con el Codespace: al volver hay que arrancarlo limpio otra vez antes del vivo. El estado del intento 1 está preservado en `process/`.
+- Regla de Opus: **un solo texto para Code por pausa**, cuando la decisión está cerrada.
+
 ## 1. En curso
 - **Code, parte B del intento 2 de `serie2_caso0`** (texto: `textos_para_code/TEXTO_PARA_CODE_intento2_21oct2026.md`, más la respuesta de Opus a T1–T7 en `decisiones_en_el_acto.md`). Preparar, **no correr**: `max_tokens` Groq ≤ 1000; ventana del gate 10 → 4 y del generate → 10; pedido de mensajes cortos en la consigna; `DURATION` 1200; reporte del `McpError` de `device_d` + registro de su causa interna (A1.PAUSA en B.5); **ZERO_SHOT** con `--reset` y reinicio del server; lectura de qué hace CONTINUA con los json y con el canal.
 - El intento 2 **espera la orden de delamor**. Al darla: lanzar en background, no seguirlo; leer el resumen, no el log entero.

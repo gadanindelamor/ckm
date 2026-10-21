@@ -13034,3 +13034,59 @@ delamor aprobó: lo que es traza fechada no se reescribe para que diga algo que 
 Si delamor quiere igual la edición de esa línea, la hago.
 
 **A1.PAUSA.**
+
+---
+## CIERRE de sesión — el Codespace, ordenado para el próximo arranque — 2026-10-21 20:05 UTC
+
+*Claude Opus 5 (Code). **Nada quedó a medias**: no es una entrada `CORTE`. Esto es el estado
+físico del Codespace, que el `ESTADO_al_cortar_21oct2026.md` de Opus no cubre — ése es la
+autoridad sobre **qué sigue** (el próximo paso es el paper, y tiene dos preguntas para delamor
+antes de tocarlo).*
+
+### El repo
+
+- `HEAD = origin/main = ddd415c`. **Árbol limpio**, nada sin commitear, nada sin pushear.
+- **51 no trackeados, todos a propósito** y todos de antes o conocidos: los PDFs y docs de
+  respaldo de `docs/`, `LETTER.md`, `baseline_d_ckm.*`, `scripts/`, `tests/run_tests.sh`, los tres
+  `NOTA_armstrong_*`, los `experiments/_state_*`, y los `.bak_*` que dejaron los dos `--reset` en
+  `process/`. **Ninguno es un pendiente**: `??` no es trabajo sin terminar.
+
+### Lo que hay que saber antes de correr cualquier cosa
+
+- **`experiments/_state_S2-C0/` tiene el estado del INTENTO 2**: 10 archivos, 84 mensajes, **80
+  textos en el corpus**, W con 20 nodos y 6 versiones. **No se commitea.**
+- Así que **un `ZERO_SHOT` nuevo aborta** si se corre así: primero
+  `python3 iap_chatroom/tests/test_caso_serie2_caso0.py --reset` (mueve el estado a `process/` con
+  timestamp, no borra) **y después reiniciar el server** — el `--reset` no vacía el corpus en
+  memoria, que `CorpusService` cargó al arrancar `server.py`.
+- **El server está apagado.** Ningún proceso mío corriendo. Para levantarlo:
+  `PYTHONPATH=/workspaces/ckm python3 iap_chatroom/server.py --state-dir /workspaces/ckm/experiments/_state_S2-C0`,
+  en background, y confirmar `corpus_size` por MCP antes de cualquier vivo.
+- Estados preservados en `process/`: el del **intento 1** con timestamp `1792559911` (8 archivos,
+  13 textos, `sha256` de los `texts` verificado) y un tick suelto en `1792561037`.
+
+### Para el chequeo §2 del próximo arranque, ya contestado
+
+- **Locks:** ninguno al cerrar.
+- **Preguntas abiertas (§8): ninguna.** P1–P11 tienen respuesta que las nombra, y **P12 quedó
+  cerrada hoy** (delamor: *"revertir las dos. confirmo"* → `67e340a`).
+- **Tests:** suite completa **843 passed, 7 xfailed, 0 failed**, corrida dos veces después de la
+  reversión. **Punto ciego de siempre:** los `test_caso_*` de `iap_chatroom/tests/` no los colecta
+  pytest, así que esos 843 no dicen nada de ellos.
+- **Archivos de salida de la última corrida** (el intento 2): `serie2_caso0_intento2_log.json`
+  parsea entero, `segundos_reales = 1204.33`, `errores_fatales: []`; los 10 archivos del
+  `state_dir` con la última línea completa. **El formato no tiene marca de "terminó"**: el cierre
+  se lee de `segundos_reales` y de `por_device`.
+- **Intermitente conocida:** `test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history`
+  (`tests/test_oda_continuo.py`) falló **1 de 5** corridas completas, el 21 oct, y no está
+  explicada. Si aparece, ya tiene antecedente.
+
+### Dónde se re-verifica lo que Opus marcó como no verificado por él
+
+| lo que falta verificar | dónde está el dato |
+|---|---|
+| el `LEAVE` de `device_d` | `_state_S2-C0/device_decisions.jsonl` (su vuelta 8, `action_result: "left"`) y `device_log.jsonl` (`run_end` con `left_by_own_decision: true`, `cut_by_end_of_case: false`) |
+| los 0 `413` | `device_log.jsonl`, los 71 `provider_error`: 69 `429 RESOURCE_EXHAUSTED` de Gemini, 1 `503`, 1 `429 TPM`. Ningún `413` |
+| los 17 truncamientos | **no están en el `state_dir`**: el aviso del provider es un `print` y quedó en el stdout del driver (hueco 2 del REG). Lo que sí está: los **17** `unreadable` de `device_c`, **los 17 con `largo: 0`** |
+
+**A1.PAUSA.** Sin nada abierto de mi lado.

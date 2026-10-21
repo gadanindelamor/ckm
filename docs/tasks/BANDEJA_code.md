@@ -13001,3 +13001,36 @@ de B son cuota). **Una corrida: nada acá es replicación.**
 - **Server apagado** al cerrar.
 
 **A1.PAUSA.**
+
+---
+## S2-C0 intento 2 — el REG entra a `registers/`. A1.PAUSA — 2026-10-21 19:55 UTC
+
+*Claude Opus 5 (Code). delamor: *"apruebo el reg"* (`747264f`).*
+
+`docs/REG_borrador_serie2_caso0_intento2.md` → **`registers/REG_iap_serie2_caso0_intento2_v1.md`**,
+con `git mv`, así que la traza del renombre queda. Mismo criterio de nombre que el del intento 1
+(`REG_iap_serie2_caso0_intento1_v1.md`).
+
+Cabecera: se fue la marca de borrador y entró la línea de fecha/autoría con la forma de los otros
+REG, más la aprobación: **aprobado por delamor el 21 oct 2026**, con el path del que vino.
+**El contenido no cambia** — verificado con un `diff` del cuerpo contra la versión en `HEAD`:
+idéntico desde la primera línea de datos.
+
+**El permiso para escribir en `registers/`** —que la Clase R reserva— sale de esta orden de
+delamor, y queda declarado en el commit.
+
+### Una referencia que NO actualicé, y por qué
+
+Las tres referencias al path viejo:
+
+| dónde | qué hice |
+|---|---|
+| `docs/opus/ESTADO_al_cortar_21oct2026.md:5` | **no se toca** — es de Opus y es traza con fecha (la orden lo dice) |
+| `docs/opus/decisiones_en_el_acto.md:111` | **no se toca** — ídem |
+| `docs/tasks/BANDEJA_code.md:13000` | **no la toqué.** Es mi propia entrada de las 19:52 UTC, y la regla de esta bandeja dice que **las entradas anteriores no se editan**: es traza con fecha, de la misma naturaleza que `docs/opus/`. El path nuevo queda acá, en la entrada nueva. |
+
+Es el mismo criterio que apliqué a los `TEXTO_PARA_CODE` cuando entró el REG del intento 1, y que
+delamor aprobó: lo que es traza fechada no se reescribe para que diga algo que no decía ese día.
+Si delamor quiere igual la edición de esa línea, la hago.
+
+**A1.PAUSA.**

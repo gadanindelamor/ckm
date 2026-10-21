@@ -1,7 +1,12 @@
-# REG (BORRADOR) — serie2_caso0, intento 2
+# REG_iap_serie2_caso0_intento2_v1.md
 
-**Borrador. Fuera de `registers/` por la regla de Clase R: los REG nuevos se
-entregan como borrador y delamor decide si entran.**
+*Oct 21 2026 — gadanin.delamor + Claude Opus 5 + Claude Code*
+*Clase R*
+
+**Aprobado por delamor el 21 oct 2026** (*"apruebo el reg"*). Entró a
+`registers/` el 21 oct 2026 desde
+`docs/REG_borrador_serie2_caso0_intento2.md`. El contenido es el del borrador,
+sin cambios.
 
 - **Caso:** `serie2_caso0` (técnico) / `S2-C0` (campo `case` del panel).
 - **Fecha:** 2026-10-21. **Duración real:** 1204,33 s. **Modo:** `ZERO_SHOT`

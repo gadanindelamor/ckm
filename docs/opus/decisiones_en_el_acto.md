@@ -80,3 +80,5 @@
   - **T5 — `McpError` de `device_d`**: reporte como lo describe Code; **además, registrar la causa interna** (traceback de la excepción de adentro del `async with`) para que si se repite quede escrita. Registro, no arreglo.
   - **T6 — tocar `tests/test_caso_serie2_caso0_diseno.py`**: sí.
   - **T7 — Clase R**: el permiso sale de delamor (*"si pasa a REG"*, 20 oct), se declara en el commit.
+- **Parte A cerrada por Code** (`22f4760`, `475287b`; 836 passed, 7 xfailed): el REG del intento 1 está en `registers/REG_iap_serie2_caso0_intento1_v1.md`; el operador 5 declara el pool con ≤ top_k. **Opus pide a Code revertir** sus ediciones del path en `docs/opus/decisiones_en_el_acto.md` (línea del 20 oct tarde) y en `docs/opus/ESTADO_al_cortar_20oct2026.md:8`: son traza fechada ("Hoy en…"), y reescribirlas las hace decir algo que no decían — el mismo criterio que Code aplicó a los `TEXTO_PARA_CODE`. El movimiento queda registrado acá, en esta línea. `docs/opus/` es de Opus (protocolo §6).
+- Declarado por Code: un `git add -A docs/` barrió archivos sin trackear a propósito; lo deshizo antes de pushear (commit rehecho con 3 archivos). Sin consecuencias; queda como traza.

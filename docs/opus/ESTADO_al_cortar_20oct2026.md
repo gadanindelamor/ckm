@@ -5,7 +5,7 @@
 - **Δ_r sin normalizar, como en COCO** (`f684aee`). Misma fórmula, distintos insumos (Δ y baseline siguen distintos). Corridas "antes/después" en `experiments/medir_dos_d_ckm_*.jsonl`.
 - **Diseño de `serie2_caso0`, apodo "Cimientos"** (S2-C0). Sin checkpoints. Devices genuinos, sin agentes. Consigna parcial por device, sólo en inglés (CKM no es bilingüe): el agua de una ciudad que crece, perspectivas A/B/C/D, *"may move the foundations"*. Sin coordinador, sin seed, sin explicación de los campos de CKM en el system prompt (**definición por caso: preguntarle a delamor en el próximo caso**). Sesgo declarado con su objetivo: erradicar del paper la expresión heredada *"COCO no se conectó nunca a un vivo de IAP"*. Durante el vivo, ninguna intervención.
 - Code (`2dee177`…`46aeaee`): nada en castellano en lo que llega al modelo; test de que el β de cada device no va a ningún device; **todo en el mismo `state_dir`, escrito durante la corrida**; el caso listo y con su modo de ejecución declarado.
-- **Intento 1 corrido** (Code, por orden de delamor; `e8db141`, REG `fe7ed74` como borrador en `docs/`, aprobado por delamor y movido el 21 oct a `registers/REG_iap_serie2_caso0_intento1_v1.md`). Modelos usados: A groq `gpt-oss-120b`, B `gemini-2.5-flash`, C groq `gpt-oss-20b`, D groq `qwen3.8-27b`. 605 s, ZERO_SHOT.
+- **Intento 1 corrido** (Code, por orden de delamor; `e8db141`, REG borrador `fe7ed74` en `docs/REG_borrador_serie2_caso0_intento1.md`). Modelos usados: A groq `gpt-oss-120b`, B `gemini-2.5-flash`, C groq `gpt-oss-20b`, D groq `qwen3.8-27b`. 605 s, ZERO_SHOT.
 
 ## 2. Resultado del intento 1
 - **Objetivo NO cumplido:** quedaron 13 textos de device contra los 30 que necesita el primer W, así que COCO no nació.

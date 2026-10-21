@@ -81,6 +81,29 @@ def _es_rate_limit(e: Exception) -> tuple:
         return True, "texto"
     return False, None
 
+# ── El vocabulario del protocolo ───────────────────────────────────────────
+#
+# Las tres palabras con las que el **gate** contesta. Estaban escritas como una
+# tupla literal adentro de `_decide`; desde el 21 oct 2026 también las usa
+# `_generate` para no publicar una de ellas como si fuera un mensaje, y dos
+# listas de lo mismo se separan sin que nada lo diga.
+PALABRAS_DEL_PROTOCOLO = ("INTERACT", "LEAVE", "OP_SILENCE")
+
+# **El pedido del generate, en inglés porque lo lee el modelo** (Opus, 21 oct
+# 2026, `1cc11dc`). Va al final del prompt de la fase que publica, que hasta
+# acá era **system prompt + historial del canal y nada más**: ninguna línea le
+# pedía escribir. Medido con el prompt real (una llamada por modelo de Groq):
+# `qwen/qwen3.8-27b` devolvió `OP_SILENCE` como mensaje — la única mención de
+# esa palabra que tenía delante era la del bloque común, y sin pedido la
+# repitió.
+#
+# **Es un pedido, no una orden** (delamor, 21 oct: *"son LLMs, no se trata de
+# presionar"*), y **no va con prefijo de identidad**: los mensajes del canal
+# viajan como `[device_id]: texto`, así que una línea sin prefijo no es
+# atribuible a ningún device del canal.
+PEDIDO_GENERATE = "Please write your message for the channel now."
+
+
 # ── Las dos ventanas de historial, declaradas como sesgo ───────────────────
 #
 # **Sesgo del intento 2 de `serie2_caso0`** (delamor y Opus, 21 oct 2026), con
@@ -306,6 +329,11 @@ class AutonomousDevice:
         # lo que no se pudo fue leer la respuesta. Son dos causas distintas de
         # la misma consecuencia (UNKNOWN), y para atribuir hay que separarlas.
         self._ilegibles: list[dict] = []
+        # La vuelta en la que el generate devolvió **una palabra del
+        # protocolo** en vez de un mensaje: `None`, o el registro de lo que
+        # devolvió. Se lee en `_interact` para que eso quede como OP_SILENCE y
+        # no como "el provider falló", que son dos cosas distintas.
+        self._silencio_en_generate: "dict | None" = None
         self._se_fue: bool = False
         # True si el caso venció con el device adentro de una vuelta. Es
         # distinto de `_se_fue`, que es irse **por decisión propia**.
@@ -351,11 +379,19 @@ class AutonomousDevice:
         `self._history` **no se recorta**: lo usa el criterio local para el
         último mensaje ajeno, y recortarlo cambiaría el filtro de llamadas y no
         el prompt. Lo que se acota es **lo que el modelo lee**.
+
+        **El pedido va al final** (`PEDIDO_GENERATE`, 21 oct 2026) y **es lo
+        único que no viene del canal**: hasta acá el prompt era el system
+        prompt y el historial, sin ninguna línea que pidiera escribir. Va como
+        un turno más y **sin prefijo de identidad**, así que si `_coalesce` lo
+        junta con el último mensaje del canal se sigue distinguiendo: los del
+        canal llevan `[device_id]: ` adelante y éste no.
         """
         chat: list[ChatMessage] = [{"role": "system", "content": self.system_prompt}]
         for m in self._history[-VENTANA_GENERATE:]:
             role = "assistant" if m["device_id"] == self.device_id else "user"
             chat.append({"role": role, "content": f"[{m['device_id']}]: {m['text']}"})
+        chat.append({"role": "user", "content": PEDIDO_GENERATE})
         system_msgs = [c for c in chat if c["role"] == "system"]
         turn_msgs = _coalesce([c for c in chat if c["role"] != "system"])
         return system_msgs + turn_msgs
@@ -434,7 +470,25 @@ class AutonomousDevice:
         leak de prefijo del Caso 0.14. **No se filtra contenido** —eso sería
         interpretar (**Opus**, `1535ff9`; delamor dijo *"corregirlo"*, que era
         sobre el mensaje vacío)—: sólo se registra qué lo vació.
+
+        **None también si el texto es, exacto, una palabra del protocolo**
+        (Opus, 21 oct 2026, `1cc11dc`). Medido con el prompt real: `qwen`
+        devolvió `OP_SILENCE` como mensaje, y el canal lo habría publicado
+        —no está vacío— y habría entrado al corpus como un texto, igual que
+        el `'2'` del intento 1.
+
+        **Esto no es filtrar contenido:** `PALABRAS_DEL_PROTOCOLO` es el
+        vocabulario con el que el gate contesta, no un juicio sobre lo que el
+        device dice. La comparación es sobre el **texto entero** después del
+        `strip()` (y sin distinguir mayúsculas): un mensaje que *empieza* con
+        `INTERACT` y sigue es un mensaje, y se publica. Cualquier otro texto,
+        **aunque sea de un carácter**, se publica como hoy.
+
+        Lo que pasó es que el device **eligió callar**, y así se registra
+        —`OP_SILENCE` con `fase: generate`—, que no es lo mismo que un
+        provider que falló.
         """
+        self._silencio_en_generate = None
         cruda = await self._llamar_llm(self._to_chat_messages(), "generate")
         if cruda is None:
             return None
@@ -454,6 +508,22 @@ class AutonomousDevice:
             })
             self._escribir(run_store.DEVICE_LOG,
                            {"event": "unreadable", **self._ilegibles[-1]})
+            return None
+
+        if text.strip().upper() in PALABRAS_DEL_PROTOCOLO:
+            self._silencio_en_generate = {
+                "causa": "protocol_word_as_message",
+                "word": text.strip().upper(),
+                "respuesta_cruda": cruda[:500],
+                "truncada": len(cruda) > 500,
+                "largo": len(cruda),
+                "fase": "generate",
+                "provider": getattr(self.provider, "name", None),
+                "model": getattr(self.provider, "model", None),
+            }
+            self._escribir(run_store.DEVICE_LOG,
+                           {"event": "op_silence_in_generate",
+                            **self._silencio_en_generate})
             return None
         return text
 
@@ -611,7 +681,7 @@ class AutonomousDevice:
         # decidir, igual que si el provider hubiera fallado. Un vacío también.
         # Segunda mitad de la nota de Opus sobre el CP2v.
         word = response.strip().upper().split()[0] if response.strip() else ""
-        if word in ("INTERACT", "LEAVE", "OP_SILENCE"):
+        if word in PALABRAS_DEL_PROTOCOLO:
             return word
         # **La respuesta cruda, con su causa** (pedido de Opus para el
         # primer vivo con el 8B, relevado por delamor): es lo único que después va a mostrar si el
@@ -708,6 +778,16 @@ class AutonomousDevice:
 
         text = await self._generate()
         if text is None:
+            if self._silencio_en_generate is not None:
+                # **El device eligió callar en el generate** (21 oct 2026): el
+                # texto era, exacto, una palabra del protocolo. No es que no
+                # haya qué publicar por una falla — es que lo que vino no era
+                # un mensaje. Se registra como OP_SILENCE, con la fase en el
+                # `action_result` para que no se confunda con el silencio que
+                # decidió el gate.
+                self._log("OP_SILENCE", field_state)
+                return {"tick_action": None,
+                        "result": "no_action: op_silence in generate"}
             # El provider falló al generar: la decisión fue INTERACT pero no
             # hay qué publicar. Queda registrado, y no se publica nada.
             self._log("INTERACT_SIN_TEXTO", field_state)

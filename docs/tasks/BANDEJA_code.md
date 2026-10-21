@@ -12633,3 +12633,97 @@ como un texto**, igual que el `'2'` del intento 1 (REG §6). n = 1 por modelo. N
 
 Parte B cerrada. El intento 2 **espera la orden de delamor**; el server está arriba y en 0.
 **A1.PAUSA.**
+
+---
+## S2-C0 intento 2 · la corrección del generate (pedido + palabra del protocolo). A1.PAUSA — 2026-10-21 05:40 UTC
+
+*Claude Opus 5 (Code). Decisión de Opus, `1cc11dc`. **El intento 2 no se corrió.**
+Cerrado con el Codespace en su límite de uso: lo que falta corrido está dicho abajo.*
+
+### 1. El pedido, al final del prompt del generate
+
+`PEDIDO_GENERATE = "Please write your message for the channel now."`
+(`autonomous_device.py:104`), agregado como un turno más al final de
+`_to_chat_messages` y **sin prefijo de identidad**: los mensajes del canal viajan como
+`[device_id]: texto`, así que una línea sin prefijo no es atribuible a ningún device. Nada más
+cambia en el prompt.
+
+### 2. Una palabra del protocolo no se publica
+
+`PALABRAS_DEL_PROTOCOLO = ("INTERACT", "LEAVE", "OP_SILENCE")` queda en **un solo lugar**
+(`:90`) y la usan el gate y ahora `_generate`. Si el texto, después del `strip()` y sin
+distinguir mayúsculas, **es exacto** una de las tres: no se publica, se escribe
+`op_silence_in_generate` en `device_log.jsonl` (con la palabra y la respuesta cruda), y la vuelta
+queda como `OP_SILENCE` con `action_result: "no_action: op_silence in generate"` — **distinto**
+del `INTERACT_SIN_TEXTO` de un provider que falló, que es la diferencia que permite atribuir un
+vivo silencioso.
+
+**No es filtrar contenido:** la comparación es sobre el texto **entero**. Un mensaje que
+*empieza* con `OP_SILENCE` y sigue se publica (hay test), y cualquier otro texto, **aunque sea de
+un carácter como el `'2'`**, se publica como hoy.
+
+### 3. Tests (10 nuevos en `tests/test_generacion_vacia.py`)
+
+Las tres palabras y sus variantes de caso y espacios; que se loguee como `OP_SILENCE` y **no**
+como `INTERACT_SIN_TEXTO`; el `action_result`; la línea escrita en el `state_dir`; que el mensaje
+que *empieza* con la palabra **sí** se publique; que el pedido vaya al final, sin prefijo y en
+inglés; y **la inversión**: sin `PEDIDO_GENERATE` el prompt no contiene ninguna forma de pedido —
+que es el estado en el que se midió el `OP_SILENCE` de `qwen`.
+
+### 4. La re-verificación, los cuatro modelos con el prompt real
+
+| modelo | techo | `finish_reason` | completion | razonamiento | texto | ¿palabra del protocolo? |
+|---|---|---|---|---|---|---|
+| `openai/gpt-oss-120b` | 512 | `stop` | 234 | 118 | 76 palabras | no |
+| `gemini-2.5-flash` | 4096 | `STOP` | 66 | **1080** | 53 palabras | no |
+| `openai/gpt-oss-20b` | 512 | `stop` | 149 | 67 | 52 palabras | no |
+| `qwen/qwen3.8-27b` | 512 | `stop` | 94 | no lo informa | **68 palabras** | no |
+
+**Ninguno truncó, ninguno devolvió vacío, ninguno devolvió una palabra del protocolo.** `qwen`,
+que con el prompt sin pedido devolvía `OP_SILENCE`, ahora escribe 68 palabras (n = 1).
+El 120b bajó su razonamiento de 221 a 118.
+
+**Y la T3 queda medida, no razonada:** `gemini-2.5-flash` gastó **1080 tokens de *thinking***
+contra 66 de texto. Con un techo de 512 el thinking solo no entraría y `response.text` volvería
+vacío. **Gemini en 4096 estaba bien, y ahora está medido.**
+
+Script: `…/scratchpad/chequeo_con_pedido.py` (no commiteado).
+
+### 5. Lo que la suite encontró, y una divergencia mía
+
+Suite completa: **854 passed, 7 xfailed, 1 failed**.
+
+**El failed era real y lo causó este cambio.** `test_delta_mensajes_cuenta_solo_ajenos`
+(`tests/test_local_criterion.py`) armaba el stub como `["INTERACT"] + ["OP_SILENCE"] * 50`: la
+primera respuesta la consume `_decide` y **la segunda `_generate`**, así que lo que ese test
+publicaba era **la palabra `OP_SILENCE` como texto del mensaje**. Con la guarda puesta dejó de
+publicar y su propio `assert propios, "el device no publicó: el test no mide nada"` lo encontró.
+Arreglado en el test —un mensaje de verdad en el segundo lugar, con la razón escrita en el
+docstring—, porque lo que el test mide no cambió: necesita que el device publique algo y el
+contenido le es indiferente. **El mismo patrón ya estaba anotado** en
+`test_generacion_vacia._una_vuelta` ("*el test decía 'se publica el texto' y publicaba la palabra
+del gate*"), y no lo busqué antes de cambiar `_generate`.
+
+**Una falla que no se reproduce.** En la primera corrida también falló
+`test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history`
+(`tests/test_oda_continuo.py`). Sola pasa, y en la segunda corrida completa de la misma suite
+**no volvió a fallar**: 1 failed en vez de 2. No la toqué y **no la explico**: queda anotada como
+intermitente, con `duration=0.02` y reloj monkeypatcheado, para que el próximo que la vea sepa
+que ya apareció una vez el 21 oct.
+
+**Lo que no corrí:** la suite completa **después** del arreglo del test. Corrí los tres archivos
+tocados —`test_local_criterion.py`, `test_oda_continuo.py`, `test_generacion_vacia.py`: **127
+passed**— y ahí corté por el límite del Codespace. Los 854 restantes son de antes del arreglo, y
+el arreglo toca un solo test.
+
+### 6. Estado al cerrar
+
+- **`CONTINUA` anotado como abierto** en `docs/opus/ESTADO_al_cortar_21oct2026.md` §3, a pedido de
+  Opus, con las dos cosas de B.7 (los contadores que cruzan y los `message_id` duplicados; el
+  canal vacío contra el corpus lleno). El intento 2 va **ZERO_SHOT**.
+- El server de IAP se **bajó** al cerrar (estaba en `corpus 0`, sin nada escrito). Antes del
+  intento 2 hay que volver a levantarlo con `--state-dir experiments/_state_S2-C0` y confirmar
+  `corpus_size = 0`.
+- El `_state_S2-C0/` está **vacío** y los 8 archivos del intento 1 están en `process/` con
+  timestamp `1792559911`, verificados por `sha256` de los `texts`.
+- **El intento 2 espera la orden de delamor.** **A1.PAUSA.**

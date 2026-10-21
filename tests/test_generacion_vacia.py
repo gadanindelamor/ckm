@@ -140,6 +140,149 @@ def test_distingue_el_vacio_del_provider_del_que_dejo_el_strip(canal) -> None:
         "no se registró que el stripper fue lo que lo vació"
 
 
+# ── la palabra del protocolo como mensaje (21 oct 2026) ─────────────────────
+#
+# Medido con el prompt real del generate, una llamada por modelo:
+# `qwen/qwen3.8-27b` devolvió `OP_SILENCE`. No está vacío, así que el canal lo
+# habría publicado y habría entrado al corpus como un texto. Opus (`1cc11dc`):
+# no se publica, y se registra como OP_SILENCE con `fase: generate` — el device
+# eligió callar, que no es un provider que falló.
+
+@pytest.mark.parametrize("palabra", [
+    "OP_SILENCE", "INTERACT", "LEAVE",
+    "op_silence", " OP_SILENCE ", "Leave\n",
+])
+def test_una_palabra_del_protocolo_no_se_publica(canal, palabra) -> None:
+    """
+    Las tres palabras, y sin distinguir mayúsculas ni espacios de los bordes:
+    la comparación es sobre el texto **entero** después del `strip()`.
+    """
+    dev, publicados = _una_vuelta(canal, palabra)
+    assert not publicados, f"se publicó {palabra!r}"
+    assert dev._silencio_en_generate is not None
+    assert dev._silencio_en_generate["word"] == palabra.strip().upper()
+    assert dev._silencio_en_generate["respuesta_cruda"] == palabra  # sin strip
+    assert dev._silencio_en_generate["fase"] == "generate"
+
+
+def test_se_registra_como_OP_SILENCE_y_no_como_INTERACT_SIN_TEXTO(canal, capsys) -> None:
+    """
+    **La diferencia es el punto.** Un provider que falla y un device que
+    contesta `OP_SILENCE` dejan los dos un INTERACT sin publicar, y son dos
+    cosas distintas: la primera es infraestructura, la segunda es una decisión
+    del modelo. Si las dos se loguearan igual, el vivo no se podría atribuir.
+    """
+    out = capsys.readouterr      # se consume después de cada vuelta
+    _una_vuelta(canal, "OP_SILENCE")
+    salida = out().out
+    assert "OP_SILENCE" in salida
+    assert "INTERACT_SIN_TEXTO" not in salida
+
+    _una_vuelta(canal, "", device_id="dev2")
+    salida = out().out
+    assert "INTERACT_SIN_TEXTO" in salida
+
+
+def test_el_action_result_dice_en_que_fase_fue_el_silencio(canal) -> None:
+    """
+    El `action_result` de la vuelta, que es lo que lee la traza: el silencio
+    del generate **no** se confunde con el que decidió el gate.
+    """
+    prov = ProviderStub(["OP_SILENCE"])
+    dev = _device(prov)
+    client = ClientStub(canal, dev.device_id)
+    asyncio.run(client.call_tool(
+        "join_channel", {"device_id": dev.device_id, "device_type": "AI"}))
+    r = asyncio.run(dev._interact(client, "INTERACT", {"field": None}))
+    assert r["result"] == "no_action: op_silence in generate"
+    assert r["tick_action"] is None
+
+
+def test_la_linea_queda_escrita_en_el_state_dir(canal, tmp_path) -> None:
+    """
+    Y queda **en disco**, con el mismo mecanismo que todo lo demás del punto 3:
+    un registro que no se escribe es indistinguible de uno que no ocurrió.
+    """
+    from iap_chatroom import run_store
+
+    d = tmp_path / "_state"
+    run_store.set_state_dir(d)
+    prov = ProviderStub(["OP_SILENCE"])
+    dev = _device(prov)
+    dev._state_dir = d
+    client = ClientStub(canal, dev.device_id)
+    asyncio.run(client.call_tool(
+        "join_channel", {"device_id": dev.device_id, "device_type": "AI"}))
+    asyncio.run(dev._interact(client, "INTERACT", {"field": None}))
+
+    lineas = [ln for ln in run_store.read(run_store.DEVICE_LOG, d)
+              if ln["event"] == "op_silence_in_generate"]
+    assert len(lineas) == 1, lineas
+    assert lineas[0]["word"] == "OP_SILENCE"
+    assert lineas[0]["causa"] == "protocol_word_as_message"
+
+
+def test_un_mensaje_que_EMPIEZA_con_una_palabra_del_protocolo_se_publica(canal) -> None:
+    """
+    **La comparación es sobre el texto entero, a propósito.** El gate mira la
+    primera palabra (`split()[0]`); acá eso descartaría un mensaje de verdad
+    que arranca nombrando el protocolo, que es justo de lo que estos devices
+    hablan entre ellos.
+    """
+    texto = "OP_SILENCE is not what I would choose here: the aquifer needs a decision."
+    dev, publicados = _una_vuelta(canal, texto)
+    assert len(publicados) == 1
+    assert publicados[0].text == texto
+    assert dev._silencio_en_generate is None
+
+
+def test_el_pedido_va_al_final_del_prompt_del_generate(canal) -> None:
+    """
+    El pedido (`PEDIDO_GENERATE`) es **lo único del prompt del generate que no
+    viene del canal**, y va **al final**. Sin él, el prompt era el system
+    prompt más el historial: ninguna línea pedía escribir, y con el prompt real
+    `qwen` devolvió `OP_SILENCE`.
+
+    Y **sin prefijo de identidad**: si `_coalesce` lo junta con el último
+    mensaje del canal, se sigue distinguiendo de él.
+    """
+    from iap_chatroom.autonomous_device import PEDIDO_GENERATE
+
+    dev = _device(ProviderStub([]))
+    dev._history = [
+        {"device_id": "otro", "text": "the source is the constraint"},
+    ]
+    messages = dev._to_chat_messages()
+    assert messages[-1]["content"].endswith(PEDIDO_GENERATE)
+    assert not PEDIDO_GENERATE.startswith("[")
+    assert f"[{dev.device_id}]" not in PEDIDO_GENERATE
+    # y está en inglés, como todo lo que llega al modelo
+    sys.path.insert(0, str(RAIZ / "tests"))
+    from test_prompt_solo_ingles import castellano
+    assert castellano(PEDIDO_GENERATE) == []
+
+
+def test_sin_el_pedido_el_prompt_no_pide_nada(canal) -> None:
+    """
+    La inversión, para que el test anterior no sea decorado: sin
+    `PEDIDO_GENERATE` el prompt del generate no contiene ninguna forma de
+    pedido — que es el estado en el que se midió el `OP_SILENCE` de `qwen`.
+    """
+    import iap_chatroom.autonomous_device as mod
+
+    dev = _device(ProviderStub([]))
+    dev._history = [{"device_id": "otro", "text": "the source is the constraint"}]
+    anterior = mod.PEDIDO_GENERATE
+    mod.PEDIDO_GENERATE = ""
+    try:
+        sin_pedido = " ".join(m["content"] for m in dev._to_chat_messages())
+    finally:
+        mod.PEDIDO_GENERATE = anterior
+    assert "write your message" not in sin_pedido.lower()
+    con_pedido = " ".join(m["content"] for m in dev._to_chat_messages())
+    assert "write your message" in con_pedido.lower()
+
+
 # ── lo que NO se toca ───────────────────────────────────────────────────────
 
 def test_assistant_SIGUE_publicandose(canal) -> None:

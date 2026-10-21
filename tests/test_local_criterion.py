@@ -419,8 +419,18 @@ def test_delta_mensajes_cuenta_solo_ajenos(canal) -> None:
     Se verifica en el lazo, que es quien le pasa `n_nuevos` al filtro: ya filtra
     `m["device_id"] != self.device_id`. El device publica y después calla; sus
     propios mensajes no pueden contar como mensajes nuevos.
+
+    **El stub lleva un mensaje de verdad en el segundo lugar** (21 oct 2026):
+    la primera respuesta la consume `_decide` y la segunda `_generate`, así que
+    con `["INTERACT"] + ["OP_SILENCE"] * 50` lo que se publicaba era **la
+    palabra `OP_SILENCE` como texto del mensaje**. Desde que `_generate`
+    descarta las palabras del protocolo (`PALABRAS_DEL_PROTOCOLO`), eso ya no
+    se publica y este test se quedaba sin publicación — que es lo que su propio
+    `assert propios` encontró. Lo que el test mide no cambió: necesita que el
+    device **publique algo**, y el contenido le es indiferente.
     """
-    dev = _device(ProviderStub(["INTERACT"] + ["OP_SILENCE"] * 50),
+    dev = _device(ProviderStub(["INTERACT", "un mensaje de verdad"]
+                               + ["OP_SILENCE"] * 50),
                   local_criterion=_filtro(piso_vueltas=99))
     _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
 

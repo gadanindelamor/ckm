@@ -24,6 +24,7 @@
 - Qué cuenta el umbral del primer W (hoy 30 mensajes; alternativas: unidades con ≥ 2 nodos, o medir cuándo se estabiliza). No se mueve después de un intento fallido sin declararlo como sesgo.
 - Pseudoaleatoriedad para perturbar el sesgo (pregunta abierta de delamor).
 - Si el intento 2 no llega: CONTINUA (según la lectura de B.7) o el piso de `local_criterion` (de reserva).
+- **`CONTINUA` queda sin usar hasta que se arregle lo que la lectura de B.7 encontró** (Opus, 21 oct; línea agregada por Code a pedido de Opus). Dos cosas, medidas: (a) los contadores del rebuild cruzan de un intento al otro —`rebuild_state.json` guarda `w_sha: null` y el guard compara `w_sha`, así que "sin W" es igual a "sin W" y se restauran— y los `message_id` se duplican, porque salen de la posición en el historial en memoria; (b) con el server reiniciado el **canal arranca vacío mientras el corpus tiene los textos**: dos memorias distintas del mismo caso, y W se construiría sobre textos que ningún device presente leyó. El intento 2 va **ZERO_SHOT**.
 - La experiencia "leído completo" con Sonnet u otra instancia: delamor la va a señalar.
 - Límites de uso: delamor va a pasar dónde publica Anthropic las indicaciones; evaluar estrategia ahí.
 

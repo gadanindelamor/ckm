@@ -12727,3 +12727,110 @@ el arreglo toca un solo test.
 - El `_state_S2-C0/` está **vacío** y los 8 archivos del intento 1 están en `process/` con
   timestamp `1792559911`, verificados por `sha256` de los `texts`.
 - **El intento 2 espera la orden de delamor.** **A1.PAUSA.**
+
+---
+## ARRANQUE — 2026-10-21 19:01 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2 del protocolo, leído entero.
+Sesión nueva sobre el corte del Codespace al 100 %.*
+
+### Revisé
+
+1. **Locks.** `find .git -name "*.lock"` → **ninguno**. No borré nada.
+2. **`git pull --rebase origin main`** → *Already up to date*. `HEAD = origin/main = d3e1abf`
+   (*docs(opus): ea9224b leido al cierre*). Historia lineal, sin rebase pendiente.
+3. **`git status`** → **ningún cambio sin commitear**. 50 no trackeados, todos conocidos y de
+   antes (PDFs y docs de respaldo en `docs/`, `LETTER.md`, `baseline_d_ckm.*`, `scripts/`,
+   `tests/run_tests.sh`, los tres `NOTA_armstrong_*`, los `_state_*`, y los `.bak` que dejó el
+   `--reset` de ayer en `process/`). Ninguno inesperado.
+4. **Estado.** `docs/opus/ESTADO_al_cortar_21oct2026.md` (el último) y el final de
+   `docs/opus/decisiones_en_el_acto.md`. Abierto: **decidir con delamor si `ea9224b` se conserva
+   o se revierte, verificando antes**; el intento 2 de `serie2_caso0` espera orden; `CONTINUA` sin
+   usar.
+5. **`DECISIONES_opus.md`** (§8). **Preguntas abiertas: ninguna — P1 a P11 tienen respuesta que
+   las nombra.** Verificado una por una. Ningún `DEFAULT VIGENTE, SIN DECISIÓN` para arrastrar.
+6. **Archivos de salida de la última corrida** (el intento 1, 20 oct). `.tmp` sueltos en
+   `experiments/`: **ninguno**. `serie2_caso0_log.json` parsea entero, `segundos_reales = 605.18`,
+   `errores_fatales: [(device_d, McpError)]`. Los 8 archivos preservados en `process/`: **la última
+   línea parsea en los cinco JSONL** (384, 17, 304, 384, 528, 8 líneas) y los dos JSON están
+   completos. **Marca de "terminó": el formato no la tiene** — el cierre se lee de
+   `segundos_reales` y de `por_device`, y eso quedó dicho acá para no inventarle una.
+7. **Los tests.** Suite completa: **855 passed, 7 xfailed, 0 failed** (113 s). Es el hueco que el
+   ESTADO nombraba: la suite **después** del arreglo de `test_delta_mensajes_cuenta_solo_ajenos`.
+8. **El paso 1**, que el ESTADO también nombraba: 3 llamadas por modelo **con el prompt sin
+   tocar** (los cuatro del caso). Resultado abajo. No es el vivo: sin canal, sin Monitor, sin
+   publicar.
+
+### Encontré
+
+1. **El `OP_SILENCE` de `qwen` NO se reproduce con el prompt sin tocar.** El control pone
+   `PEDIDO_GENERATE = ""` en memoria, que deja el prompt **idéntico** al de antes de `ea9224b`
+   (verificado con un `assert` sobre el prompt armado, no supuesto):
+
+   | modelo | n | errores | palabra del protocolo | palabras del texto |
+   |---|---|---|---|---|
+   | `openai/gpt-oss-120b` | 3 | 0 | **0** | 64, 69, 87 |
+   | `gemini-2.5-flash` | 3 | 1 (`503` *high demand*) | **0** | 55, 45 |
+   | `openai/gpt-oss-20b` | 3 | 0 | **0** | 75, 55, 70 |
+   | `qwen/qwen3.8-27b` | 3 | 0 | **0** | 54, **3**, 71 |
+
+   **11 llamadas válidas, 0 palabras del protocolo, 0 vacíos, 0 truncadas.** El `OP_SILENCE` de
+   ayer era `n = 1` y **no se replicó**.
+2. **Lo que eso le hace a `ea9224b`.** Las dos mitades se apoyaban en ese `n = 1`:
+   - el **pedido** en el prompt — delamor: *"solo si es necesario"*. La verificación que él pidió
+     **dice que no es necesario**: sin pedido, los cuatro escriben mensajes de 45 a 87 palabras.
+   - la **guarda** de la palabra del protocolo — **0 casos en 11 llamadas**. Y la nomenclatura que
+     introduce (`op_silence_in_generate`, `PALABRAS_DEL_PROTOCOLO`, `PEDIDO_GENERATE`) ya la había
+     retirado delamor (*"no agregar nomenclatura"*), y el registro como `OP_SILENCE` es lo que
+     delamor marcó con *"ojo con UNKNOWN"*.
+3. **Un dato nuevo, y es del modelo.** `qwen`, en la segunda de sus tres, devolvió
+   **`"device_d is offline."`** — 3 palabras, `completion_tokens: 6`. **No** es una palabra del
+   protocolo, así que la guarda de `ea9224b` **no lo tocaría** y se publicaría. Es del mismo
+   linaje que el `'2'` del intento 1: `qwen` produce no-mensajes que el canal acepta porque no
+   están vacíos. Lo anoto sin tocar nada: es del modelo, y filtrarlo sería interpretar.
+4. **La falla intermitente no reapareció.**
+   `test_lo_publicado_antes_del_corte_no_cuenta_pero_esta_en_history` (`tests/test_oda_continuo.py`)
+   falló **1 de 3** corridas completas (la primera de ayer). Hoy pasó. Sigue anotada como
+   intermitente, sin explicación.
+5. **La pregunta abierta que el ESTADO le deja a delamor** sigue abierta y no es mía: la ventana
+   del gate en 4, con el gate congelado en `f96c234` (9 oct). No la toqué.
+
+### No pude revisar
+
+1. **Los `test_caso_*` de `iap_chatroom/tests/` no los colecta pytest** (`testpaths = ["tests"]`).
+   Correrlos es disparar el vivo. **Punto ciego declarado**: los 855 no dicen nada de ellos.
+2. **Ningún test corre dos devices a la vez** (declarado el 8 oct). Lo que cambió en
+   `autonomous_device.py` ayer está cubierto device por device, no en concurrencia.
+3. **Si la diferencia de `qwen` entre corridas es el pedido o varianza, no lo puedo separar.** Con
+   pedido: `n = 1`, 68 palabras. Sin pedido: `n = 3`, dos mensajes y un `"device_d is offline."`.
+   Lo que el control **sí** afirma es que **el caso que motivó el cambio no se reproduce**.
+4. **Gemini quedó en `n = 2`**: una de sus tres murió con `503 high demand`, que no es un límite
+   de cuota ni de techo.
+5. **El vivo.** Todo esto es fuera del canal. Cómo se comporta el generate con el Monitor y el
+   corpus reales no está medido, y no lo voy a medir sin orden.
+
+---
+## PREGUNTA P12 — **BLOQUEA** — 2026-10-21 19:01 UTC — **[delamor]**
+
+**`ea9224b` se conserva o se revierte.** La verificación que delamor pidió antes de decidir
+(*"no se revierte nada sin verificar"*) **está hecha** y está arriba: 11 llamadas con el prompt
+sin tocar, 0 palabras del protocolo; suite completa 855 passed, 7 xfailed, 0 failed.
+
+**Por qué BLOQUEA y por qué es de delamor:** toca lo que delamor decidió (**E1**) y toca IAP, que
+no se toca sin verificar (su propia regla). Code no decide esto (§5).
+
+**Mi lectura, para que no haya que reconstruirla** — no es una decisión:
+
+- Las dos mitades de `ea9224b` se apoyaban en un `n = 1` que **no se replicó**.
+- Las dos son **reversibles por separado**, cada una con sus tests:
+  (a) `PEDIDO_GENERATE` y su línea en `_to_chat_messages` — 2 tests;
+  (b) la guarda + `op_silence_in_generate` + `PALABRAS_DEL_PROTOCOLO` — 8 tests, más el arreglo
+  de `test_delta_mensajes_cuenta_solo_ajenos`, que **se queda igual**: ese test publicaba la
+  palabra `OP_SILENCE` como texto del mensaje, y eso era un defecto del test con guarda o sin
+  guarda.
+- Si se revierte (b), **vuelve el camino de antes**: una palabra del protocolo en el generate se
+  publica y entra al corpus. Hoy eso tiene **0 casos en 11 llamadas** y **1 caso en 1** de ayer.
+- El dato de `"device_d is offline."` dice que la guarda, además, **no cubriría** el caso
+  parecido: el no-mensaje que no es del vocabulario.
+
+**Esperando respuesta. No avanzo con nada de IAP mientras.**

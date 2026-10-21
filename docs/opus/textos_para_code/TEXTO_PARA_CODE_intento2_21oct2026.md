@@ -34,7 +34,8 @@ delamor, 21 oct: de acuerdo con todo lo que sigue. **El sesgo va en lo que entra
    Sólo en inglés, como el resto. Nada más cambia en la consigna.
 4. **`DURATION` de 600 a 1200 s** (`:263`), declarado: con mensajes cortos la duración vuelve a ser palanca (con mensajes largos sólo sumaba 413).
 5. **`device_d` y el `McpError`** (corrió la mitad del caso): leé la causa y **reportala antes de arreglar nada**. A1.PAUSA ahí.
-6. **Modo `CONTINUA`** (delamor: *"si activamos el modo"*), desde los 13 textos. Verificá que el `state_dir` del intento 1 (`experiments/_state_S2-C0/`) esté en el Codespace con sus 13 textos; si no está, A1.PAUSA.
+6. **Modo `ZERO_SHOT`** (delamor, 21 oct: *"creo que debemos empezar por modo ZERO shot. luego parar y evaluar"*). Antes: `--reset` (mueve el estado del intento 1 a `process/` con timestamp, no borra) y **reiniciar el server** (el corpus queda en memoria si no). Verificá que los 13 textos del intento 1 queden preservados en `process/`.
+7. **Lectura, sin cambiar nada: qué hace `CONTINUA`** (para decidir en el intento siguiente, si éste no llega). (a) Con los archivos del `state_dir`: ¿agrega, pisa, mezcla? archivo por archivo. (b) Con el **canal**: los devices son instancias nuevas de LLM; ¿el canal IAP arranca con los mensajes acumulados del intento anterior, o vacío mientras el corpus de CKM tiene los textos? Si es lo segundo, decilo: serían dos memorias distintas del mismo caso. Reportá con línea de código.
 
 **No se corre.** Al terminar B: A1.PAUSA, reporte, y el intento 2 espera la orden de delamor. Durante el vivo, sin intervenciones (regla vigente).
 

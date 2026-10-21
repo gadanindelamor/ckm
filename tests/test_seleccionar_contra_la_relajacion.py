@@ -23,6 +23,13 @@ predicción está escrita y commiteada **antes** de este archivo (`ab4e987`, BAN
 | **c** | empate que **no cabe**, con `anterior` | **conserva**, y en **las dos** direcciones |
 | **d** | empate que **no cabe**, sin `anterior` | **dos descripciones de la misma salida**, y el test no puede separarlas |
 | **e** | ε | la relajación usa `h == 0`; `_seleccionar` usa `1e-12` |
+| **f** | el pool tiene **≤ top_k** términos | **entran todos**: `N = |pool| < top_k` y la regla de empate **no actúa** |
+
+El caso **f** se agregó el 21 oct 2026 por un **hueco de declaración**, no por
+un cambio de código: la rama existía desde siempre (`node_extractor.py`, primer
+`if` de `_seleccionar`) y `docs/defs/DECLARACION_extraccion_W_v2.md` nombraba
+sólo los empates y el `N = 0`. **El código no se tocó**; se declaró, y este
+test fija el caso.
 """
 
 import json
@@ -232,6 +239,51 @@ def test_e_la_relajacion_decide_donde_seleccionar_empata() -> None:
     assert s_relax[i_delta] == -1.0, "para la relajación h < 0: sale"
     assert _s_de(terms, sel)[i_delta] == +1.0, "para _seleccionar es empate: conserva"
     assert sel == ["alfa", "beta", "delta"]
+
+
+# ── f — el pool con ≤ top_k términos: entran todos ────────────────────────
+
+def test_f_el_pool_con_menos_terminos_que_top_k_entra_entero() -> None:
+    """
+    **El criterio que no se aplica por volumen.** Con menos candidatos que
+    lugares no hay nada que decidir: entran todos, `N = |pool| < top_k`, y la
+    regla de empate **no se calcula**.
+
+    Lo que lo separa de (c) y (d): acá los cinco términos están **empatados en
+    el mismo puntaje** y el estado previo los deja **afuera**. Si la rama del
+    empate actuara, con `anterior` sin ninguno la salida sería **vacía** —el
+    caso (d)—; con la rama del volumen, la salida son **los cinco**. Un solo
+    `assert` distingue las dos.
+    """
+    terms = np.array(["alfa", "beta", "gama", "delta", "epsilon"])
+    scores = np.array([0.4, 0.4, 0.4, 0.4, 0.4])     # todos empatados
+    top_k = 12                                        # más lugares que términos
+
+    for previo in (None, [], ["no_esta_en_el_pool"]):
+        sel = _seleccionar(terms, scores, previo, top_k)
+        assert set(sel) == set(terms), (
+            f"previo={previo!r}: el pool no entró entero; con la rama del "
+            f"empate la salida habría sido vacía"
+        )
+        assert len(sel) == len(terms) < top_k, "N tiene que ser |pool| < top_k"
+
+
+def test_f_sale_de_accumulate_y_no_solo_de_la_rama() -> None:
+    """
+    El mismo caso **por el camino entero**, no sólo por la rama: un corpus con
+    vocabulario chico que sobrevive a `min_df` deja un pool de pocos términos,
+    y `accumulate` devuelve **menos nodos que `top_k`** sin que eso sea el
+    `N = 0` del CP2 ni un empate decidido.
+    """
+    svc = NodeExtractorService(top_k=12, ngram_max=2)
+    res = svc.accumulate(["alfa beta gama"] * 3)
+    nodos = res["nodes"]
+    assert 0 < len(nodos) < svc.top_k, (
+        f"{len(nodos)} nodos: el caso no es el que este test fija"
+    )
+    # y la declaración del extractor dice que esto puede pasar
+    assert "N = |pool| < top_k" in \
+        svc.declaracion()["operadores"]["5_seleccion"]["que_hace"]
 
 
 # ── (b) frente a (c) en los corpus registrados ───────────────────────────

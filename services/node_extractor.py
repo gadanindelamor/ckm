@@ -556,6 +556,14 @@ class NodeExtractorService:
         del corte es empate: conserva su pertenencia anterior, o queda afuera
         si no hay anterior. Si los empatados caben todos en los lugares que
         quedan, no hay empate que decidir y entran.
+
+        **Pool con ≤ top_k términos: entran todos.** El corte es el puntaje
+        del último, nadie queda afuera, **N = |pool| < top_k** y la regla de
+        empate **no actúa** — ni se calcula. Es la regla que no se aplica
+        **por volumen**, y no una excepción: con menos candidatos que lugares
+        no hay nada que decidir. Declarado el 21 oct 2026 (hueco de
+        declaración: el código lo hacía desde siempre y el documento canónico
+        sólo nombraba los empates y el N = 0).
         """
         orden = sorted(range(len(terms)), key=lambda i: (-scores[i], terms[i]))
         if len(orden) <= self.top_k:
@@ -672,7 +680,9 @@ class NodeExtractorService:
                                    "(max_features), y de ese pool los top_k de mayor "
                                    "TF-IDF medio; empate en el corte conserva la "
                                    "pertenencia anterior (h=0 conserva), y con empates "
-                                   "N puede no ser top_k"),
+                                   "N puede no ser top_k. Si el pool tiene top_k "
+                                   "terminos o menos entran todos: N = |pool| < top_k "
+                                   "y la regla de empate no actua"),
                     "parametros": {
                         "top_k"        : self.top_k,
                         "min_df"       : self.min_df,

@@ -204,6 +204,13 @@ def test_el_codigo_dice_lo_mismo_que_el_documento(corpus):
     assert d["operadores"]["5_seleccion"]["parametros"]["max_features"] == \
         d["parametros_del_servicio"]["top_k"] * 3
 
+    # operador 5 — el pool con ≤ top_k términos, declarado en los dos lados
+    # (hueco cerrado el 21 oct 2026: la rama existía en el código y el
+    # documento nombraba sólo los empates y el N = 0)
+    assert "N = |pool| < top_k" in doc
+    assert "N = |pool| < top_k" in \
+        d["operadores"]["5_seleccion"]["que_hace"]
+
     # operador 8 — la diagonal y el conteo por unidad
     assert "Wᵢᵢ = 0" in doc
     assert d["operadores"]["8_W"]["parametros"]["diagonal"] == 0.0

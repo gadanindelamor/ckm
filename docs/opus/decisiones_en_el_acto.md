@@ -188,3 +188,9 @@
 - **System prompt sin explicación de los campos de CKM** en `serie2_caso0` (delamor: *"no, aún"*). **Es definición por caso: Opus lo vuelve a preguntar en el próximo caso.**
 - **Objetivo, reiterado** (delamor): *"erradicar el sesgo del paper"*: la expresión heredada "COCO no se conectó nunca a un vivo de IAP".
 - **Sin seed** en `serie2_caso0` (Opus, por delegación de delamor: *"como lo consideres… no, siempre que no obstaculice el objetivo"*). Riesgo: < 30 mensajes ⇒ COCO no nace. Si pasa, el seed es lo primero a ajustar.
+
+### 20 oct (tarde) — tras el intento 1 de `serie2_caso0`
+- **El REG borrador del intento 1 pasa a `registers/`** (delamor: *"si pasa a REG"*). Hoy en `docs/REG_borrador_serie2_caso0_intento1.md` (`fe7ed74`); el movimiento lo hace Code.
+- **El intento 2 va `--modo CONTINUA`**, desde los 13 textos (delamor: *"si activamos el modo"*). delamor le explicó a Code cómo se usaba; se debate también con Opus.
+- **Abierto, para hablarlo con Opus (delamor):** qué persigue el umbral de 30 mensajes del primer W y cómo; y por qué el largo se mide en caracteres. Lectura de Opus: el 30 está **declarado, no calibrado** (`ckm_monitor.py:167-174`); los caracteres aparecen sólo en el REG, como causa del 413, no como criterio de W.
+- Repo verificado por Opus: `HEAD = origin/main = 80e19c1` (ESTADO del 20 oct), un commit después de `fe7ed74`. Sin trackear: `tests/run_tests.sh`, `tools/sync_main.ps1`.

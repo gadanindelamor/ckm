@@ -109,3 +109,4 @@
 - **Abierto (decide Opus, sin apuro; no hay intento 3 planeado):** 17 truncamientos de `gpt-oss-20b` con el techo de 512 (17/98 llamadas, todas `largo: 0`): la verificación previa era n = 1. Forma propuesta por Code: techo por modelo. Además: Gemini, 69/89 llamadas en `429` de cuota.
 - Huecos anotados por Code: `canal.n_mensajes` del log guarda la lectura de 20 (`get_messages` tope) y no el total (84); el aviso de truncamiento es `print`, no registro; `series`/`case` faltan en `monitor_trajectory.jsonl`.
 - REG borrador: `docs/REG_borrador_serie2_caso0_intento2.md` → **a delamor: ¿pasa a `registers/`?**
+- **El REG del intento 2 pasa a `registers/`** (delamor: *"apruebo el reg"*). El movimiento lo hace Code, como el del intento 1.

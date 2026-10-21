@@ -265,8 +265,12 @@ def test_la_duracion_alcanza_para_dos_rebuilds(caso):
     `MIN_TEXTS_FIRST_W = 30` y el criterio de volumen dispara cada
     `REBUILD_EVERY = 10`. El objetivo declarado son 70.
 
-    La duración se verifica contra la tasa **pesimista** del diseño
-    (p = 0.15 de publicar por vuelta): si alcanza ahí, alcanza.
+    La duración se verifica contra la tasa **pesimista declarada**: desde el
+    intento 2 es **p = 0.075**, la mitad de la del intento 1 (0.15), porque
+    `DURATION` subió a 1200 s con ese objetivo. Si alcanza ahí, alcanza.
+
+    **Esto es lo que cubre el cambio de `DURATION`:** con los 600 s del
+    intento 1 este test falla contra p = 0.075 (hacen falta 1167 s).
     """
     from iap_chatroom.ckm_monitor import MIN_TEXTS_FIRST_W, REBUILD_EVERY
 
@@ -275,7 +279,7 @@ def test_la_duracion_alcanza_para_dos_rebuilds(caso):
     assert textos_para_dos_rebuilds == 50
     assert caso.TEXTOS_OBJETIVO >= textos_para_dos_rebuilds
 
-    P_PESIMISTA = 0.15
+    P_PESIMISTA = 0.075
     n_devices = len(caso.DEVICES)
     mensajes_por_min = n_devices * (60.0 / caso.POLL_INTERVAL) * P_PESIMISTA
     minutos = caso.TEXTOS_OBJETIVO / mensajes_por_min
@@ -471,3 +475,181 @@ def test_el_caso_no_lo_colecta_pytest():
     assert testpaths == ["tests"], testpaths
     assert CASO_PATH.parent.name == "tests"
     assert CASO_PATH.parent.parent.name == "iap_chatroom"
+
+
+# ── el sesgo del intento 2, declarado con su objetivo ────────────────────────
+#
+# Los cuatro números que cambian entre el intento 1 y el 2 (delamor y Opus, 21
+# oct 2026), con el objetivo declarado: **volumen, para que nazca el primer
+# W**. El sesgo va en lo que entra —canal y consigna—; la declaración de CKM
+# (el 30, `min_df`, `top_k`) **no se toca**.
+#
+# `DURATION` ya lo cubre `test_la_duracion_alcanza_para_dos_rebuilds`, contra
+# el p pesimista nuevo.
+
+def test_el_techo_de_salida_de_groq_entra_en_el_OTPM_medido():
+    """
+    `GroqProvider.MAX_TOKENS` contra **lo medido** en el intento 1
+    (`registers/REG_iap_serie2_caso0_intento1_v1.md` §3): `qwen` devolvió un
+    `429` por **OTPM** `Limit 1000, Requested 1246`. Con 4096, una sola
+    llamada no cabía en el presupuesto de salida del minuto.
+
+    Las dos cotas, y las dos son del intento 1:
+
+    - **arriba**, el OTPM medido: una llamada sola no puede pasarse de él;
+    - **abajo**, el pedido de la consigna (≈ 80 palabras ≈ 110 tokens): el
+      techo tiene que dejar margen, o el fix de los `max_tokens` —que cerró el
+      truncamiento silencioso— se reabre por el otro lado.
+    """
+    from iap_chatroom.providers.groq_provider import MAX_TOKENS
+
+    OTPM_MEDIDO = 1000
+    TOKENS_DEL_PEDIDO = 110          # ≈ 80 palabras
+    assert MAX_TOKENS < OTPM_MEDIDO, (
+        f"max_tokens={MAX_TOKENS} no entra por sí solo en el OTPM medido "
+        f"({OTPM_MEDIDO})"
+    )
+    assert MAX_TOKENS >= 3 * TOKENS_DEL_PEDIDO, (
+        f"max_tokens={MAX_TOKENS} deja poco margen sobre las ~80 palabras que "
+        f"pide la consigna: el truncamiento vuelve"
+    )
+
+
+def test_los_otros_dos_providers_no_bajan_su_techo():
+    """
+    **El sesgo es de Groq y de nadie más.** Gemini queda en 4096 (T3): sus seis
+    errores del intento 1 fueron cuota del plan y un 503, ninguno de techo de
+    salida, y `gemini-2.5-flash` cuenta los tokens de *thinking* adentro de
+    `max_output_tokens` — bajarlo devuelve texto vacío, que el device
+    registraría como `generacion_vacia`. Anthropic no corre en este caso.
+    """
+    from iap_chatroom.providers.gemini_provider import MAX_OUTPUT_TOKENS
+
+    assert MAX_OUTPUT_TOKENS == 4096
+    fuente = (RAIZ / "iap_chatroom" / "providers" / "anthropic_provider.py").read_text()
+    assert '"max_tokens": 4096' in fuente
+
+
+def test_las_dos_ventanas_de_historial_son_dos_numeros_distintos():
+    """
+    **Dos preguntas, dos ventanas** (Opus, 21 oct): el gate decide *si* hablar
+    y le alcanza con lo último; el generate *escribe* y necesita ver más del
+    canal. Y la del generate **tiene que existir**: hasta el 21 oct
+    `_to_chat_messages` usaba `self._history` entero.
+    """
+    from iap_chatroom.autonomous_device import VENTANA_GATE, VENTANA_GENERATE
+
+    assert VENTANA_GATE == 4
+    assert VENTANA_GENERATE == 10
+    assert VENTANA_GATE < VENTANA_GENERATE
+
+
+def test_el_generate_no_manda_mas_que_su_ventana():
+    """
+    La ventana del generate **medida sobre la salida**, no sobre la constante:
+    con 25 mensajes en el historial, el prompt lleva los últimos
+    `VENTANA_GENERATE` y no los 25.
+
+    El conteo es de **mensajes del historial**, así que la comparación se hace
+    antes del `_coalesce` (que fusiona consecutivos del mismo rol): se cuenta
+    cuántos textos del historial aparecen en el prompt.
+    """
+    from iap_chatroom.autonomous_device import AutonomousDevice, VENTANA_GENERATE
+    from iap_chatroom.providers.base import Provider
+
+    class ProviderQueNoLlama(Provider):
+        name = "stub"
+
+        async def complete(self, messages):        # pragma: no cover
+            raise AssertionError("este test no llama al provider")
+
+    dev = AutonomousDevice(
+        device_id="device_x",
+        provider=ProviderQueNoLlama(),
+        system_prompt="S",
+    )
+    dev._history = [
+        {"device_id": "device_y", "text": f"texto_{i:02d}"} for i in range(25)
+    ]
+    enviado = "\n".join(m["content"] for m in dev._to_chat_messages())
+
+    assert "texto_24" in enviado, "el último mensaje del canal tiene que estar"
+    assert "texto_00" not in enviado, "el primero de 25 no puede seguir viajando"
+    presentes = [i for i in range(25) if f"texto_{i:02d}" in enviado]
+    assert len(presentes) == VENTANA_GENERATE, presentes
+    assert presentes == list(range(25 - VENTANA_GENERATE, 25))
+
+
+def test_el_gate_no_manda_mas_que_su_ventana():
+    """
+    La del gate, también sobre la salida: `_decide` arma el prompt con los
+    últimos `VENTANA_GATE` mensajes. El provider stub **captura** lo que
+    recibe y contesta `OP_SILENCE`, así que no hay red y la decisión no actúa.
+
+    Los 68 errores del provider del intento 1 fueron **todos** de esta fase
+    (`fase: "decide"`), así que ésta es la ventana que la medición señala.
+    """
+    import asyncio
+
+    from iap_chatroom.autonomous_device import AutonomousDevice, VENTANA_GATE
+    from iap_chatroom.providers.base import Provider
+
+    capturado = {}
+
+    class ProviderQueCaptura(Provider):
+        name = "stub"
+
+        async def complete(self, messages):
+            capturado["messages"] = messages
+            return "OP_SILENCE"
+
+    dev = AutonomousDevice(
+        device_id="device_x",
+        provider=ProviderQueCaptura(),
+        system_prompt="S",
+    )
+    observacion = {
+        "field": {},
+        "history": [
+            {"device_id": "device_y", "text": f"texto_{i:02d}", "timestamp": i}
+            for i in range(25)
+        ],
+        "clock": {},
+        "tick_anterior": None,
+        "trigger": None,
+        "own_recent": [],
+    }
+    assert asyncio.run(dev._decide(observacion)) == "OP_SILENCE"
+
+    enviado = "\n".join(m["content"] for m in capturado["messages"])
+    presentes = [i for i in range(25) if f"texto_{i:02d}" in enviado]
+    assert len(presentes) == VENTANA_GATE, presentes
+    assert presentes == list(range(25 - VENTANA_GATE, 25))
+
+
+def test_la_consigna_pide_mensajes_cortos_y_es_un_pedido(caso):
+    """
+    *"Un pedido, no una orden con forma de condición… son LLMs, no se trata de
+    presionar"* (delamor, 21 oct). Lo que el test puede fijar: que el pedido
+    esté, que esté **en la consigna** —que es lo único que el caso escribe
+    además del bloque común—, que siga **sólo en inglés**, y que no venga con
+    una condición ni con una amenaza de recorte.
+
+    Lo que **no** fija: que los modelos lo respeten. Eso es del modelo, y es
+    el riesgo declarado de la ventana por cantidad.
+    """
+    from test_prompt_solo_ingles import castellano
+
+    pedido = "Please keep your messages short if you can"
+    assert pedido in caso.CONSIGNA
+    assert "80 words or fewer" in caso.CONSIGNA
+    assert castellano(caso.CONSIGNA) == []
+    # el pedido va al final, después de lo que ya decía la consigna
+    assert caso.CONSIGNA.index(pedido) > caso.CONSIGNA.index("may move theirs")
+    # y es un pedido: sin condición ni recorte anunciado
+    for forma in ("must ", "do not exceed", "will be truncated", "only if",
+                  "required", "limit of"):
+        assert forma not in caso.CONSIGNA.lower(), forma
+    # y llega a los cuatro devices, por el system prompt
+    for letra, did, _, _ in caso.DEVICES:
+        assert pedido in caso.system_prompt(did, letra)

@@ -159,10 +159,20 @@ se predice.
     p = 0.40  →  70 / 19.2  =  3.6 min  =  219 s
     p = 0.25  →  70 / 12.0  =  5.8 min  =  350 s
     p = 0.15  →  70 /  7.2  =  9.7 min  =  583 s
+    p = 0.075 →  70 /  3.6  = 19.4 min  = 1167 s
 
-`DURATION = 600 s` cubre hasta `p ≈ 0.15`. **No se corta al llegar a 70**: si
-`p` es mayor, siguen hablando y el corpus pasa de 70 — más textos y más
-rebuilds, que no estorban al objetivo.
+**`DURATION = 1200 s` desde el intento 2** (antes 600, que cubría hasta
+`p ≈ 0.15`). Sesgo declarado con su objetivo —volumen, para que nazca el
+primer W— y con **la razón por la que ahora sí es palanca**: en el intento 1,
+con 5450 caracteres de mediana por mensaje, más vueltas era sólo más `413`, y
+el REG lo dice —*"ninguna es duración ni `poll_interval`"*—; 600 s más sólo
+habrían sumado los 413 que faltaban. Con la ventana del gate en 4 y el pedido
+de mensajes cortos, cada vuelta vuelve a poder terminar en un mensaje, y
+entonces la duración compra textos: 1200 s cubre hasta `p ≈ 0.075`, la mitad
+del piso pesimista anterior.
+
+**No se corta al llegar a 70**: si `p` es mayor, siguen hablando y el corpus
+pasa de 70 — más textos y más rebuilds, que no estorban al objetivo.
 
 **El piso.** `piso_vueltas + 2 ≤ vueltas por device` es la condición del
 texto. Vueltas por device = `DURATION / s_por_vuelta`; con 5.2 s medidos son
@@ -173,8 +183,9 @@ orden.
 
 Y 6 y no 12 (el default) **por el arranque sin seed**: el canal empieza en
 silencio, y el piso es lo único que impide que el silencio sea punto fijo. Con
-6, cada device reintenta la iniciativa cada 7 vueltas ≈ 36 s — unas 16 veces
-en 600 s, 64 entre los cuatro. Con 12 serían 8 por device. Sigue **sin
+6, cada device reintenta la iniciativa cada 7 vueltas ≈ 36 s — unas 33 veces
+en 1200 s, 132 entre los cuatro (16 y 64 con los 600 s del intento 1). Con 12
+serían la mitad por device. Sigue **sin
 calibrar**, como todo umbral del filtro, y el panel lo dice.
 
 **Los 429 de Groq.** `llamadas/min = N·(60/poll)·(1+p)`. Los tres devices de
@@ -260,7 +271,7 @@ MODO_POR_DEFAULT = MODO_ZERO_SHOT
 
 # ── los números, todos declarados arriba en el docstring ────────────────────
 POLL_INTERVAL = 5.0      # el medido en el vivo 03
-DURATION = 600.0         # cubre p ≈ 0.15 para 70 textos de device
+DURATION = 1200.0        # cubre p ≈ 0.075 para 70 textos (600 en el intento 1)
 PISO_VUELTAS = 6         # piso + 2 = 8 ≤ 85 vueltas por device (pesimista)
 TEXTOS_OBJETIVO = 70     # textos de device; ≥ 2 rebuilds a los 50
 
@@ -281,7 +292,7 @@ What you can do:
 
 # La consigna parcial, textual del orden de delamor. El corchete se reemplaza
 # por **la perspectiva de ese device y nada más**.
-CONSIGNA = """This channel is about an open question with no right answer: how should the water of a growing city be organized? Your perspective is {perspectiva}. There are other perspectives in the channel. What they say may move the foundations of yours, even of what you have already said, and what you say may move theirs."""
+CONSIGNA = """This channel is about an open question with no right answer: how should the water of a growing city be organized? Your perspective is {perspectiva}. There are other perspectives in the channel. What they say may move the foundations of yours, even of what you have already said, and what you say may move theirs. Please keep your messages short if you can: a few sentences, around 80 words or fewer."""
 
 # Las cuatro perspectivas. **Esta lista no va a ningún prompt**: cada device
 # recibe su string y nunca los otros tres.

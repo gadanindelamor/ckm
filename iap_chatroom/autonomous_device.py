@@ -80,6 +80,40 @@ def _es_rate_limit(e: Exception) -> tuple:
         return True, "texto"
     return False, None
 
+# ── Las dos ventanas de historial, declaradas como sesgo ───────────────────
+#
+# **Sesgo del intento 2 de `serie2_caso0`** (delamor y Opus, 21 oct 2026), con
+# su objetivo: **volumen, para que nazca el primer W**. Antes las dos eran
+# `10`, escrito en el lugar donde se usaba, y ninguna estaba declarada.
+#
+# **De dónde salen, medido en el intento 1**
+# (`registers/REG_iap_serie2_caso0_intento1_v1.md` §3): los textos salieron con
+# **5450 caracteres de mediana**, y los **68 errores del provider fueron todos
+# de la fase `decide`** — 61 de ellos `413`, con `TPM Limit 8000` contra
+# Requested mediana **14326**. El historial que entra al gate es lo que
+# multiplica el largo contra el presupuesto del minuto.
+#
+# **Son dos números, porque son dos preguntas distintas** (Opus, 21 oct):
+#
+# - **El gate decide si hablar**: le alcanza con lo último del canal. **4.**
+# - **El generate escribe**, y para escribir necesita ver más de la
+#   conversación. **10.**
+#
+# **El riesgo, declarado:** la ventana es **por cantidad, no por tokens**. Si
+# los modelos no respetan el *"around 80 words or fewer"* de la consigna, el
+# largo vuelve a crecer y el `413` vuelve con él. Esta constante **no** lo
+# acota; lo acota el pedido, que es del modelo.
+VENTANA_GATE = 4
+
+# La del generate. Hasta el 21 oct **no existía**: `_to_chat_messages` armaba
+# el prompt con **todo** `self._history`, sin ventana, y crecía con cada
+# mensaje del canal. En el intento 1 no falló —13 INTERACT y la historia corta
+# al principio—, pero con el objetivo de 70 textos ese prompt llegaba a ~7-8k
+# tokens **justo cuando el corpus se acerca a los 30**, que es lo que el caso
+# busca alcanzar. El `413` habría aparecido en la fase que publica.
+VENTANA_GENERATE = 10
+
+
 GATE_PROMPT_04 = """Field state:
 D_ckm={d_ckm} | temp_signal={temp} | c_S={c_s} | fi={fi} | Delta_r={delta_r}
 
@@ -305,8 +339,20 @@ class AutonomousDevice:
         )
 
     def _to_chat_messages(self) -> list[ChatMessage]:
+        """
+        El prompt de la fase que **publica**, con los últimos
+        `VENTANA_GENERATE` mensajes del canal.
+
+        **La ventana es del 21 oct 2026 y antes no había ninguna**: esto
+        recorría `self._history` entero. Ver `VENTANA_GENERATE` para de dónde
+        sale el número y qué riesgo queda declarado.
+
+        `self._history` **no se recorta**: lo usa el criterio local para el
+        último mensaje ajeno, y recortarlo cambiaría el filtro de llamadas y no
+        el prompt. Lo que se acota es **lo que el modelo lee**.
+        """
         chat: list[ChatMessage] = [{"role": "system", "content": self.system_prompt}]
-        for m in self._history:
+        for m in self._history[-VENTANA_GENERATE:]:
             role = "assistant" if m["device_id"] == self.device_id else "user"
             chat.append({"role": role, "content": f"[{m['device_id']}]: {m['text']}"})
         system_msgs = [c for c in chat if c["role"] == "system"]
@@ -503,7 +549,7 @@ class AutonomousDevice:
                 # al prompt que el modelo lee, y "?" no le dice nada mientras
                 # UNKNOWN le dice que el dato no estaba.
                 f'[{m.get("timestamp") or "UNKNOWN"}] {m["device_id"]}: {m["text"]}'
-                for m in history[-10:]
+                for m in history[-VENTANA_GATE:]
             )
             if history
             else "(empty)"

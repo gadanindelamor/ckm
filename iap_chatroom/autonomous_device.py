@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -818,125 +819,154 @@ class AutonomousDevice:
         El modo viejo quedó congelado en `process/iap_series_freeze_20261008/`.
         """
         async with Client(self.mcp_url) as client:
-            # El corte inicial sale del reloj del canal, no de time.time():
-            # mezclar el reloj del device con el del canal descarta mensajes en
-            # silencio si el device va adelantado (hallazgo del CP0).
-            clock0 = await client.call_tool("get_clock", {})
-            # El corte arranca un tick antes de ahora, por la misma razón que
-            # en cada vuelta: el filtro de get_messages es `>` estricto.
-            ventana0 = self._ventana(clock0.data)
-            # Sin grano, el corte inicial es None: `get_messages(since=None)`
-            # devuelve el historial reciente, así que todo cuenta como nuevo.
-            # Es ruidoso y **no pierde nada**, que es la dirección segura.
-            since = (clock0.data["t"] - ventana0) if ventana0 is not None else None
+            # **El registro de la causa de adentro** (T5, 21 oct 2026). Es
+            # registro, **no arreglo**: el `raise` deja el comportamiento
+            # igual que antes y el driver sigue recibiendo la misma
+            # excepción.
+            #
+            # **Qué hueco cierra, medido.** En el intento 1 de
+            # `serie2_caso0`, `device_d` murió en la vuelta 62 de 115 y lo
+            # único que quedó escrito fue un `McpError: "Timed out while
+            # waiting for response"` levantado en el `__aexit__` del
+            # `Client`. La excepción de **adentro** del `async with` no está
+            # en ese registro: `exceptiongroup/_catch.py` hace
+            # `raise unhandled from exc.__cause__`, y con `__cause__` en
+            # `None` eso **suprime el contexto** — el traceback guardado
+            # empieza en el cierre y la causa se pierde. Mirar `__cause__` o
+            # `__context__` desde afuera no la recupera.
+            #
+            # Así que se escribe **acá, cuando pasa**, antes de que el cierre
+            # tenga ocasión de reemplazarla. Si se repite, la causa queda.
+            try:
+                # El corte inicial sale del reloj del canal, no de time.time():
+                # mezclar el reloj del device con el del canal descarta mensajes en
+                # silencio si el device va adelantado (hallazgo del CP0).
+                clock0 = await client.call_tool("get_clock", {})
+                # El corte arranca un tick antes de ahora, por la misma razón que
+                # en cada vuelta: el filtro de get_messages es `>` estricto.
+                ventana0 = self._ventana(clock0.data)
+                # Sin grano, el corte inicial es None: `get_messages(since=None)`
+                # devuelve el historial reciente, así que todo cuenta como nuevo.
+                # Es ruidoso y **no pierde nada**, que es la dirección segura.
+                since = (clock0.data["t"] - ventana0) if ventana0 is not None else None
 
-            r = await client.call_tool(
-                "join_channel", {"device_id": self.device_id, "device_type": "AI"}
-            )
-            assert r.data["ok"], f"join_channel fallo para {self.device_id}"
-
-            start = time.monotonic()
-            self._t_inicio = start
-            vuelta = 0
-            # **Que el archivo diga cuándo empezó y con qué.** Sin esta línea,
-            # un `device_log.jsonl` que arranca en la vuelta 3 no se distingue
-            # de uno que perdió las dos primeras.
-            self._escribir(run_store.DEVICE_LOG, {
-                "event": "run_start",
-                "duration_s": duration,
-                "poll_interval_s": self.poll_interval,
-                "trigger_mode": self.trigger_mode,
-                "local_criterion": self.local_criterion is not None,
-                "mcp_url": self.mcp_url,
-            })
-
-            while time.monotonic() - start < duration and not self._se_fue:
-                vuelta += 1
-
-                # **El tiempo que le queda al caso.** La vuelta entera corre
-                # bajo esto: si el caso termina mientras el device observa,
-                # decide o actúa, la vuelta se corta **ahí** y el device se va.
-                # Lo que no hizo, no lo hizo.
-                restante = duration - (time.monotonic() - start)
-                tick_observacion = self._tick_anterior
-                try:
-                    since = await asyncio.wait_for(
-                        self._one_turn(client, vuelta, since), timeout=restante
-                    )
-                except asyncio.TimeoutError:
-                    # **Venció el caso con el device adentro de la vuelta.**
-                    # Se registra como lo que es —una oportunidad que se
-                    # terminó— y no como un error del provider ni como un
-                    # silencio decidido. Las tres cosas son distintas.
-                    # **Las mismas claves que una vuelta completa.**
-                    #
-                    # Tenía siete de las veintiuna, y los consumidores de
-                    # `decisiones()` leen las otras: `sum(d["n_nuevos"])`,
-                    # `all(d["llamadas_llm"] == 1)`, `d.get("ventana")`. Con
-                    # esa fila adentro, cada uno de esos levanta `KeyError`.
-                    #
-                    # **No lo vi antes porque esta rama casi nunca corría**: el
-                    # corte por fin de caso pide que la vuelta tarde más que lo
-                    # que queda, y con los stubs una vuelta era tan rápida que
-                    # no llegaba. Lo destapó el punto 3: con las escrituras
-                    # puestas la vuelta tarda lo suficiente, y
-                    # `test_un_mensaje_sellado_en_el_corte_no_se_pierde` falló
-                    # 2 de 6 corridas. Medido también al revés: en HEAD, 8 de 8
-                    # verdes. **El defecto es anterior; el disparador es mío.**
-                    #
-                    # Lo que no se sabe va `None`, declarado, y no 0: la vuelta
-                    # se cortó en algún punto que no se registró, así que
-                    # "cuántos mensajes nuevos vio" y "cuántas llamadas hizo"
-                    # son UNKNOWN. Ponerles 0 diría que observó y no vio nada,
-                    # y que no llamó — dos afirmaciones que nadie midió.
-                    self._decisiones.append({
-                        "vuelta": vuelta,
-                        "tick": tick_observacion,
-                        "tick_observation": tick_observacion,
-                        "tick_action": None,
-                        "action_result": "did_not_happen: end of case",
-                        "tick_anterior": self._tick_anterior,
-                        "reloj": None,
-                        "n_nuevos": None,
-                        "trigger": None,
-                        "decision": DECISION_END_OF_CASE,
-                        "trigger_mode": self.trigger_mode,
-                        "criterio_motivo": None,
-                        "criterio_via": None,
-                        "umbrales_calibrados": None,
-                        "ventana": "UNKNOWN",
-                        "llamadas_llm": None,
-                        "errores_llm": None,
-                        "ilegibles": None,
-                    })
-                    self._escribir(run_store.DEVICE_DECISIONS,
-                                   self._decisiones[-1])
-                    self._cut_by_end_of_case = True
-                    break
-
-                if self._se_fue:
-                    break
-                await asyncio.sleep(self.poll_interval)
-            self._t_fin = time.monotonic()
-
-            # Si se fue por decisión propia, ya llamó a leave_channel en A: no
-            # se llama dos veces. Si venció `duration`, se va acá.
-            if not self._se_fue:
                 r = await client.call_tool(
-                    "leave_channel", {"device_id": self.device_id}
+                    "join_channel", {"device_id": self.device_id, "device_type": "AI"}
                 )
-                assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+                assert r.data["ok"], f"join_channel fallo para {self.device_id}"
 
-            # **El cierre, con el costo adentro.** El driver también lo vuelca,
-            # y eso **no es redundante**: el del driver sale de un proceso que
-            # pudo no llegar al final. Éste lo escribe el device, en el mismo
-            # directorio que todo lo demás.
-            self._escribir(run_store.DEVICE_LOG, {
-                "event": "run_end",
-                "left_by_own_decision": self._se_fue,
-                "cut_by_end_of_case": self._cut_by_end_of_case,
-                "costo": self.costo(),
-            })
+                start = time.monotonic()
+                self._t_inicio = start
+                vuelta = 0
+                # **Que el archivo diga cuándo empezó y con qué.** Sin esta línea,
+                # un `device_log.jsonl` que arranca en la vuelta 3 no se distingue
+                # de uno que perdió las dos primeras.
+                self._escribir(run_store.DEVICE_LOG, {
+                    "event": "run_start",
+                    "duration_s": duration,
+                    "poll_interval_s": self.poll_interval,
+                    "trigger_mode": self.trigger_mode,
+                    "local_criterion": self.local_criterion is not None,
+                    "mcp_url": self.mcp_url,
+                })
+
+                while time.monotonic() - start < duration and not self._se_fue:
+                    vuelta += 1
+
+                    # **El tiempo que le queda al caso.** La vuelta entera corre
+                    # bajo esto: si el caso termina mientras el device observa,
+                    # decide o actúa, la vuelta se corta **ahí** y el device se va.
+                    # Lo que no hizo, no lo hizo.
+                    restante = duration - (time.monotonic() - start)
+                    tick_observacion = self._tick_anterior
+                    try:
+                        since = await asyncio.wait_for(
+                            self._one_turn(client, vuelta, since), timeout=restante
+                        )
+                    except asyncio.TimeoutError:
+                        # **Venció el caso con el device adentro de la vuelta.**
+                        # Se registra como lo que es —una oportunidad que se
+                        # terminó— y no como un error del provider ni como un
+                        # silencio decidido. Las tres cosas son distintas.
+                        # **Las mismas claves que una vuelta completa.**
+                        #
+                        # Tenía siete de las veintiuna, y los consumidores de
+                        # `decisiones()` leen las otras: `sum(d["n_nuevos"])`,
+                        # `all(d["llamadas_llm"] == 1)`, `d.get("ventana")`. Con
+                        # esa fila adentro, cada uno de esos levanta `KeyError`.
+                        #
+                        # **No lo vi antes porque esta rama casi nunca corría**: el
+                        # corte por fin de caso pide que la vuelta tarde más que lo
+                        # que queda, y con los stubs una vuelta era tan rápida que
+                        # no llegaba. Lo destapó el punto 3: con las escrituras
+                        # puestas la vuelta tarda lo suficiente, y
+                        # `test_un_mensaje_sellado_en_el_corte_no_se_pierde` falló
+                        # 2 de 6 corridas. Medido también al revés: en HEAD, 8 de 8
+                        # verdes. **El defecto es anterior; el disparador es mío.**
+                        #
+                        # Lo que no se sabe va `None`, declarado, y no 0: la vuelta
+                        # se cortó en algún punto que no se registró, así que
+                        # "cuántos mensajes nuevos vio" y "cuántas llamadas hizo"
+                        # son UNKNOWN. Ponerles 0 diría que observó y no vio nada,
+                        # y que no llamó — dos afirmaciones que nadie midió.
+                        self._decisiones.append({
+                            "vuelta": vuelta,
+                            "tick": tick_observacion,
+                            "tick_observation": tick_observacion,
+                            "tick_action": None,
+                            "action_result": "did_not_happen: end of case",
+                            "tick_anterior": self._tick_anterior,
+                            "reloj": None,
+                            "n_nuevos": None,
+                            "trigger": None,
+                            "decision": DECISION_END_OF_CASE,
+                            "trigger_mode": self.trigger_mode,
+                            "criterio_motivo": None,
+                            "criterio_via": None,
+                            "umbrales_calibrados": None,
+                            "ventana": "UNKNOWN",
+                            "llamadas_llm": None,
+                            "errores_llm": None,
+                            "ilegibles": None,
+                        })
+                        self._escribir(run_store.DEVICE_DECISIONS,
+                                       self._decisiones[-1])
+                        self._cut_by_end_of_case = True
+                        break
+
+                    if self._se_fue:
+                        break
+                    await asyncio.sleep(self.poll_interval)
+                self._t_fin = time.monotonic()
+
+                # Si se fue por decisión propia, ya llamó a leave_channel en A: no
+                # se llama dos veces. Si venció `duration`, se va acá.
+                if not self._se_fue:
+                    r = await client.call_tool(
+                        "leave_channel", {"device_id": self.device_id}
+                    )
+                    assert r.data["ok"], f"leave_channel fallo para {self.device_id}"
+
+                # **El cierre, con el costo adentro.** El driver también lo vuelca,
+                # y eso **no es redundante**: el del driver sale de un proceso que
+                # pudo no llegar al final. Éste lo escribe el device, en el mismo
+                # directorio que todo lo demás.
+                self._escribir(run_store.DEVICE_LOG, {
+                    "event": "run_end",
+                    "left_by_own_decision": self._se_fue,
+                    "cut_by_end_of_case": self._cut_by_end_of_case,
+                    "costo": self.costo(),
+                })
+            except BaseException as e:            # noqa: BLE001 — se re-lanza
+                self._escribir(run_store.DEVICE_LOG, {
+                    "event": "run_exception_inside_client",
+                    "excepcion": type(e).__name__,
+                    "mensaje": str(e)[:1000],
+                    "traceback": traceback.format_exc(),
+                    "se_fue": self._se_fue,
+                    "cut_by_end_of_case": self._cut_by_end_of_case,
+                })
+                raise
 
 
     async def _one_turn(self, client, vuelta: int, since):

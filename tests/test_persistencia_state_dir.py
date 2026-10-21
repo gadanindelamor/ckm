@@ -23,6 +23,7 @@ archivos tienen que **sobrevivir a un corte a mitad de camino**.
 | nombres en inglés | `test_los_nombres_de_los_archivos_estan_en_ingles` |
 | sin lógica en los drivers | `test_el_driver_solo_pasa_el_state_dir` |
 | lo de COCO sigue sin publicarse en el canal | `test_lo_de_coco_no_se_publica_en_el_canal` |
+| la excepción de adentro del `Client` MCP (21 oct) | `test_la_causa_de_adentro_del_cliente_queda_escrita` |
 
 ### El corte, medido y no simulado
 
@@ -630,3 +631,60 @@ def test_la_fila_del_fin_del_caso_tiene_las_mismas_claves_que_una_vuelta(
                        if e["decision"] == DECISION_END_OF_CASE]
     assert cortada_escrita, "la vuelta cortada no quedó escrita"
     assert esperadas <= set(cortada_escrita[0])
+
+
+# ── la causa de adentro del cliente MCP ──────────────────────────────────────
+
+def test_la_causa_de_adentro_del_cliente_queda_escrita(state, canal):
+    """
+    **El hueco que dejó `device_d` en el intento 1 de `serie2_caso0`** (T5, 21
+    oct 2026). Murió en la vuelta 62 de 115 y lo único que quedó escrito fue un
+    `McpError: "Timed out while waiting for response"` del `__aexit__` del
+    `Client`. La excepción de **adentro** del `async with` no estaba en ningún
+    lado: `exceptiongroup` hace `raise unhandled from exc.__cause__`, y con
+    `__cause__` en `None` eso **suprime el contexto**.
+
+    Este test replica las dos mitades —el cuerpo que falla y el cierre que
+    falla **con el contexto suprimido**— y verifica las tres cosas:
+
+    1. lo que le llega al driver sigue siendo la excepción del cierre
+       (**el comportamiento no cambió**: es registro, no arreglo);
+    2. el traceback que el driver recibe **no** menciona la causa de adentro,
+       que es por qué el registro hace falta;
+    3. la causa de adentro **sí** quedó escrita, con su traceback, en el
+       `device_log.jsonl` del `state_dir`.
+    """
+    import traceback as tb
+
+    class ClienteQueMuereAdentroYAlCerrar(ClientStub):
+        async def __aexit__(self, *a):
+            # `from None` = lo que hace `exceptiongroup`: suprime el contexto.
+            raise RuntimeError("Timed out while waiting for response") from None
+
+        async def call_tool(self, nombre, args=None):
+            if nombre == "get_clock":
+                raise RuntimeError("la causa de adentro, la que se perdia")
+            return await super().call_tool(nombre, args)
+
+    dev = _device(ProviderStub(["OP_SILENCE"]), device_id="device_a")
+    dev._state_dir = state
+
+    with pytest.raises(RuntimeError, match="Timed out") as capturada:
+        _correr(dev, ClienteQueMuereAdentroYAlCerrar(canal, device_id="device_a"))
+
+    # (1) y (2): el driver recibe la del cierre, y sin la causa adentro
+    del_driver = "".join(tb.format_exception(capturada.value))
+    assert "la causa de adentro" not in del_driver, (
+        "si el contexto ya viaja, este test no replica lo medido"
+    )
+
+    # (3) la causa, escrita cuando pasó
+    lineas = [ln for ln in run_store.read(run_store.DEVICE_LOG, state)
+              if ln["event"] == "run_exception_inside_client"]
+    assert len(lineas) == 1, lineas
+    assert lineas[0]["excepcion"] == "RuntimeError"
+    assert "la causa de adentro" in lineas[0]["mensaje"]
+    assert "la causa de adentro" in lineas[0]["traceback"]
+    assert "get_clock" in lineas[0]["traceback"], (
+        "el traceback tiene que decir en qué llamada murió"
+    )

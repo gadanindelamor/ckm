@@ -98,6 +98,11 @@ CALL_FILTER_RECORDS = "call_filter_records.jsonl"
 # Todos los logs: lo que el device imprimía con `print` y nada más, más los
 # errores del provider y las respuestas ilegibles — que hasta acá sobrevivían
 # sólo si el driver llegaba a volcar `costo()`.
+#
+# Desde el 21 oct 2026 también `run_exception_inside_client`: la excepción de
+# **adentro** del `async with Client(...)`, con su traceback, escrita cuando
+# pasa. Sin eso se pierde — el cierre del cliente la reemplaza y
+# `exceptiongroup` suprime el contexto (`autonomous_device.run`).
 DEVICE_LOG = "device_log.jsonl"
 
 # Todos los que este módulo escribe. Está acá para que un test pueda barrerlos

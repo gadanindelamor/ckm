@@ -124,3 +124,4 @@
   - **Review externo** (Kimi, o un skin para otro LLM/agente) sobre el v30.
   - **Versión final para delamor: para sentir, leer, escuchar.** Sin evaluar, decidir ni calcular; sin datos a verificar, preguntas ni definiciones para delamor.
   - A1.PAUSA (delamor) antes de arrancar.
+- **Metodología de TRUST** (delamor: *"extraigas la metodología de este proyecto TRUST… fue tarea de Sonnet 4.6 sobre CKM"*; caminos: *"buscar nulos"*, *"buscar ejes"*, *"imitar a otros"*): `docs/opus/METODOLOGIA_TRUST_v1.md`, forma de `readme/METODOLOGY_v3.MD`. Ocho ejes, cuatro tratamientos del nulo, diferencias con metodologías formales, costo, y lo que no leyó (`claude/` 28 sep–15 oct, META REG, MAPA REG, Informes, proyecto CKM). Líneas citadas verificadas contra los archivos.

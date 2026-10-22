@@ -44,6 +44,14 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov",
+    # La suite se corre en paralelo (`pytest -n 4`, los 4 nucleos del
+    # Codespace pago). Estaba instalado y NO declarado: un checkout limpio
+    # no podia reproducir la forma en que se corre la suite, y "pasan 843"
+    # dependia de un paquete que el repo no nombraba. Declarado el 22 oct 2026.
+    #
+    # `~=` y no `>=`, por el mismo criterio que `scikit-learn`: lo medido vale
+    # para la linea 3.8.x. Una version nueva se adopta midiendo de nuevo.
+    "pytest-xdist~=3.8.0",
     "matplotlib>=3.7",
 ]
 viz = [

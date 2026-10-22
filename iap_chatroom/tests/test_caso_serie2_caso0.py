@@ -234,6 +234,7 @@ RAIZ = Path(__file__).resolve().parent.parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
+from iap_chatroom import run_store                                   # noqa: E402
 from iap_chatroom.autonomous_device import AutonomousDevice          # noqa: E402
 from iap_chatroom.local_criterion import (                            # noqa: E402
     LocalCriterion,
@@ -445,6 +446,31 @@ def preservar_estado() -> list[str]:
     return movidos
 
 
+def mensajes_del_canal() -> list[dict]:
+    """
+    **El canal entero, desde el registro del canal.** No desde `get_messages`.
+
+    Hueco medido en el intento 2 (REG §6.1): `get_messages(since=None)`
+    devuelve **los últimos 20 por diseño** (`mcp_server.py:127-131`), y el log
+    guardaba esa lectura en `canal.n_mensajes` y `canal.mensajes` como si fuera
+    el canal entero. En el intento 1 no se vio porque el canal tuvo 17
+    mensajes, menos que el tope; en el intento 2 dijo **20** cuando habían
+    pasado **84**.
+
+    **Y el conteo no era lo único.** Los 64 textos que quedaron afuera del log
+    —que **sí se commitea**— sólo existen en `channel_messages.jsonl`, que **no
+    se commitea**: el corpus que COCO evaluó no entró a la traza del repo.
+
+    Se lee de `channel_messages.jsonl` con el lector de `run_store`, que es
+    quien lo escribió: **el registro del canal, hecho por el canal**, append-only
+    y durante la corrida. Sin claves nuevas en el log.
+
+    Si el archivo no está —un driver sin `state_dir`—, devuelve `[]`, y el que
+    llama declara de dónde salió lo que puso.
+    """
+    return run_store.read(run_store.CHANNEL_MESSAGES, STATE_DIR)
+
+
 async def estado_de_partida() -> dict:
     """Se lee ANTES de arrancar, por MCP, y se declara en el log."""
     from fastmcp import Client
@@ -560,6 +586,9 @@ async def correr(modo: str = MODO_POR_DEFAULT) -> dict:
         monitor = (await c.call_tool("get_monitor_state", {})).data
         firma = (await c.call_tool("get_firma", {})).data
 
+    # El canal entero, del registro del canal y no de la lectura con tope.
+    del_canal = mensajes_del_canal()
+
     umb = _umbrales()
     return {
         "que_es": f"ESTO MIDE — {NOMBRE}: COCO contra un vivo de IAP",
@@ -634,8 +663,15 @@ async def correr(modo: str = MODO_POR_DEFAULT) -> dict:
         ],
         "canal": {
             "clock_final": clock,
-            "n_mensajes": len(mensajes),
-            "mensajes": mensajes,
+            # **El canal entero** (ver `mensajes_del_canal`): la lectura por
+            # MCP tiene tope 20 y acá se guardaba como si fuera el total.
+            # `mensajes_por_MCP` queda al lado **a propósito**: si los dos
+            # números no coinciden, el que lee ve que uno es una ventana.
+            "n_mensajes": len(del_canal) if del_canal else len(mensajes),
+            "n_mensajes_segun": ("channel_messages.jsonl" if del_canal
+                                 else "get_messages (tope 20)"),
+            "mensajes": del_canal if del_canal else mensajes,
+            "mensajes_por_MCP": len(mensajes),
             "monitor_state": monitor,
             "firma": firma,
         },
@@ -674,7 +710,8 @@ def imprimir_cierre(res: dict) -> None:
               f"429={c['errores_rate_limit']} "
               f"decisiones={c['decisiones_por_tipo']}")
     print(f"\nmensajes en el canal    : {res['canal']['n_mensajes']} "
-          f"(incluye los joins SYSTEM, que NO entran al corpus)")
+          f"(segun {res['canal'].get('n_mensajes_segun')}; incluye los joins "
+          f"SYSTEM, que NO entran al corpus)")
     print(f"archivos en el state_dir: {res['archivos_del_state_dir']}")
 
 

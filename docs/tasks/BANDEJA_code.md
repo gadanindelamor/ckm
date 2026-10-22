@@ -13090,3 +13090,339 @@ antes de tocarlo).*
 | los 17 truncamientos | **no están en el `state_dir`**: el aviso del provider es un `print` y quedó en el stdout del driver (hueco 2 del REG). Lo que sí está: los **17** `unreadable` de `device_c`, **los 17 con `largo: 0`** |
 
 **A1.PAUSA.** Sin nada abierto de mi lado.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 0 — la suite en paralelo: 3 errores que en serie no salen — 2026-10-22 05:57 UTC
+
+*Claude Opus 5 (Code). `pytest-xdist` instalado y **declarado** en `pyproject.toml`
+(`pytest-xdist~=3.8.0`, con `~=` por el mismo criterio que `scikit-learn`: lo medido vale para la
+línea 3.8.x). Estaba instalado y sin declarar: un checkout limpio no podía reproducir **la forma
+en que se corre la suite**.*
+
+### Encontré
+
+`pytest -n 4`: **843 passed, 7 xfailed, 3 errors**. En serie, 0 errors. Los tres son **errores de
+teardown** del mismo guardia (`conftest.py:62`, `_el_state_del_repo_no_se_toca`), en tres archivos
+distintos, y los tres dicen lo mismo: `nuevos: ['channel_ticks.jsonl']` en
+`iap_chatroom/_state/` — la traza de agosto.
+
+**El mecanismo, medido: es de ORDEN, no de cantidad.** `run_store` guarda el `state_dir` en una
+variable **del proceso**. El `_run_store_aislado` lo resetea antes de cada test, pero **importar
+`iap_chatroom.mcp_server` construye el `CKMMonitor` por default y vuelve a apuntarlo** a la traza
+de agosto. En serie, el orden de los tests hace que para cuando alguien publica en un canal el
+directorio ya esté fijado en un `tmp_path`. Con 4 workers, cada uno corre **un subconjunto
+distinto**, ese orden no se cumple, y el que publica escribe en el default.
+
+**Lo escrito fue 1 línea** (un tick, 150 bytes, `tick: 1`), y **3 tests fueron culpados**: el
+guardia saca una foto del directorio en su setup y la compara en su teardown, así que **todos los
+tests cuyo setup fue anterior a la escritura y cuyo teardown fue posterior fallan**, sin haber
+escrito nada. El que escribió puede no estar entre los tres.
+
+### No pude revisar
+
+- **Cuál test escribió.** Con el guardia actual no se puede saber: culpa por ventana de tiempo, no
+  por autoría. Habría que registrar quién fija el `state_dir`, y eso es nomenclatura nueva.
+- Los `test_caso_*` de `iap_chatroom/tests/`: **punto ciego de siempre**, no los colecta pytest.
+
+### Qué hice con la línea escrita
+
+**No la borré en silencio** (la regla del guardia es *"no se borra nada: fallar es el punto"*).
+Está como `??` en `iap_chatroom/_state/channel_ticks.jsonl`, 1 línea, creada por mi corrida de las
+05:39. Los archivos de agosto —`corpus_G_state.json`, `monitor_trajectory.jsonl`— **no se
+tocaron** (fechas del 1 de agosto intactas).
+
+**PREGUNTA P13 — NO BLOQUEA — [delamor].** Dos cosas, con default declarado:
+1. ¿La línea se preserva en `process/` con timestamp (el mecanismo de la serie) o se borra?
+   **Default: la dejo donde está, sin tocar**, hasta que alguien decida. Es `??`, no entra a git.
+2. ¿La suite se corre en paralelo de ahora en más? **Default: sí para medir, y los 3 errores se
+   leen como lo que son.** Con `-n 4` tarda 169 s contra 95 s en serie — en este Codespace el
+   paralelo **no acelera** (4 workers sobre 4 núcleos, con el arranque de cada worker), así que la
+   razón para usarlo sería otra, no el tiempo.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 1 — el techo de Groq por modelo, y el razonamiento — 2026-10-22 05:57 UTC
+
+### Revisé
+
+**60 llamadas**: 5 por modelo, por fase (`decide` y `generate`) y por condición (con y sin
+`reasoning_effort`). Prompts del vivo, armados por el código del device —`_to_chat_messages` y
+`_decide`— con la **ventana de 10 mensajes reales del intento 2** y un panel real de
+`monitor_trajectory.jsonl`. Techo de la medición alto a propósito (2048; 1000 en qwen, su OTPM
+medido), para ver cuánto gasta cada modelo **cuando no lo cortan**. Las dos fases, porque **14 de
+los 17 vacíos del intento 2 fueron en el gate**, y el gate contesta una palabra.
+
+### Encontré
+
+**1. La cola de `gpt-oss-20b` en el gate: 999 tokens de completion, 988 de razonamiento, para
+contestar UNA palabra.** Una de cinco llamadas. Con el techo plano en 512, esa llamada vuelve
+vacía: **es el mecanismo de los 17 vacíos del intento 2** (14 `decide` + 3 `generate`, los 17 con
+`largo: 0`, todos de ese modelo). No era el modelo: era el techo contra la cola.
+
+| modelo | fase | completion min/med/máx | razonamiento máx |
+|---|---|---|---|
+| `gpt-oss-120b` | `decide` | 87 / 124 / 171 | 158 |
+| `gpt-oss-120b` | `generate` | 154 / 202 / 213 | 112 |
+| `gpt-oss-20b` | `decide` | 139 / 253 / **999** | **988** |
+| `gpt-oss-20b` | `generate` | 187 / 243 / 312 | 200 |
+| `qwen3.8-27b` | `decide` | 3 / 6 / 6 | no lo informa |
+| `qwen3.8-27b` | `generate` | 60 / 92 / 102 | no lo informa |
+
+**2. `reasoning_effort="low"` NO es portable.** Fue la pregunta de delamor (*"acá no sería
+relevante el uso de razonamiento"*), y la medición la contesta en las dos direcciones:
+
+| modelo | fase | completion min/med/máx | razonamiento máx |
+|---|---|---|---|
+| `gpt-oss-120b` | `decide` | 21 / 38 / 54 | 41 |
+| `gpt-oss-120b` | `generate` | 93 / 121 / 125 | 20 |
+| `gpt-oss-20b` | `decide` | 21 / 26 / **78** | 35 |
+| `gpt-oss-20b` | `generate` | 109 / 119 / **128** | 23 |
+| `qwen3.8-27b` | `decide` | 291 / 346 / **416** | **408** |
+| `qwen3.8-27b` | `generate` | 532 / 737 / **849** | **755** |
+
+En los dos `gpt-oss` **corta** el razonamiento y la cola de 999 desaparece (máximo de las 20
+llamadas: 128). En `qwen3.8` hace lo **contrario**: sin la bandera gasta 3–102 y **no informa**
+razonamiento; con la bandera gasta 291–849 con 283–755 de razonamiento, y **2 de sus 10 llamadas
+murieron con `429 OTPM Limit 1000`**. Pasar el mismo parámetro a los tres rompería al único que
+hoy no tiene problema.
+
+**3. Los límites de la cuenta, de los headers y no del texto de un error:**
+`x-ratelimit-limit-tokens: 8000` y `x-ratelimit-limit-requests: 1000` en los **tres** modelos. El
+OTPM **no viaja en los headers**; de él sólo se sabe lo medido: `qwen` da `OTPM Limit 1000`, y
+`gpt-oss-20b` produjo 999 sin 429, así que su OTPM admite al menos eso.
+
+### Lo que queda fijado, con la expectativa escrita
+
+- **`gpt-oss-120b` y `gpt-oss-20b`: techo 512 + `reasoning_effort="low"`.** 512 es **4× el máximo
+  medido bajo esa bandera** (128). **El techo no cambia** respecto del intento 2; lo que cambia es
+  que la cola que lo desbordaba ya no existe. **Expectativa: 0 vacíos en `gpt-oss-20b` y la misma
+  presión de TPM que el intento 2 —que tuvo cero `413`.** Subir el techo a 1024 habría cerrado los
+  vacíos **comprando `413`**: 1445 + 1024 = 2469 por llamada contra 8000 por minuto ⇒ ~3,2
+  llamadas/min contra las ~5 que ese device hizo.
+- **`qwen3.8-27b`: techo 256, sin la bandera.** Máximo medido 102 (2,5× de margen), y con 256
+  entran **3** llamadas por minuto en su OTPM de 1000 en vez de 1. Único modelo donde bajar el
+  techo compra llamadas.
+
+Nomenclatura nueva, declarada porque el ítem la pide: `MAX_TOKENS_POR_MODELO`,
+`MAX_TOKENS_POR_DEFAULT`, `REASONING_EFFORT_POR_MODELO`, `techo_de_salida()`,
+`esfuerzo_de_razonamiento()`. Un modelo ausente de la tabla de razonamiento **no recibe la
+bandera**: la ausencia es una decisión medida.
+
+### Y un error mío, que lo encontró un test
+
+Escribí *"con 256 entran **4** llamadas por minuto"* y `1000 // 256 = 3`. El test del techo lo
+encontró en su primera corrida. **Se corrigió la afirmación, no el techo** — y queda dicho en el
+docstring y en el comentario del provider.
+
+### No pude revisar
+
+- **El OTPM de los dos `gpt-oss`**: no está en los headers y no lo forcé. Lo único medido es
+  "admite al menos 999".
+- **n = 5 por celda.** La cola de 999 apareció **1 de 5**: con n = 5 no se puede estimar su
+  frecuencia, sólo afirmar que existe.
+- **Nada de esto es el vivo:** sin canal, sin Monitor, sin publicar.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 2 — el log registra el canal entero, no la ventana de 20 — 2026-10-22 05:57 UTC
+
+### Revisé
+
+El hueco del REG §6.1: `canal.n_mensajes` guardaba `len()` de la lectura de `get_messages`, que
+**devuelve los últimos 20 por diseño** (`mcp_server.py:127-131`). En el intento 2 dijo **20**
+cuando por el canal habían pasado **84**.
+
+### Encontré
+
+**El conteo no era lo único.** `canal.mensajes` guardaba **esos mismos 20**, así que los **64
+textos restantes del intento 2 no entraron al log** — y el log **se commitea**, mientras
+`channel_messages.jsonl` **no**. Es decir: **el corpus que COCO evaluó no quedó en la traza del
+repo**. En el intento 1 no se vio porque el canal tuvo 17 mensajes, menos que el tope.
+
+### Qué hice
+
+`mensajes_del_canal()` en el caso lee `channel_messages.jsonl` **con el lector de `run_store`**,
+que es quien lo escribió: el registro del canal, hecho por el canal, append-only y durante la
+corrida. El log pasa a tener:
+
+- `n_mensajes`: el total (84 en el intento 2, si se volviera a armar);
+- `n_mensajes_segun`: `"channel_messages.jsonl"` o `"get_messages (tope 20)"` si no hay registro;
+- `mensajes`: **todos**;
+- `mensajes_por_MCP`: el número de la ventana, **al lado y a propósito** — si los dos no
+  coinciden, el que lee ve que uno es una ventana.
+
+Tres tests: el helper por encima del tope (25 líneas → 25), el caso sin registro (→ `[]`, y el log
+lo declara), y **la inversión atada a la corrida**: 25 `publish` en un canal de verdad y la tool
+devuelve **20**, los últimos. Si eso fallara, el helper sobraría.
+
+**PREGUNTA P14 — NO BLOQUEA — [delamor].** El caso ahora **importa `run_store`** para leer, y había
+un guardia que lo prohibía **nombrar**. La regla de delamor es *"quien **escribe** es IAP"*; el
+guardia pedía más que eso. Lo afiné para que distinga: el caso **no** puede `append`,
+`set_state_dir` ni `reset_failures`, y **sí** puede `read`. **Default declarado y reversible en una
+línea:** si preferís el guardia absoluto, el caso lee el archivo con la stdlib y vuelve a no
+nombrar `run_store` — al precio de repetir el nombre del archivo, que hoy es de `run_store` y de
+nadie más.
+
+### No pude revisar
+
+- **Los 64 textos del intento 2 ya perdidos para git.** Están en `_state_S2-C0/` (no commiteado) y
+  el `--reset` del intento 3 los va a mover a `process/` (tampoco commiteado). El arreglo sirve de
+  acá en adelante; **recuperarlos para la traza es una decisión de datos y no la tomo**.
+- El log del intento 3 va a ser más grande por esto (los textos entran). No lo medí todavía.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 4 — la calibración que no separa, y las dos preguntas de delamor — 2026-10-22 05:57 UTC
+
+*Sólo lectura: no cambié nada de `calibrate` ni de Monitor.*
+
+### Qué hace `calibrate`, en los términos de su propio código
+
+Mide `D_ckm` a lo largo de `W_λ = (1−λ)·W + λ·W_colapso` y busca un umbral que separe λ=0 de λ=1.
+El umbral es el **punto medio del salto**, y el **margen** es el salto. `W_colapso` es
+`extremo_colapso(W)`: **todos los acoplamientos positivos e iguales a `max|W|`**, diagonal en 0.
+`D_ckm = 1 − ln N_eff / ln N_eff0`, con `N_eff0 = A0 = count_attractors(W)`.
+Si `margen = d_colapso − d_sin_cambio ≤ 0` ⇒ `causa: "sin_separacion"`.
+
+### Por qué no separa: la aritmética de **esta** W
+
+Medido sobre la W final del intento 2 (N = 20, `n_runs=200`, `seed=0`):
+
+| | |
+|---|---|
+| pares fuera de la diagonal | 380 |
+| **positivos** | **366** |
+| **negativos** | **0** |
+| nulos | 14 |
+| `max|W|` (la escala) | 1.000000 |
+| media de los no nulos | 0.334426 |
+
+| λ | N_eff | D_ckm |
+|---|---|---|
+| 0.00 | 2.0086371397 | +0.000000 |
+| 0.25 | 2.1028283041 | −0.065706 |
+| 0.50 | 2.2596316800 | −0.168821 |
+| 0.75 | **2.4369440721** | −0.277133 |
+| 1.00 | **2.4369440721** | −0.277133 |
+
+**El mecanismo, en una línea: la W del intento 2 ya es toda positiva** (366 de 380, ninguna
+negativa), así que interpolar hacia *"todo positivo e igual a la escala"* **no colapsa nada**:
+sube cada acoplamiento de 0.334 hacia 1.0 y rellena los 14 nulos. El resultado **agrega**
+atractores en vez de quitarlos, `D_ckm` se va a negativo y el margen es **−0.277 ≤ 0**.
+
+`sin_separacion` **no es una falla del calibrador**: es la aritmética de una W cooperativa. El
+patrón del extremo asume signos mezclados (`W_mixta`); con una W sin un solo peso negativo, el
+"colapso" es una **amplificación uniforme**.
+
+**Lo que haría falta para que separe** (sin cambiar nada hoy): una W con signos mezclados, es
+decir un corpus donde los 44 marcadores de oposición disparen. El del intento 2 —cómo organizar
+el agua de una ciudad— no los dispara.
+
+### ¿λ es tan determinante? — los números
+
+- **Mueve poco:** N_eff va de 2.0086 a 2.4369, **+0.428 atractores (+21,3 %)**, sobre una W de
+  **N = 20 nodos**. Toda la curva vive entre 2 y 2,44 atractores.
+- **Y se satura en λ = 0.75:** λ=0.75 y λ=1.00 dan **el mismo número a 10 decimales**. El último
+  cuarto de la grilla aporta **exactamente 0**.
+- **Y hay algo más fuerte, medido:** en λ=1 la matriz es **todo unos** — ya no depende de W. Por
+  eso `N_eff(λ=1) = 2.4369440721` es **el mismo valor** en mi recálculo (W de n=80) y en el
+  registro del vivo (W de n=70): es una constante de `N = 20` y la seed, no una propiedad del
+  corpus. **Mientras `N_eff(W) < 2.4369`, el margen es negativo por construcción.** En el vivo
+  `N_eff` nunca pasó de **2.2676**.
+
+Así que: λ es determinante en **signo** (monótono hasta 0.75) y no en **magnitud** (0,43 de un
+atractor), y el extremo al que apunta tiene **más** atractores efectivos que cualquier W medida en
+este caso.
+
+### La dominancia de criterio en `should_rebuild` — lo que delamor pidió mirar
+
+Jerarquía (cadena de `elif`): **estructural > volumen > tiempo**. Las 29 decisiones del intento 2:
+
+| criterio | veces que fue la `causa` | ¿estaba en condición de disparar? |
+|---|---|---|
+| estructural | **0** / 29 | **no**: pide 3 gradientes positivos seguidos de `D_ckm`; en la serie de 51 evaluaciones eso pasó en **1 de 48** ventanas (15 de 50 pasos tuvieron gradiente > 0), y `_d_ckm_history` **se vacía en cada rebuild** |
+| **volumen** | **29** / 29 | **sí, desde el mensaje 10 y de forma permanente** hasta el primer W |
+| tiempo | **0** / 29 | **sí, y simultáneamente**: `ciclos_sin_rebuild` llegó a **33** con `MAX_CICLOS = 10` |
+
+**La dominancia está medida: en al menos 24 de las 29 decisiones, `tiempo` también estaba en
+condición de disparar —`ciclos_sin_rebuild` de 10 a 33— y el registro dice `causa: volumen` en
+todas.** No es que el tiempo no se cumpliera: es que el `elif` lo tapa. Y después del primer W,
+`volumen` rebuildea cada 10 textos y **resetea `ciclos_sin_rebuild` a 0**, así que el tiempo
+tampoco puede acumular.
+
+El rango de `D_ckm` en el vivo fue **[−0.0861, +0.0093]** (ancho 0,095), y el umbral que COCO usa
+sin calibrar es **`D_CKM_THRESHOLD = 0.4`**: **4,2× el rango entero observado**. Con esa
+aritmética, los **`triggers: 0`** no dicen que no hubiera nada que disparar.
+
+### Un hueco de registro, encontrado acá
+
+**La línea de la decisión de rebuild no escribe `textos_desde_rebuild`**, que es el contador que
+hace disparar `volumen` (`ckm_monitor.py:685-696`). Escribe `ciclos_sin_rebuild` y
+`n_puntos_d_ckm` —los de los **otros dos** criterios— y no el del que decidió. Por eso en los 29
+registros ese campo no existe. Va al ítem 5 como propuesta.
+
+### No pude revisar
+
+- **Si el estructural habría disparado alguna vez con la historia real por ciclo.** `_d_ckm_history`
+  se vacía en cada rebuild y el registro guarda `n_puntos_d_ckm`, no la serie; la serie que usé es
+  la del panel, que es **acumulada**. La única ventana positiva que encontré puede caer a caballo
+  de un reset.
+- **Si la no-monotonía de la curva aparece en otras W.** Acá la curva **es** monótona hasta
+  saturar; la no-monotonía que el código declara se midió con una W sintética de N=12.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 5 — los huecos de registro: cómo se cerrarían. PROPUESTA, no implementado — 2026-10-22 05:57 UTC
+
+*Los dos del REG del intento 2, más **un tercero** que apareció en el ítem 4. **No los
+implementé**: el ítem lo pide así, y además el intento 3 tiene que ser atribuible a los ítems 1 y
+2 solos. delamor autorizó tocar servicios e IAP *"si y sólo si es responsable, con pausas,
+revisando, declarando… o bien revertible"* — con esa autorización, los tres son de una línea y
+reversibles, y aun así los dejo afuera de esta corrida **a propósito y declarado**.*
+
+### Hueco 1 — el aviso de truncamiento es un `print`, no un registro
+
+Hoy: `groq_provider` (y `gemini_provider`, y `anthropic_provider`) imprimen
+`[GroqProvider WARNING] response truncated at max_tokens=…`. Los **17** del intento 2 quedaron en
+el stdout del driver y **no** en el `state_dir`: si nadie guarda la consola, lo que queda es una
+respuesta vacía **sin causa**.
+
+**Cómo se cerraría.** El provider no conoce el `state_dir` (no debe: la escritura es de IAP). Dos
+formas, y **la segunda es la que propongo**:
+
+1. que el provider escriba — rompe la regla *"quien escribe es IAP"*;
+2. **que `complete()` pueda decir que se truncó, y que el device lo registre.** El device ya
+   escribe `unreadable` con `fase`, `provider`, `model` y la cruda; un corte es **otra causa** de
+   la misma familia, y entra en el registro que ya existe.
+
+**Nomenclatura que pediría:** una causa nueva en el registro del device —algo como
+`respuesta_truncada`— y una forma de que el provider la informe sin cambiar su firma: hoy
+`complete()` devuelve `str`. La opción menos invasiva es un atributo del provider que el device
+lea después de la llamada (`ultimo_truncado`), que **sí es un nombre nuevo**. Es la parte que
+necesita decisión.
+
+### Hueco 2 — `series`/`case` fuera de `monitor_trajectory.jsonl`
+
+Hoy las líneas llevan `device_id`, `panel`, `t`, `text`. `rebuild_decisions.jsonl` **sí** lleva
+`series` y `case`. Lo que dice de qué caso es un archivo de trayectoria es **el directorio**.
+
+**Cómo se cerraría:** las dos claves ya existen en Monitor (las escribe en las decisiones de
+rebuild), así que es agregarlas en el mismo punto donde se arma la línea de trayectoria. **Sin
+nomenclatura nueva.** Es el más chico de los tres.
+
+### Hueco 3 — la decisión de rebuild no registra el contador que la hizo disparar *(nuevo, del ítem 4)*
+
+`ckm_monitor.py:685-696` escribe `ciclos_sin_rebuild` y `n_puntos_d_ckm` —los contadores de los
+criterios **estructural** y **tiempo**— y **no** `textos_desde_rebuild`, que es el que hace
+disparar **volumen**. En las 29 decisiones del intento 2, `causa: volumen` 29 veces y el contador
+que la produjo **no está en ninguna**.
+
+**Cómo se cerraría:** una clave más en el mismo `dict`, con el valor que ya está en memoria
+(`self._textos_desde_rebuild`). **Sin nomenclatura nueva** —el nombre ya existe en
+`rebuild_state.json` y en el panel— y reversible quitando la línea.
+
+**Y una segunda parte, que sí necesita decisión:** con la dominancia medida en el ítem 4
+(`volumen` tapa a `tiempo` en ≥ 24 de 29), el registro podría declarar **qué criterios estaban en
+condición de disparar**, no sólo el que ganó. Eso es nomenclatura nueva (algo como
+`criterios_en_condicion`) y cambia la forma de la línea. **Es de delamor.**
+
+### Lo que no propongo
+
+Tocar la jerarquía del `elif`. La dominancia está medida y declarada; **cambiar el orden o la
+precedencia es del modelo** y no de este ítem.

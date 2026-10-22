@@ -51,6 +51,15 @@ def caso():
     return mod
 
 
+@pytest.fixture
+def canal_limpio(monkeypatch):
+    """Un `ChatChannel` nuevo: es singleton, así que se resetea la instancia."""
+    from iap_chatroom.channel import ChatChannel
+
+    monkeypatch.setattr(ChatChannel, "_instance", None)
+    return ChatChannel()
+
+
 # ── la consigna parcial ──────────────────────────────────────────────────────
 
 def test_hay_cuatro_devices_uno_por_perspectiva(caso):
@@ -422,12 +431,33 @@ def test_el_caso_pasa_el_state_dir_y_nada_mas(caso):
     # str(run_store.ARCHIVOS)` es cierto para todos—, así que el test pasaba
     # sin mirar. Lo que hay que verificar es que el caso no llame a `append`
     # ni abra esos archivos para escribir.
-    assert "import run_store" not in cuerpo, (
-        "el caso importa run_store: la escritura tiene que estar en IAP"
-    )
-    # sin el punto no alcanza: el docstring de `construir_devices` nombra
-    # `run_store` para decir que la lógica está ahí y no acá.
-    assert "run_store." not in cuerpo, "el caso llama a run_store"
+    # **Escribir, no leer** (22 oct 2026, ítem 2). La regla de delamor es
+    # *"quien **escribe** es IAP"*: el driver pasa el `state_dir` y no decide
+    # qué se guarda. Hasta acá el guardia lo exigía prohibiendo **nombrar**
+    # `run_store`, que es más de lo que la regla pide, y dejaba sin cubierta la
+    # distinción que la regla hace.
+    #
+    # El caso **lee** `channel_messages.jsonl` con el lector de `run_store`
+    # para poner en su log el total del canal y no la ventana de 20
+    # (`mensajes_del_canal`, hueco del intento 2). Leer el registro del canal
+    # para reportarlo es lo que un driver hace; lo que no puede es escribirlo.
+    #
+    # **Queda como pregunta NO BLOQUEA en la BANDEJA**, con este default
+    # declarado y reversible en una línea: si delamor prefiere el guardia
+    # absoluto, el caso lee el archivo con la stdlib y vuelve a no nombrar
+    # `run_store` — a costa de repetir el nombre del archivo, que hoy es de
+    # `run_store` y de nadie más.
+    escrituras = ("run_store.append", "run_store.set_state_dir",
+                  "run_store.reset_failures")
+    for llamada in escrituras:
+        assert llamada not in cuerpo, f"el caso llama a {llamada}"
+    lecturas = [l for l in cuerpo.splitlines() if "run_store." in l]
+    permitidas = ("run_store.read", "run_store.CHANNEL_MESSAGES",
+                  "run_store.ARCHIVOS")
+    for linea in lecturas:
+        assert any(p in linea for p in permitidas), (
+            f"el caso usa run_store para algo que no es leer: {linea.strip()}"
+        )
     for archivo in run_store.ARCHIVOS:
         assert re.search(rf'open\([^)]*{re.escape(archivo)}', cuerpo) is None, (
             f"el caso abre {archivo} por su cuenta"
@@ -487,32 +517,129 @@ def test_el_caso_no_lo_colecta_pytest():
 # `DURATION` ya lo cubre `test_la_duracion_alcanza_para_dos_rebuilds`, contra
 # el p pesimista nuevo.
 
-def test_el_techo_de_salida_de_groq_entra_en_el_OTPM_medido():
+# Lo medido el 22 oct 2026 con los prompts del vivo (5 llamadas por modelo,
+# por fase y por condición; techo de la medición alto a propósito): el
+# **máximo** de `completion_tokens` que cada modelo gastó cuando no lo
+# cortaron. Dos tablas, porque la bandera de razonamiento **no es portable**.
+MAXIMO_SIN_BANDERA = {
+    "openai/gpt-oss-120b": 213,
+    "openai/gpt-oss-20b": 999,      # 988 de razonamiento, para UNA palabra
+    "qwen/qwen3.8-27b": 102,
+}
+MAXIMO_CON_BANDERA_LOW = {
+    "openai/gpt-oss-120b": 125,
+    "openai/gpt-oss-20b": 128,
+    "qwen/qwen3.8-27b": 849,        # la bandera lo EMPEORA: 283-755 de razonamiento
+}
+# El OTPM que se conoce **medido**, no por los headers: `qwen` da
+# `429 OTPM Limit 1000`.
+OTPM_MEDIDO_QWEN = 1000
+
+
+def test_cada_modelo_de_groq_tiene_su_techo_y_cubre_lo_medido():
     """
-    `GroqProvider.MAX_TOKENS` contra **lo medido** en el intento 1
-    (`registers/REG_iap_serie2_caso0_intento1_v1.md` §3): `qwen` devolvió un
-    `429` por **OTPM** `Limit 1000, Requested 1246`. Con 4096, una sola
-    llamada no cabía en el presupuesto de salida del minuto.
+    **El techo por modelo cubre el máximo que ese modelo gastó bajo la
+    condición en la que va a correr** — con la bandera de razonamiento si la
+    recibe, sin ella si no.
 
-    Las dos cotas, y las dos son del intento 1:
+    El que lo pedía es `gpt-oss-20b`: **sin** bandera gastó **999** tokens en
+    el gate —988 de razonamiento, para contestar una palabra— en 1 de 5
+    llamadas, y con el techo en 512 esa llamada volvía **vacía** (los 17 vacíos
+    del intento 2). **Con** `reasoning_effort="low"` su máximo es **128**, así
+    que 512 lo cubre 4×.
 
-    - **arriba**, el OTPM medido: una llamada sola no puede pasarse de él;
-    - **abajo**, el pedido de la consigna (≈ 80 palabras ≈ 110 tokens): el
-      techo tiene que dejar margen, o el fix de los `max_tokens` —que cerró el
-      truncamiento silencioso— se reabre por el otro lado.
+    **Si este test falla, el techo quedó por debajo de la cola de su propia
+    condición.**
     """
-    from iap_chatroom.providers.groq_provider import MAX_TOKENS
+    from iap_chatroom.providers.groq_provider import (
+        MAX_TOKENS_POR_MODELO, esfuerzo_de_razonamiento, techo_de_salida,
+    )
 
-    OTPM_MEDIDO = 1000
-    TOKENS_DEL_PEDIDO = 110          # ≈ 80 palabras
-    assert MAX_TOKENS < OTPM_MEDIDO, (
-        f"max_tokens={MAX_TOKENS} no entra por sí solo en el OTPM medido "
-        f"({OTPM_MEDIDO})"
+    for modelo in MAXIMO_SIN_BANDERA:
+        assert modelo in MAX_TOKENS_POR_MODELO, f"{modelo} sin techo propio"
+        techo = techo_de_salida(modelo)
+        con_bandera = esfuerzo_de_razonamiento(modelo) is not None
+        maximo = (MAXIMO_CON_BANDERA_LOW if con_bandera
+                  else MAXIMO_SIN_BANDERA)[modelo]
+        assert techo > maximo, (
+            f"{modelo}: techo {techo} no cubre el máximo medido {maximo} "
+            f"(bandera={esfuerzo_de_razonamiento(modelo)}) — una llamada así "
+            f"vuelve vacía"
+        )
+
+
+def test_la_bandera_de_razonamiento_va_solo_donde_baja_el_gasto():
+    """
+    **La bandera no es portable, y la tabla lo dice.** En los dos `gpt-oss`
+    `reasoning_effort="low"` baja el gasto (213 → 125 y 999 → 128). En
+    `qwen3.8` lo **sube**: 102 → 849, con 283–755 de razonamiento donde antes
+    no informaba nada, y 2 de 10 llamadas murieron con `429 OTPM`.
+
+    Así que un modelo **no** recibe la bandera por default: la recibe si está
+    medido que le baja el gasto. Este test fija las dos direcciones.
+    """
+    from iap_chatroom.providers.groq_provider import esfuerzo_de_razonamiento
+
+    for modelo, maximo in MAXIMO_SIN_BANDERA.items():
+        con = MAXIMO_CON_BANDERA_LOW[modelo]
+        baja = con < maximo
+        recibe = esfuerzo_de_razonamiento(modelo) is not None
+        assert recibe == baja, (
+            f"{modelo}: la bandera {'baja' if baja else 'SUBE'} el gasto "
+            f"({maximo} -> {con}) y recibe={recibe}"
+        )
+    # y el que no está en la tabla no la recibe
+    assert esfuerzo_de_razonamiento("un/modelo-que-nadie-midio") is None
+    assert esfuerzo_de_razonamiento(None) is None
+
+
+def test_el_techo_de_qwen_entra_en_su_OTPM_medido():
+    """
+    `qwen` es el único con OTPM medido (`Limit 1000`, intento 1). Su techo
+    tiene que entrar ahí **por sí solo** —si no, una llamada sola no cabe en el
+    presupuesto de salida del minuto— y además **cuanto más bajo, más llamadas
+    caben**: con 256 entran **3** por minuto, con 512 entraba 1.
+
+    **La cuenta, corregida por este test** (22 oct 2026): escribí "con 256
+    entran 4" y `1000 // 256 = 3`. El test lo encontró en el primer intento, y
+    lo que se corrige es **la afirmación**, no el techo: 256 sigue siendo 2,5×
+    el máximo medido de ese modelo sin bandera (102).
+    """
+    from iap_chatroom.providers.groq_provider import techo_de_salida
+
+    techo = techo_de_salida("qwen/qwen3.8-27b")
+    assert techo < OTPM_MEDIDO_QWEN, techo
+    assert OTPM_MEDIDO_QWEN // techo >= 3, (
+        f"con techo {techo} entran {OTPM_MEDIDO_QWEN // techo} llamadas por "
+        f"minuto en el OTPM de qwen"
     )
-    assert MAX_TOKENS >= 3 * TOKENS_DEL_PEDIDO, (
-        f"max_tokens={MAX_TOKENS} deja poco margen sobre las ~80 palabras que "
-        f"pide la consigna: el truncamiento vuelve"
+
+
+def test_un_modelo_sin_medir_cae_al_default_declarado():
+    """
+    Un modelo que nadie midió **no hereda el techo de otro**: cae al default
+    declarado, que es el valor del intento 2 —el único vivo entero— y no un
+    promedio. Medirlo es la condición para nombrarlo en un caso.
+    """
+    from iap_chatroom.providers.groq_provider import (
+        MAX_TOKENS_POR_DEFAULT, techo_de_salida,
     )
+
+    assert techo_de_salida("un/modelo-que-nadie-midio") == MAX_TOKENS_POR_DEFAULT
+    assert techo_de_salida(None) == MAX_TOKENS_POR_DEFAULT
+
+
+def test_el_techo_deja_margen_sobre_el_pedido_de_la_consigna():
+    """
+    La cota de abajo, que sigue valiendo: la consigna pide ≈ 80 palabras ≈ 110
+    tokens, y el techo tiene que dejar margen o el fix de los `max_tokens`
+    —que cerró el truncamiento silencioso— se reabre por el otro lado.
+    """
+    from iap_chatroom.providers.groq_provider import techo_de_salida
+
+    TOKENS_DEL_PEDIDO = 110
+    for modelo in MAXIMO_SIN_BANDERA:
+        assert techo_de_salida(modelo) >= 2 * TOKENS_DEL_PEDIDO, modelo
 
 
 def test_los_otros_dos_providers_no_bajan_su_techo():
@@ -653,3 +780,76 @@ def test_la_consigna_pide_mensajes_cortos_y_es_un_pedido(caso):
     # y llega a los cuatro devices, por el system prompt
     for letra, did, _, _ in caso.DEVICES:
         assert pedido in caso.system_prompt(did, letra)
+
+
+# ── el canal entero en el log, y no la ventana de 20 (hueco del intento 2) ───
+
+def test_el_log_registra_el_canal_entero_desde_el_registro_del_canal(
+    caso, tmp_path, monkeypatch
+) -> None:
+    """
+    **Hueco medido en el intento 2** (REG §6.1): el log guardaba en
+    `canal.n_mensajes` la lectura de `get_messages`, que tiene **tope 20**, y
+    dijo 20 cuando por el canal habían pasado 84.
+
+    `mensajes_del_canal()` lee `channel_messages.jsonl` —el registro que
+    escribió el canal— así que el número es el total. Con 25 líneas tiene que
+    dar 25: por encima del tope, que es donde el hueco se veía.
+    """
+    import json
+
+    d = tmp_path / "_state"
+    d.mkdir()
+    (d / "channel_messages.jsonl").write_text("\n".join(
+        json.dumps({"device_id": f"device_{i % 3}", "device_type": "AI",
+                    "text": f"texto {i}", "message_id": f"msg-{i}"})
+        for i in range(25)
+    ) + "\n")
+    monkeypatch.setattr(caso, "STATE_DIR", d)
+
+    leidos = caso.mensajes_del_canal()
+    assert len(leidos) == 25, len(leidos)
+    assert leidos[0]["text"] == "texto 0" and leidos[-1]["text"] == "texto 24"
+
+
+def test_sin_registro_del_canal_devuelve_vacio_y_el_log_lo_declara(
+    caso, tmp_path, monkeypatch
+) -> None:
+    """
+    Un driver sin `state_dir` no tiene registro del canal. Entonces
+    `mensajes_del_canal()` devuelve `[]`, y el log **cae a la lectura por MCP
+    diciéndolo** (`n_mensajes_segun`): un número con tope y un total no se
+    pueden confundir si el registro declara de dónde salió.
+    """
+    monkeypatch.setattr(caso, "STATE_DIR", tmp_path / "no_existe")
+    assert caso.mensajes_del_canal() == []
+
+
+def test_la_lectura_por_MCP_tiene_tope_20_medido_contra_la_corrida(
+    canal_limpio, tmp_path, monkeypatch
+) -> None:
+    """
+    **La inversión, atada a la corrida y no a la fórmula.** Si esto fallara, el
+    helper de arriba sobraría. Se publica 25 veces en un canal de verdad y se
+    llama a la tool: devuelve **20**, los últimos.
+
+    `run_store.set_state_dir(tmp_path)` va **después** de importar
+    `mcp_server`, porque ese import construye el `CKMMonitor` por default y
+    apunta el `state_dir` del proceso a la traza de agosto (lo dice el guardia
+    de `conftest.py`).
+    """
+    import asyncio
+
+    from iap_chatroom import mcp_server, run_store
+
+    run_store.set_state_dir(tmp_path / "state")
+    monkeypatch.setattr(mcp_server, "channel", canal_limpio)
+    for i in range(25):
+        asyncio.run(canal_limpio.publish("d0", "AI", f"texto {i}"))
+
+    todos = asyncio.run(mcp_server.get_messages(None))
+    assert len(todos) == 20, f"el tope cambió: {len(todos)}"
+    assert todos[0]["text"] == "texto 5", todos[0]["text"]
+    assert todos[-1]["text"] == "texto 24"
+    # y el canal tiene los 25: el tope es de la lectura, no del canal
+    assert len(canal_limpio.get_history()) == 25

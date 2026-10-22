@@ -110,3 +110,9 @@
 - Huecos anotados por Code: `canal.n_mensajes` del log guarda la lectura de 20 (`get_messages` tope) y no el total (84); el aviso de truncamiento es `print`, no registro; `series`/`case` faltan en `monitor_trajectory.jsonl`.
 - REG borrador: `docs/REG_borrador_serie2_caso0_intento2.md` → **a delamor: ¿pasa a `registers/`?**
 - **El REG del intento 2 pasa a `registers/`** (delamor: *"apruebo el reg"*). El movimiento lo hace Code, como el del intento 1.
+
+### 22 oct
+- **Trabajo autónomo en dos tareas paralelas: PAPER (Opus) y REPO (Code)** (delamor: *"2 tareas autónomas. PAPER y REPO"*; plan pago de Codespaces, 4 núcleos, *"a full o IDLE es lo mismo"* → aprovechar las horas, sin paradas). Sin ramas: tocan archivos distintos sobre `main` (decisión del 8 oct). Reportes a delamor, en serie.
+- **Puntos de intervención de delamor:** paper al final (aprobar el borrador y los rastros listados); cuota de Gemini (dinero/proveedor); calibración `sin_separacion` (E3). Lo demás lo decide Opus y lo registra.
+- **PAPER, defaults de Opus** (para no frenar; delamor aprueba al final): **v30 borrador nuevo**, el v29 queda intacto como traza; las tres frases de COCO (líneas 144, 281, 668 del v29) se retiran sin reemplazo; otros rastros que suponen la ausencia **se listan sin tocar**.
+- **REPO:** Code trabaja de corrido; A1.PAUSA sólo al final o si algo bloquea todo; las preguntas a delamor van como PREGUNTA BLOQUEA **sólo de ese ítem**, y sigue con los demás. Suite con `pytest -n 4` (`pytest-xdist`, no está en `pyproject.toml`: se instala y se declara como dependencia de desarrollo).

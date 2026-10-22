@@ -117,3 +117,10 @@
 - **PAPER, defaults de Opus** (para no frenar; delamor aprueba al final): **v30 borrador nuevo**, el v29 queda intacto como traza; las tres frases de COCO (líneas 144, 281, 668 del v29) se retiran sin reemplazo; otros rastros que suponen la ausencia **se listan sin tocar**.
 - **REPO:** Code trabaja de corrido; A1.PAUSA sólo al final o si algo bloquea todo; las preguntas a delamor van como PREGUNTA BLOQUEA **sólo de ese ítem**, y sigue con los demás. Suite con `pytest -n 4` (`pytest-xdist`, no está en `pyproject.toml`: se instala y se declara como dependencia de desarrollo).
 - **PAPER, task redefinida por delamor:** *"barrer la traza de versiones del paper… luego de haber barrido la traza de DEFs actuales… vamos a buscar ausencias, lo que la traza no sabe"*. Reemplaza los defaults de Opus de arriba (v30 y retiro de las tres frases): el retiro queda **dentro** del barrido. Primer paso de Opus: inventario de lo que ya hay en las carpetas (`docs/opus/INVENTARIO_versiones_paper_22oct2026.md`): v1–v29 salvo **v5**; v28 sólo borrador; copias distintas en v10_1, v10_2/v10_2_1, v11, v12. DEFs en el repo: v2, v7–v10, v10_1, v12–v17 (faltan v1, v3–v6, v11).
+- **Task PAPER, definida por delamor** (*"abarcar menos y apretar más"*; la confianza no verifica el carácter transitivo: resumir resúmenes o delegar en árbol concentra la responsabilidad en delamor):
+  - Un solo hilo, leído en la fuente primaria, cada afirmación con archivo y línea. Primer hilo: la frase de COCO a través de las versiones del paper.
+  - **Un grep sólo da presencias** (*"sería como un workflow automático de presencias"*): la ausencia no sale del grep; sale de comparar.
+  - **Output 1 = la versión siguiente del documento** (paper v30). La unidad es el documento. Otros outputs posibles, no bloqueantes.
+  - **Review externo** (Kimi, o un skin para otro LLM/agente) sobre el v30.
+  - **Versión final para delamor: para sentir, leer, escuchar.** Sin evaluar, decidir ni calcular; sin datos a verificar, preguntas ni definiciones para delamor.
+  - A1.PAUSA (delamor) antes de arrancar.

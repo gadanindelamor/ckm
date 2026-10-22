@@ -309,7 +309,33 @@ PERSPECTIVAS = {
 DEVICES = (
     # (letra, device_id neutro, provider, modelo)
     ("A", "device_a", "groq", "openai/gpt-oss-120b"),
-    ("B", "device_b", "gemini", "gemini-2.5-flash"),
+    # **El modelo de B cambia en el intento 3, y la cuota está medida.**
+    # delamor, 22 oct: *"cuota Gemini, o cambiar el LLM. Autorizo lo que
+    # decidas Code"*.
+    #
+    # Lo que el log nunca pudo mostrar —lo corta en 300 caracteres— y una
+    # llamada en vivo sí: el `429` de `gemini-2.5-flash` trae
+    # `quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier`,
+    # `quotaValue: 20` y `retryDelay: 3339s`. **Veinte requests por día, por
+    # modelo.** No es ritmo: es un tope diario. La aritmética del intento 2
+    # cierra exacta: **89 llamadas de device B − 20 que entraron = 69 errores**,
+    # que son los 69 `429` registrados.
+    #
+    # `gemini-3.5-flash-lite` es lo que los propios `404` de Google nombran
+    # como reemplazo de los lite retirados, **responde** (medido hoy, 2 de 2)
+    # y devuelve `thoughts_token_count: None` — sin tokens de *thinking*, así
+    # que no reabre el problema del techo que `2.5-flash` tiene (1080 tokens de
+    # thinking contra 66 de texto).
+    #
+    # **Lo que NO arregla, declarado:** el tope de 20/día es **por modelo**, así
+    # que cambiar de modelo compra **otros 20**, no más. device B va a aportar
+    # a lo sumo ~20 llamadas por corrida y después queda intermitente. Con eso,
+    # el caso corre con tres devices y una fracción.
+    #
+    # Reversible en esta línea. El provider sigue siendo Gemini: la
+    # heterogeneidad de proveedor es una propiedad medida del caso (0.9) y no
+    # se cambia por una cuota.
+    ("B", "device_b", "gemini", "gemini-3.5-flash-lite"),
     ("C", "device_c", "groq", "openai/gpt-oss-20b"),
     ("D", "device_d", "groq", "qwen/qwen3.8-27b"),
 )

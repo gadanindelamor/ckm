@@ -13426,3 +13426,144 @@ condición de disparar**, no sólo el que ganó. Eso es nomenclatura nueva (algo
 
 Tocar la jerarquía del `elif`. La dominancia está medida y declarada; **cambiar el orden o la
 precedencia es del modelo** y no de este ítem.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 3 — la cuota de Gemini, medida y decidida — 2026-10-22 06:35 UTC
+
+*delamor: *"cuota Gemini, o cambiar el LLM. Autorizo lo que decidas Code"*. Decidido con medición.*
+
+### Encontré: la cuota, por fin nombrada
+
+El `429` del intento 2 dice *"You exceeded your current quota"* y **no nombra la métrica**; el log
+además lo corta en 300 caracteres (hueco 1 del REG del intento 1). Una llamada en vivo sí la
+trae:
+
+```
+quotaMetric : generativelanguage.googleapis.com/generate_content_free_tier_requests
+quotaId     : GenerateRequestsPerDayPerProjectPerModel-FreeTier
+quotaValue  : 20
+retryDelay  : 3339s
+```
+
+**Veinte requests por día, por modelo.** No era ritmo. **Y la aritmética del intento 2 cierra
+exacta: 89 llamadas de device B − 20 que entraron = 69 errores**, que son los 69 `429`
+registrados. Con eso, ninguna pausa ni reparto de llamadas lo arregla.
+
+**El paisaje de modelos cambió** (la memoria decía *"Gemini sólo 2.5-flash"*): `2.5-flash-lite`,
+`2.0-flash`, `2.0-flash-lite` y `2.5-pro` dan **404 "no longer available"**, y los propios 404
+nombran el reemplazo. Responden: `gemini-2.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.8-flash`,
+`gemini-flash-latest`.
+
+### Decidí: device B pasa a `gemini-3.5-flash-lite`
+
+Por qué: responde (medido), es el reemplazo que Google nombra, devuelve
+`thoughts_token_count: None` —sin tokens de *thinking*, así que no reabre el problema del techo que
+`2.5-flash` tiene (1080 de thinking contra 66 de texto)— y **mantiene la heterogeneidad de
+proveedor**, que es una propiedad medida del caso (0.9) y no se cambia por una cuota. Reversible en
+una línea de `DEVICES`.
+
+### Y la expectativa que declaré era equivocada, en la dirección conservadora
+
+Escribí que el tope de 20/día es por modelo y que esto *"compra otros 20, no más"*. En el intento 3
+**device B hizo 68 llamadas con 0 errores**: el límite diario de `gemini-3.5-flash-lite` es
+**≥ 68**, no 20. El 20/día que medí es de `gemini-2.5-flash` y **no se generaliza entre modelos**.
+
+### Una divergencia mía
+
+**La cuota de `gemini-2.5-flash` la agoté yo**, hoy, con mis propias mediciones —incluida una que
+perdió su salida por no hacer `flush` antes del timeout—, y eso hizo **fallar el primer preflight
+del intento 3**. Con 20 requests/día, cada llamada de prueba cuesta un 5 % del presupuesto diario
+de ese modelo. La regla que saco: **no medir contra la misma key que después necesita el vivo**, o
+medir con el modelo que no se va a usar.
+
+### No pude revisar
+
+- **El RPD exacto de `gemini-3.5-flash-lite`:** sólo que es ≥ 68. Forzarlo costaría la cuota que el
+  próximo vivo necesita.
+- **Si `thoughts: None` es del modelo o de la llamada corta.** Lo medí con un prompt de una línea y
+  con el prompt real del gate; en los dos dio `None`, pero no probé prompts largos con respuesta
+  larga.
+
+---
+## TAREA AUTÓNOMA 22 oct · ÍTEM 6 — INTENTO 3 CORRIDO. Primera calibración que separa en un vivo — 2026-10-22 06:35 UTC
+
+*`ZERO_SHOT`, 1204,61 s, sin intervenciones durante el vivo. Reporte completo y comparación con el
+intento 2 en `docs/REG_borrador_serie2_caso0_intento3.md` (borrador, fuera de `registers/`).*
+
+### Lo que el intento 3 vino a medir, y dio
+
+| | intento 2 | intento 3 |
+|---|---|---|
+| **errores del provider** | **71** | **0** |
+| **truncamientos** | **17** | **0** |
+| respuestas no usables | 17 (las 17 vacías) | **2** (1 vacía) |
+| textos de device | 80 | 56 |
+| versiones de W | 6 | 4 |
+| evaluaciones de COCO | 51 | 27 |
+| `coco.connected` | `true` | `true` |
+
+**Las dos expectativas que declaré antes de correr se cumplieron:** 0 vacíos por techo en
+`gpt-oss-20b` y cero `413` (ítem 1), y el log registrando el canal entero —`n_mensajes: 59`,
+`n_mensajes_segun: "channel_messages.jsonl"`, con los 59 textos adentro y `mensajes_por_MCP: 20`
+al lado— (ítem 2). La tercera, la de Gemini, **estaba equivocada**: ver la entrada del ítem 3.
+
+### Tres primeras veces
+
+1. **`calibrate` separó: `state: "calibrado"`**, con `D_CKM_THRESHOLD = 0.00571` y
+   `FRAC_REC_MIN = 0.99488`. Y separó **por donde el ítem 4 predijo**: `N_eff(λ=1) = 2.436944072133545`
+   es una constante de N=20 y la seed (idéntica a 15 dígitos en tres mediciones independientes), y
+   la condición escrita era *"mientras `N_eff(W) < 2.4369` el margen es negativo por
+   construcción"*. Acá `N_eff(W) = 2.4621 > 2.4369` por primera vez.
+2. **El criterio estructural votó:** 26 `volumen` y **1 `estructural`** en 27 decisiones (en el
+   intento 2 fue 29/29 volumen). La dominancia del volumen sigue, pero ya no es total.
+3. **COCO corrió con umbrales calibrados** en las últimas 3 de sus 27 evaluaciones
+   (`source: "calibrate"`, `calibrated: true`).
+
+### El resultado más fuerte, y es aritmética
+
+Las 27 evaluaciones: filas 0–23 con el umbral **default 0.40** (COCO de −0.2796 a **+0.0465**,
+zona `stable`), filas 24–26 con el **calibrado 0.00571** (0.0, −0.0202, −0.0202, `stable`). No hay
+contradicción: la comparación es **con signo**.
+
+**El contrafáctico:** con los umbrales calibrados activos en las filas 1–3, el `D_ckm` de COCO
+(0.0329 / 0.0438 / 0.0465) habría sido **5,8× / 7,7× / 8,1× el umbral**, y `frac_rec`
+(0.9761 / 0.9682 / 0.9663) **por debajo** de 0.99488. **Esas tres filas no habrían sido
+`stable`.** Es decir: **los `triggers: 0` de los dos intentos son una propiedad del default sin
+calibrar, no del campo.**
+
+### Los dos `D_ckm`, ahora separados (corrección de delamor)
+
+| | intento 2 (51) | intento 3 (27) |
+|---|---|---|
+| Monitor | [−0.0861, +0.0093] | **[−0.0202, +0.2335]** |
+| COCO | [−0.1710, +0.0093] | **[−0.2796, +0.0465]** |
+| filas distintas | 30 de 51 | **24 de 27** |
+
+El REG del intento 2 reportó **uno solo** y eso era ambiguo. La firma lleva el de **Monitor**
+(`firma_ckm.py:116`); el que va contra el umbral es el de **COCO** (`coco.py:294`). Dos baselines:
+`W_eff` que se resetea con cada W, contra **W sola** que se refija al renacer el ciclo.
+
+### Un hueco nuevo: carrera en el cierre
+
+El log dice `n_mensajes: 59` / `corpus_size: 55`; los archivos tienen **60 líneas y 56 textos**. El
+driver lee el registro **antes** de que aterrice el último mensaje (`msg-59`, publicado a las
+06:28:17 durante el cierre). Los dos números son correctos en su momento y **ninguno es el final**.
+El del archivo sí.
+
+**Y ese último mensaje fue `'.'`** — un carácter, que pasa el filtro y entra al corpus, igual que
+el `'2'` del intento 1.
+
+### No pude revisar
+
+- **Por qué 56 textos y no 80.** Los OP_SILENCE subieron (38/54/43 contra 21/1/20) y los INTERACT
+  bajaron (55 contra 88). Qué parte es del techo, qué del `reasoning_effort`, qué del modelo de B y
+  qué varianza, **no se separa con n = 1 por lado**.
+- **El `LEAVE` de `device_d` en su vuelta 2** (en el intento 2 fue en la 8). Sin error, por
+  decisión propia. Es del modelo.
+- **La respuesta de 374 caracteres** de device C en el gate: **no** fue truncamiento (hubo 0), así
+  que es otra causa y queda abierta.
+- **Duplicación/convergencia del contenido:** el instrumento propio es `activos_relajado`, no el
+  ojo ni el `sha256`. Ofrecido a delamor, **no corrido**.
+- Los `test_caso_*` siguen siendo **punto ciego**: no los colecta pytest.
+
+**A1.PAUSA general: la tarea autónoma del 22 oct está cerrada en sus 6 ítems.**

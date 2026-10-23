@@ -42,6 +42,17 @@ Palabras clave *(delamor)*: **subgrafo inducido · perspectiva · ajuste de peso
 - **Informe v4:** la numeración se corre (R08 = desde adentro, R09 = lo que la situación pide). R13: "lo que emerge en el cruce no pertenece a ninguna — es nodo del campo, no del grafo". "R09 permanece sin modelo — es la pieza faltante más crítica del diseño."
 - **Sciamarella §2.3:** "una perspectiva VP es el Máximo Subgrafo Inducido por los nodos disponibles (propuesta R09)".
 
+## 2b. REG anterior — `registers/REG_sesion_perspectivas_rp2_ff_v7.md` (mayo 2026)
+
+**Corrección de Opus (A3):** este borrador se escribió sin haber leído ese REG. Lo que dice ahí:
+- **Unión G[A∪B]:** "Ambas perspectivas activas simultáneamente. Produce atractor propio con c(S) > perspectivas puras. **G[A∪B] ≠ G[A] + G[B]**", marcada como **verificada (Escenario 3, v11)**.
+- **Intersección A∩B:** los nodos bisagra, implementada. **Contacto R13:** definido. **Divergencia R10/R11:** definida. **Dos umbrales R13:** definidos.
+- Marcadas como no definidas: la composición secuencial, la métrica entre VPs y la operación inversa del contacto.
+- La dirección RP² (VP como punto; join p_A ∨ p_B como candidato para G[A∪B]) aparece como "dirección, no correspondencia probada".
+- Ese REG **no dice cuándo** se ajustan los pesos desde adentro.
+
+Pendiente: leer el Escenario 3 (v11) en la fuente y saber con qué código se verificó.
+
 ## 3. Forma *(matemática estándar)*
 
 Perspectiva A ⊆ V. Su grafo es el **subgrafo inducido** G[A]: los nodos de A con todas las W_ij entre ellos.
@@ -57,7 +68,7 @@ La unión de los grafos no es el grafo de la unión: le falta el corte. En CKM, 
 
 | Lo formulado | En el código |
 |---|---|
-| Perspectiva como subgrafo inducido | No existe |
+| Perspectiva como subgrafo inducido | No está en `services/`. El REG de mayo marca la unión como verificada en el Escenario 3 (v11), con un código que todavía no ubiqué. |
 | Lo que la situación pide (la perspectiva activa) | No existe |
 | Red de verificación continua | No existe |
 | Ajuste desde adentro, dentro de una W | Lo más cercano es `Δ_r_pares`: W_eff = W + Δ_r, con lo que la relajación rechaza. No tiene perspectiva y **se pone en cero cuando cambia W**. |

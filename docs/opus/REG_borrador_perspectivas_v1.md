@@ -53,6 +53,8 @@ Palabras clave *(delamor)*: **subgrafo inducido · perspectiva · ajuste de peso
 
 Pendiente: leer el Escenario 3 (v11) en la fuente y saber con qué código se verificó.
 
+**delamor, 23 oct, sobre los nodos bisagra: "ESO ESO es."**
+
 ## 3. Forma *(matemática estándar)*
 
 Perspectiva A ⊆ V. Su grafo es el **subgrafo inducido** G[A]: los nodos de A con todas las W_ij entre ellos.

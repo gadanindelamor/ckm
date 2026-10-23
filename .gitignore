@@ -73,3 +73,6 @@ Thumbs.db
 
 # Replay de sesiones — contiene conversación personal (TASK_replay_sesion_trust_v2_code_paso1_v3)
 process/replay/_private/
+
+# Derivados de datasets de terceros (IAC fourforums W_v8n, etc.) — no van a git (delamor, 23 oct 2026)
+process/datasets_private/

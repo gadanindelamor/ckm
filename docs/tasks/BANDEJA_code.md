@@ -13577,3 +13577,23 @@ el `'2'` del intento 1.
 - Código para `ckmdatasets` (no es de este repo; las copias quedan en `docs/opus/ckmdatasets/`): `fourforums_pipeline_v8i.py` (v8h intacta + todos los pares, matriz A con NaN, conteos) y `fourforums_pipeline_v8j.py` (v8i + J1 nombres + J2 unsure). Se corre en el Codespace de ckmdatasets y se devuelven `out/run_v8i.log` y `out/run_v8j.log`.
 - Hallazgo para revisar: en `REG_qr_asymmetry` / `REG_c6c_asim`, "T0_quotes_T1" se lee "T0 cita T1", y por la nomenclatura de v8h (`delta_t_wobs_v1.py`) T0 es el citado. No se tocó ningún REG viejo.
 - Este repo: nada de código tocado.
+
+
+---
+
+## PREDICCIÓN — 2026-10-23 22:06 UTC · TAREA 7: medir las W de fourforums (v8n)
+
+*Code (Claude Opus 5.5, Codespace `ckmdatasets` con `ckm` clonado en `/workspaces/ckm`). Escrita ANTES de correr cualquier dinámica. Sólo miré: los sha256 (8/8 OK), grados y media de pesos positivos de W_obs y W_presence.*
+
+**Lo que no es predicción sino teorema / aritmética (no se "espera", se sabe):**
+- W simétrica, diagonal 0, actualización síncrona → toda órbita tiene período 1 o 2 (Goles–Olivos). Período > 2: 0 en las ocho.
+- relax(−σ) = −relax(σ): las órbitas vienen en pares ±.
+- `beta_c_landscape` = 1/(0.5·N·mean(W>0)) es aritmética, no depende de n_runs ni seed. W_obs: mean pos 0.2596 → β_c ≈ 0.0528. W_sign: mean pos = 1 → β_c = 1/73 ≈ 0.01370. W_presence: mean pos 0.02058 → β_c ≈ 0.666. W_null_s*: distinto en cada una (los signos se permutan, las magnitudes quedan por arista, así que cambia qué magnitudes son positivas).
+
+**Predicción (dinámica, n_runs ∈ {1000, 5000, 20000}, muestreo uniforme por defecto de `basin_masses`):**
+- **W_presence** (todo ≥ 0, ferromagnética, conexa, 36 nodos de grado 1): pocas órbitas, masa dominada por las dos de consenso (todo +1 / todo −1) y algunas mixtas. N_eff chico (del orden de 2–10) y **convergente** entre n_runs. Habrá período 2 (la actualización síncrona oscila en bordes bipartitos aun con pesos positivos), en fracción baja-moderada. Masa de la órbita mayor alta (≥ 0.2).
+- **W_obs** (297 −, 75 +, 11 en 0; 168/354 triángulos frustrados; grado mediano 3, 39 hojas): paisaje vidrioso. Muchas órbitas distintas, que **crecen con n_runs** (no saturan en 20000). N_eff grande y **no convergente**: del orden de una fracción apreciable de n_runs. Masa de la órbita mayor chica (≤ 0.05). Fracción de período 2 alta (> 0.5): dominan las negativas, y en síncrono lo antiferromagnético oscila.
+- **W_sign**: como W_obs en orden de magnitud. Sin magnitudes aparecen más campos locales h = 0 exactos (empates que congelan el nodo), así que espero algo distinto, sin dirección que pueda afirmar.
+- **W_null_s1..s5**: mismo régimen que W_obs (vidrioso, no convergente, período 2 alto). Las cinco cerca entre sí. W_obs tiene menos triángulos frustrados que el nulo L3 (168 vs 194 ± 12.6), y si eso pesa en el instrumento esperaría para W_obs un N_eff algo menor y una masa mayor algo más alta que las nulas. **Confianza baja** en esa dirección: puede caer dentro de la dispersión de las cinco.
+
+**Lo que no sé predecir:** si W_obs se distingue de las nulas en alguna medida con estos n_runs; el valor de la fracción de período 2 en W_presence.

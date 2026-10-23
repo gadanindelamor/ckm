@@ -46,6 +46,7 @@ Pendiente escrito por esos REGs: *"Construir W[N×N] orientada desde top_pairs�
 
 - **El dump tiene copia en la PC**, en `ckmdatasets_old/trace/` (`.sql` y `.gz`), ignorada por git (`*.sql`) y sin versionar. El "existe solo en el Codespace" del REG de la tarea 1 y de Opus era incorrecto.
 - **`W_asim_v8h.json` está versionado en `ckmdatasets`** con ids de autor por par. Es un derivado por fila, y según la clasificación del 15 oct quizás no corresponda. Lo decide delamor.
+- **El protocolo no se replica en `ckmdatasets`** (delamor: replicarlo complica). Ese repo queda para código, logs y su REG de corrida. Los registros van en `ckm`.
 
 ## 5. Pendiente
 

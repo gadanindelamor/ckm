@@ -13597,3 +13597,23 @@ el `'2'` del intento 1.
 - **W_null_s1..s5**: mismo régimen que W_obs (vidrioso, no convergente, período 2 alto). Las cinco cerca entre sí. W_obs tiene menos triángulos frustrados que el nulo L3 (168 vs 194 ± 12.6), y si eso pesa en el instrumento esperaría para W_obs un N_eff algo menor y una masa mayor algo más alta que las nulas. **Confianza baja** en esa dirección: puede caer dentro de la dispersión de las cinco.
 
 **Lo que no sé predecir:** si W_obs se distingue de las nulas en alguna medida con estos n_runs; el valor de la fracción de período 2 en W_presence.
+
+
+---
+
+## RESULTADO — 2026-10-23 · TAREA 7: W fourforums v8n medidas
+
+*Code. Detalle en `registers/REG_ckm_W_fourforums_v8n_2026-10-23.md`; números en `process/datasets_private/fourforums_W_v8n/resultados_medir_W_fourforums_v8n.json` (fuera de git).*
+
+- sha256 8/8 OK. Masas idénticas a `basin_masses` en 24/24. Ninguna corrida agotó `max_iter`. Período > 2: ninguno (teorema).
+- **W_obs, W_sign, W_null_s1..s5:** N_eff = órbitas distintas = n_runs en 1000, 5000 y 20000. Masa de la órbita mayor = 1/n_runs. Período 2: 1.0 (W_sign: 0.9992 con 20000, aparecen algunos puntos fijos). El instrumento está en el techo en las siete.
+- **W_presence:** N_eff 826 → 2243 → 3721; órbitas 934 → 4257 → 15605; período 2 por masa 0.963 → 0.966 → 0.971; masa mayor 0.0060 → 0.0058 → 0.0046.
+- **β_c_landscape:** W_obs 0.05276, W_sign 0.01370, W_presence 0.6655, nulas 0.0409–0.0455.
+
+**Contraste con la predicción (22:06 UTC):**
+- W_obs / W_sign / nulas, "no convergente, período 2 > 0.5, masa mayor ≤ 0.05": acerté la dirección. Me quedé corto en la magnitud: es el techo exacto (cada muestra, una órbita), no "una fracción apreciable de n_runs".
+- "W_obs con N_eff algo menor que las nulas": no se observa. Las seis coinciden en el techo; con estas medidas no se puede distinguir.
+- W_presence, "N_eff 2–10, convergente, masa mayor ≥ 0.2, período 2 bajo-moderado": **errada en todo**. N_eff crece con n_runs hasta 3721, masa mayor 0.005 y período 2 ≈ 0.97.
+- β_c: los valores coinciden con lo calculado antes. Era aritmética.
+
+A1.PAUSA: delamor decide.

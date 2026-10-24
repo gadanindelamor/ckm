@@ -74,8 +74,21 @@ propuesta cambia de opción.
 >
 > **Para que B funcione haría falta** que el camino de la decisión pueda
 > disparar **cuando el corpus cruza `min_texts` y todavía no hay W**,
-> independiente del volumen: una **causa nueva**. Eso es nomenclatura nueva y
-> **E3**, así que es de delamor y no se decide acá.
+> independiente del volumen: una **causa nueva**.
+>
+> **delamor aprobó la nomenclatura el 24 oct** (*"apruebo nomenclatura que
+> defina Code si y sólo si es en inglés"*), así que **B quedó implementada con
+> la cuarta causa**: `CAUSA_FIRST_W = "first_w"`, primera en la jerarquía, que
+> vota **sólo mientras no hay W**. El rótulo va en inglés por la regla; el
+> prefijo `CAUSA_` no es nuevo (es la familia que ya existe en 28 lugares), y
+> el costo declarado es que el campo `causa` queda con **tres valores en
+> castellano y uno en inglés**.
+>
+> **El atajo que se descartó:** agregarle un `or self._corpus.w_sha() is None`
+> al criterio de volumen. No pedía nombres nuevos, y escribía
+> `causa: "volumen"` para algo que no es volumen — **el registro mintiendo
+> sobre su propia razón**, en la misma línea donde el ítem 4 ya había
+> encontrado que falta el contador que decide.
 >
 > Lo de abajo queda como estaba escrito, para que se vea qué se creyó.
 

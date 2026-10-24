@@ -111,7 +111,7 @@ if str(_SERVICES_DIR) not in sys.path:
     sys.path.insert(0, str(_SERVICES_DIR))
 
 from behavior_graph import BehaviorGraph  # noqa: E402
-from ckm_landscape_config import CKMlandscapeConfig  # noqa: E402
+from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
@@ -137,6 +137,42 @@ CAUSA_ESTRUCTURAL = "estructural"
 CAUSA_VOLUMEN = "volumen"
 CAUSA_TIEMPO = "tiempo"
 
+# **La cuarta causa: el nacimiento de W** (24 oct 2026, CP1 de
+# `TASK_calibrate_en_el_build_v1`, con el OK de delamor).
+#
+# **Por qué hace falta.** `ingest()` construía la primera W, y esa W **no
+# pasaba por el punto de calibración** —que vive en el bloque de la decisión—,
+# así que el COCO del primer ciclo arrancaba siempre con los defaults, por
+# construcción y no por el corpus: su `calibration.estado` era `None`, ni
+# siquiera `nulo_calibrado`. 11 de 51 evaluaciones del intento 2 y 4 de 27 del
+# 3 (`docs/REG_borrador_calibrate_no_corre_en_el_build.md`).
+#
+# **Por qué una causa y no un `or` en el volumen.** El primer intento fue
+# sacarle a `ingest` el permiso y dejar que votara el volumen; la suite lo
+# tumbó con 30 failed, porque el volumen pide
+# `_textos_desde_rebuild >= rebuild_every` y donde `min_texts < rebuild_every`
+# W nacía tarde o no nacía. Y el atajo —un `or` en el volumen— habría escrito
+# `causa: "volumen"` para algo que no es volumen: **el registro mintiendo
+# sobre su propia razón**, en la misma línea donde el ítem 4 encontró que
+# falta el contador que decide.
+#
+# **Y no hay nomenclatura nueva: el nombre ya existe.** `CAUSA_BOOTSTRAP =
+# "bootstrap"` es de `ckm_landscape_config` (`:52`) y es con lo que **Monitor
+# ya abre el primer ciclo** (ver el comentario de `_landscape_config`, más
+# abajo). El rebuild que crea la primera W **es ese mismo evento**, así que
+# llamarlo de otra manera —`"first_w"`, que es lo que esta línea decía en su
+# primera versión— habría sido **un segundo nombre para una cosa que ya tiene
+# uno**. Lo señaló delamor con una palabra: *"LandscapeConfig"*.
+#
+# Con esto los dos registros concuerdan: la línea de `rebuild_decisions.jsonl`
+# y el ciclo de la Config dicen **el mismo** `"bootstrap"` para el mismo
+# momento. Y la regla de delamor —*"nomenclatura nueva sólo en inglés"*— no
+# necesita aplicarse: no hay nomenclatura nueva.
+#
+# **Vota sólo mientras no hay W**, y va **primera** en la jerarquía: no compite
+# con las otras tres, es la única que puede aplicar cuando todavía no hay W
+# contra qué medir un gradiente ni un ciclo.
+
 # **Qué criterios VOTAN.** El default son los tres, que es el comportamiento de
 # hoy: el `criterios_rebuild` del constructor no cambia nada si no se pasa.
 #
@@ -150,7 +186,8 @@ CAUSA_TIEMPO = "tiempo"
 # criterio, lo vuelve dominante. Eso además convierte la ausencia en un valor
 # (I2). Así que "peso nulo" se implementa **sacando al criterio de la votación**,
 # no bajándole el umbral.
-CRITERIOS_POR_DEFAULT = (CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN, CAUSA_TIEMPO)
+CRITERIOS_POR_DEFAULT = (CAUSA_BOOTSTRAP, CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN,
+                         CAUSA_TIEMPO)
 
 # ───────────────────────────────────────────────────────────────────────────
 # Serie 2 del canal IAP — la identificación y los parámetros de la tabla
@@ -383,29 +420,22 @@ class CKMMonitor:
                 # de la Serie 2). La cantidad la mira `CorpusService` con su
                 # `min_texts`; cuántos devices hay sólo lo sabe el canal.
                 #
-                # **Acá se probó `allow_first_W=False` el 24 oct 2026 (CP1 de
-                # `TASK_calibrate_en_el_build_v1`) y se revirtió el mismo
-                # día.** La idea era que `ingest` no construyera ninguna W,
-                # para que la primera naciera por el camino de la decisión y
-                # pasara por `calibrate`. **La suite lo tumbó: 30 failed, 6
-                # errors.**
+                # **`ingest` acumula y no construye ninguna W, ni la
+                # primera** (CP1, 24 oct 2026). La primera nace por el camino
+                # de la decisión, con la causa `first_w`, y por eso **pasa por
+                # `calibrate`** como todas las demás.
                 #
-                # El motivo, medido: el bloque de la decisión construye la
-                # primera W **sólo si algún criterio vota**, y el de volumen
-                # pide `_textos_desde_rebuild >= rebuild_every`. En el vivo
-                # eso se cumple —`min_texts = 30` contra `rebuild_every = 10`,
-                # el contador ya pasó 10 cuando el corpus llega a 30—, pero
-                # **en las configuraciones donde `min_texts < rebuild_every`
-                # W nace más tarde o no nace**, y media suite usa
-                # `min_texts = 3` o `5`.
+                # **La condición de los ≥ 2 devices no se pierde:** sigue
+                # gobernando donde decide, en `no_rebuild_reason(allow_first_w)`
+                # unas líneas más abajo.
                 #
-                # Así que `ingest` **no es sólo una segunda puerta: es la que
-                # hace que W nazca cuando el corpus alcanza su umbral,
-                # independientemente del ritmo del rebuild.** Eso no estaba en
-                # la TASK y es lo que la suite agregó.
-                allow_first_W=(
-                    len(self._devices_seen) >= self._min_devices_first_w
-                ),
+                # El primer intento de este cambio **dejó que votara el
+                # volumen** y la suite lo tumbó (30 failed): el volumen pide
+                # `_textos_desde_rebuild >= rebuild_every`, y donde
+                # `min_texts < rebuild_every` W nacía tarde o no nacía. Por eso
+                # la causa `first_w` existe: **el nacimiento de W no puede
+                # quedar acoplado al ritmo del rebuild.**
+                allow_first_W=False,
             )
         sha_after = self._corpus.w_sha()
 
@@ -465,7 +495,27 @@ class CKMMonitor:
         # Cada criterio vota **sólo si está en `_criterios_rebuild`**. La
         # jerarquía no cambia: el orden de los `elif` es el mismo.
         vota = self._criterios_rebuild
-        if (CAUSA_ESTRUCTURAL in vota
+        if CAUSA_BOOTSTRAP in vota and self._corpus.w_sha() is None:
+            # **Mientras no hay W, la única causa que puede aplicar.** Los
+            # otros tres miden sobre una W que todavía no existe: el gradiente
+            # no tiene serie, y los contadores de volumen y tiempo cuentan
+            # desde un rebuild que nunca ocurrió. Por eso ésta va primera: no
+            # compite, es la única que puede nombrar el origen.
+            #
+            # **Vota y deja que `no_rebuild_reason` la bloquee**, igual que
+            # los otros tres: de ahí salen las líneas `ocurrio: false` con su
+            # motivo (24 de ellas en el intento 2). Lo que cambia es que esas
+            # líneas pasan a decir `bootstrap` —*"se consideró construir la
+            # primera W y todavía no"*— en vez de `volumen`, que era el
+            # nombre equivocado para ese tramo.
+            #
+            # Se probó condicionar el voto a que el nacimiento ya pudiera
+            # ocurrir, para no escribir esas líneas. **Bajó el ruido y no
+            # arregló lo que importaba** (13 tests seguían rojos), y además
+            # hacía que esta causa se comportara distinto de las otras tres.
+            # Se sacó.
+            self._last_rebuild_causa = CAUSA_BOOTSTRAP
+        elif (CAUSA_ESTRUCTURAL in vota
                 and self._corpus.should_rebuild(self._d_ckm_history, n=3)):
             self._last_rebuild_causa = CAUSA_ESTRUCTURAL
         elif (CAUSA_VOLUMEN in vota

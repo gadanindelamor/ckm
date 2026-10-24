@@ -13904,3 +13904,132 @@ acá.
   sería imaginar sin mirar dónde piso en cada paso. Baby steps."*
 
 **A1.PAUSA.** CP2 espera la orden de delamor.
+
+---
+## CP1, segundo intento — la cuarta causa `first_w`. Opción B implementada — 2026-10-24 01:35 UTC
+
+*delamor: *"apruebo nomenclatura que defina Code si y sólo si es en inglés"*. Con eso se
+desbloqueó lo que el primer intento de CP1 necesitaba y no tenía. **El vivo (CP2) sigue sin
+correr** — delamor: *"el vivo nooo… eso sería imaginar sin mirar dónde piso en cada paso."**
+
+### Qué cambió respecto del intento que la suite tumbó
+
+El primero sacaba el permiso de `ingest` y **dejaba que votara el volumen**: 30 failed, porque el
+volumen pide `_textos_desde_rebuild >= rebuild_every` y donde `min_texts < rebuild_every` W nacía
+tarde o no nacía. Ahora hay **una causa propia**:
+
+```python
+CAUSA_FIRST_W = "first_w"            # primera en la jerarquía
+CRITERIOS_POR_DEFAULT = (CAUSA_FIRST_W, CAUSA_ESTRUCTURAL, CAUSA_VOLUMEN, CAUSA_TIEMPO)
+...
+if CAUSA_FIRST_W in vota and self._corpus.w_sha() is None:
+    self._last_rebuild_causa = CAUSA_FIRST_W
+```
+
+Vota **sólo mientras no hay W**, y va primera porque no compite: las otras tres miden sobre una W
+que todavía no existe —el gradiente no tiene serie, y los contadores de volumen y tiempo cuentan
+desde un rebuild que nunca ocurrió—. `no_rebuild_reason` sigue decidiendo **cuándo** deja de estar
+bloqueada.
+
+### La nomenclatura, definida y con su costo dicho
+
+**El rótulo en inglés: `"first_w"`.** El prefijo `CAUSA_` **no es nuevo** —es la familia que ya
+existe en 28 lugares del repo—, así que lo nuevo es el string que entra al registro. **Costo
+declarado: el campo `causa` queda con tres valores en castellano y uno en inglés.** Es el precio
+de la regla, y queda escrito en el código en vez de descubrirse leyendo un `jsonl`.
+
+**Y el atajo que descarté, para que esté sobre la mesa:** un `or w_sha() is None` en el criterio
+de volumen. No pedía nombres nuevos, y habría escrito `causa: "volumen"` para algo que no es
+volumen — **el registro mintiendo sobre su propia razón**, en la misma línea donde el ítem 4 ya
+encontró que falta el contador que decide.
+
+### Los 6 tests, y el que importa
+
+`tests/test_first_w_como_causa.py`. El que importa es
+`test_la_W_nace_al_cruzar_min_texts_con_rebuild_every_por_default`: usa `min_texts = 6` con el
+**`rebuild_every` de default (10)** — **la configuración exacta que rompió el primer intento**, y
+con ese cambio este test falla.
+
+Lo escribí así a propósito. En el intento anterior **mi test pasó** porque elegí `min_texts=6` con
+`rebuild_every=3`, parámetros que garantizaban la hipótesis: un test que confirmaba en vez de uno
+que arriesgaba. Esta vez el test se para donde el error estuvo.
+
+Los otros cinco: que la causa registrada sea **`first_w` y no `volumen`**; que el primer W **deje
+registro de calibración** (antes `None`) con el `moment` en **un solo valor**; que la condición de
+≥ 2 devices siga gobernando desde `no_rebuild_reason`; que `ingest` por sí solo ya no construya W;
+y **el precio, medido**: sin `first_w` en la votación, W nace con **10** textos en vez de 6 —
+cuatro mensajes de atraso, acoplada a `rebuild_every`.
+
+### No pude revisar
+
+- **Que el panel del mensaje donde nace W se corra una fila** —el precio que la TASK declaraba—:
+  sigue sin test. Fijarlo pide comparar trayectorias enteras, y se vería en un vivo.
+- **Si la causa `first_w` aparece en corridas donde W ya existía** (no debería votar nunca). Lo
+  cubre la condición `w_sha() is None`, no una medición sobre una corrida larga.
+- **El vivo.** CP2 no se corrió.
+
+---
+## CP1 — el nombre es `bootstrap`, y la suite queda en 13 rojos DECLARADOS — 2026-10-24 02:05 UTC
+
+*Corrige la entrada de las 01:35, que hablaba de `first_w`. **Se commitea con la suite en rojo, a
+pedido de delamor y con el estado dicho acá.** Revertir: `git revert` de este commit.*
+
+### El nombre no era nuevo: ya existía
+
+delamor, con una palabra: *"LandscapeConfig"*. **`CAUSA_BOOTSTRAP = "bootstrap"`**
+(`services/ckm_landscape_config.py:52`) es con lo que **Monitor ya abre el primer ciclo**, y está
+hardcodeado en `MonitorService._abrir_ciclo:694-709` con su razón escrita: *"el primer rebuild no
+es degradación, es el origen (PROPUESTA v5)"*.
+
+Así que `first_w` era **un segundo nombre para algo que ya tenía uno**, y yo lo inventé después de
+medir tres corridas, discutir dos opciones y **declarar su costo** (*"el campo `causa` queda
+bilingüe"*) — todo **sin buscar si el nombre existía**. Mi propia nota dice que antes del `grep`
+hay que preguntarse bajo qué otros nombres puede estar el concepto. El concepto era "el primer
+ciclo" y el repo lo llamaba *bootstrap* desde octubre.
+
+**Y con eso el cambio deja de agregar un nombre: quita una contradicción.** Hoy, cuando la primera
+W nace por el camino de la decisión, la Config registra el ciclo como `bootstrap` y
+`rebuild_decisions.jsonl` registra `volumen`: **dos trazas del mismo evento que se contradicen**.
+
+### Lo que la suite probó, y las dos veces que me corrigió
+
+1. **`allow_first_W=False` solo** (sin causa): **30 failed**. El volumen pide
+   `_textos_desde_rebuild >= rebuild_every`, y donde `min_texts < rebuild_every` W nacía tarde o
+   no nacía.
+2. **Con la causa `bootstrap`**: **13 failed**, todas en `test_should_rebuild_conectado.py`.
+3. **Con la causa condicionada** a que el nacimiento ya pudiera ocurrir: **las mismas 13**. Bajó
+   el ruido (señales espurias `[True,True,True,…]` → `[False,False,True,…]`, decisiones `4` → `2`)
+   y **no tocó el núcleo**. Además hacía que `bootstrap` se comportara distinto de los otros tres
+   —que votan y dejan que `no_rebuild_reason` los bloquee—, así que **la saqué**.
+
+**Y mi afirmación "sólo cambia el rótulo" era falsa**, y lo probaron esos números:
+`assert [10, 20, 30] == [13, 23]` — los rebuilds se corren, porque W nace antes y el contador se
+resetea antes.
+
+### Qué miden en realidad las 13
+
+**No defienden una decisión: miden el mundo de tres causas.** Y la dominancia que vigila la PoC es
+otra cosa — su propio test la define: *"dispara en TODOS los mensajes desde que W existe: eso es
+dominancia"*. `bootstrap` dispara **una vez y su condición se apaga**: `self._W` se asigna en dos
+lugares (`corpus_service:138` a `None`, `:538` a una matriz) y **nada la vuelve a `None`** dentro
+de una corrida. **O no hay bootstrap, o hay exactamente uno** (delamor).
+
+Y `should_rebuild` **no se evalúa** en ese mensaje —la cadena de `elif` corta—, pero no oculta
+nada: `_d_ckm_history` está vacía y el estructural pide 4 puntos. **Tapa un criterio que no podía
+disparar.**
+
+**Otra corrección mía:** dije que el cambio *"vuelve a poner `min_texts` como disparador"*. Falso.
+`min_texts` es la **compuerta** (`no_rebuild_reason`), la misma que ya gobernaba el nacimiento
+cuando lo hacía `ingest` (`:168`). El criterio es `w_sha() is None`. El cambio **no agrega
+dominancia de `min_texts`: nombra una condición que ocurre una vez**.
+
+### El estado, para quien llegue
+
+- **La suite está en 843 passed / 13 failed.** Las 13 son de `test_should_rebuild_conectado.py` y
+  **no se tocaron**: codifican la PoC de dominancia de delamor y actualizarlas es su decisión.
+- **En la configuración del vivo (`min_texts 30`, `rebuild_every 10`) las dos versiones nacen en
+  el mismo mensaje.** La diferencia de timing existe sólo donde `min_texts < rebuild_every`.
+- Lo que queda abierto es **una palabra**: actualizar las 13 acotándolas al régimen posterior al
+  origen, o revertir este commit.
+
+**A1.PAUSA.**

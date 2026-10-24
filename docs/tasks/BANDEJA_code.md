@@ -14033,3 +14033,46 @@ dominancia de `min_texts`: nombra una condición que ocurre una vez**.
   origen, o revertir este commit.
 
 **A1.PAUSA.**
+
+---
+## CP1 revertido en el código, con la traza intacta. `main` vuelve a verde — 2026-10-24 02:20 UTC
+
+*delamor confirmó el revert después de preguntar algo que corrigió mi propia oferta.*
+
+### Lo que estaba mal en cómo lo ofrecí
+
+Ofrecí `git revert a7d065f` a secas. **Eso habría borrado la entrada de las 02:05 de esta
+bandeja** —la que explica las tres correcciones de la suite, el nombre que ya existía y qué miden
+las 13— y el registro en la TASK de que la opción B se probó y qué la refutó. La regla de esta
+bandeja es que las entradas **se agregan y no se quitan**: un revert pelado la viola.
+
+Lo encontró delamor preguntando *"¿nos deja en el punto de partida?"*. No era una pregunta
+retórica y la respuesta correcta era **no**, por dos razones distintas.
+
+### Lo que se hizo, entonces
+
+Revertidos **sólo los dos archivos de código** —`iap_chatroom/ckm_monitor.py` a su estado en
+`a7d065f~1`, y se retiró `tests/test_bootstrap_como_causa.py`—. **La BANDEJA y la TASK quedan
+como están.**
+
+### Dónde queda el repo, que no es el punto de partida
+
+El punto de partida de hoy era *"el build no calibra y nadie lo sabía"*. Queda:
+
+- **los tres docstrings corregidos** (`7477d0b`): el punto de `calibrate` ya no dice *"existe y no
+  hace nada"*, y `w_sha_vigente_al_calibrar` pasó a ser la clave que de verdad se escribe;
+- **el REG del CP0** (`8439be7`): las dos primeras W reconstruidas con **el mismo `sha` que el
+  vivo**, las dos `no_calibrado`;
+- **la TASK** con la opción B probada y refutada, y lo que haría falta para que funcione;
+- **la BANDEJA entera**, incluida la entrada de las 02:05 con el `bootstrap` que ya existía;
+- **el comportamiento, exactamente el de antes.**
+
+Y en `a7d065f` queda la implementación completa, en la historia, para volver a aplicarla el día
+que se decida actualizar las 13.
+
+### Lo que falta, que es una palabra
+
+Actualizar las 13 de `test_should_rebuild_conectado.py` acotándolas al régimen posterior al
+origen, o dejar el asunto archivado. **Es de delamor**: codifican su PoC de dominancia.
+
+**A1.PAUSA.** Se retoma en dos días.

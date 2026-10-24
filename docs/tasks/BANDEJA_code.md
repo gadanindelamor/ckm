@@ -13617,3 +13617,146 @@ el `'2'` del intento 1.
 - β_c: los valores coinciden con lo calculado antes. Era aritmética.
 
 A1.PAUSA: delamor decide.
+
+---
+## ARRANQUE — 2026-10-24 00:20 UTC
+
+*Claude Opus 5 (Code, Codespace `ckm`). Chequeo §2. Sesión nueva sobre dos días de trabajo de
+otras instancias (49 commits desde mi último, `8c84fac`).*
+
+### Revisé
+
+1. **Locks.** Ninguno. No borré nada.
+2. **`git pull --rebase origin main`** → *Already up to date*. `HEAD = origin/main = 30e0084`
+   (*docs(opus): decisiones — tarea 8 hecha*). El **push de los 13 commits de ckm** que el ESTADO
+   del 23 oct dejaba como abierto **ya está hecho**: local y remoto coinciden.
+3. **`git status`** → sin cambios sin commitear al arrancar. 62 no trackeados.
+4. **Estado.** `docs/opus/ESTADO_al_cortar_23oct2026.md` (el último) y el final de
+   `decisiones_en_el_acto.md`. El frente vivo es **fourforums / ckmdatasets** (cadena v8h→v8n,
+   siete W declaradas) y la **medición en ckm** ya corrida (`REG_ckm_W_fourforums_v8n_2026-10-23`,
+   `498f8dc`): con N = 146 y relajación síncrona **el instrumento está en el techo**
+   (`N_eff = n_runs`) y no separa W_obs de los nulos.
+5. **Las preguntas abiertas (§8).** Una por una:
+   - **P12 — respondida y ejecutada** (`decisiones_en_el_acto.md:100-102`, `67e340a`).
+   - **P13 — ABIERTA.** Nombrada como *"pendiente de delamor"* en
+     `decisiones_en_el_acto.md:131`, sin respuesta que la cierre. **Default vigente, sin
+     decisión:** la línea suelta en `iap_chatroom/_state/channel_ticks.jsonl` sigue sin tocarse —
+     y **creció de 150 a 300 bytes** (2 líneas), porque la segunda corrida con `-n 4` agregó otra.
+     Sigue `??`, no entra a git, y los archivos de agosto siguen intactos.
+   - **P14 — ABIERTA y sin registrar en ninguna parte.** No aparece en `DECISIONES_opus.md` ni en
+     `decisiones_en_el_acto.md`. Es el caso que el §8 nombra como *"el default tácito"*: hay
+     pregunta, no hay respuesta, y el default **quedaría como decisión sin que nadie la haya
+     tomado**. La arrastro acá: **P14 — DEFAULT VIGENTE, SIN DECISIÓN** (el guardia de *"sin
+     lógica en los drivers"* afinado para distinguir **leer** de **escribir**; reversible en una
+     línea).
+6. **Archivos de salida de la última corrida** (el intento 3).
+   `serie2_caso0_intento3_log.json` parsea entero, `segundos_reales = 1204.61`,
+   `errores_fatales: 0`. Los 10 archivos del `state_dir`: **la última línea parsea en los siete
+   JSONL** (659, 60, 557, 659, 668, 27, 27 líneas). Ningún `.tmp` suelto. **El formato no tiene
+   marca de "terminó"**: el cierre se lee de `segundos_reales` y de `por_device`.
+7. **El REG del intento 3.** delamor aprobó hoy que pase de borrador a `registers/`. **Ya estaba
+   hecho**: Opus lo pasó el 23 oct con su OK (`fa24faf`, `9a8a926`) a
+   `registers/REG_iap_serie2_caso0_intento3_v1.md`.
+
+### Encontré
+
+1. **El REG estaba duplicado.** Opus lo **copió**, no lo movió, así que quedaron las dos:
+   `docs/REG_borrador_serie2_caso0_intento3.md` (185 líneas) y la de `registers/` (184). Verifiqué
+   con `diff` desde `- **Caso:**`: **el cuerpo es idéntico**, sólo cambia la cabecera (la de
+   `registers/` declara el OK de delamor y el path del borrador).
+   **Qué hice:** `git rm` del borrador en `docs/`. Es lo que *"pasa de borrador a register"*
+   significó en los intentos 1 y 2, que se movieron con `git mv` y no dejaron copia. **El
+   contenido no se pierde**: está idéntico en `registers/` y en la historia de git.
+   **No toqué el archivo de `registers/`** — es Clase R y lo escribió Opus.
+2. **Una tarea de la sesión anterior quedó detenida sin registro**: el loop que esperaba a que
+   muriera la medición de cuota de Gemini. No dejó salida y no hay nada que recuperar: la
+   medición que importaba ya estaba en la entrada del ítem 3.
+
+### No pude revisar
+
+1. **La suite.** No la corrí en este arranque: 49 commits de otras instancias entraron desde mi
+   último verde (850 passed en serie, 22 oct), y casi todo es `docs/opus/`. **No afirmo que esté
+   verde hoy.**
+2. **Los `test_caso_*`** de `iap_chatroom/tests/`: punto ciego de siempre, no los colecta pytest.
+3. **Lo de `ckmdatasets`**: es otro repo y otra instancia. Lo del ESTADO lo leí como contexto, no
+   como algo mío — que es exactamente el desliz que `decisiones_en_el_acto.md` nombra el 23 oct
+   (*"así se filtran los sesgos"*).
+4. **Si P13 y P14 tienen respuesta en algún lado que no sea el repo** (un chat, otra sesión). Lo
+   que puedo afirmar es que **en el repo no están**.
+
+**A1.PAUSA.** El próximo paso abierto que me toca, si delamor lo ordena, es el **review del v32**
+—el ESTADO lo deja *"desde el menú de Skills, en una sesión nueva"*— y hoy hay un skill de
+`cold-referee` disponible. No lo disparo sin orden.
+
+---
+## El build de W no calibra — REG borrador y TASK. A1.PAUSA — 2026-10-24 00:45 UTC
+
+*Pregunta de delamor: *"luego de la fase de acumulación a evaluación, ¿podés verificar si el build
+de W calibra tal como lo hace el rebuild?"*. **Verificación, no corrida: no se cambió nada.***
+
+### Revisé
+
+El código (`ckm_monitor.on_message`) y las trayectorias de las **dos** corridas vivas: el intento 3
+en `_state_S2-C0/` y el intento 2 preservado en `process/` (timestamp `1792649008`).
+
+### Encontré
+
+**1. No: el build de la primera W no calibra.** La primera W de cada corrida tiene
+`calibration.estado: None` — **ni siquiera `nulo_calibrado`**, que es el valor de *"no se
+ejecutó"*. No es que corriera y no separara: **nunca se la intentó**.
+
+| corrida | W | estado | causa | margen | `d_max` | λ | umbral de COCO |
+|---|---|---|---|---|---|---|---|
+| 2 | `6e666d09` **(build)** | **None** | — | — | — | — | default |
+| 2 | los 4 rebuilds | `no_calibrado` | `sin_separacion` | −0.27 a −0.25 | **0.0000** | **0.0** | default |
+| 3 | `7093ad0f` **(build)** | **None** | — | — | — | — | default |
+| 3 | `5d657507` | `no_calibrado` | `sin_separacion` | −0.2492 | 0.0280 | 0.25 | default |
+| 3 | `698d0f3f` | `no_calibrado` | `sin_separacion` | −0.0485 | 0.1760 | 0.25 | default |
+| 3 | `bdb98f5b` | **`calibrado`** | — | **+0.0114** | 0.2312 | 0.25 | **0.00571** |
+
+**El mecanismo:** `ingest()` construye la primera W (`:368`) **antes** del bloque de la decisión,
+y en ese mismo mensaje `_textos_desde_rebuild` se resetea a 0 (`:400`), así que el volumen no vota
+y el punto de `calibrate` (`:458-469`) no se alcanza. **Por construcción, el COCO del primer ciclo
+corre siempre con los defaults** — 11 de 51 evaluaciones en el intento 2, 4 de 27 en el 3.
+
+**2. Lo que le falta al REG del intento 2** (ya Clase R, así que la corrección es de delamor): no
+dice que el primer ciclo **no podía** calibrarse; no dice que en esa corrida los cuatro rebuilds
+dieron **`d_max = 0.0000` en λ = 0** —la curva nunca subió, que es más fuerte que "no separó"—; y
+no dice que los umbrales fueron `default` en **51 de 51**.
+
+**3. El número que cierra el contraste:** en el intento 3 el máximo interno del **primer** rebuild
+(0.0280) ya era **4,9× el umbral que finalmente se adoptó** (0.00571). La señal estaba desde el
+primer rebuild y la definición del margen —extremos solamente— la descartó tres veces.
+
+**4. Tres docstrings que no dicen lo que el código hace** (chequeados a pedido de delamor, *"no
+olvidar los docstrings al chequear"*). **Son de hoy y no dependen de la TASK:**
+
+- `ckm_monitor.py:82-83` y `:326` dicen que el punto de `calibrate` *"existe y **no hace nada**"*.
+  Corre desde el 19 oct y en el intento 3 **produjo los umbrales que COCO usó**.
+- `ckm_monitor.py:552` nombra la clave `w_sha_vigente_al_calibrar`; la que el código escribe
+  (`:573`) y la que está en los datos es **`w_sha_live_at_calibration`**.
+
+### Entregado
+
+- `docs/REG_borrador_calibrate_no_corre_en_el_build.md` — **borrador fuera de `registers/`**.
+- `docs/tasks/TASK_calibrate_en_el_build_v1.md` — **propuesta, no se ejecuta sin OK**. Es **E3**
+  (calibración), así que Code no decide. Propone la **opción A** (calibrar la primera W después de
+  que `ingest` la construye, con el `moment` declarando que para el primer ciclo es *después* de
+  instalar) y descarta la **B** (mover el build al bloque de la decisión: tocaría cuándo nace W).
+  **CP0 mide antes de pedir nada**, con predicción escrita; **CP0b** son los tres docstrings, que
+  se pueden cerrar sin decidir el resto.
+
+### No pude revisar
+
+- **Qué habría dado `calibrate` sobre la primera W**: nunca corrió. Es el CP0, y es medible
+  offline desde los textos preservados.
+- **La suite**: no la corrí en esta sesión (ver el ARRANQUE de las 00:20).
+
+### Y ejecuté una cosa, declarada
+
+El `git rm` del borrador duplicado del REG del intento 3. delamor aprobó que pasara de borrador a
+`registers/`, y **ya estaba ahí** desde el 23 oct (`fa24faf`): Opus lo **copió** en vez de moverlo.
+Verifiqué con `diff` que el cuerpo es **idéntico** y retiré la copia de `docs/`, que es lo que el
+movimiento significó en los intentos 1 y 2. **No toqué el de `registers/`**: es Clase R.
+
+**A1.PAUSA.** La TASK espera el OK de delamor; P13 y P14 siguen abiertas.

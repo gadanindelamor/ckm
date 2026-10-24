@@ -13816,3 +13816,91 @@ que la ve.
   También va al CP1, como test.
 
 **A1.PAUSA.** La TASK sigue esperando el OK; sigue siendo E3.
+
+---
+## TASK_calibrate_en_el_build — CP0 y CP0b cerrados; CP1 probado y REVERTIDO — 2026-10-24 01:10 UTC
+
+*delamor aprobó la TASK con los tests y la suite (chat, 24 oct). **Opus Cowork no está hoy**
+(límite de uso semanal), así que la aprobación vino de delamor directo y la traza de la decisión
+vive **acá**, no en `DECISIONES_opus.md`. **CP2 (el vivo) NO se corrió** — delamor: *"antes de
+ejecutar el caso"*.*
+
+### CP0 — la predicción se cumplió, y la reconstrucción resultó exacta
+
+La predicción estaba **commiteada antes de correr** (`8439be7`): *"las dos van a dar
+`no_calibrado` […] el primero debería estar por debajo de 0.0280 y el margen por debajo de
+−0.2492"*.
+
+| | primera W del intento 2 | primera W del intento 3 |
+|---|---|---|
+| textos / devices al nacer | 30 / 4 | 30 / 3 |
+| `sha` reconstruido | **`6e666d09`** | **`7093ad0f`** |
+| `sha` del vivo | `6e666d09` | `7093ad0f` |
+| estado | **`no_calibrado`** | **`no_calibrado`** |
+| causa | `sin_separacion` | `sin_separacion` |
+| margen | −0.267252 | −0.270535 |
+| `d_max` | **0.0000** en λ=0 | **0.0000** en λ=0 |
+| pares >0 / <0 / =0 | 306 / **14** / 60 | 296 / **14** / 70 |
+
+**La reconstrucción da el mismo `sha` que el vivo en las dos, así que no es una aproximación: es
+la misma W.** Y las dos partes de la predicción se cumplen: `no_calibrado`, `d_max` por debajo de
+0.0280 (es 0) y margen por debajo de −0.2492.
+
+**Lo que eso significa, y hay que decirlo antes que lo bueno:** el cambio del CP1 **no habría
+cambiado ninguna de las dos corridas**. El primer ciclo habría seguido con los defaults, porque
+`no_calibrado` no produce umbrales. **Lo que el cambio compra no son umbrales: es la diferencia
+entre "no separó" y "nunca se intentó".** Hoy esa diferencia no se podía leer — el registro decía
+`None` en los dos casos.
+
+Y un dato que el CP0 agrega: las dos primeras W tienen **14 pares negativos**, mientras la W
+final del intento 2 (n=80) tenía **0**. Los marcadores de oposición **disparaban al principio y
+dejaron de disparar**. No lo interpreto; queda medido.
+
+### CP0b — los tres docstrings, corregidos
+
+`ckm_monitor.py:82-88` y `:817-820` decían que el punto de `calibrate` *"existe y **no hace
+nada**"* (versión anterior del mecanismo; corre desde el 19 oct y en el intento 3 produjo los
+umbrales que COCO usó). `:552` nombraba la clave `w_sha_vigente_al_calibrar`; la que se escribe es
+`w_sha_live_at_calibration`. Los tres dicen ahora lo que el código hace, **y dicen qué decían
+antes**. Más el docstring de `_calibrate`, que ahora declara que **sólo lo llama el camino del
+rebuild** y la consecuencia medida.
+
+### CP1 — PROBADO Y REVERTIDO EL MISMO DÍA. La suite lo tumbó
+
+El cambio era `allow_first_W=False` en la llamada a `ingest`. **La suite dio 30 failed y 6
+errors.** Revertido; `ckm_monitor.py` vuelve a su expresión anterior y el test nuevo se retiró.
+
+**El motivo, medido:** el bloque de la decisión construye la primera W **sólo si algún criterio
+vota**, y el de volumen pide `_textos_desde_rebuild >= rebuild_every`. En el vivo eso se cumple
+—`min_texts = 30` contra `rebuild_every = 10`, el contador ya pasó 10 cuando el corpus llega a
+30—, pero **donde `min_texts < rebuild_every` W nace más tarde o no nace**, y media suite corre
+con `min_texts = 3` o `5`. Los fallos son todos de la misma familia: tests que publican N mensajes
+y esperan W (y por lo tanto COCO) — *"el fixture necesita COCO"*, `assert None is not None`.
+
+**Lo que esto le agrega a la TASK, y no estaba:** `ingest` **no es sólo una segunda puerta**. Es
+lo que hace que W nazca **cuando el corpus alcanza su umbral, independientemente del ritmo del
+rebuild**. Sacarla acopla el nacimiento de W al `rebuild_every`, que es otro parámetro y otra
+decisión.
+
+**Y una divergencia mía, que es la que importa.** Mi test
+`test_la_primera_W_nace_en_el_mismo_mensaje_que_antes` **pasó** — con `min_texts=6` y
+`rebuild_every=3`, parámetros que yo elegí y que **garantizaban** que la hipótesis se cumpliera.
+Construí un test que **confirmaba** en vez de uno que arriesgara: con los valores por defecto
+habría fallado en el primer intento. Es el mismo patrón que la TASK ya tenía —afirmar la opción B
+sin leer tres cosas— y acá se repitió **dentro del test que debía protegerme de eso**.
+
+**Qué haría falta para que B funcione** (propuesta, no hecha): que el camino de la decisión tenga
+una forma de disparar **cuando el corpus cruza `min_texts` y todavía no hay W**, independiente del
+volumen. Eso es **una causa nueva** —nomenclatura nueva y E3—, así que es de delamor y no entra
+acá.
+
+### No pude revisar
+
+- **Cuánto más tarde nacería W en cada configuración.** Medí que no nace en varias; no barrí el
+  mapa de `min_texts` contra `rebuild_every`.
+- **El precio que la TASK declaraba** —que el panel del mensaje donde nace W se corre una fila—
+  **quedó sin medir**: el cambio no llegó a correr en una configuración sana.
+- **El vivo.** CP2 no se corrió y no se va a correr sin orden. delamor, hoy: *"el vivo nooo… eso
+  sería imaginar sin mirar dónde piso en cada paso. Baby steps."*
+
+**A1.PAUSA.** CP2 espera la orden de delamor.

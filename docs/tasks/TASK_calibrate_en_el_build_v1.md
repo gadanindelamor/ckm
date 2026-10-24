@@ -58,7 +58,28 @@ propuesta cambia de opción.
 
 ## 3. Las dos opciones, con su costo
 
-### Opción B — que `ingest` no construya la primera W *(la que propongo)*
+### Opción B — que `ingest` no construya la primera W *(PROBADA Y REFUTADA, 24 oct)*
+
+> **CP1 la implementó y la suite la tumbó el mismo día: 30 failed, 6 errors.**
+> El bloque de la decisión construye la primera W **sólo si algún criterio
+> vota**, y el de volumen pide `_textos_desde_rebuild >= rebuild_every`. En el
+> vivo se cumple (`min_texts = 30` contra `rebuild_every = 10`), pero **donde
+> `min_texts < rebuild_every` W nace más tarde o no nace** — y media suite
+> corre con `min_texts = 3` o `5`.
+>
+> **Lo que la suite agregó y esta TASK no tenía:** `ingest` no es sólo una
+> segunda puerta. Es lo que hace que W nazca **cuando el corpus alcanza su
+> umbral, independientemente del ritmo del rebuild**. Sacarla **acopla el
+> nacimiento de W al `rebuild_every`**.
+>
+> **Para que B funcione haría falta** que el camino de la decisión pueda
+> disparar **cuando el corpus cruza `min_texts` y todavía no hay W**,
+> independiente del volumen: una **causa nueva**. Eso es nomenclatura nueva y
+> **E3**, así que es de delamor y no se decide acá.
+>
+> Lo de abajo queda como estaba escrito, para que se vea qué se creyó.
+
+
 
 Una línea en el sitio de llamada:
 

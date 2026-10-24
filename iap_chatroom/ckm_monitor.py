@@ -79,8 +79,15 @@ que vota.**
 
 **Lo que esta clase NO hace:** no toca `MonitorService`, la Config ni COCO.
 La invalidación de Δ_r en el cambio de W sigue siendo de Monitor (D2), y se
-lee en `panel["Delta_r_reset"]`. El punto donde iría `calibrate` existe,
-está marcado en el panel y **no hace nada** (`TASK_calibrate_mecanismo_v1`).
+lee en `panel["Delta_r_reset"]`.
+
+**`calibrate` corre desde el 19 oct** (delamor), sobre la W candidata y antes
+del rebuild: el punto dejó de ser un marcador vacío. En el intento 3 de
+`serie2_caso0` **produjo los umbrales que COCO usó** (`D_CKM_THRESHOLD =
+0.00571`, `FRAC_REC_MIN = 0.99488`, `source: "calibrate"` en 3 de 27
+evaluaciones). Acá decía *"existe y no hace nada"*, que era la versión
+anterior del mecanismo (`TASK_calibrate_mecanismo_v1`); corregido el 24 oct
+2026 al chequear los docstrings contra el código.
 
 Nota de integración con services/:
   - CorpusService.ingest(texts) es el método real de acumulación (no
@@ -323,7 +330,11 @@ class CKMMonitor:
         self._last_rebuild_causa: "str | None" = None
         # El último rebuild por decisión, o None si no hubo ninguno todavía.
         self._ultimo_rebuild: "dict | None" = None
-        # El lugar donde va `calibrate`. Existe y no hace nada: declarado.
+        # El registro de la última corrida de `calibrate`. **Corre**, desde el
+        # 19 oct: lo llena `_calibrate()` antes de cada rebuild. `None` hasta
+        # que haya habido uno — y por eso **el build de la primera W lo deja
+        # en `None`**: no pasa por ese punto (`REG_borrador_calibrate_no_corre
+        # _en_el_build.md`, 24 oct).
         self._punto_calibrate: "dict | None" = None
 
     @property
@@ -371,6 +382,27 @@ class CKMMonitor:
                 # **El primer W espera ≥ 30 mensajes de ≥ 2 devices** (tabla
                 # de la Serie 2). La cantidad la mira `CorpusService` con su
                 # `min_texts`; cuántos devices hay sólo lo sabe el canal.
+                #
+                # **Acá se probó `allow_first_W=False` el 24 oct 2026 (CP1 de
+                # `TASK_calibrate_en_el_build_v1`) y se revirtió el mismo
+                # día.** La idea era que `ingest` no construyera ninguna W,
+                # para que la primera naciera por el camino de la decisión y
+                # pasara por `calibrate`. **La suite lo tumbó: 30 failed, 6
+                # errors.**
+                #
+                # El motivo, medido: el bloque de la decisión construye la
+                # primera W **sólo si algún criterio vota**, y el de volumen
+                # pide `_textos_desde_rebuild >= rebuild_every`. En el vivo
+                # eso se cumple —`min_texts = 30` contra `rebuild_every = 10`,
+                # el contador ya pasó 10 cuando el corpus llega a 30—, pero
+                # **en las configuraciones donde `min_texts < rebuild_every`
+                # W nace más tarde o no nace**, y media suite usa
+                # `min_texts = 3` o `5`.
+                #
+                # Así que `ingest` **no es sólo una segunda puerta: es la que
+                # hace que W nazca cuando el corpus alcanza su umbral,
+                # independientemente del ritmo del rebuild.** Eso no estaba en
+                # la TASK y es lo que la suite agregó.
                 allow_first_W=(
                     len(self._devices_seen) >= self._min_devices_first_w
                 ),
@@ -549,8 +581,16 @@ class CKMMonitor:
         separa) o `nulo_calibrado` (no se ejecutó). Además lleva dos shas que
         son los que permiten ver el orden desde afuera: el de la **candidata**
         (`w_sha`) y el de la que estaba **viva al calibrar**
-        (`w_sha_vigente_al_calibrar`). Si fueran iguales habiendo cambiado W,
+        (`w_sha_live_at_calibration`). Si fueran iguales habiendo cambiado W,
         la calibración habría corrido después de instalar.
+
+        **Sólo lo llama el camino del rebuild** (`on_message`, el bloque de la
+        decisión). La primera W la construye `ingest()` antes de ese bloque,
+        así que **no pasa por acá** y el COCO del primer ciclo arranca con los
+        defaults. Medido en las dos corridas vivas: su `calibration.estado` es
+        `None` —ni siquiera `nulo_calibrado`—, 11 de 51 evaluaciones en el
+        intento 2 y 4 de 27 en el 3
+        (`docs/REG_borrador_calibrate_no_corre_en_el_build.md`).
 
         No instancia nada nuevo: usa `services/calibrate.py` donde está, y le
         pasa una copia que `calibrate` vuelve a copiar y no toca.
@@ -795,8 +835,10 @@ class CKMMonitor:
             "rebuild_senal": self._last_rebuild_signal,
             "rebuild_causa": self._last_rebuild_causa,
             "ultimo_rebuild_por_decision": self._ultimo_rebuild,
-            # El punto donde va `calibrate`: existe y no hace nada. Declarado
-            # en el panel para que no haya que buscarlo de nuevo.
+            # El registro de la última corrida de `calibrate`, en el panel
+            # para que no haya que buscarlo. **Corre** desde el 19 oct; acá
+            # decía "existe y no hace nada", de la versión anterior del
+            # mecanismo (corregido el 24 oct al chequear los docstrings).
             "punto_calibrate": self._punto_calibrate,
             # ── CP2b: dónde quedó la decisión, y qué se restauró ──────────
             "rebuild_decisions_path": str(self._decisiones_path),

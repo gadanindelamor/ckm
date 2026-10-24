@@ -1,7 +1,6 @@
-# REG (BORRADOR) — `calibrate` no corre en el build de la primera W
+# REG — `calibrate` no corre en el build de la primera W
 
-**Borrador. Fuera de `registers/` por la regla de Clase R: los REG nuevos se
-entregan como borrador y delamor decide si entran.**
+**Pasa a `registers/` con el OK de delamor (24 oct 2026: *"el REG pasa a register, Confirmo"*). Era `docs/REG_borrador_calibrate_no_corre_en_el_build.md` (Code, `8439be7`); movido con `git mv`, sin copia. El cuerpo no cambia.**
 
 - **Fecha:** 2026-10-24. **Medido por:** Code (Claude Opus 5), por pregunta de
   delamor: *"luego de la fase de acumulación a evaluación, ¿podés verificar si

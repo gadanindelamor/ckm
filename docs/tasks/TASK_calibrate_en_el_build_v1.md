@@ -26,55 +26,89 @@ con qué umbrales COCO lee el campo desde su primera evaluación**. En el
 intento 3, con umbrales calibrados, tres filas no habrían sido `stable`. Esto
 no es plomería.
 
-## 2. La asimetría, dicha antes de proponer nada
+## 2. La asimetría, y por qué resultó más chica de lo que escribí
 
 `calibrate` corre hoy **sobre la W candidata, antes de instalarla** (delamor,
 19 oct; `ckm_monitor:463-469`). **Para la primera W eso no se puede hacer sin
 mover de lugar el build**, porque la construye `ingest()` (`:368`) y cuando el
 bloque de la decisión se evalúa la W **ya está instalada**.
 
-O sea: cualquier propuesta elige entre
+**La primera versión de esta TASK decía que mover el build *"toca el límite
+`ingest`/rebuild… es el cambio más grande y puede mover cuándo nace W"*. Eso
+estaba mal**, y lo encontró una pregunta de delamor (*"mover el build, ¿es en
+el bloque de código unas líneas? ¿o qué implica?"*). Tres cosas que no había
+mirado:
 
-- **conservar el momento** ("antes de instalar") y **mover el build**, o
-- **conservar el build donde está** y **cambiar el momento** para el primer
-  ciclo ("después de instalar, antes de la primera evaluación").
+1. **Monitor construye el corpus con `rebuild_suspendido=True`** (`:243`). En
+   `ingest` (`corpus_service:168-172`) ese flag deja `_rebuild()` alcanzable
+   **sólo cuando `W is None`**: ingest construye **exactamente una** W, la
+   primera. Todas las demás **ya vienen** del bloque de la decisión.
+2. **El camino de la decisión ya sabe construir la primera.**
+   `no_rebuild_reason` (`corpus_service:385-399`) distingue
+   `corpus_en_acumulacion` de `primer_W_no_habilitado`, y
+   `rebuild_por_decision(causa, allow_first_W)` existe. **No hay maquinaria que
+   escribir: está.**
+3. **El volumen ya vota desde el mensaje 10**, porque `_textos_desde_rebuild`
+   nunca se reseteó —no hubo rebuild antes—. Así que en el mensaje donde el
+   corpus llega a 30 con ≥ 2 devices, `reason` pasa a `None` y el bloque
+   dispara **solo**, sin agregarle nada.
 
-No hay una tercera que preserve las dos cosas. Esto es lo que hay que decidir.
+Con eso, **la asimetría no hay que declararla: se puede eliminar**, y la
+propuesta cambia de opción.
 
 ## 3. Las dos opciones, con su costo
 
-### Opción A — calibrar la primera W **después** de que `ingest` la construye *(la que propongo)*
+### Opción B — que `ingest` no construya la primera W *(la que propongo)*
 
-Dónde: en `on_message`, en la rama `if sha_after != sha_before` (`:396`),
-**sólo cuando `sha_before is None`** —el build, no un rebuild— y **antes** de
-que corra `evaluate` (`:415`), que es quien arma el panel del que COCO toma
-sus umbrales.
+Una línea en el sitio de llamada:
 
-- **Qué conserva:** el build donde está, `ingest()` intacto, el camino del
-  rebuild intacto, el registro con la misma forma (`punto_calibrate` y
-  `coco.calibration`).
-- **Qué cambia, y hay que declararlo:** para el primer ciclo el momento es
-  **"después de instalar"**, no "antes". El registro tiene que **decirlo en el
-  campo `moment`**, que hoy dice siempre *"antes del rebuild, sobre la W
-  candidata"*. Dos momentos distintos con el mismo rótulo sería justo el tipo
-  de cosa que este repo no hace.
-- **Costo medido:** `calibrate` es bloqueante y tardó **0,0866 s y 0,1326 s**
-  en el intento 3. Es **una** llamada más por corrida.
-- **Reversible:** quitando la rama.
+```python
+# ckm_monitor.on_message:368
+self._corpus.ingest(
+    [message.text],
+    landscape_signal=signal,
+    allow_first_W=False,        # antes: len(self._devices_seen) >= min_devices
+)
+```
 
-### Opción B — mover el build al bloque de la decisión
+La condición de los ≥ 2 devices **no se pierde**: sigue viva donde decide, en
+`no_rebuild_reason(allow_first_w)` (`:460-467`), que es la que gobierna el
+rebuild por decisión. Lo único que cambia es que **ingest deja de ser una
+segunda puerta** por la que W puede nacer.
 
-Que la primera W también se construya desde el camino del rebuild, para que
-pase por el mismo punto y el `moment` siga siendo uno solo.
+- **Qué conserva:** el momento (`"antes del rebuild, sobre la W candidata"`)
+  **con un solo valor**, el registro con la misma forma, y el camino del
+  rebuild intacto. La primera W pasa **por la misma puerta** que las otras.
+- **Qué cuesta, y es lo único:** `evaluate` corre en `:414`, **antes** del
+  bloque de `:458`. Hoy, en el mensaje donde nace W, el panel se calcula
+  **con** W —es el primer panel de evaluación—; con B se calcularía **sin**
+  ella —sería el último de acumulación— y W nace en **ese mismo mensaje**, un
+  paso después en el orden. **Se corre una fila de la trayectoria.** No se
+  mueve cuándo nace W; se mueve cuál es el primer panel que la ve.
+- **Borde que hay que declarar:** hoy `ingest` es la red de seguridad. Con B,
+  si el bloque de la decisión quedara sin criterios que voten
+  (`criterios_rebuild` vacío), **W no nacería nunca**. Hoy nacería igual.
+- **Reversible:** volviendo el argumento.
 
-- **Qué conserva:** la simetría completa.
-- **Qué cambia:** toca el límite `ingest` / rebuild, que es donde viven
-  `_textos_desde_rebuild`, `_ciclos_sin_rebuild`, `allow_first_w` y
-  `no_rebuild_reason`. **Es el cambio más grande de los dos y el que puede
-  mover el momento en que nace W**, que es lo que todas las corridas anteriores
-  tienen fijado en `MIN_TEXTS_FIRST_W = 30`.
-- **No la propongo** para esta TASK: el beneficio es de forma y el riesgo es
-  sobre cuándo nace W.
+### Opción A — calibrar la primera W **después** de que `ingest` la construye
+
+Era la que proponía la v1 de esta TASK. Agrega la rama en `:396` sólo para
+`sha_before is None`, calibra después de instalar, y **obliga a que el campo
+`moment` tenga dos valores** —uno por camino— para no llamar igual a dos cosas
+distintas.
+
+- **Qué conserva:** el orden del panel exactamente como está hoy; ninguna fila
+  se corre.
+- **Qué cuesta:** deja **dos momentos** de calibración conviviendo, que es
+  precisamente la asimetría que B elimina. Y mantiene las dos puertas por las
+  que W puede nacer.
+- **Queda como alternativa**, no como propuesta: es la que elegiría delamor si
+  prefiere **no tocar ninguna fila de la trayectoria** y pagar la asimetría.
+
+### Lo que las dos comparten
+
+Las dos son **una llamada más a `calibrate` por corrida**, que es bloqueante y
+tardó **0,0866 s y 0,1326 s** en el intento 3.
 
 ## 4. Lo que esta TASK NO toca
 
@@ -125,18 +159,23 @@ sesión está en pausa de ejecución.
 
 ### CP1 — la implementación *(BLOQUEA: necesita el OK de delamor)*
 
-La opción A, con:
+La opción B, con:
 
-- la rama en `on_message`, **sólo** para `sha_before is None`;
-- el `moment` del registro diciendo cuál de los dos momentos fue —sin nombres
-  nuevos: el campo ya existe y hoy tiene un solo valor—;
+- `allow_first_W=False` en la llamada a `ingest` (`:368`), y **nada más** en
+  ese punto;
+- **nada nuevo en el registro**: el `moment` conserva su único valor, que es el
+  punto de B frente a A;
 - **docstrings**, que son parte del cambio y no un anexo (delamor: *"y luego
   de modificar"*): `_calibrate` y `on_message` con la asimetría declarada —
   que el primer ciclo también calibra y **en qué momento**—, y las tres del
   CP0b si todavía no se cerraron;
-- tests: que el build deje registro de calibración (hoy deja `None`), que el
-  `moment` distinga los dos casos, y **la inversión**: que el camino del
-  rebuild siga dando exactamente lo de antes.
+- tests: que el build deje registro de calibración (hoy deja `None`), que la
+  condición de los ≥ 2 devices **siga gobernando** desde `no_rebuild_reason`,
+  que W nazca **en el mismo mensaje** que hoy, y **la inversión**: que el
+  camino del rebuild siga dando exactamente lo de antes;
+- y el borde declarado: con `criterios_rebuild` vacío, **W ya no nacería**. Un
+  test que lo fije, para que el día que alguien vacíe esa tupla se entere acá y
+  no en un vivo.
 
 ### CP2 — la corrida *(BLOQUEA: un vivo no se corre sin orden explícita)*
 
@@ -145,5 +184,6 @@ atribuible. Con la expectativa escrita antes de correr.
 
 ## 6. Cómo se revierte
 
-CP1 es una rama y un docstring: se quita y el comportamiento vuelve exacto.
+CP1 es **un argumento** y los docstrings: se vuelve el argumento a su
+expresión anterior y el comportamiento es exacto el de hoy.
 CP0 no toca el repo —mide sobre copias— y CP2 no se corre sin orden.

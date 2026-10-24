@@ -13760,3 +13760,59 @@ Verifiqué con `diff` que el cuerpo es **idéntico** y retiré la copia de `docs
 movimiento significó en los intentos 1 y 2. **No toqué el de `registers/`**: es Clase R.
 
 **A1.PAUSA.** La TASK espera el OK de delamor; P13 y P14 siguen abiertas.
+
+---
+## TASK_calibrate_en_el_build corregida — la propuesta pasa de A a B — 2026-10-24 00:55 UTC
+
+*Una pregunta de delamor (*"mover el build, ¿es en el bloque de código unas líneas? ¿o qué
+implica?"*) encontró un error en mi propia propuesta.*
+
+### Lo que decía y era falso
+
+La v1 de la TASK descartaba la opción B —mover el build al bloque de la decisión— diciendo que
+*"toca el límite `ingest`/rebuild… es el cambio más grande de los dos y el que puede mover el
+momento en que nace W"*. **No es así, y lo dije sin haber leído tres cosas.**
+
+### Lo que leí después
+
+1. **Monitor construye el corpus con `rebuild_suspendido=True`** (`ckm_monitor:243`). En
+   `ingest` (`corpus_service:168-172`) ese flag deja `_rebuild()` alcanzable **sólo cuando
+   `W is None`**: ingest construye **exactamente una** W, la primera. Las demás **ya vienen** del
+   bloque de la decisión.
+2. **El camino de la decisión ya sabe construir la primera**: `no_rebuild_reason`
+   (`corpus_service:385-399`) distingue `corpus_en_acumulacion` de `primer_W_no_habilitado`, y
+   `rebuild_por_decision(causa, allow_first_W)` existe. **No hay maquinaria que escribir.**
+3. **El volumen ya vota desde el mensaje 10** —`_textos_desde_rebuild` nunca se reseteó, no hubo
+   rebuild antes—, así que en el mensaje donde el corpus llega a 30 con ≥ 2 devices el bloque
+   dispara **solo**.
+
+### La propuesta nueva
+
+**Opción B, y es una línea:** `allow_first_W=False` en la llamada a `ingest` (`:368`). La
+condición de los ≥ 2 devices **no se pierde**: sigue gobernando desde
+`no_rebuild_reason(allow_first_w)` (`:460-467`). Lo que cambia es que **ingest deja de ser una
+segunda puerta** por la que W puede nacer.
+
+Con eso **la asimetría se elimina en vez de declararse**: la primera W pasa por `calibrate`
+*antes de instalarla*, igual que las otras, y `moment` conserva un solo valor.
+
+**Lo que cuesta, y es lo único:** `evaluate` corre en `:414`, **antes** del bloque de `:458`. Hoy,
+en el mensaje donde nace W, el panel se calcula **con** W —el primer panel de evaluación—; con B
+se calcularía **sin** ella, y W nace en **ese mismo mensaje**, un paso después en el orden. **Se
+corre una fila de la trayectoria.** No se mueve cuándo nace W; se mueve cuál es el primer panel
+que la ve.
+
+**Borde declarado, y con test en el CP1:** hoy `ingest` es la red de seguridad. Con B, si
+`criterios_rebuild` quedara vacío, **W no nacería nunca**. Hoy nacería igual.
+
+**La opción A queda como alternativa**, no descartada: es la que corresponde si delamor prefiere
+**no correr ninguna fila de la trayectoria** y pagar la asimetría de dos `moment` conviviendo.
+
+### No pude revisar
+
+- **Si `allow_first_W=False` rompe algún otro consumidor de `ingest`.** Miré el sitio de llamada
+  del canal, que es el único vivo; no barrí tests ni otros servicios. Va al CP1.
+- **Que W nazca en el mismo mensaje** es una deducción del orden del código, no una medición.
+  También va al CP1, como test.
+
+**A1.PAUSA.** La TASK sigue esperando el OK; sigue siendo E3.

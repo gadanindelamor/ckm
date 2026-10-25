@@ -14076,3 +14076,61 @@ Actualizar las 13 de `test_should_rebuild_conectado.py` acotándolas al régimen
 origen, o dejar el asunto archivado. **Es de delamor**: codifican su PoC de dominancia.
 
 **A1.PAUSA.** Se retoma en dos días.
+
+---
+## `correr_caso0.sh` — disparar S2-C0 sin depender de Code — 2026-10-25 (cierre)
+
+*Pedido de delamor: *"necesito un script para poder ejecutar caso0 de iap intento 3, que incluya
+todas las consideraciones que debo tener para usarlo… poder hacer pruebas puntuales sin depender
+de los créditos o límites de uso de Code"*, con la aclaración *"tal como puedo ejecutar la suite
+de tests actualmente"*. Queda **dentro de git**, confirmado por delamor.*
+
+### Entregado
+
+`iap_chatroom/correr_caso0.sh` (`5229b77`), ejecutable, con la misma ergonomía que
+`tests/run_tests.sh`: un comando.
+
+```
+./iap_chatroom/correr_caso0.sh --check     verifica TODO y NO corre el vivo
+./iap_chatroom/correr_caso0.sh            el vivo completo (~20 min)
+--no-reset · --modo CONTINUA · lo demás se le pasa al caso
+```
+
+Seis pasos, y **cada uno aborta con el motivo y el arreglo**: que no haya otro server en el 7860
+—uno viejo tiene el corpus del intento anterior en memoria, y con otro `--state-dir` escribiría en
+otro lado sin decirlo—; `--reset` que preserva en `process/` sin borrar; el server con el
+`state_dir` del caso, esperando a que responda y mostrando su log si muere; la verificación **por
+MCP** de `corpus_size == 0` y canal en 0, que es la única que atraviesa los dos procesos; el
+preflight de los cuatro modelos; y el caso con log propio por fecha, que no pisa los anteriores.
+Apaga el server **siempre**, con `trap`, incluso con Ctrl-C.
+
+### Lo que lleva adentro, que es el punto del pedido
+
+- **Dura ~20 min** y `DURATION = 1200` es un número **declarado con tests que lo afirman**:
+  acortarlo para pruebas cortas pide una bandera en el caso, **y eso se decide**. Queda dicho en
+  el encabezado y **no lo hice**.
+- **Durante el vivo, ninguna intervención**, y publicar desde la UI mete texto al corpus.
+- **Gemini: 20 requests por día y por modelo** (medido: `quotaId`
+  `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `quotaValue 20`, `retryDelay 3339s`). Cada
+  prueba suelta le come cuota al vivo. **Los `--check` también gastan: 4 llamadas.**
+- El `--reset` mueve archivos pero **no vacía el corpus en memoria** — por eso el server se
+  reinicia siempre.
+- `experiments/_state_S2-C0/` **no se commitea**; el log del driver **sí** (~750 K).
+- El `.env` vive en `iap_chatroom/.env`, **no en la raíz** — me costó un script el 22 oct.
+
+### No pude revisar
+
+**No está probado.** Se escribió con el límite de uso de Anthropic al 99 %, así que su primera
+corrida va a ser de delamor — que es exactamente para lo que existe. El `--check` es lo barato
+para estrenarlo (~1 min, 4 llamadas). Si algo falla ahí, lo que falla es el script, no el caso: el
+caso corrió tres veces.
+
+### Trackeado, y por qué
+
+A diferencia de `tests/run_tests.sh` y `scripts/keepalive.sh`, que son de delamor y quedan fuera
+de git. Éste entra porque **encodea lo medido en tres corridas** y un Codespace detenido se borra
+a los 30 días. Confirmado por delamor.
+
+**A1.PAUSA.** Sigue abierto lo de antes: actualizar las 13 de `test_should_rebuild_conectado.py`
+acotándolas al régimen posterior al origen, o archivar el asunto. Y `a7d065f` tiene la
+implementación de `bootstrap` esperando esa palabra.

@@ -18,6 +18,18 @@ Traza completa en `docs/opus/decisiones_en_el_acto.md`, entradas del 24 oct. Est
   - leer el criterio estructural de rebuild;
   - buscar en `DECISIONES` el origen del baseline de Monitor.
   - Después, ajustar `cold-referee` y el pedido de review para que apunten al `_print`.
+- **Opus → Code (ckm, Codespace), tarea chica, primero en la próxima sesión.** Las tres declaraciones de fourforums v8n:
+  1. **Extracción:** O1–O7 y la cadena v8h→v8n, que ya están declaradas.
+  2. **LandscapeConfig de cada una de las 8 W:** `CKMlandscapeConfig.create(W, sampling_mode="uniform", n_runs, seed)` y un `Ciclo` con `w_version_id = sha256_W`, N, μ_W y β_c en sus dos formas. Se guarda junto a los resultados y no se vuelve a medir.
+  3. **Calibración: "no se ejecutó"** (`nulo_calibrado`), porque las W son primeros builds y lo medido no usa umbrales.
+
+  También declarar lo que hoy no coincide con la Config:
+  - la semilla 20261023 contra la 0 de la Config;
+  - las muestras 1000, 5000 y 20000 contra las 1000 declaradas;
+  - el REG reporta `beta_c_landscape` (media de los positivos), que no es `beta_c_nonzero` ni `beta_c_global`;
+  - la identidad de cada W es el sha del archivo, no `sha256_W` (sin verificar si coinciden).
+
+  Opcional, como punto aparte: correr `calibrate` offline sobre las 8 W, como medición, sin predecir el resultado. Fuente: `decisiones_en_el_acto.md`, 24 oct.
 - **delamor:**
   - qué hacer con las 13 de `test_should_rebuild_conectado.py`: acotarlas o archivarlas. Code retoma en dos días;
   - P13 y P14;

@@ -252,3 +252,11 @@
   - **calibrate:** 200, default propio; Monitor no le pasa la Config.
   - **fourforums:** 1000, 5000 y 20000, fuera de la Config.
   - Consecuencia, sin interpretar: el umbral sale de un N_eff estimado con 200 muestras y se aplica a uno estimado con 1000. Ya estaba en el plan del v33 (M4): el umbral calibrado (0,00571) queda por debajo de la dispersión del muestreo.
+- **Por qué se cae en 0,40 / 0,60** (pregunta de delamor; leídos `ckm_monitor.py:282`, `monitor_service.py:140-154`, `:520-529`, `:667-676` y `coco.py:145-152`, no los archivos enteros). La cadena:
+  1. El canal crea Monitor con `coco_config={"track_landscape": True}` (`ckm_monitor.py:282`): **sin umbrales**.
+  2. Cada ciclo COCO nace con `kw = coco_config` + `n_runs`, `seed` y `sampling_mode` de la Config (`monitor_service.py:670-676`).
+  3. El constructor de COCO tiene los umbrales como **argumentos con default**: `d_ckm_threshold = D_CKM_THRESHOLD (0.40)`, `frac_rec_min = FRAC_REC_MIN (0.60)` (`coco.py:147-149`). Si `kw` no los trae, Python pone el default **sin decir nada**.
+  4. Los umbrales entran a `coco_config` sólo por `set_coco_thresholds`, y sólo si `calibrate` devolvió números (`:520-529`).
+  - Caso 2 (primer ciclo): `_calibrate` no se llama → `coco_config` sin umbrales → 0,40 / 0,60.
+  - Caso 1 (no separa): `set_coco_thresholds` retorna sin tocar → si nunca se calibró, 0,40 / 0,60; si se calibró antes, la vara de otra W. Un `FRAC_REC_MIN = "UNKNOWN"` se filtra y queda el anterior o el default.
+  - Además la Config no los lleva (D6), así que nadie más es dueño de esos valores. El registro de la calibración sí dice el estado (`_coco_calibration`), pero COCO usa el default igual.

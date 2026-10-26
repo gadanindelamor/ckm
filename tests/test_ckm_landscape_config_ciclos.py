@@ -417,7 +417,7 @@ def test_registro_plano_de_v1_se_lee_como_un_ciclo_bootstrap() -> None:
 
 def test_el_jsonl_historico_real_se_lee(tmp_path: Path) -> None:
     """Sobre el único JSONL con config v1 serializada que hay en el repo."""
-    p = Path(__file__).resolve().parent.parent / "P1P4" / "run_conteo_vs_masa_04oct" / "log_conteo_vs_masa.jsonl"
+    p = Path(__file__).resolve().parent.parent / "process" / "model_properties_front_20261004" / "run_conteo_vs_masa_04oct" / "log_conteo_vs_masa.jsonl"
     if not p.exists():
         pytest.skip(f"no está {p}")
     leidos = 0

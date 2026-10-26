@@ -454,7 +454,8 @@ def ciclo_desde_registro_plano_v1(d: dict) -> Ciclo:
     """
     Lee un registro plano de la config v1 como **un único ciclo**.
 
-    Los JSONL ya escritos (`P1P4/run_conteo_vs_masa_04oct/log_conteo_vs_masa.jsonl`)
+    Los JSONL ya escritos (`process/model_properties_front_20261004/run_conteo_vs_masa_04oct/log_conteo_vs_masa.jsonl`,
+    antes `P1P4/`)
     llevan la config v1 serializada plana. **No se reescriben**: se leen con
     este mapeo, declarado en el CP0 (BANDEJA_code, pregunta P4):
 

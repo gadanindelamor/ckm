@@ -14,7 +14,7 @@ Las instrucciones del proyecto y el protocolo, cargados en cada sesión:
 - `readme/CONVENTIONS.md` — convenciones de código. Incluye la regla de completitud: un cambio de comportamiento que no mueve ningún test ni docstring no está cubierto.
 - `docs/tasks/` — las TASK. Se ejecutan con checkpoints: al terminar cada paso, detenerse, reportar y esperar el OK. **Vale también para las acciones espontáneas.**
 - `registers/` — Clase R. No se toca. Los REG nuevos se entregan como borrador fuera de `registers/`.
-- `P1P4/DESPERTAR_leer_primero.md` — frente de las propiedades del modelo. Leer **antes** de abrir cualquier otro archivo de ese frente: lo que quedó cerrado, los nombres que no se usan, y la regla del teorema.
+- `process/model_properties_front_20261004/DESPERTAR_leer_primero.md` — frente de las propiedades del modelo. Leer **antes** de abrir cualquier otro archivo de ese frente: lo que quedó cerrado, los nombres que no se usan, y la regla del teorema.
 
 ## Lo que no se hace
 

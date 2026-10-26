@@ -42,7 +42,7 @@ Híbrido. No toca N_eff contra enumeración exacta, SALAMANCA, D3, ni la D_ckm c
 proyecto: *no se reabre algo cerrado sin leer el REG que lo cerró.*
 
 El REG que lo cierra:
-`P1P4/BORRADOR_REG_p1_p4_no_testeables_en_w_snapshot_v1.md` — borrador, fuera de `registers/`,
+`process/model_properties_front_20261004/BORRADOR_REG_p1_p4_no_testeables_en_w_snapshot_v1.md` — borrador, fuera de `registers/`,
 pendiente del OK de delamor para entrar.
 
 ## Hacia dónde va el frente
@@ -50,6 +50,6 @@ pendiente del OK de delamor para entrar.
 A las premisas nuevas, **sobre el modelo dinámico**, con nombre propio: **no** son P1, ni 2, ni 3,
 ni 7, ni 8. Serie nueva, para que nadie las confunda con esta traza.
 
-Orientación completa: `P1P4/ORIENTACION_p1p4_modelo_dinamico_v1.md`.
+Orientación completa: `process/model_properties_front_20261004/ORIENTACION_p1p4_modelo_dinamico_v1.md`.
 
 **No ejecutar este módulo para sostener nada.** Es traza de abril.

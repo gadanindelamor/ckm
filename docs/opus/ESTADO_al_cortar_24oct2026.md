@@ -106,3 +106,8 @@ Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por luga
 - **Respondido (delamor: *"si sostiene algo se quedan"*):** fourforums v8i–v8n **entra al §5** con las tres declaraciones y sus límites. Fuentes: los REGs de ckmdatasets del 23 oct y `registers/REG_ckm_W_fourforums_v8n_2026-10-23.md`.
 - **Falta leer antes de escribir:** el CP-E, el criterio estructural de rebuild y el baseline de Monitor en `DECISIONES`.
 - **Recomendación de Opus, por el uso:** escribir el v33 en una sesión nueva, que arranque de este ESTADO. Esta conversación ya es muy larga.
+
+## Próxima sesión de Opus (sesión nueva, por la estrategia de uso)
+1. **v33** (`_borrador` + `_print`) según el plan de arriba.
+2. **DEFS v19** sobre la v18, con lo del 26 oct: las premisas solo en W dinámica (las F y las declaraciones en W estática); P1–P7 retiradas como premisas; la Config (lo declarado y lo medido, sin umbrales); el primer build sin calibrar; las capas del repo (`X_alcance_CKM_IAP_devices_26oct2026.md`); la nueva ubicación de `P1P4/` → `process/model_properties_front_20261004/`.
+3. **Para Code** (texto a escribir): correr la suite (el test movido, `test_el_jsonl_historico_real_se_lee`, tiene que correr y no saltearse) y la tarea de las tres declaraciones de fourforums.

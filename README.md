@@ -96,8 +96,8 @@ docs/
   defs/          DEFS (definitions, versioned)
   paper/         earlier paper material
 process/         frozen conditions and preserved states of runs
+  model_properties_front_20261004/   the 4–5 Oct front on the static-model properties (formerly P1P4/)
 readme/          THEORY, METODOLOGY, AWARENESS, CONVENTIONS, API_SPEC, EXPERIMENTS, LETTER
-P1P4/            static-model experiments
 ```
 
 The fourforums pipelines (v8h–v8n) and the W they build live in a separate repository, `ckmdatasets`. The W reach this repository by hand, anonymized, outside git.

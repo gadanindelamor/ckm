@@ -14199,3 +14199,370 @@ listas, sin veredicto global.*
    evaluaciones, contra 27 del intento 3 que está vivo en `_state_S2-C0/`); de `monitor_trajectory`
    **no hay `.bak` de la familia `1792559911`**, así que del intento 1 no hay trayectoria.
 
+
+---
+## REPORTE TEXTO 08 — la cadena bootstrap / calibrate / umbrales. V1–V6. A1.PAUSA — 2026-10-26 23:05 UTC
+
+*Claude Opus 5 (Code, Codespace). Verificación, no implementación. Lo lee Opus antes que delamor.*
+*Leídos **enteros**: `iap_chatroom/ckm_monitor.py`, `services/corpus_service.py`,
+`services/monitor_service.py`, `services/calibrate.py` (los dos modificados, 2 veces: antes y
+después). Leídos **en parte** y dicho acá: `services/coco.py` (docstring del módulo, `__init__`,
+`fijar_baseline`, `observe`) y `services/ckm_landscape_config.py` (constantes y el bloque
+"Declarado"). Sin veredicto global.*
+
+### 0. Tensiones del texto 08 contra el repo (antes de empezar)
+
+**T1 — el ítem 3 de V6 ya está corregido; no quedaba nada que corregir ahí.** El texto pide
+reportar el estado de `ckm_monitor.py:82-83` y `:326` (*"no hace nada"*, del §5 del REG). Las dos
+cosas se corrigieron el **24 oct**: hoy el docstring del módulo dice lo contrario en `:84-90`
+(*"`calibrate` corre desde el 19 oct… produjo los umbrales que COCO usó"*) y el comentario del
+atributo, en `:333-339` (*"**Corre**, desde el 19 oct"*), más la nota del panel en `:841-843`. La
+línea `:326` de hoy es `self._n_decisiones`, que no tiene nada que ver. **El REG §5 ítems 1 y 2
+están cerrados.**
+
+**T2 — el ítem 1 de V6 tiene DOS apariciones, no una.** Además de la del docstring de
+`_calibrate`, la misma ruta vieja estaba en un comentario de `__init__` (`:336-337`), **partida en
+dos líneas** (`REG_borrador_calibrate_no_corre` + `_en_el_build.md`), así que un `grep` de la ruta
+entera no la encuentra. Las dos corregidas (abajo, V6).
+
+**T3 — en la cadena de V4 falta un eslabón, y cambia dónde está lo que no se avisa.** Los umbrales
+no van de `set_coco_thresholds` a COCO: van a `self._coco_config` (`monitor_service.py:533-536`) y
+llegan a COCO **en el renacimiento siguiente** (`:677-693`), por `setdefault`. Y
+`thresholds.source` **no se calcula del COCO vivo** sino de `self._coco_thresholds`
+(`:480-481`), que una vez puesto **no se limpia nunca**. Eso mueve el caso 1 de lugar: ver V4.
+
+**T4 — V1 da media razón, y la otra mitad es la que cierra.** El texto dice que no se entra al
+bloque de la decisión porque `ingest` va antes. Eso es cierto y **no alcanza**: aunque el bloque
+estuviera antes, en el mensaje en que nace W **ninguno de los tres criterios puede votar**, porque
+el cambio de sha resetea los tres contadores en esa misma vuelta. Es un candado doble. V1.
+
+**T5 — del intento 1 no hay trayectoria** (ya está en el ARRANQUE de hoy): el `.bak` de
+`monitor_trajectory` existe sólo para la familia `1792649008`, que es la del intento 2 (51 líneas
+contra las 27 del intento 3, vivo en `_state_S2-C0/`). V4 y V5 van sobre los intentos 2 y 3, que
+es lo que el texto pide.
+
+---
+
+### V1 — el nacimiento de la primera W, hoy (`main` con el revert `7040a02`). **CONFIRMADO, y con una causa más que la del texto**
+
+**El flujo del mensaje en que nace W** (`ckm_monitor.py:346-556`):
+
+1. `clock = ChatChannel().get_clock()` (`:354`). SYSTEM se filtra (`:369`): no entra al corpus.
+2. `sha_before = self._corpus.w_sha()` (`:373`) → `None` mientras no hay W.
+3. `self._devices_seen.add(...)` (`:379`), **antes** de la ingesta.
+4. `ingest([text], landscape_signal, allow_first_W=len(devices_seen) >= min_devices_first_w)`
+   (`:380-410`).
+5. **Dentro de `ingest`** (`corpus_service.py:151-174`) está la condición que construye W:
+   - `if len(self._texts) >= self.min_texts:` (`:168`) — la compuerta de cantidad (30);
+   - `if self._W is None and not allow_first_W: pass` (`:169-170`) — la de devices (2);
+   - `elif not (self._rebuild_suspendido and self._W is not None): self._rebuild()` (`:171-172`).
+     Con `rebuild_suspendido=True` y `_W is None` la condición es `not (True and False)` = **True**,
+     así que **`_rebuild()` corre y construye la primera W**.
+6. `_rebuild(causa=None)` (`corpus_service.py:524-574`) instala nodos y W y registra la versión con
+   `causal_event = "rebuild"` (`:570-572`) — **no** `rebuild_por_decision:*`.
+7. De vuelta en `on_message`: `sha_after != sha_before` (`:429`) → `_ciclos_sin_rebuild = 0`
+   (`:430`), `_textos_desde_rebuild = 0` (`:433`), `_d_ckm_history = []` (`:443`).
+8. `if self._message_count >= self._corpus.min_texts:` (`:447`) → `evaluate()`; ahí Monitor abre el
+   primer ciclo con causa **`bootstrap`** (`monitor_service.py:708-716`) y COCO nace
+   (`:650`, `:653-699`).
+9. **La votación** (`:468-484`): los tres criterios llegan a este punto con sus contadores recién
+   puestos en cero por el paso 7 — estructural pide 4 puntos de `d_ckm_history` y hay 0
+   (`corpus_service.py:254-255`); volumen pide `>= rebuild_every` y hay 0; tiempo pide
+   `>= MAX_CICLOS` y hay 0. **`_last_rebuild_causa = None`.**
+10. Por lo tanto **no se entra al bloque de `:491`** y **`_calibrate` no se llama**:
+    `_punto_calibrate` queda en `None` (`:339`).
+
+**Las dos razones, y la segunda es la fuerte.** La del texto —`ingest` va antes del bloque— es
+cierta. La que la cierra: **el propio nacimiento de W apaga a los tres criterios en la misma
+vuelta.** Mientras el nacimiento ocurra en `ingest`, mover el bloque de la decisión más arriba no
+alcanzaría; hay que sacarle a `ingest` el permiso, que es lo que intentó `a7d065f`.
+
+**Medido en las dos corridas** (`rebuild_decisions.jsonl` y su `.bak`), y esto es lo que lo hace
+visible sin leer código:
+
+| | intento 2 | intento 3 |
+|---|---|---|
+| decisiones registradas | 29 | 27 |
+| con `ocurrio=False`, motivo `corpus_en_acumulacion` | 24 (msg 10→33) | 24 (msg 10→33) |
+| **mensaje del nacimiento de W** | **34** | **34** |
+| ¿hay línea de decisión en el msg 34? | **no** | **no** |
+| primera decisión que mueve W | msg 44, `volumen` | msg 37, **`estructural`** |
+
+- **El msg 34 no deja línea en `rebuild_decisions.jsonl`**, en las dos corridas: es el hueco que
+  predice el paso 9. El nacimiento de W es el único cambio de W de la corrida **que no tiene
+  decisión registrada**; queda sólo como marca `"rebuild"` en `w_version`.
+- Desde el msg 10 el criterio de volumen **vota en cada mensaje** y `rebuild_por_decision` lo
+  rechaza con `corpus_en_acumulacion` (`corpus_service.py:395-396`, `:430-436`): 24 veces en cada
+  corrida. En esas 24, `_calibrate` **tampoco** corre, porque el canal consulta
+  `no_rebuild_reason` primero (`:500-514`) y deja `nulo_calibrado` con su razón. Eso **está bien
+  declarado**: se ve por qué no se calibró.
+
+**Lo que cambiaba `a7d065f`** (leído el diff): `allow_first_W=False` en la ingesta + una **cuarta
+causa** `CAUSA_BOOTSTRAP` —**el nombre ya existía** en `ckm_landscape_config.py:52`, y es el que
+Monitor ya usa para abrir el primer ciclo (`monitor_service.py:708-716`)— puesta **primera** en la
+jerarquía y votando **sólo mientras `w_sha() is None`**. Con eso W nacía por el bloque de la
+decisión y **pasaba por `calibrate`**. Su propio mensaje de commit declara lo que la suite le
+corrigió tres veces y que *"solo cambia el rótulo" era FALSA*: `[10,20,30]` contra `[13,23]`.
+
+**El criterio de delamor: ¿la implementación del bootstrap usa la maquinaria del rebuild?**
+
+- **Donde sí.** Hoy la primera W la construye **`_rebuild()`**, la misma función del régimen, con
+  `causa=None` (`corpus_service.py:524`). El `causal_event` que queda es `"rebuild"`, el mismo
+  string que un rebuild por ingesta cualquiera. Y con `a7d065f` pasaba a usar además el **bloque de
+  la decisión**, o sea `should_rebuild`/`rebuild_por_decision`, que son del régimen. Las dos
+  versiones usan maquinaria de rebuild: la de hoy usa `_rebuild`, la de `a7d065f` usa todo el
+  camino de la decisión.
+- **Donde no.** La **condición** del nacimiento no es la del régimen: son las dos compuertas de
+  `ingest` (`len(texts) >= min_texts` y `allow_first_W`), que no son ninguno de los tres criterios.
+  Y el ciclo que se abre ya se llama `bootstrap`, no "rebuild": en la Config el origen **ya tiene su
+  nombre propio** desde antes (`monitor_service.py:711-713`: *"el primer rebuild no es degradación,
+  es el origen"*).
+- **La contradicción concreta, en una línea.** El concepto es *"construir la primera W
+  calibrada"*; la implementación de hoy construye la primera W **por el único camino que no puede
+  calibrar**, y lo hace **porque** calibrar vive en el bloque de la decisión y el nacimiento apaga
+  a los tres criterios que lo abren. No es que falte una llamada: el punto de calibración está
+  **atado a la decisión del régimen**, y el origen no es una decisión del régimen.
+
+**Un flujo donde el build del bootstrap va separado — DESCRITO, no implementado.** Lo que se ve
+desde el código leído, sin elegir entre las variantes:
+- el nacimiento tiene **su propia condición**, que ya está escrita y ya se evalúa:
+  `no_rebuild_reason(allow_first_W)` devuelve `None` exactamente cuando hay corpus y permiso
+  (`corpus_service.py:385-399`). Es la condición "bootstrap verdadera" y **no necesita contadores**;
+- el punto de calibración **no es del bloque de la decisión**: es *"antes de instalar una W"*. Si
+  `calibrate` colgara de ese lugar —antes de cualquier `_rebuild` que instale, sea el del origen o
+  el del régimen— el origen pasaría por él sin agregarle una causa a la jerarquía, y las 13 de
+  `test_should_rebuild_conectado.py` no se moverían: **la jerarquía no cambiaría**;
+- hoy ese lugar no existe como tal. `calibrate` lo llama el canal (`ckm_monitor.py:502`), no el
+  corpus, y el corpus es quien instala. Mover la calibración adentro de `CorpusService` **sí**
+  cambiaría quién calibra, y eso es decisión de delamor (toca la semántica: **E3**).
+
+### V2 — los tres D_ckm. **CONFIRMADO, con una precisión en el de `calibrate`**
+
+| | baseline | se resetea | Δ_r | n_runs | dónde |
+|---|---|---|---|---|---|
+| **Monitor** | W_eff = W + Δ_r **crudo**, fijado en la primera evaluación con corpus establecido | **sí**, cuando W cambia | el propio, que escribe | **propio** (`_n_runs`, 1000) | `monitor_service.py:832-857`, reset en `:579-582` |
+| **COCO** | **W sola**, fijado al nacer el ciclo (`fijar_baseline`, con Δ_r en cero) | **no** se re-fija; muere con el ciclo | **lee** el de Monitor (`observe(Delta_new)`), nunca lo escribe | **de la Config** (`setdefault`) | `coco.py:236-253`, `:255-...`; `monitor_service.py:367`, `:679-681`, `:696` |
+| **`calibrate`** | **la W candidata sin tocar** — `A0 = count_attractors(Wc)`, que es el punto λ=0 | no aplica: vive una llamada | **ninguno**: Δ_r no entra | **200**, default propio | `calibrate.py:254`, `:257-266`; llamada en `ckm_monitor.py:604` **sin** la Config |
+
+- **Precisión sobre `calibrate`.** El baseline no es "la W candidata perturbada": es **la candidata
+  sin perturbar**. La deformación (λ hacia el colapso, `extremo_colapso`) se aplica a **los puntos
+  de la curva**, que se miden **contra** ese baseline. Y la curva va **sólo al colapso**:
+  `extremo_expansion` existe con tests y `calibrate()` no la llama (declarado en su propio
+  docstring, `calibrate.py:42-46`).
+- `Monitor.n_runs = 1000` contra `calibrate.n_runs = 200`: el umbral sale de un N_eff estimado con
+  200 muestras y se aplica a uno estimado con 1000. Ya estaba en el plan del v33 (M4).
+- **Lo único que queda sin unificar es el baseline**, y el código lo dice en los dos lados
+  (`monitor_service.py:846-848`, `coco.py:13-16`) y lo declara en cada panel
+  (`panel.coco.w_eff.baseline_coco` / `baseline_monitor`).
+
+### V3 — `n_runs`. **CONFIRMADO, y el docstring de la Config tiene dos afirmaciones que el código no sostiene**
+
+Leído `monitor_service.py` entero:
+- **Monitor** cuenta con **su** parámetro: `self._n_runs = n_runs_attractors` (`:128`, default
+  1000), usado en `_N_eff` (`:882`), `_count_attractors` (`:948`) y declarado en `condicion_W`
+  (`:865`). **No lee `cfg.n_runs` en ninguna parte.** Igual con la seed: `self._count_seed`
+  (`:168`, default 0).
+- **COCO** sí: `kw.setdefault("n_runs", cfg.n_runs)` y `("seed", cfg.seed)` (`:679-680`).
+- En el canal **coinciden por default**: Config `n_runs=1000`/`seed=0`
+  (`ckm_landscape_config.py:57`, `:61`) y Monitor `1000`/`0`. **Nadie lo verifica.**
+
+**Las dos afirmaciones del docstring de la Config** (`ckm_landscape_config.py:179-184`):
+1. *"n_runs y seed son UNO SOLO para Monitor y COCO"* — **no se sostiene para Monitor**: Monitor
+   no lee la Config. Son uno solo **por coincidencia de defaults**.
+2. *"COCO ya no tiene un default propio"* — **no se sostiene**: `coco.py:151-152` sigue teniendo
+   `n_runs: int = 80` y `seed: int = 0` en la firma. Lo que pasa es que el `setdefault` del
+   renacimiento los pisa **cuando hay Config**; sin Config (`monitor_service.py:682-685`) los pisa
+   con los de Monitor. El `80` nunca se usa en el canal, y sigue ahí como default silencioso.
+   Es uno de los de la lista "defaults declarados" del 26 oct.
+
+**Y la asimetría del control:** `sampling_mode` **sí** tiene guardia —Monitor levanta `ValueError`
+si el suyo no coincide con el de la Config (`:171-176`)—. `n_runs` y `seed`, los otros dos
+"obligatorios" del mismo bloque I4, **no tienen ninguna**. De los tres declarados, uno se verifica
+y dos se confían.
+**No lo arreglé**: depende de la decisión de delamor sobre los defaults de `LandscapeConfig`.
+
+Una divergencia más, encontrada en la segunda lectura: el docstring de `_renacer_coco`
+(`:670-672`) dice *"`n_runs`, `seed` y `sampling_mode` **salen de la Config**… no son defaults de
+COCO"*. Con `setdefault`, salen de la Config **sólo si `coco_config` no los trae**; y el `else` de
+`:682-685` los toma de Monitor. Reportado, sin corregir (es la misma decisión).
+
+### V4 — por qué COCO cae en 0.40 / 0.60. **CONFIRMADO, con el eslabón de T3, y MEDIDO**
+
+La cadena, con el paso que faltaba:
+1. `ckm_monitor.py:282`: `coco_config={"track_landscape": True}` — **sin umbrales**. Confirmado.
+2. `monitor_service.py:677-685`: `kw = dict(_coco_config)` + `n_runs`/`seed`/`sampling_mode` de la
+   Config. Si `kw` no trae umbrales, no hay umbrales.
+3. `coco.py:147-149`: el constructor los pone **como argumentos con default** —
+   `d_ckm_threshold = D_CKM_THRESHOLD` (0.40), `frac_rec_min = FRAC_REC_MIN` (0.60) — **sin decir
+   nada**. Confirmado.
+4. Entran sólo por `set_coco_thresholds` y sólo si `calibrate` devolvió **números**:
+   `"UNKNOWN"` se filtra con `isinstance(v, (int, float))` (`:530`). Confirmado.
+5. **El eslabón que faltaba:** no van al COCO vivo, van a `_coco_config` (`:533-536`), y llegan a
+   COCO **en el renacimiento siguiente**. El orden del canal lo hace coherente: `_calibrate` corre
+   en el msg k (`ckm_monitor.py:502`), el rebuild cambia W después (`:515`), y el COCO nuevo nace en
+   el `evaluate` del msg k+1.
+
+**Los dos casos sin aviso, revisados uno por uno:**
+
+- **Caso 2 (primer ciclo).** Confirmado en el código **y en los datos**, pero **sí hay aviso en el
+  panel**: `thresholds.source = "default"`, `calibrated = false` y `calibration = null`. Lo que
+  **no** se distingue es `null` de `nulo_calibrado` — es justo lo que dice el REG.
+- **Caso 1 (calibrate no separa).** Confirmado en el código, **con una corrección sobre dónde está
+  lo que no se avisa**, y **no se produjo en ninguna de las dos corridas**:
+  - si **nunca** se calibró con éxito, `_coco_thresholds` sigue en `None` → `source = "default"` y
+    `calibration.estado = "no_calibrado"` con su `w_sha`. **Eso se ve.** Es lo que pasó en los 2
+    intentos;
+  - si **ya** se había calibrado con éxito y una calibración posterior **no separa**:
+    `_coco_calibration` se reemplaza por la que falló (`:521`, antes del `return`) pero
+    `_coco_thresholds` **no se limpia**. El panel diría `source: "calibrate"`, `calibrated: true`,
+    los **números de la W vieja**, y `calibration.condiciones.w_sha` = **la W que falló**. O sea:
+    el panel nombraría **la W equivocada**. Ese es el caso sin aviso, y es más preciso que
+    "hereda los umbrales que hubiera".
+
+**MEDIDO, por ciclo, en las dos trayectorias** (cada fila es un COCO; `cal_W` es el `w_sha` de la
+calibración registrada):
+
+| corrida | gen | evaluaciones | W viva = W de COCO | D_CKM_THRESHOLD | FRAC_REC_MIN | source | estado de la calibración | cal_W |
+|---|---|---|---|---|---|---|---|---|
+| int. 2 | 1 | t 0–10 (11) | `6e666d09` | 0.40000 | 0.60000 | default | **`None`** | — |
+| int. 2 | 2 | t 11–20 (10) | `fa1d1864` | 0.40000 | 0.60000 | default | `no_calibrado` | `fa1d1864` |
+| int. 2 | 3 | t 21–30 (10) | `18138650` | 0.40000 | 0.60000 | default | `no_calibrado` | `18138650` |
+| int. 2 | 4 | t 31–40 (10) | `3d2e8f1d` | 0.40000 | 0.60000 | default | `no_calibrado` | `3d2e8f1d` |
+| int. 2 | 5 | t 41–50 (10) | `c049d2e8` | 0.40000 | 0.60000 | default | `no_calibrado` | `c049d2e8` |
+| int. 3 | 1 | t 0–3 (4) | `7093ad0f` | 0.40000 | 0.60000 | default | **`None`** | — |
+| int. 3 | 2 | t 4–13 (10) | `5d657507` | 0.40000 | 0.60000 | default | `no_calibrado` | `5d657507` |
+| int. 3 | 3 | t 14–23 (10) | `698d0f3f` | 0.40000 | 0.60000 | default | `no_calibrado` | `698d0f3f` |
+| int. 3 | 4 | t 24–26 (3) | `bdb98f5b` | **0.00571** | **0.99488** | **calibrate** | **`calibrado`** | `bdb98f5b` |
+
+- **`w_matches = true` en las 78 evaluaciones**: el COCO vivo siempre mide sobre la W de Monitor.
+- **Los 11 de 51 y 4 de 27 del REG, confirmados exactos**: son las evaluaciones de la generación 1,
+  con `calibration = None`. Es el caso 2.
+- **En las 78 evaluaciones, `cal_W` siempre es la W viva.** El caso 1 "la vara de otra W" **no se
+  instanció**: para que ocurra hace falta una calibración exitosa seguida de una que no separe, y
+  la única exitosa fue la última de la última corrida. **Está en el código y no está en los datos.**
+- **De las 78, 75 usaron los defaults 0.40 / 0.60** (todas menos las 3 últimas del intento 3).
+
+**¿El panel dice de qué W salió la vara?** **Sí, y con una condición.** Lo dice en
+`panel.coco.calibration.condiciones.w_sha`, además de `thresholds.source` / `calibrated`. La
+condición: ese `w_sha` es el de la **última calibración registrada**, no el de la que produjo los
+números en uso. Mientras las dos coincidan —lo que pasó en las 78— el panel dice la verdad; en el
+caso 1 de arriba diría la W equivocada. **No hay ningún campo que ate los números a su W.**
+
+### V5 — la curva de λ. Sólo la tabla y lo que se ve
+
+Las **7** calibraciones que registraron curva (4 del intento 2, 3 del intento 3). Las condiciones
+son las mismas en las 7: `n_runs=200`, `seed=0`, `escala_de_W=1.0`, grilla `(0, 0.25, 0.5, 0.75,
+1.0)`, `n_evaluaciones=5`, `representacion="presencia"`, `patron="extremos + lambda"`.
+
+| corrida · W | λ | n_eff | d_ckm | frac_rec |
+|---|---|---|---|---|
+| **int.2 · `fa1d1864`** | 0.0 | 2.0159 | 0.000000 | 1.000000 |
+| | 0.25 | 2.0812 | −0.045429 | 1.032362 |
+| | 0.5 | 2.2578 | −0.161655 | 1.120005 |
+| | 0.75 | 2.4369 | −0.270535 | 1.208846 |
+| | 1.0 | 2.4369 | −0.270535 | 1.208846 |
+| **int.2 · `18138650`** | 0.0 | 2.0176 | 0.000000 | 1.000000 |
+| | 0.25 | 2.0786 | −0.042450 | 1.030243 |
+| | 0.5 | 2.3582 | −0.222285 | 1.168848 |
+| | 0.75 | 2.4369 | −0.269075 | 1.207871 |
+| | 1.0 | 2.4369 | −0.269075 | 1.207871 |
+| **int.2 · `3d2e8f1d`** | 0.0 | 2.0396 | 0.000000 | 1.000000 |
+| | 0.25 | 2.1466 | −0.071771 | 1.052485 |
+| | 0.5 | 2.3844 | −0.219144 | 1.169051 |
+| | 0.75 | 2.4369 | −0.249751 | 1.194834 |
+| | 1.0 | 2.4369 | −0.249751 | 1.194834 |
+| **int.2 · `c049d2e8`** | 0.0 | 2.0200 | 0.000000 | 1.000000 |
+| | 0.25 | 2.1227 | −0.070529 | 1.050838 |
+| | 0.5 | 2.2614 | −0.160570 | 1.119516 |
+| | 0.75 | 2.4369 | −0.266888 | 1.206409 |
+| | 1.0 | 2.4369 | −0.266888 | 1.206409 |
+| **int.3 · `5d657507`** | 0.0 | 2.0402 | 0.000000 | 1.000000 |
+| | 0.25 | 1.9998 | **0.028044** | 0.980202 |
+| | 0.5 | 2.2828 | −0.157604 | 1.118936 |
+| | 0.75 | 2.4369 | −0.249215 | 1.194468 |
+| | 1.0 | 2.4369 | −0.249215 | 1.194468 |
+| **int.3 · `698d0f3f`** | 0.0 | 2.3386 | 0.000000 | 1.000000 |
+| | 0.25 | 2.0139 | **0.175967** | 0.861142 |
+| | 0.5 | 2.1903 | 0.077110 | 0.936590 |
+| | 0.75 | 2.4369 | −0.048469 | 1.042037 |
+| | 1.0 | 2.4369 | −0.048469 | 1.042037 |
+| **int.3 · `bdb98f5b`** | 0.0 | 2.4621 | 0.000000 | 1.000000 |
+| | 0.25 | 1.9992 | **0.231163** | 0.811975 |
+| | 0.5 | 2.1439 | 0.153633 | 0.870726 |
+| | 0.75 | 2.4369 | **0.011418** | 0.989765 |
+| | 1.0 | 2.4369 | 0.011418 | 0.989765 |
+
+**Dónde quedan 0.40 y 0.60, y qué más se ve. Sólo lo que está en la tabla:**
+
+1. **Ningún punto de ninguna curva alcanza `D_CKM_THRESHOLD = 0.40`.** El `d_ckm` más alto de las
+   35 filas es **0.231163** (int.3 · `bdb98f5b`, λ=0.25), que es el **58 %** del umbral.
+2. **Ningún punto baja de `FRAC_REC_MIN = 0.60`.** El `frac_rec` más bajo es **0.811975**, en la
+   misma fila. 25 de las 35 filas tienen `frac_rec > 1`.
+3. **Las 7 curvas tienen `curva_monotona = False` y `colapso_es_el_maximo = False`.** El máximo cae
+   en **λ=0.25** en 3 de 7, y en **λ=0.0** (o sea `d_max = 0.0`) en las 4 del intento 2.
+4. **λ=0.75 y λ=1.0 dan `n_eff = 2.4369` en las 7 curvas**, el mismo número con 4 decimales. En
+   las 7, `escala_de_W = 1.0` y N=20.
+5. Los márgenes: `margen_separacion` es **negativo** en 6 de 7 (de −0.0485 a −0.2705, causa
+   `sin_separacion`) y **+0.011418** en la séptima, que es la única `calibrado`. De ese margen sale
+   `D_CKM_THRESHOLD = 0.00571` (el punto medio) y de `margen_frac_rec = 0.010235` sale
+   `FRAC_REC_MIN = 0.99488`.
+6. El único umbral calibrado de las dos corridas, **0.00571**, es **1/70 del default 0.40**.
+
+### V6 — las divergencias de docstring. **2 corregidas, 1 ya estaba corregida, y 1 nueva reportada**
+
+Commit aparte, nombrando cada una. Los dos `.py` se leyeron enteros antes y después.
+
+1. **La ruta vieja del REG — CORREGIDA, en las dos apariciones.**
+   - `iap_chatroom/ckm_monitor.py:336-338` (comentario de `__init__`) y `:594-595` (docstring de
+     `_calibrate`): ahora citan `registers/REG_calibrate_no_corre_en_el_build_v1.md`, que es el REG
+     con el OK de delamor. `docs/REG_borrador_calibrate_no_corre_en_el_build.md` **no existe**
+     (verificado).
+2. **`set_coco_thresholds` decía "después de un rebuild" — CORREGIDA.**
+   `services/monitor_service.py:506-513`. **No era una diferencia de énfasis: era el orden al
+   revés.** El único caller es `CKMMonitor._calibrate` (`ckm_monitor.py:605`), que corre en `:502`,
+   **antes** de `rebuild_por_decision` en `:515`. Verificado que no hay otro caller, ni en los
+   tests. Lo que no cambió: los umbrales siguen siendo para el COCO del ciclo siguiente, así que
+   *"antes del rebuild"* y *"para el COCO de después"* conviven, y eso quedó escrito.
+3. **`ckm_monitor.py:82-83` y `:326` ("no hace nada") — YA ESTABA CORREGIDA.** Ver T1. **No toqué
+   nada.**
+4. **NUEVA, reportada y sin corregir** — `_renacer_coco` dice que `n_runs`, `seed` y
+   `sampling_mode` *"no son defaults de COCO"*, y `coco.py:151-152` los sigue teniendo. Ver V3:
+   no la corrijo porque es la misma decisión de los defaults de `LandscapeConfig`.
+
+---
+
+### Lo que encontré y no estaba pedido (dos cosas, ninguna tocada)
+
+**A — la decisión `estructural` registra `n_puntos_d_ckm: 0`.** En el intento 3, la segunda W
+nació por el criterio **estructural** (`rebuild_decisions.jsonl`, t=24, msg 37) — el primer disparo
+estructural que veo en un vivo; el docstring de `ckm_monitor.py:74-78` dice que en la PoC del 11
+oct no disparaba en ninguna de las dos configuraciones, y esto es del vivo, no de la PoC. Para
+disparar necesitó 4 puntos de `d_ckm_history` con gradiente positivo sostenido
+(`corpus_service.py:249-258`), y hubo exactamente 4 (las evaluaciones de los msg 34, 35, 36 y 37).
+Pero la línea registrada dice **`n_puntos_d_ckm: 0`**: el campo se lee en `_registrar_decision`
+(`ckm_monitor.py:737`), que corre en `:550`, **después** del reset de `:543`. Así que en toda
+decisión que mueve W, el campo que mostraría la evidencia del criterio estructural **vale 0 por
+construcción**. Es del mismo orden que el hueco del ítem 4 del 22 oct ("falta el contador que
+decide"). No lo toqué: cambia lo que se registra.
+
+**B — la primera W es el único cambio de W sin decisión registrada.** De V1: en las dos corridas,
+el msg 34 mueve W y no deja línea en `rebuild_decisions.jsonl`. Reconstruirlo desde la traza se
+puede —`w_version` tiene la marca `"rebuild"` y la trayectoria muestra el salto de generación—,
+pero **no está en el archivo que registra "por qué cambió W"**.
+
+### Lo que NO hice
+
+- No reapliqué `a7d065f`. No toqué las 13 de `test_should_rebuild_conectado.py`.
+- No cambié `calibrate`, el margen, los defaults ni la Config.
+- No corrí el vivo.
+- No corregí la divergencia 4 de V6 ni las dos afirmaciones del docstring de la Config (V3):
+  dependen de la decisión de delamor sobre los defaults de `LandscapeConfig`.
+
+### Suite después de los cambios
+
+`python -m pytest -q`: **850 passed, 7 xfailed, 0 failed**. Son cambios de docstring y comentario;
+**ningún test se movió, y por la regla de completitud eso es coherente sólo porque no cambió
+comportamiento** — si algo de esto hubiera cambiado comportamiento, la suite intacta sería la señal
+de que no está cubierto.
+
+**A1.PAUSA.**

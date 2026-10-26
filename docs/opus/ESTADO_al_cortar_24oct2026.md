@@ -121,4 +121,4 @@ Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por luga
   2. **Dominancia en los criterios de `should_rebuild`:** sin decisión todavía.
   3. **Defaults de `LandscapeConfig`:** el docstring dice que `n_runs` y `seed` son obligatorios; el código les da default. Espera la decisión.
   - **calibrate:** *"debe empezar por los defaults para saber que curva es lambda"*; pregunta abierta, ver decisiones del 26 oct.
-- **Próxima sesión de Opus (propuesta):** leer completos `iap_chatroom/ckm_monitor.py` (869 líneas), el diff de `a7d065f` y `corpus_service.ingest`/`no_rebuild_reason`, y dibujar el flujo del primer build con sus condiciones (con figura, para delamor). Sin código corrido. El v33 queda después.
+- **Próxima sesión de Opus (propuesta):** partir de "la punta del ovillo" (decisiones, 26 oct: los casos 1 y 2 en que COCO_i juzga con una vara que no sale de W_i). Leer completos `iap_chatroom/ckm_monitor.py` (869 líneas), el diff de `a7d065f` y `corpus_service.ingest`/`no_rebuild_reason`, y dibujar el flujo del primer build con sus condiciones (con figura, para delamor). Sin código corrido. El v33 queda después.

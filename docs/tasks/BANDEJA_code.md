@@ -14134,3 +14134,68 @@ a los 30 días. Confirmado por delamor.
 **A1.PAUSA.** Sigue abierto lo de antes: actualizar las 13 de `test_should_rebuild_conectado.py`
 acotándolas al régimen posterior al origen, o archivar el asunto. Y `a7d065f` tiene la
 implementación de `bootstrap` esperando esa palabra.
+
+---
+## ARRANQUE — 2026-10-26 22:53 UTC
+
+*Claude Opus 5 (Code, Codespace). §2 del `PROTOCOLO_code_continuidad_v1`, leído entero. Tres
+listas, sin veredicto global.*
+
+### Revisé
+
+1. **Locks.** `.git/*.lock`: no existe ninguno. No borré nada.
+2. **`git pull --rebase origin main`**: `Already up to date`. **HEAD = `6f3b4be`** (26 oct 19:08
+   UTC, *"docs: README aproximado al 26 oct… decisiones y ESTADO"*). El snapshot que traía el
+   prompt de arranque decía `4d6ca7a`; estaba atrasado 5 commits.
+3. **`git status -sb`**: `main...origin/main`, sin divergencia. Nada en el índice ni modificado:
+   todo lo que aparece es `??`.
+4. **ESTADO**: `docs/opus/ESTADO_al_cortar_24oct2026.md` (actualizado el 26 oct, con el bloque
+   *"26 oct, tarde — después del arranque"*). **`docs/opus/decisiones_en_el_acto.md`**: leídas
+   las entradas del 26 oct desde *"Respuestas de delamor al Feedback X"* hasta el final.
+5. **`DECISIONES_opus.md`**: barrido de P1–P14.
+6. **Archivos de salida de la última corrida** (S2-C0 intento 3, 22 oct 06:28): los 7 JSONL de
+   `experiments/_state_S2-C0/` y el `.bak` del intento 2 en `process/`, línea por línea.
+7. **Suite completa**, en serie: `python -m pytest -q`.
+
+### Encontré
+
+1. **Suite verde: 850 passed, 7 xfailed, 0 failed, 0 skipped**, 143,34 s en serie.
+   - El 21 oct (P12) eran **855 passed**. La diferencia son 5 tests, consistente con el revert
+     de CP1 (`7040a02`) y con el movimiento de `P1P4/`. **No lo verifiqué commit por commit**:
+     queda dicho como diferencia, no como causa.
+   - **El test movido corre y no se saltea**: `tests/test_ckm_landscape_config_ciclos.py::test_el_jsonl_historico_real_se_lee`
+     corrido solo → `1 passed` (no `skipped`), así que encontró su archivo en
+     `process/model_properties_front_20261004/`. Era el punto que pedía el ESTADO.
+   - Las **13 de `test_should_rebuild_conectado.py` están en verde**: `main` sigue con el revert,
+     `a7d065f` sin reaplicar. Coherente con el ESTADO.
+2. **Preguntas abiertas (§8), una por una:**
+   - **P12 — respondida por delamor, NO registrada en `DECISIONES_opus.md`.** La respuesta está
+     en la BANDEJA (*"revertir las dos. confirmo"*, `da4faa6`, entrada `REPORTE P12` del 21 oct
+     19:22) y se ejecutó. En `DECISIONES_opus.md` no hay ninguna mención de `P12`. Es el tercer
+     hueco del §8 (*"la escala que no vuelve"*): la decisión existe y la tríada quedó abierta.
+   - **P13 — DEFAULT VIGENTE, SIN DECISIÓN.** La línea suelta en
+     `iap_chatroom/_state/channel_ticks.jsonl` sigue ahí (está en `??`, no entra a git). Default:
+     no tocarla, y paralelo sólo para medir. **Hoy corrí en serie**, coherente con el default.
+   - **P14 — DEFAULT VIGENTE, SIN DECISIÓN.** El guardia afinado (el caso puede leer `run_store`
+     y no escribir) sigue como está.
+   - P1–P11: con respuesta en `DECISIONES_opus.md`.
+3. **Última corrida, completa.** `experiments/_state_S2-C0/`: `monitor_trajectory.jsonl` 27
+   líneas, `rebuild_decisions.jsonl` 27, `channel_messages.jsonl` 60, `channel_ticks.jsonl` 557,
+   `device_log.jsonl` 668, `device_decisions.jsonl` 659, `call_filter_records.jsonl` 659.
+   **Las 3256 líneas parsean como JSON; 0 truncadas.** El `.bak` del intento 2
+   (`process/monitor_trajectory.jsonl.bak_1792649008_serie2_caso0`): 51 líneas, 0 truncadas.
+   **Ningún `.tmp` suelto** en `experiments/`, `process/` ni `iap_chatroom/`.
+4. **Los `tmp_obj_*` de `.git/objects` siguen ahí**, como los declaró el ESTADO del 24 oct. No son
+   locks y no los toqué.
+
+### No pude revisar
+
+1. **Si los 5 tests de diferencia contra el 21 oct son exactamente los de `7040a02` + el
+   movimiento de `P1P4/`.** Haría falta correr la suite en el commit viejo; no lo hice (no hace
+   falta para el texto 08, y el ESTADO ya declara los dos cambios).
+2. **El vivo.** No se corre sin orden explícita, y el texto 08 lo prohíbe.
+3. **El `.bak` del intento 1.** Hay dos familias de `.bak` en `process/` (`1792559911` y
+   `1792649008`). Verifiqué por conteo de líneas que la de `1792649008` es la del intento 2 (51
+   evaluaciones, contra 27 del intento 3 que está vivo en `_state_S2-C0/`); de `monitor_trajectory`
+   **no hay `.bak` de la familia `1792559911`**, así que del intento 1 no hay trayectoria.
+

@@ -14566,3 +14566,123 @@ comportamiento** — si algo de esto hubiera cambiado comportamiento, la suite i
 de que no está cubierto.
 
 **A1.PAUSA.**
+
+---
+## ESTRATEGIA de límites de uso — divergencias y observaciones desde adentro. A pedido de delamor — 2026-10-26 23:15 UTC
+
+*Claude Opus 5 (Code, Codespace). delamor, hoy: *"la estrategia es propuesta, se aceptan críticas,
+toda divergencia es un aporte"* y *"si vos te das cuenta de algo que puede ayudar es más que
+bienvenido"*. Sobre `docs/opus/ESTRATEGIA_limites_de_uso_26oct2026.md`, que **no toqué**:
+`docs/opus/` es de Opus y la traza con fecha no se reescribe.*
+
+### Parte A — divergencias del documento (6)
+
+**A1. El punto 3 choca con el refuerzo de delamor del 24 oct.** La estrategia dice *"lo grande se
+lee una sola vez"*; el refuerzo dice que los `.py` se leen **2 veces** si hay escritura, enteros.
+Hoy las dos lecturas de `ckm_monitor.py` y `monitor_service.py` —1.900 líneas repetidas— fueron la
+lectura más grande de la sesión, y se hicieron **por** el refuerzo. Las dos reglas no pueden
+gobernar el mismo archivo. Mi lectura: no se contradicen de fondo —el refuerzo es sobre **no
+afirmar sin cotejar** y la estrategia sobre **no releer de gusto**— pero eso no está escrito en
+ninguno de los dos lados. Ver **P15**.
+
+**A2. El punto 7 deroga el régimen de checkpoints, y nadie dijo eso.** *"Code trabaja de corrido"*
+contra `CLAUDE.md`: *"se ejecutan con checkpoints: al terminar cada paso, detenerse, reportar y
+esperar el OK. **Vale también para las acciones espontáneas.**"* Hoy trabajé de corrido V1→V6 con
+una sola A1.PAUSA al final, y salió bien **porque el texto 08 definía la verificación entera como
+una unidad con su pausa**. Leído literal, el punto 7 saca el "esperar el OK" de cada paso. Ver
+**P16**.
+
+**A3. El punto 2 declara que no está medido, y el punto 8 dice que hay instrumento.** Que el punto
+2 diga *"es lectura de la guía, no está medido"* es lo más fuerte del documento, y aun así produce
+una conducta (estar IDLE en vez de cerrar). El punto 8 manda mirar Settings > Usage: **el
+instrumento existe y el punto 2 no lo usa.** Se mide barato —uso antes y después de un retomar con
+pausa larga, dos veces— y pasa de lectura a dato.
+
+**A4. El punto 5 corta por tipo de artefacto; el corte que veo es otro.** *"Registros, ESTADO y
+git, con menos esfuerzo"* pone del lado barato donde el proyecto guarda su valor. El
+`ESTADO_calibrate_en_el_build_v1.md` de hoy necesitaba el resultado de V1 para decir qué espera y
+de quién. Y la falla es invisible: un ESTADO flaco no da error, pierde en silencio lo que no era
+obvio. El corte: **mecánico vs. de juicio** —comandos de git, mover archivos, formatear →
+liviano; qué dice el ESTADO y cuál fue la divergencia → no.
+
+**A5. El punto 1, llevado al límite, se paga a sí mismo, y hay una ausencia.** Cada sesión paga el
+§2 completo. Partir una tarea en tres sesiones paga tres arranques. El óptimo no es la sesión más
+corta sino **la unidad más chica que se puede cerrar**, que es lo que el §4 del protocolo ya llama
+"CP chicos". La ausencia: la estrategia cubre el corte **antes** de empezar (punto 8) y el
+protocolo resuelve el corte **en el medio** (escritura atómica, idempotencia, CP chicos).
+Resuelven el mismo problema por dos lados y **ninguno cita al otro**.
+
+**A6. El punto 6 está decidido y no aplicado.** En esta sesión siguen cargados los conectores de
+Google Drive y Claude Docs, con sus esquemas en el prompt de cada request. Es el ítem más barato de
+la lista y el único que no necesita decisión de nadie.
+
+### Parte B — lo que vi desde adentro (5). El 1, 2, 3 y 5 los aplico yo
+
+**B1. Corrí la suite entera cuando el §2.5 pedía menos** (encontrado por mí, hoy). El protocolo
+dice *"los tests de la TASK abierta"*; corrí las 857, **143 s**, y después otra vez completa,
+**115 s**, para verificar una afirmación que ya había escrito sobre el estado posterior a los
+cambios. Lo que el §2.5 pedía eran `test_should_rebuild_conectado.py` y el test movido: ~15 s.
+**Las dos corridas no son redundantes** —la del arranque dice qué heredé, la del final qué dejé—
+pero **sólo la segunda necesita ser completa**. De ahora en más: arranque acotado al §2.5, completa
+al cerrar.
+
+**B2. El costo no es leer: es leer temprano.** Cada archivo que entra al contexto **se vuelve a
+enviar en cada request posterior de la sesión**. Un `.py` de 1.000 líneas leído en el tool call 10
+de 40 se paga unas 30 veces; leído en el 35, tres. Hoy leí `ckm_monitor.py` entero y después hice
+~20 llamadas más con eso adentro. Mismo trabajo, menos reenvío, con el orden al revés: **primero lo
+que explora y mide, al final lo que hay que leer completo.** Es gratis y no está en ninguna de las
+dos listas.
+
+**B3. Que el shell reduzca antes de llegar al contexto.** Las tablas de V4 y V5 salieron de 3.256
+líneas de JSONL y al contexto entraron ~80. Cuando lo que hace falta es **una respuesta calculada**
+sobre algo grande, va un `python -I` que imprime sólo el resultado. Lo mismo con esta BANDEJA:
+`grep -n "^## "` da el índice de 14.000 líneas en 25 — y **funciona porque las entradas tienen el
+`## ` consistente**. Mantener ese formato es lo que mantiene barato el archivo.
+
+**B4. Propuesta acotada sobre la segunda lectura** → es **P15**.
+
+**B5. Lo que no cuesta y conviene de costumbre.** Varias llamadas independientes en un mismo bloque
+en vez de en serie. Y no releer un archivo después de editarlo para "confirmar" que entró: si la
+edición no aplica, falla y se avisa.
+
+**El límite honesto: no veo tokens ni mi propio uso.** Todo lo de arriba es sobre **volumen de
+texto que entra al contexto**, que es un proxy del gasto, **no el gasto**. Lo único que lo mediría
+es el instrumento del punto 8.
+
+---
+
+## PREGUNTA P15 — **NO BLOQUEA** — 2026-10-26 23:15 UTC — **[delamor]**
+
+**La segunda lectura de un `.py`, cuando el cambio es sólo de docstring o comentario.**
+
+Hoy la segunda lectura de los dos `.py` fueron **1.900 líneas repetidas para verificar dos cambios
+de docstring**, que por construcción no pueden cambiar comportamiento. Opus ya se desvió de esto el
+26 oct —leyó por diff— y lo **declaró como desvío**, que es lo correcto.
+
+**Propuesta:** que el desvío deje de ser desvío en un caso nombrado — **segunda lectura = archivo
+entero cuando se tocó código; diff más el bloque que lo contiene cuando sólo se tocaron docstrings
+o comentarios.** El propósito de la regla (*"ninguna afirmación sobre un `.py` sin haber cotejado
+las dos cosas"*) queda intacto: el diff de un docstring **es** las dos cosas.
+
+Toca una regla que puso delamor (**E1**), así que no la decide Code ni Opus.
+
+**Default declarado y reversible mientras no haya respuesta:** sigo leyendo **entero las dos
+veces**, como hoy. Revertir la propuesta es no aplicarla.
+
+## PREGUNTA P16 — **NO BLOQUEA** — 2026-10-26 23:15 UTC — **[delamor]**
+
+**Qué gobierna entre el punto 7 de la estrategia y los checkpoints de `CLAUDE.md`.** Ver A2.
+*"Code trabaja de corrido"* contra *"al terminar cada paso, detenerse, reportar y esperar el OK;
+vale también para las acciones espontáneas"*.
+
+Lo que haría falta es una línea que diga dónde cae el corte. Mi lectura, por si sirve: **de corrido
+adentro de una unidad definida, pausa entre unidades** — que es lo que pasó hoy con el texto 08, y
+funcionó porque **el texto definía la unidad**. Si la unidad no está definida por quien la pide,
+el punto 7 y el checkpoint dicen cosas distintas.
+
+Toca un principio del proyecto (**E1**).
+
+**Default declarado y reversible:** sigo como hoy —una A1.PAUSA por unidad definida en la consigna,
+y si la consigna no define unidad, pausa al terminar cada paso—.
+
+**A1.PAUSA.**

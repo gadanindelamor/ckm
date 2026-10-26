@@ -1,4 +1,4 @@
-# ESTADO al cortar — 24 oct 2026 (Opus 5.5, Cowork)
+# ESTADO al cortar — 24 oct 2026, actualizado el 26 oct (Opus 5.5, Cowork)
 
 Traza completa en `docs/opus/decisiones_en_el_acto.md`, entradas del 24 oct. Esto es solo el mapa.
 
@@ -85,3 +85,24 @@ Traza completa en `docs/opus/decisiones_en_el_acto.md`, entradas del 24 oct. Est
 ## Raro
 - En `.git/objects` hay cientos de `tmp_obj_*` sobrantes de sesiones anteriores. No son locks y no se tocaron.
 - Uso al 95% del límite semanal; se repone en un día.
+
+
+---
+## 26 oct — plan del v33, después de leer el v32 entero (1117 líneas)
+Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por lugar del v32 (líneas del v32):
+- **Bloque de arriba del `_borrador`:** el bloque del v33 y, debajo, las secciones **Traza** (los bloques v29–v32 tal como están), **Pendientes** y **Retirado**. Lo retirado va al `_borrador`, nunca al `_print`.
+- **Premisas → F** (l.65–67, l.98, l.219–220, l.258–272): se va "premise/premises" para P1–P7. F1, F3 y F4 quedan como *formulaciones matemáticas que se verifican sobre W estática*, sin "(formerly Pn)". El párrafo de P2 (l.272) va a Retirado. Las tres condiciones de l.260–264 (determinismo, productor declarado, medida de referencia) no son P1–P7: Opus las deja como *condiciones*, sin la palabra premisa (decisión de Opus, se declara).
+- **§5.2 P2, P5, P6, P7** (l.400–420) → Retirado. P5–P7 *"esperan condiciones"*. Arrastran §5.3 (l.424), el abstract (l.67), §8.1 (l.738–741) y §8.5 (l.802, l.832, l.865–872). **Pregunta abierta a delamor:** el nulo de permutación del signo por marcadores (l.404–416), ¿queda como medición o se va con P5?
+- **§4.2 y §4.2.4** (l.297, l.334): *"what jumps is its measurement"*, con la tensión declarada; sale *"[Propuesta — decide delamor.]"*.
+- **§4.2.3 CKMLandscapeConfig** (l.326) está mal contra el código: el threshold **no** está en la Config (`ckm_landscape_config.py:186`, D6). Se corrige así: declarado = `sampling_mode`, `n_runs`, `seed`, `scale`; medido por ciclo = `w_version_id`, N, μ_W y β_c en sus dos formas.
+- **§4.2.1 / §6.4 / §8.2:** la primera W de cada corrida no pasa por `calibrate` (`registers/REG_calibrate_no_corre_en_el_build_v1.md`); el intento 2 tiene `d_max = 0` en los 4 rebuilds; el umbral queda por debajo de la dispersión del muestreo, como conclusión (M4).
+- **β (M3):** un párrafo con `β_i`, `β_collective`, `beta_c_corpus`, `beta_c_landscape` y `beta_c_nonzero/global`, según el código (CONSIDERACIONES §3). Ninguno entra en la relajación del vivo (`uniform`).
+- **§4.3.1 baselines (M5):** el de COCO es una decisión de delamor del 8 oct (`coco.py:240`); el de Monitor, tal como está en el código.
+- **§4.3.2** (l.370): el texto de CONSIDERACIONES §3 M2. El *"15.52 → 5.27"* va a Pendientes (a verificar en el CP-E, `0e042ac`).
+- **REG del intento 3** (l.531, l.553, l.567): → `registers/REG_iap_serie2_caso0_intento3_v1.md`; sale *"register in draft"*.
+- **IAC v2:** l.398 y l.900 → se obtiene de https://nlds.engineering.ucsc.edu/iac2/; sale *"[Permiso de uso pedido — pendiente]"*.
+- **§8.3** (l.768): el gap de representación como forma (círculo que no cierra, hélice), *no medido*.
+- **Al `_print` no van:** `[a verificar.]` (l.396), la nota en castellano de §7.6 (l.724), los `[VERIFY]` (a Pendientes), el placeholder del release y la fecha (a Pendientes).
+- **Pregunta abierta a delamor:** ¿los resultados de fourforums v8i–v8n (el nulo L3 de triángulos, z = −2,06; el instrumento en su techo con N = 146) entran al cuerpo del v33, con las tres declaraciones?
+- **Falta leer antes de escribir:** el CP-E, el criterio estructural de rebuild y el baseline de Monitor en `DECISIONES`.
+- **Recomendación de Opus, por el uso:** escribir el v33 en una sesión nueva, que arranque de este ESTADO. Esta conversación ya es muy larga.

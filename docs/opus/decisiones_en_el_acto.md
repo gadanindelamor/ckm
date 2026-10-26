@@ -272,3 +272,11 @@
   - **`AgentDeviceSkin`: sin cubrir.** Ningún test de la suite lo construye con o sin criterio local (sólo `test_caso_serie2_caso0_diseno.py:223-231` verifica que el caso 0 no lo usa).
   - En el código el "apagado" es `None` (ausencia), no `False`; los tests afirman `None`, coherente con "la ausencia no es cero". Diferencia de palabra, declarada.
   - Va al próximo texto para Code (alcance de devices): un test de que el skin, por default, no aplica el criterio local, y verificar si algún driver se lo pasa. Si el skin debe **rechazar** un criterio local es otra decisión, de delamor, y no está tomada.
+- **Todos los defaults de parámetros se declaran** (delamor: *"similar a todos los defaults de parametros, deben ser declarados"*). Lo generaliza desde el criterio local. Lectura de Opus, a confirmar: un default que se usa tiene que aparecer en la traza o el panel como default, con su valor y de dónde sale; nunca completado en silencio por un argumento de función. Casos de hoy, todos encontrados en lecturas parciales:
+  - los umbrales de COCO, 0,40 y 0,60 (`coco.py:147-149`), que el constructor completa cuando no llega calibración;
+  - `n_runs` de COCO, con default 80 en su constructor; en el canal se pisa con el de la Config;
+  - `n_runs_attractors = 1000` de Monitor, que es propio y no viene de la Config;
+  - `n_runs = 200`, `seed = 0` y la grilla de `calibrate` (estos ya van en `condiciones`);
+  - `n_runs = 1000` y `seed = 0` de la Config, cuyo docstring dice "obligatorio";
+  - el criterio local, que por default es `None`.
+  - Destino: las DEFS v19, como regla, y el próximo texto para Code, como inventario verificado de defaults y de dónde se declara cada uno. El texto 08 no cambia: su V4 ya pregunta si el panel dice de dónde sale la vara.

@@ -280,3 +280,8 @@
   - `n_runs = 1000` y `seed = 0` de la Config, cuyo docstring dice "obligatorio";
   - el criterio local, que por default es `None`.
   - Destino: las DEFS v19, como regla, y el próximo texto para Code, como inventario verificado de defaults y de dónde se declara cada uno. El texto 08 no cambia: su V4 ya pregunta si el panel dice de dónde sale la vara.
+  - delamor confirma: *"Nunca lo completa en silencio el argumento de una función" EXACTO.* Agrega:
+    - **Dónde se declaran antes de que empiece un flujo: abierto** (*"no se"*).
+    - Que la traza lleve la declaración *"es congruente"*. Pide revisar si ya se cumple en algún caso; si no se cumple, por qué, y cuál es su impacto.
+    - **Requisito de lectura:** *"Yo REVIEWER o usuario del repo, digamos yo codificando necesito poder leer y saber cuales son las declaraciones, sea yo humano o no humano… debo poder leer"*. Las declaraciones tienen que poder leerse **antes** de correr, no solo reconstruirse desde la traza.
+    - Para el próximo texto para Code: el inventario de defaults va con tres columnas por parámetro: (a) dónde se declara antes del flujo (o "no se declara"); (b) si aparece en la traza o en el panel como default; (c) si no se declara, por qué y qué impacto tiene. Sin implementar nada. El lugar donde se van a declarar lo decide delamor después de ver el inventario.

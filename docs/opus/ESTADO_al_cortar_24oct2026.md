@@ -111,3 +111,14 @@ Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por luga
 1. **v33** (`_borrador` + `_print`) según el plan de arriba.
 2. **DEFS v19** sobre la v18, con lo del 26 oct: las premisas solo en W dinámica (las F y las declaraciones en W estática); P1–P7 retiradas como premisas; la Config (lo declarado y lo medido, sin umbrales); el primer build sin calibrar; las capas del repo (`X_alcance_CKM_IAP_devices_26oct2026.md`); la nueva ubicación de `P1P4/` → `process/model_properties_front_20261004/`.
 3. **Para Code** (texto a escribir): correr la suite (el test movido, `test_el_jsonl_historico_real_se_lee`, tiene que correr y no saltearse) y la tarea de las tres declaraciones de fourforums.
+
+---
+## 26 oct, tarde — después del arranque
+- Respuestas de delamor al Feedback X: registradas (`902a586`).
+- Docstring de `calibrate.py`: declara que `calibrate()` usa sólo el extremo de colapso (`8e3ff3b`).
+- **Pendientes del repo, reordenados por delamor (sus ejes):**
+  1. **Bootstrap:** primero entender cómo nace la primera W por el camino del rebuild (condiciones, flujo limpio o no); después evaluar las 13. No es "dejarlo como está".
+  2. **Dominancia en los criterios de `should_rebuild`:** sin decisión todavía.
+  3. **Defaults de `LandscapeConfig`:** el docstring dice que `n_runs` y `seed` son obligatorios; el código les da default. Espera la decisión.
+  - **calibrate:** *"debe empezar por los defaults para saber que curva es lambda"*; pregunta abierta, ver decisiones del 26 oct.
+- **Próxima sesión de Opus (propuesta):** leer completos `iap_chatroom/ckm_monitor.py` (869 líneas), el diff de `a7d065f` y `corpus_service.ingest`/`no_rebuild_reason`, y dibujar el flujo del primer build con sus condiciones (con figura, para delamor). Sin código corrido. El v33 queda después.

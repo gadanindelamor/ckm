@@ -260,3 +260,4 @@
   - Caso 2 (primer ciclo): `_calibrate` no se llama → `coco_config` sin umbrales → 0,40 / 0,60.
   - Caso 1 (no separa): `set_coco_thresholds` retorna sin tocar → si nunca se calibró, 0,40 / 0,60; si se calibró antes, la vara de otra W. Un `FRAC_REC_MIN = "UNKNOWN"` se filtra y queda el anterior o el default.
   - Además la Config no los lleva (D6), así que nadie más es dueño de esos valores. El registro de la calibración sí dice el estado (`_coco_calibration`), pero COCO usa el default igual.
+- **Texto para Code 08** (decisión de Opus ante *"pasos siguientes aclarar con Code todo lo definido aquí?"*): sí, como **verificación V1–V6, sin implementar**, porque varias lecturas de Opus fueron parciales y Code tiene los datos del vivo. Archivo: `docs/opus/TEXTO_PARA_CODE_08_REPO_CKM_verificar_bootstrap_umbrales_26oct2026.md`. Único cambio permitido: los docstrings de V6.

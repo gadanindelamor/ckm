@@ -503,8 +503,15 @@ class MonitorService:
         Los umbrales con los que **nace el próximo COCO**, y el registro de la
         calibración que los produjo.
 
-        Lo llama el canal después de un rebuild (`TASK_calibrate_mecanismo_v1`
-        en su punto). `valores=None` deja los que haya —que pueden ser los
+        **Lo llama el canal ANTES del rebuild**, desde `CKMMonitor._calibrate`
+        (`iap_chatroom/ckm_monitor.py:603`), que corre sobre la W **candidata**
+        y recién después instala (`:501` antes de `:514`). Es el único caller.
+        Acá decía *"después de un rebuild"*, que era el orden anterior al 19
+        oct (delamor: *"el punto es `should_rebuild`… antes del rebuild"*);
+        corregido el 26 oct 2026 al cotejar los docstrings contra el código.
+        Los umbrales no entran al COCO vivo: nacen con el del ciclo siguiente,
+        así que "antes del rebuild" y "para el COCO de después" conviven.
+        `valores=None` deja los que haya —que pueden ser los
         defaults de `coco.py`— y el `registro` dice que no se calibró: **no se
         cae a 0.40 en silencio**, se ve que ese 0.40 es el default.
 

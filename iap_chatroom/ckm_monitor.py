@@ -333,8 +333,9 @@ class CKMMonitor:
         # El registro de la última corrida de `calibrate`. **Corre**, desde el
         # 19 oct: lo llena `_calibrate()` antes de cada rebuild. `None` hasta
         # que haya habido uno — y por eso **el build de la primera W lo deja
-        # en `None`**: no pasa por ese punto (`REG_borrador_calibrate_no_corre
-        # _en_el_build.md`, 24 oct).
+        # en `None`**: no pasa por ese punto
+        # (`registers/REG_calibrate_no_corre_en_el_build_v1.md`, 24 oct; el
+        # borrador que esta línea citaba en `docs/` ya no existe).
         self._punto_calibrate: "dict | None" = None
 
     @property
@@ -590,7 +591,8 @@ class CKMMonitor:
         defaults. Medido en las dos corridas vivas: su `calibration.estado` es
         `None` —ni siquiera `nulo_calibrado`—, 11 de 51 evaluaciones en el
         intento 2 y 4 de 27 en el 3
-        (`docs/REG_borrador_calibrate_no_corre_en_el_build.md`).
+        (`registers/REG_calibrate_no_corre_en_el_build_v1.md`, que es el REG
+        con el OK de delamor; el borrador en `docs/` ya no existe).
 
         No instancia nada nuevo: usa `services/calibrate.py` donde está, y le
         pasa una copia que `calibrate` vuelve a copiar y no toca.

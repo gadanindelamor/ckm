@@ -39,6 +39,12 @@ extremos se sacan **de la misma W** y la interpolación es sin dimensión:
   de W (`max|W|`). Todo tira para el mismo lado: el paisaje pierde órbitas.
 - **expansión**: el signo invertido en una **fracción** de los pares.
 
+**Lo que `calibrate()` usa hoy: sólo el extremo de colapso.** `extremo_expansion`
+existe y tiene tests (`test_calibrate_mecanismo.py`), pero `calibrate()` no la
+llama: la curva es `W → W_colapso`. (Divergencia docstring/código declarada por
+Opus 5.5 el 26 oct 2026; el docstring nombraba los dos extremos sin decir cuál
+entra a la curva.)
+
 `calibrate` busca un umbral que **separe** λ=0 (COCO no dispara) de λ=1 (COCO
 dispara), y registra el **margen**. Si ninguno separa: **no calibrado**, sin
 inventar un valor.

@@ -1,4 +1,4 @@
-# Texto para Code — 13 — repo ckm — un solo n_runs (decisión de delamor) + dos correcciones de registro — 27 oct 2026 (Opus 5.5)
+# Texto para Code — 13 (reemplaza la versión anterior entera) — repo ckm — n_runs y seeds: revisar el concepto e implementar (dirección de delamor) + dos correcciones de registro — 27 oct 2026 (Opus 5.5)
 
 ```
 Code: tres puntos, en este orden. Por favor.
@@ -11,31 +11,48 @@ Code: tres puntos, en este orden. Por favor.
 - Unidad: cada punto. De corrido dentro de cada uno; A1.PAUSA al terminar el
   punto 1 sólo si encontrás una tensión; si no, seguí.
 
-1. UN SOLO n_runs — decisión de delamor (E3 que subiste en el CP2).
-   delamor, 27 oct: "si se trata del mismo concepto, n_runs, que se usa como
+1. n_runs y seeds: revisar si son el mismo concepto, y después implementar —
+   dirección de delamor (E3 que subiste en el CP2). delamor, 27 oct: "La
+   direccion, es revise. y que implemente lo solicitado coco, monitor, y copia
+   de W, usan el mismo n runs (si son el mismo conceptualmente claro) idem
+   seeds, etc... Ahora si NO lo son conceptualmente, porque coco tal y cual,
+   y en cambio Monitor tal cosa, etc etc. CONCEPTUALMENTE se separan, BABEL".
+   Antes había dicho: "si se trata del mismo concepto, n_runs, que se usa como
    variaciones de sigma estados iniciales, y se analiza donde tiende o
-   converge. La respuesta es si. Confirmo todos leen el mismo concepto".
-   Y su pregunta de origen: "si cambio el n_runs para barridos en la config,
-   cambia el de Monitor, y el de COCO?". Después de este punto, la respuesta
-   tiene que ser sí, y también para calibrate.
-   - Monitor, COCO y calibrate leen n_runs de CKMlandscapeConfig. Ninguno lo
-     tiene propio: sale calibrate_n_runs (Config y CALIBRATE_N_RUNS en
-     ckm_monitor.py); Monitor deja de contar con n_runs_attractors propio
-     (monitor_service.py:91, :140) y lee el de la Config.
-   - No cambia ningún número: hoy los tres valen 1000.
-   - Alcance de la decisión: n_runs. seed y grilla no están en esta decisión:
-     seed de Monitor (count_seed), seed de calibrate y seed de COCO quedan como
-     están; reportá cómo quedan, sin unificarlos.
-   - Test: cambiar Config.n_runs mueve a los tres (Monitor, COCO y calibrate).
+   converge... todos leen el mismo concepto". "Copia de W" es su nombre para
+   el D_ckm de calibrate.
+   1a. Revisión, sin código. Para cada parámetro de muestreo (n_runs, seed y
+       lo que encuentres del mismo tipo, por ejemplo la grilla o
+       sampling_mode) y para cada uno de los tres (Monitor, COCO, copia de
+       W), escribí en la BANDEJA una tabla con lo que el código hace, no con
+       lo que significa: qué se muestrea, sobre qué W o copia, qué se calcula
+       con eso, y contra qué se compara ese resultado después. Con línea de
+       código. Al final de cada parámetro: "mismo concepto" o "se separa", y
+       la razón, en una línea, tomada de la tabla.
+   1b. Implementación, según 1a, sin esperar:
+       - mismo concepto en los tres -> un solo campo en CKMlandscapeConfig,
+         que leen los tres. Sale el propio de cada uno (calibrate_n_runs y
+         CALIBRATE_N_RUNS; n_runs_attractors y count_seed de Monitor, si es
+         el caso).
+       - no es el mismo concepto -> un campo por concepto en la Config, con
+         nombre propio (orden BABEL: un nombre por concepto, en inglés), y
+         cada uno declarado. Dos que hoy se llaman igual y son distintos
+         dejan de llamarse igual.
+       - Si para algún parámetro la tabla no alcanza para decidir, ése no
+         se implementa: A1.PAUSA sólo para ése y seguí con lo demás.
+   - No cambia ningún número: los valores de hoy pasan tal cual al campo
+     que les toque.
+   - Test: cambiar un campo de la Config mueve exactamente a los que lo leen,
+     y a ningún otro.
    - Si un camino construye Monitor o calibrate sin Config (tests, drivers,
      calibrate offline), no lo arregles con un default nuevo: reportá cuáles
-     son y qué n_runs usan hoy.
-   - Docstrings a revisar, con el grep: el de la Config (ahora sí "uno solo
-     para Monitor, COCO y calibrate"), el de coco.py:173-175 ("sesgado hacia
-     arriba con n_runs… no cambiar sin revisar el hallazgo del sweep 60→70")
-     — no lo cambies, decí si sigue siendo cierto tal como está escrito —,
-     y el de CALIBRATE_N_RUNS con la razón de delamor (la razón se conserva,
-     en el docstring de la Config o donde quede el valor).
+     son y qué valores usan hoy.
+   - Docstrings, con el grep: el de la Config, el de coco.py:173-175
+     ("sesgado hacia arriba con n_runs… no cambiar sin revisar el hallazgo
+     del sweep 60→70") — no lo cambies, decí si sigue siendo cierto tal como
+     está escrito —, y la razón de delamor para el 1000 de calibrate ("darles
+     posibilidades para que sientan el sesgo. luego lo que suceda solo
+     sucederá"), que se conserva donde quede el valor.
    - El n_runs = 80 de la firma de COCO es un default de función: no lo toques
      (TASK de defaults); decí si en algún camino todavía se usa.
 

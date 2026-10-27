@@ -48,3 +48,30 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
   - **Dos `seed` con el mismo nombre en `calibrate`.** Qué es: el de `extremo_expansion` elige qué pares invierten el signo; no sortea `sigma_0`. Hay que decidir si se renombra (BABEL). Hoy no se usa en el flujo.
   - **Q1–Q3, que trajiste vos y quedan abiertas** (BANDEJA, 16:45 UTC): los nombres de `d_ckm`, permutar roles de devices entre providers, y FREE WILL después de un `LEAVE`.
   - **A5:** `human_device_skin` nace en la BANDEJA, con sus condiciones (17:00–17:10 UTC). No es un pedido.
+
+---
+## 27 oct, cierre — después del texto 13
+- **Resuelto:**
+  - E5: el docstring de `ckm_monitor.py` declara las condiciones de la primera separación en un vivo (`293fd44`).
+  - P13 ya estaba resuelto (la "fila misteriosa").
+  - P14 punto 3: los providers pasan a IAP (delamor).
+  - `iap_chatroom/tests/` es process: no se agregan archivos ahí.
+- **Textos para Code pendientes, en orden:**
+  - **14:** el intervalo de Simpson, el piso del colapso por enumeración y la medida de referencia.
+  - **15:** hacia el próximo vivo. `--check`, la caída de B, el test del skin, el inventario de defaults y el docstring de `coco.py`.
+  - **16:** el registro de providers en IAP y la clasificación de `iap_chatroom/tests/`, con A1.PAUSA antes de mover.
+- **Opus (próxima sesión):**
+  - leer en la BANDEJA los reportes de 14, 15 y 16;
+  - dar el OK o subir a delamor el movimiento de `iap_chatroom/tests/`;
+  - las DEFS v19: 1000 → 200, CP2 implementado, texto 13, E5 resuelto, la medida de referencia y el piso del colapso según el 14;
+  - después, el v33.
+- **delamor:**
+  - **La medida de referencia:** "uniforme" en el código (30–70 % de nodos activos) no es la del paper (uniforme sobre {−1,+1}^N). Decide después de la lectura de Code. Declaró su propio sesgo hacia la opción más directa.
+  - **E1, el state_dir:** espera el `--check` y el inventario. Opciones A, B y C, con la inclinación de Opus por B.
+  - **P14 puntos 1 y 2** (los archivos de estado y el puerto): ¿también pasan a IAP?
+  - **Siguen abiertos:** el patrón de calibrate (la tensión del margen sostenida; el máximo interno; el rango expansión–contracción; el percentil sobre el ruido propio; la W sombra) y las dos semillas en `calibrate`. También J1, J2, los subgrafos, `W_asim`, la figura y el REG del intento 2.
+- **Abierto, sin pedido:**
+  - "ODA son 4 pasos y uno no es paso";
+  - el criterio local es implementación, no paso;
+  - `human_device_skin` (¿evolución de la GUI?);
+  - Q1–Q3.

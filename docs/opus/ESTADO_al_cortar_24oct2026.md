@@ -123,3 +123,17 @@ Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por luga
   - **calibrate:** *"debe empezar por los defaults para saber que curva es lambda"*; pregunta abierta, ver decisiones del 26 oct.
 - **Code primero:** `docs/opus/TEXTO_PARA_CODE_08_REPO_CKM_verificar_bootstrap_umbrales_26oct2026.md` (verificación V1–V6, sin implementar). Opus lee su reporte en la BANDEJA antes que delamor.
 - **Próxima sesión de Opus (propuesta):** leer el reporte de Code y, si hace falta, partir de "la punta del ovillo" (decisiones, 26 oct: los casos 1 y 2 en que COCO_i juzga con una vara que no sale de W_i). Leer completos `iap_chatroom/ckm_monitor.py` (869 líneas), el diff de `a7d065f` y `corpus_service.ingest`/`no_rebuild_reason`, y dibujar el flujo del primer build con sus condiciones (con figura, para delamor). Sin código corrido. El v33 queda después.
+
+---
+## 27 oct — cierre de la sesión larga (26–27 oct)
+- **Leído:** el reporte de Code al texto 08 (V1–V6) y sus divergencias sobre la estrategia de uso. Todo está en `decisiones_en_el_acto.md` del 26 y 27 oct.
+- **Decidido por delamor:**
+  - la visión del estado: cada uno guarda lo suyo, con su atribución, en su lugar, y *"el candado es el dónde"*;
+  - P15: A1 al acceder a un `.py`; después de modificarlo, su docstring + `grep` de los nombres tocados;
+  - P16: de corrido dentro de la unidad, pausa entre unidades;
+  - el diseño del bootstrap en esa dirección.
+- **Escrito:** `docs/tasks/TASK_calibrate_en_el_build_v2.md` y el texto para Code 09 (CPa + CP0).
+- **Qué espera y de quién:**
+  - **delamor:** pegarle a Code el texto 09; revisar los conectores; estudiar la pantalla de uso.
+  - **Code:** CPa y CP0, y después A1.PAUSA.
+  - **Opus (sesión nueva):** leer el reporte de CPa/CP0 en la BANDEJA y dar el OK de CP1, o subir a delamor los puntos que sean E3. El v33 y las DEFS v19 van después.

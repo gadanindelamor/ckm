@@ -51,14 +51,45 @@ RHO_STAR = 0.5   # misma ρ* que coco.BETA_RHO_STAR
 
 CAUSA_BOOTSTRAP = "bootstrap"
 
-# n_runs = 1000: decisión de delamor (8 oct, P9) — "n 1000". Es donde N_eff
-# converge en los casos IAP, ±2% respecto de 5000; con 50 quedaba 5-20% por
-# debajo. Uno solo para Monitor y COCO.
-N_RUNS_DEFAULT = 1000
-# seed: la elige Code y la declara (P9, resuelto por Opus bajo el umbral). 0 es
-# la que Monitor ya usaba por default en count_seed, así que no mueve nada de lo
-# que ya está medido.
+# ── el muestreo: un solo lugar para los tres (27 oct 2026, texto 13) ────────
+# Los tres que muestrean sigma_0 —Monitor, COCO y la copia de W de
+# `calibrate`— leen de acá, y cualquier caso que se agregue después también.
+# La revisión que lo decidió está en BANDEJA_code, REPORTE 1a: los tres pasan
+# `n_runs` y `seed` a la **misma** función (`landscape_engine.count_attractors`,
+# que los declara sin default) y en el mismo rol —cuántas sigma_0 y cuáles—.
+# Lo que cambia entre ellos es sobre qué W cuentan y contra qué comparan el
+# N_eff que sale; nada de eso es n_runs ni seed.
+#
+# **El default es UNO** (delamor, 27 oct: *"el default es el mismo para los tres
+# casos, y para los Q casos del futuro"*). Un valor propio por caso existe sólo
+# si un driver lo declara, y entonces se ve: `sampling_overrides`.
+#
+# **n_runs = 200: decisión de delamor, 27 oct 2026** — *"Y tambie fijar como
+# default n runs 200 y seed 0"*. Es el default único de los tres, el primero que
+# vale para los tres a la vez. No se le agrega lectura.
+#
+# Lo que había antes, que esta decisión reemplaza, y que no se borra:
+#   - n_runs = 1000, decisión de delamor del 8 oct (P9) — "n 1000". Es donde
+#     N_eff converge en los casos IAP, ±2% respecto de 5000; con 50 quedaba
+#     5-20% por debajo.
+#   - era también el 1000 de `calibrate` (D6', 27 oct), que vivía en
+#     `ckm_monitor.CALIBRATE_N_RUNS`, y su razón era de delamor, en sus
+#     palabras: *"darles posibilidades para que sientan el sesgo. luego lo que
+#     suceda solo sucederá."*
+#   - y lo medido en el CP0 (`4d219ae`), que el 200 vuelve a poner en juego: a
+#     200 el veredicto de la única calibración que separó en un vivo **depende
+#     de la semilla** —2 de 10 dicen `calibrado`—; a 1000, 0 de 10.
+N_RUNS_DEFAULT = 200
+# seed = 0: **confirmada por delamor el 27 oct 2026** en el mismo mensaje que
+# el 200. Venía de P9 (la elige Code y la declara) y es la que Monitor ya usaba
+# por default en count_seed y la que `calibrate` tenía en su propio
+# SEED_DEFAULT, así que el valor no se mueve: ahora está decidido.
 SEED_DEFAULT = 0
+
+# Los tres casos que muestrean, y los parámetros que comparten. Rótulos nuevos,
+# en inglés (BABEL: un nombre por concepto).
+SAMPLING_CASES = ("monitor", "coco", "calibrate")
+SAMPLING_PARAMS = ("n_runs", "seed")
 
 
 # ── medido ───────────────────────────────────────────────────────────────────
@@ -152,6 +183,70 @@ class Ciclo:
         return cls(**d)
 
 
+# ── el muestreo declarado por caso (1c) ─────────────────────────────────────
+
+def _validar_sampling_overrides(overrides: Optional[dict]) -> dict:
+    """
+    Valida lo que un driver declaró para un caso, y lo devuelve normalizado.
+
+    Forma: `{"<caso>": {"n_runs": int, "seed": int, "declared_by": str}}`, con
+    al menos un parámetro y **`declared_by` obligatorio**: un valor propio sin
+    quién lo declaró es justamente lo que 1c no quiere —un número distinto que
+    nadie firma—. `None` o `{}` quiere decir que los tres leen el default único.
+    """
+    if overrides is None:
+        return {}
+    if not isinstance(overrides, dict):
+        raise ValueError(
+            f"sampling_overrides inválido: {overrides!r} — dict por caso "
+            f"{SAMPLING_CASES} o None"
+        )
+    out: dict = {}
+    for caso, decl in overrides.items():
+        if caso not in SAMPLING_CASES:
+            raise ValueError(
+                f"caso desconocido en sampling_overrides: {caso!r} — "
+                f"esperado {SAMPLING_CASES}"
+            )
+        if not isinstance(decl, dict):
+            raise ValueError(
+                f"declaración inválida para {caso!r}: {decl!r} — dict con "
+                "los parámetros propios y declared_by"
+            )
+        declared_by = decl.get("declared_by")
+        if not isinstance(declared_by, str) or not declared_by.strip():
+            raise ValueError(
+                f"sampling_overrides[{caso!r}] sin declared_by — un valor "
+                "propio se declara con quién lo declaró (1c)"
+            )
+        propios = {k: v for k, v in decl.items() if k != "declared_by"}
+        desconocidos = sorted(set(propios) - set(SAMPLING_PARAMS))
+        if desconocidos:
+            raise ValueError(
+                f"parámetros desconocidos en sampling_overrides[{caso!r}]: "
+                f"{desconocidos} — esperado {SAMPLING_PARAMS}"
+            )
+        if not propios:
+            raise ValueError(
+                f"sampling_overrides[{caso!r}] no declara ningún parámetro — "
+                f"esperado alguno de {SAMPLING_PARAMS}"
+            )
+        if "n_runs" in propios and (
+            not isinstance(propios["n_runs"], int) or propios["n_runs"] < 1
+        ):
+            raise ValueError(
+                f"n_runs inválido en sampling_overrides[{caso!r}]: "
+                f"{propios['n_runs']!r} — entero >= 1"
+            )
+        if "seed" in propios and not isinstance(propios["seed"], int):
+            raise ValueError(
+                f"seed inválida en sampling_overrides[{caso!r}]: "
+                f"{propios['seed']!r} — entero"
+            )
+        out[caso] = {**propios, "declared_by": declared_by.strip()}
+    return out
+
+
 # ── la config ────────────────────────────────────────────────────────────────
 
 class CKMlandscapeConfig:
@@ -173,10 +268,12 @@ class CKMlandscapeConfig:
       sampling_mode — **el único exigido**: es keyword-only y sin default, y
                       Monitor valida el suyo contra éste (`ValueError` si no
                       coinciden).
-      n_runs        — **con default** `N_RUNS_DEFAULT` (1000): muestras de
-                      sigma_0 para contar órbitas.
+      n_runs        — **con default** `N_RUNS_DEFAULT` (200): muestras de
+                      sigma_0 para contar órbitas. **Lo leen los tres**
+                      (Monitor, COCO y la copia de W de `calibrate`) por
+                      `sampling_for`, desde el 27 oct 2026.
       seed          — **con default** `SEED_DEFAULT` (0): la seed de ese
-                      muestreo.
+                      muestreo. Lo leen los tres, igual que `n_runs`.
       scale         — opcional: hoy sólo lo usa la UI.
     theta_W no está: es del Gatekeeper.
 
@@ -199,10 +296,33 @@ class CKMlandscapeConfig:
         Coinciden **por default** (1000 y 0 en los dos lados), no por
         construcción, y nada lo verifica — `sampling_mode` sí tiene guardia y
         estos dos no.
+        **Cerrado el 27 oct 2026** (texto 13, dirección de delamor): ahora los
+        **tres** —Monitor, COCO y la copia de W de `calibrate`— leen `n_runs` y
+        `seed` de acá por `sampling_for(caso)`, y ya no coinciden por default
+        sino por construcción. La revisión que lo decidió está en BANDEJA_code,
+        REPORTE 1a: es el mismo argumento de la misma función
+        (`landscape_engine.count_attractors`, que los declara sin default).
+        Al unificar, ningún número se movió: los tres estaban en 1000 y en 0.
+        **El valor sí se movió después, el mismo día y por decisión de delamor:
+        el default único es 200** (*"Y tambie fijar como default n runs 200 y
+        seed 0"*). Es el primer valor que vale para los tres a la vez.
+        El `calibrate_n_runs` y el `calibrate_seed` que vivían acá **salieron**:
+        eran el mismo concepto con otro nombre. La grilla sí queda, porque
+        ninguno de los otros dos tiene grilla.
       - decía *"COCO ya no tiene un default propio"*. **Lo tiene**:
         `coco.py` declara `n_runs = 80` y `seed = 0` en su firma. Lo que pasa es
         que el `setdefault` del renacimiento los pisa cuando hay Config; el 80
-        no se usa en el canal y sigue ahí.
+        no se usa en el canal y sigue ahí. Es un default de función y lo mira la
+        TASK de defaults, no esta clase.
+
+    **La excepción, declarada (1c, 27 oct 2026).** Un driver puede querer
+    criterios no unificados —delamor: *"quiero probar que pasa si monitor hace
+    relax orbit con 1000 y coco lo hace con 333"*—. Eso se puede, y **sólo
+    declarándolo**: `sampling_overrides` lleva el caso, el parámetro, el valor y
+    `declared_by`, y sale en `panel()` y en `to_dict()`. Lo que no se puede es
+    que un caso tenga un valor propio sin que se vea: *"que no sea el default,
+    que se defina expresamente que se desea hacer eso en un driver.. se
+    declare"*.
 
     **Los umbrales de COCO** (`d_ckm_threshold`, `frac_rec_min`): **D6 se
     revisó el 27 oct 2026** (D3 y D4 de `TASK_calibrate_en_el_build_v2`).
@@ -215,14 +335,18 @@ class CKMlandscapeConfig:
 
     __slots__ = ("_sampling_mode", "_n_runs", "_seed", "_scale", "_config_id",
                  "_timestamp", "_ciclos", "_lock", "_tick", "_tick_reloj",
+                 # ── el muestreo declarado por caso (27 oct 2026) ──────────
+                 # Lo que un driver declaró **para un caso solo**. Vacío quiere
+                 # decir que los tres leen `_n_runs` y `_seed`, que es el
+                 # default único.
+                 "_sampling_overrides",
                  # ── el lugar de la calibración (D3, 27 oct 2026) ───────────
                  # `_calibracion` es el registro de la última calibración, con
-                 # su `w_sha`. Los tres `_calibrate_*` son los parámetros
-                 # **declarados** con los que corre `calibrate`: dejaron de ser
-                 # defaults de función (D6'). `None` en cualquiera de ellos es
-                 # **"nadie lo declaró"** (UNKNOWN), no un número.
-                 "_calibracion", "_calibrate_n_runs", "_calibrate_seed",
-                 "_calibrate_grilla")
+                 # su `w_sha`. `_calibrate_grilla` es el único parámetro propio
+                 # de `calibrate` que queda acá: su `n_runs` y su `seed` son los
+                 # de los tres. `None` es **"nadie la declaró"** (UNKNOWN), que
+                 # no es una grilla vacía.
+                 "_calibracion", "_calibrate_grilla")
 
     def __init__(
         self,
@@ -234,22 +358,33 @@ class CKMlandscapeConfig:
         config_id    : Optional[str] = None,
         timestamp    : Optional[float] = None,
         ciclos       : tuple[Ciclo, ...] = (),
-        calibrate_n_runs : Optional[int] = None,
-        calibrate_seed   : Optional[int] = None,
-        calibrate_grilla : Optional[tuple] = None,
-        calibracion      : Optional[dict] = None,
+        sampling_overrides : Optional[dict] = None,
+        calibrate_grilla   : Optional[tuple] = None,
+        calibracion        : Optional[dict] = None,
     ) -> None:
         """
         Uso normal: `CKMlandscapeConfig.create(W, sampling_mode=...)`.
 
-        **Los cuatro últimos son el lugar de la calibración** (D3 y D6', 27 oct
-        2026). Los tres `calibrate_*` son lo **declarado**: con qué va a correr
-        `calibrate`. `calibracion` es lo **medido**: el registro de la última
-        corrida. **`None` en los cuatro quiere decir "nadie lo declaró / no hubo
-        registro"**, que es UNKNOWN — no es `nulo_calibrado`, que es un estado
-        de `calibrate` y significa *"no se ejecutó"*. La diferencia importa en
-        `from_dict`: un estado guardado antes de hoy no tiene estas claves, y
-        leerlas como `nulo_calibrado` afirmaría algo que nadie registró (I2).
+        **`n_runs` y `seed` son los de los tres** (27 oct 2026, texto 13):
+        Monitor, COCO y la copia de W de `calibrate` leen de acá. No hay un
+        `calibrate_n_runs` aparte: era el mismo concepto con otro nombre.
+
+        **`sampling_overrides` es la excepción declarada** (1c): un driver que
+        quiere un valor propio para **un** caso lo declara ahí, y entonces se
+        ve en `panel()` y en `to_dict()` —qué caso, qué parámetro, qué valor y
+        quién lo declaró—. Vacío o `None` quiere decir que los tres leen el
+        mismo valor. La forma es
+        `{"coco": {"n_runs": 333, "declared_by": "<quién>"}}`.
+
+        **Los dos últimos son el lugar de la calibración** (D3 y D6', 27 oct
+        2026). `calibrate_grilla` es lo **declarado** que sigue siendo propio de
+        `calibrate` —ninguno de los otros dos tiene grilla—; `calibracion` es lo
+        **medido**: el registro de la última corrida. **`None` en los dos quiere
+        decir "nadie lo declaró / no hubo registro"**, que es UNKNOWN — no es
+        `nulo_calibrado`, que es un estado de `calibrate` y significa *"no se
+        ejecutó"*. La diferencia importa en `from_dict`: un estado guardado
+        antes de hoy no tiene estas claves, y leerlas como `nulo_calibrado`
+        afirmaría algo que nadie registró (I2).
 
         **Esta Config no importa `calibrate`.** Los valores llegan de quien
         arma la corrida —el canal—, igual que el tick: acá se **registran**, no
@@ -267,17 +402,6 @@ class CKMlandscapeConfig:
             raise ValueError(f"seed inválida: {seed!r} — entero")
         # Los declarados de `calibrate`: se validan **sólo si llegaron**.
         # `None` es "nadie lo declaró" y es un valor legítimo del lugar.
-        if calibrate_n_runs is not None and (
-            not isinstance(calibrate_n_runs, int) or calibrate_n_runs < 1
-        ):
-            raise ValueError(
-                f"calibrate_n_runs inválido: {calibrate_n_runs!r} — entero >= 1 "
-                "o None (nadie lo declaró)"
-            )
-        if calibrate_seed is not None and not isinstance(calibrate_seed, int):
-            raise ValueError(
-                f"calibrate_seed inválida: {calibrate_seed!r} — entero o None"
-            )
         if calibrate_grilla is not None:
             if not calibrate_grilla:
                 raise ValueError(
@@ -306,8 +430,10 @@ class CKMlandscapeConfig:
         # `_calibrate_*` son con qué va a correr `calibrate`; `_calibracion` es
         # el registro de lo que salió. Un escritor —el punto único del canal,
         # `CKMMonitor._calibrar_antes_de_instalar`— y muchos lectores.
-        self._calibrate_n_runs : Optional[int]   = calibrate_n_runs
-        self._calibrate_seed   : Optional[int]   = calibrate_seed
+        # El muestreo propio de un caso, si un driver lo declaró (1c).
+        self._sampling_overrides : dict = _validar_sampling_overrides(
+            sampling_overrides
+        )
         self._calibrate_grilla : Optional[tuple] = (
             tuple(calibrate_grilla) if calibrate_grilla is not None else None
         )
@@ -328,6 +454,7 @@ class CKMlandscapeConfig:
         scale        : Optional[str] = None,
         causa        : str = CAUSA_BOOTSTRAP,
         t_senal      : Optional[float] = None,
+        sampling_overrides : Optional[dict] = None,
     ) -> "CKMlandscapeConfig":
         """
         Crea la config y **abre el primer ciclo** con causa "bootstrap".
@@ -335,7 +462,8 @@ class CKMlandscapeConfig:
         El primer rebuild no es degradación: es el origen (PROPUESTA v5). Por
         eso `len(ciclos) >= 1` desde la construcción (I2).
         """
-        cfg = cls(sampling_mode=sampling_mode, n_runs=n_runs, seed=seed, scale=scale)
+        cfg = cls(sampling_mode=sampling_mode, n_runs=n_runs, seed=seed, scale=scale,
+                  sampling_overrides=sampling_overrides)
         cfg.abrir_ciclo(W, causa, time.time(), t_senal=t_senal)
         return cfg
 
@@ -369,6 +497,67 @@ class CKMlandscapeConfig:
     def declarado(self) -> dict:
         return {"sampling_mode": self._sampling_mode, "n_runs": self._n_runs,
                 "seed": self._seed, "scale": self._scale}
+
+    # ── el muestreo de cada caso (1c, 27 oct 2026) ───────────────────────────
+
+    @property
+    def sampling_overrides(self) -> dict:
+        """Lo declarado por caso, o `{}` si los tres leen el default único."""
+        with self._lock:
+            return {c: dict(d) for c, d in self._sampling_overrides.items()}
+
+    def sampling_for(self, caso: str) -> dict:
+        """
+        Con qué muestrea **este** caso: `n_runs`, `seed`, y de dónde salen.
+
+        Es el único punto de lectura de los tres (Monitor, COCO, la copia de W
+        de `calibrate`) y de los que se agreguen. Sin declaración devuelve el
+        default único y `declared_by=None`; con una declaración devuelve el
+        valor propio y **quién lo declaró**, que es lo que hace visible la
+        excepción (delamor, 27 oct: *"que se defina expresamente que se desea
+        hacer eso en un driver.. se declare"*).
+
+        `propios` dice **cuáles** de los parámetros son del caso: una lista
+        vacía es "ninguno", y entonces este caso no se distingue de los otros.
+        """
+        if caso not in SAMPLING_CASES:
+            raise ValueError(
+                f"caso desconocido: {caso!r} — esperado {SAMPLING_CASES}"
+            )
+        with self._lock:
+            decl = self._sampling_overrides.get(caso, {})
+            propios = sorted(k for k in decl if k != "declared_by")
+            return {
+                "caso": caso,
+                "n_runs": decl.get("n_runs", self._n_runs),
+                "seed": decl.get("seed", self._seed),
+                "declared_by": decl.get("declared_by"),
+                "propios": propios,
+            }
+
+    def declare_sampling_override(self, caso: str, *, declared_by: str,
+                                  **valores) -> None:
+        """
+        Un driver declara un valor propio de muestreo para **un** caso.
+
+        **La Config registra; no genera** (igual que `registrar_tick` y
+        `registrar_calibracion`): el valor y la firma vienen de quien arma la
+        corrida. Lo que esto agrega es que **se vea**: queda en `panel()` y en
+        `to_dict()`, con el caso, el parámetro, el valor y `declared_by`.
+
+        Pisa lo declarado antes para los parámetros que lleguen, y deja los
+        demás como estaban. No valida contra el default: un valor propio igual
+        al default es una declaración legítima —dice que alguien lo eligió—.
+        """
+        nuevo = _validar_sampling_overrides(
+            {caso: {**valores, "declared_by": declared_by}}
+        )
+        with self._lock:
+            previo = self._sampling_overrides.get(caso, {})
+            self._sampling_overrides = {
+                **self._sampling_overrides,
+                caso: {**previo, **nuevo[caso]},
+            }
 
     @property
     def identidad(self) -> dict:
@@ -527,22 +716,32 @@ class CKMlandscapeConfig:
         Con qué corre `calibrate`, **declarado acá y no como default de
         función** (D6', 27 oct 2026).
 
-        `None` en un campo es **"nadie lo declaró"**, y entonces quien llame a
+        **`n_runs` y `seed` salen de `sampling_for("calibrate")`** desde el 27
+        oct (texto 13, 1b): son el mismo concepto que los de Monitor y COCO, así
+        que ya no hay un `calibrate_n_runs` propio. Siempre vienen con valor —el
+        default único, o el propio si un driver lo declaró—, y `declared_by` dice
+        cuál de los dos casos es.
+
+        `grilla_lambda` sí es propia: ninguno de los otros dos tiene grilla.
+        `None` ahí es **"nadie la declaró"**, y entonces quien llame a
         `calibrate` cae en el default de `calibrate.py` — que es exactamente lo
         que este lugar existe para hacer visible. No se rellena con un número.
         """
+        smp = self.sampling_for("calibrate")
         with self._lock:
             return {
-                "n_runs": self._calibrate_n_runs,
-                "seed": self._calibrate_seed,
+                "n_runs": smp["n_runs"],
+                "seed": smp["seed"],
+                "declared_by": smp["declared_by"],
+                "propios": smp["propios"],
                 "grilla_lambda": (list(self._calibrate_grilla)
                                   if self._calibrate_grilla is not None else None),
                 # Qué campos nadie declaró. Va explícito para que una lectura
-                # del panel no tenga que deducirlo de los `null`.
+                # del panel no tenga que deducirlo de los `null`. `n_runs` y
+                # `seed` ya no pueden estar acá: el lugar de los tres siempre
+                # tiene valor.
                 "sin_declarar": sorted(
-                    k for k, v in (("n_runs", self._calibrate_n_runs),
-                                   ("seed", self._calibrate_seed),
-                                   ("grilla_lambda", self._calibrate_grilla))
+                    k for k, v in (("grilla_lambda", self._calibrate_grilla),)
                     if v is None
                 ),
             }
@@ -559,6 +758,10 @@ class CKMlandscapeConfig:
                 **self.identidad,
                 **self.declarado,
                 "ciclo_vigente": self._ciclos[-1].to_dict() if self._ciclos else None,
+                # Qué caso tiene un valor de muestreo propio, cuál, y quién lo
+                # declaró (1c). `{}` quiere decir que los tres leen el mismo.
+                "sampling_overrides": {c: dict(d)
+                                       for c, d in self._sampling_overrides.items()},
                 # El tick del canal y de qué reloj viene. None si nadie lo
                 # anotó: sin canal no hay tick, y eso es UNKNOWN, no 0.
                 "tick": self._tick,
@@ -571,6 +774,8 @@ class CKMlandscapeConfig:
             return {
                 **self.identidad,
                 **self.declarado,
+                "sampling_overrides": {c: dict(d)
+                                       for c, d in self._sampling_overrides.items()},
                 "ciclos": [c.to_dict() for c in self._ciclos],
             }
 
@@ -588,6 +793,9 @@ class CKMlandscapeConfig:
             config_id     = d["config_id"],
             timestamp     = d["timestamp"],
             ciclos        = tuple(Ciclo.from_dict(c) for c in d.get("ciclos", ())),
+            # Un estado guardado antes del 27 oct no tiene la clave, y eso es
+            # "nadie declaró nada", que es lo mismo que `{}`.
+            sampling_overrides = d.get("sampling_overrides"),
         )
 
     @classmethod

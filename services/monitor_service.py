@@ -44,6 +44,7 @@ sin señal de estar desactualizada.
 
 from __future__ import annotations
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,7 +58,8 @@ from coco import (COCO, ThermostatState, BETA_RHO_STAR,
                   D_CKM_THRESHOLD, FRAC_REC_MIN)
 from calibrate import CALIBRADO
 from ckm_trust_rule import DECLARED, MEASURED, Threshold
-from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig
+from ckm_landscape_config import (CAUSA_BOOTSTRAP, CKMlandscapeConfig,
+                                  N_RUNS_DEFAULT, SEED_DEFAULT)
 from landscape_engine import (
     fases_de_orbita,
     pares_por_orbita,
@@ -88,28 +90,43 @@ class MonitorService:
         self,
         corpus          : CorpusService,
         storage_path    : str = "monitor_trajectory.jsonl",
-        n_runs_attractors: int = 1000,
+        n_runs_attractors: Optional[int] = None,
         thermostat      : Optional[COCO] = None,
         coco_config     : Optional[dict] = None,
         behavior_graph  : Optional[object] = None,   # BehaviorGraph | None
-        count_seed      : int = 0,
+        count_seed      : Optional[int] = None,
         sampling_mode   : str = "uniform",
         n_warmup        : Optional[int] = None,
         landscape_config: Optional[CKMlandscapeConfig] = None,
     ):
         """
         count_seed / sampling_mode / n_warmup gobiernan el muestreo de
-        sigma_0 en _count_attractors(). Sus defaults —seed=0, uniform—
-        son los valores que este servicio usaba hardcodeados, de modo que
-        el comportamiento numerico no cambia. Ver TASK_monitor_service_
+        sigma_0 en _count_attractors(). Ver TASK_monitor_service_
         unificar_rutinas_v1.md: la equivalencia con COCO(seed=0) fue
         verificada exacta antes de unificar.
 
-        n_runs_attractors: muestras de sigma_0 para contar atractores (D_ckm)
-        y masas de cuenca (N_eff). Default 1000: en casos IAP N_eff converge
-        ahí (±2% de 5000); con 50 quedaba 5–20% bajo. El conteo de A no
-        satura con ningún n_runs. El panel lleva "saturacion" para cuando
-        N_eff tampoco converge. TASK_n_runs_panel_saturacion_v1.
+        **n_runs_attractors y count_seed: `None` por default, y `None` quiere
+        decir "lo lee de la Config"** (27 oct 2026, texto 13 1b/1c). Son el
+        mismo concepto que el `n_runs` y la `seed` de COCO y de la copia de W de
+        `calibrate` —el mismo argumento de la misma función,
+        `landscape_engine.count_attractors`—, así que hay **un solo lugar**
+        donde viven: `CKMlandscapeConfig`, leída por `sampling_for("monitor")`.
+        Dejaron de tener default de función: ya no coinciden con los otros dos
+        por casualidad de valor.
+
+        Pasarlos explícitos sigue siendo posible y es **la excepción de 1c**: un
+        valor propio de este caso. Entonces Monitor lo **declara en la Config**
+        —con el sitio de construcción como `declared_by`— y queda a la vista en
+        `panel()` y en la traza. Sin Config no hay dónde declararlo, y el valor
+        cae en `N_RUNS_DEFAULT` / `SEED_DEFAULT`, que son los mismos del lugar
+        único: no se agrega ningún default nuevo.
+
+        Qué muestrea: `n_runs_attractors` son las muestras de sigma_0 para
+        contar atractores (D_ckm) y masas de cuenca (N_eff). El 1000 del lugar
+        único es de delamor: en casos IAP N_eff converge ahí (±2% de 5000); con
+        50 quedaba 5–20% bajo. El conteo de A no satura con ningún n_runs. El
+        panel lleva "saturacion" para cuando N_eff tampoco converge.
+        TASK_n_runs_panel_saturacion_v1.
 
         landscape_config: config del instrumento, ya construida por quien
         arma el run — Monitor no decide calibración. Es la config del
@@ -137,7 +154,6 @@ class MonitorService:
         # llegó a construir el corpus con `top_k=32` mientras esto evaluaba
         # con 20. Con el mismo objeto, no hay dos tokenizaciones posibles.
         self._extractor = corpus.extractor
-        self._n_runs   = n_runs_attractors
         # ── COCO: configuración, no instancia (D4 + §1 de
         # TASK_monitor_coco_ciclo_orbita_v2) ─────────────────────────────────
         # Monitor y COCO son aspectos de lo mismo: nacen, viven y mueren
@@ -177,7 +193,6 @@ class MonitorService:
                 f"sampling_mode invalido: {sampling_mode!r} — "
                 "esperado 'uniform', 'weighted' o 'boltzmann'."
             )
-        self._count_seed    = count_seed
         self._sampling_mode = sampling_mode
         self._n_warmup      = n_warmup
         if landscape_config is not None and landscape_config.sampling_mode != sampling_mode:
@@ -187,6 +202,39 @@ class MonitorService:
                 "el panel llevaría una config que no describe cómo contó."
             )
         self._landscape_config = landscape_config
+
+        # ── el muestreo sale de un solo lugar (texto 13, 1b y 1c) ───────────
+        # `None` en los dos argumentos es "nadie declaró nada para este caso":
+        # Monitor lee de la Config el mismo valor que leen COCO y la copia de W.
+        # Explícitos son la excepción de 1c, y entonces se **declaran** ahí, con
+        # el sitio de construcción como firma, para que la traza muestre qué
+        # caso tiene un valor propio y quién lo pidió.
+        quien = sys._getframe(1)
+        self._sitio_construccion = (
+            f"{quien.f_code.co_filename}:{quien.f_lineno}"
+        )
+        propios = {}
+        if n_runs_attractors is not None:
+            propios["n_runs"] = n_runs_attractors
+        if count_seed is not None:
+            propios["seed"] = count_seed
+        if propios and landscape_config is not None:
+            landscape_config.declare_sampling_override(
+                "monitor",
+                declared_by=f"MonitorService() en {self._sitio_construccion}",
+                **propios,
+            )
+        if landscape_config is not None:
+            smp = landscape_config.sampling_for("monitor")
+            self._n_runs     = smp["n_runs"]
+            self._count_seed = smp["seed"]
+        else:
+            # Sin Config no hay lugar donde declarar nada. **No se inventa un
+            # default nuevo**: se cae en el mismo del que leen los tres.
+            self._n_runs     = (n_runs_attractors if n_runs_attractors is not None
+                                else N_RUNS_DEFAULT)
+            self._count_seed = (count_seed if count_seed is not None
+                                else SEED_DEFAULT)
 
         self._Delta_r : Optional[np.ndarray] = None
         # Δ_r_torsion — los pares que caen en una sola fase de la órbita.
@@ -776,7 +824,9 @@ class MonitorService:
         W del ciclo vigente.
 
         `n_runs`, `seed` y `sampling_mode` **salen de la Config** (declarado,
-        P9): no son defaults de COCO. Lo demás —`track_landscape`, `n_warmup`,
+        P9; `sampling_for("coco")` desde el 27 oct 2026): no son defaults de
+        COCO, y son el **mismo** valor que lee Monitor y que lee la copia de W
+        de `calibrate`, salvo que un driver declare uno propio (1c). Lo demás —`track_landscape`, `n_warmup`,
         `gamma`, umbrales— viene de `coco_config`.
         """
         if self._coco_config is None:
@@ -784,8 +834,21 @@ class MonitorService:
         cfg = self._landscape_config
         kw = dict(self._coco_config)
         if cfg is not None:
-            kw.setdefault("n_runs", cfg.n_runs)
-            kw.setdefault("seed", cfg.seed)
+            # 1c: un `n_runs` o una `seed` dentro de `coco_config` es un valor
+            # **propio de este caso**, declarado por quien armó la corrida. Se
+            # registra como tal y después se lee del lugar único, así que el
+            # valor que llega a COCO y el que muestra la traza son el mismo.
+            propios = {k: kw[k] for k in ("n_runs", "seed") if k in kw}
+            if propios:
+                cfg.declare_sampling_override(
+                    "coco",
+                    declared_by=(f"coco_config de MonitorService() en "
+                                 f"{self._sitio_construccion}"),
+                    **propios,
+                )
+            smp = cfg.sampling_for("coco")
+            kw["n_runs"] = smp["n_runs"]
+            kw["seed"]   = smp["seed"]
             kw.setdefault("sampling_mode", cfg.sampling_mode)
         else:
             kw.setdefault("n_runs", self._n_runs)

@@ -97,9 +97,19 @@ conteos: declara **cuántos puntos tiene la curva**, que es lo que describe la
 medición. El costo en conteos es uno menos, y está dicho acá.
 
 **El `n_runs` del canal vivo no sale de acá.** Desde el 27 oct 2026 lo declara
-el estado (`CKMlandscapeConfig.calibrate_declarado`, D6'), con el **1000** que
-decidió delamor; `N_RUNS_DEFAULT = 200` queda como el default de la función para
-quien la llame sin declararlo, y el registro dice qué quedó sin declarar.
+el estado (`CKMlandscapeConfig.calibrate_declarado`, D6'), y desde el texto 13
+—el mismo día— **no es un campo propio de `calibrate`**: es el mismo concepto
+que el `n_runs` de Monitor y el de COCO (el mismo argumento de la misma función,
+`landscape_engine.count_attractors`), así que los tres leen un solo lugar,
+`ckm_landscape_config.N_RUNS_DEFAULT`. Ahí está en **200** por decisión de
+delamor (27 oct), y la traza del 1000 que había antes vive al lado de la
+constante.
+
+`N_RUNS_DEFAULT = 200` **de este módulo** sigue siendo el default de la función
+para quien la llame sin declarar nada —`calibrate` offline, los tests— y el
+registro dice qué quedó sin declarar. Hoy los dos valen 200, y son **dos
+lugares distintos**: el de acá es el default de una función, y el de la Config
+es el lugar único de los tres. Que coincidan no los une.
 """
 
 from __future__ import annotations
@@ -126,7 +136,11 @@ GRILLA_LAMBDA_DEFAULT = (0.0, 0.25, 0.5, 0.75, 1.0)
 # Declarada, no calibrada.
 FRACCION_EXPANSION_DEFAULT = 0.5
 
-N_RUNS_DEFAULT = 200   # el de Monitor es 1000; acá es por punto de la grilla
+# Default de la **función**, para quien la llame sin declarar nada. El lugar
+# único de los tres —Monitor, COCO y esta copia de W— es
+# `ckm_landscape_config.N_RUNS_DEFAULT`, que desde el 27 oct 2026 está también
+# en 200 (delamor). Acá el valor es **por punto de la grilla**.
+N_RUNS_DEFAULT = 200
 SEED_DEFAULT = 0
 
 

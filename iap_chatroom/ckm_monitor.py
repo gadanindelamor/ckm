@@ -124,7 +124,6 @@ from monitor_service import MonitorService  # noqa: E402
 from calibrate import (                                       # noqa: E402
     GRILLA_LAMBDA_DEFAULT,
     NULO_CALIBRADO,
-    SEED_DEFAULT,
     calibrate,
 )
 from w_version import sha256_W  # noqa: E402
@@ -188,20 +187,20 @@ CASE = "S2-C0"
 #   - `REBUILD_EVERY = 10` mensajes: una W por mensaje no es sensato, y
 #     `min_texts*2` ataba el rebuild al umbral del primer W — con el 30, el
 #     rebuild habría sido cada 60 mensajes sin que nadie lo decidiera.
-# **El `n_runs` de `calibrate`, declarado** (D6', delamor 27 oct 2026: *"el
-# n_runs de calibrate = 1000"*). Antes era el default de la función (200), y el
-# umbral salía de un N_eff de 200 muestras para aplicarse a uno de 1000.
+# **El `n_runs` de `calibrate` ya no vive acá** (27 oct 2026, texto 13 1b). Era
+# `CALIBRATE_N_RUNS = 1000`, al lado de los umbrales del canal. Salió: es el
+# **mismo concepto** que el `n_runs` de Monitor y el de COCO —el mismo argumento
+# de la misma función— y los tres leen un solo lugar,
+# `ckm_landscape_config.N_RUNS_DEFAULT`. Al mudarse, el valor no se movió: los
+# tres estaban en 1000. **Después, el mismo día, delamor fijó el default único
+# en 200** (*"Y tambie fijar como default n runs 200 y seed 0"*); la traza de lo
+# que había y por qué vive al lado de la constante, en la Config.
 #
-# **La razón es de delamor, en sus palabras**, sobre el dato de que con 1000 la
-# W del vivo no separa en ninguna de 10 semillas: *"EXACTO. Esa es la razon.
-# darles posibiliddes para que sientan el sesgo. luego lo que suceda solo
-# sucedera."* No se le agrega lectura.
-#
-# Medido antes de ponerlo (CP0, `4d219ae`): a 200 el veredicto de la única
-# calibración que separó en un vivo **depende de la semilla** —2 de 10 dicen
-# `calibrado`—; a 1000, 0 de 10. Y el costo: 0,302 s en el mensaje que calibra,
-# que es el 30% de un tick del canal y el 5% de los mensajes.
-CALIBRATE_N_RUNS = 1000
+# Lo medido antes de ponerlo queda acá, porque se midió en este canal (CP0,
+# `4d219ae`): a 200 el veredicto de la única calibración que separó en un vivo
+# **depende de la semilla** —2 de 10 dicen `calibrado`—; a 1000, 0 de 10. Y el
+# costo: 0,302 s en el mensaje que calibra, que es el 30% de un tick del canal y
+# el 5% de los mensajes.
 
 TOP_K = 20
 MIN_TEXTS_FIRST_W = 30
@@ -295,16 +294,20 @@ class CKMMonitor:
         # quién lo usa. sampling_mode es el default de MonitorService.
         # Ver docs/tasks/TASK_CKMlandscapeConfig_v3.md y DECISIONES_opus.md.
         # **Los parámetros de `calibrate` se declaran acá, en el estado** (D6',
-        # 27 oct 2026): dejaron de ser defaults de función. El `n_runs` es el
-        # 1000 de delamor; `seed` y `grilla` son los valores que `calibrate`
-        # ya usaba, ahora **declarados** en vez de heredados de su firma.
+        # 27 oct 2026): dejaron de ser defaults de función.
+        #
+        # Desde el texto 13 (1b), `n_runs` y `seed` **no se declaran por
+        # separado**: son el mismo concepto que los de Monitor y COCO, y los
+        # tres los leen del default único de la Config —1000 y 0, los mismos
+        # valores que tenían—. Lo que sigue declarándose acá es la **grilla**,
+        # que es propia de `calibrate`: ninguno de los otros dos tiene grilla.
+        # Este canal no declara ningún valor propio por caso (1c): si lo hiciera,
+        # iría en `sampling_overrides` y se vería en el panel.
         #
         # La Config no importa `calibrate`: los valores se los pasa quien arma
         # la corrida, que es este canal. La Config registra, no genera.
         self._landscape_config = CKMlandscapeConfig(
             sampling_mode="uniform",
-            calibrate_n_runs=CALIBRATE_N_RUNS,
-            calibrate_seed=SEED_DEFAULT,
             calibrate_grilla=GRILLA_LAMBDA_DEFAULT,
         )
         # COCO es de Monitor (CP4). El canal ya no lo lee de CorpusService,

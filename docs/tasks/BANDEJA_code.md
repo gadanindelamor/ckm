@@ -15646,3 +15646,267 @@ de `calibrate`, que no mide el campo sino una copia deformada de la que nada vue
   original como referencia histórica.
 - La entrada del REPORTE CP3 (07:41 UTC) **no se reescribe**: apunta al borrador porque eso era
   cierto al escribirla. El puntero nuevo vive acá y en el ESTADO.
+
+---
+## ARRANQUE — 2026-10-27 16:15 UTC
+
+*Sesión nueva de Code. Protocolo §2. Entra el texto 13 (`docs/opus/TEXTO_PARA_CODE_13_REPO_CKM_n_runs_unico_y_registro_27oct2026.md`), pegado también por delamor en el chat.*
+
+### Revisé
+
+1. Locks: `ls .git/*.lock` — ninguno.
+2. `git log -1`: `e1c4f11` *docs(opus): ESTADO al cortar 27 oct*. `git pull --rebase origin main`: `Already up to date`.
+3. `git status`: **cero** archivos tracked modificados o staged. 71 entradas `??`.
+4. `docs/opus/ESTADO_al_cortar_27oct2026.md` y `docs/opus/decisiones_en_el_acto.md` (27 oct, desde
+   "CP2, CP3 y el REG del intento 4: leídos por Opus" hasta el final, como pide el texto 13).
+5. `docs/tasks/DECISIONES_opus.md`: los `Pn` registrados.
+6. Los 7 `.jsonl` de la última corrida (`experiments/_state_S2-C0/`, intento 4): última línea parseada
+   con `json.loads`.
+7. Suite completa, en serie: `python -m pytest -p no:randomly -q`.
+
+### Encontré
+
+- **La última corrida cerró completa.** Los 7 `.jsonl` tienen la última línea parseable
+  (`device_log.jsonl` 2174 chars, `monitor_trajectory.jsonl` 5507). No hay ningún `.tmp` suelto en el
+  repo: por §4, nada quedó a medio escribir. El REG está en `registers/REG_iap_serie2_caso0_intento4_v1.md`.
+- **Suite: 872 passed, 7 xfailed, 0 failed, 164,56 s.** Mismo recuento que el del CP2. Los dos tests
+  sensibles reportados en el CP2 (el de β y `test_oda_continuo`) pasaron en esta corrida; el de β sigue
+  siendo el falso positivo del punto 3 del texto 13, que pasa por la razón equivocada.
+- **Preguntas abiertas (§8): una.**
+  - **P14 — DEFAULT VIGENTE, SIN DECISIÓN.** Reformulada por delamor el 27 oct 03:30 UTC (los drivers
+    declaran tres cosas que IAP no declara: archivos de estado, puerto, providers). No tiene entrada
+    `P14` en `DECISIONES_opus.md`, y el ESTADO del 27 oct la deja esperando a delamor ("¿se encara, y
+    quién lo decide?"). El texto 13 la pone en su lista de NO, así que no la toco.
+  - P13 resuelta por delamor (27 oct 03:30 UTC); P15 y P16 con respuesta en `DECISIONES_opus.md`
+    (27 oct). P1–P12, respondidas de antes.
+- **Dos cosas esperan a delamor** (ESTADO 27 oct), ninguna de Code: el docstring de
+  `ckm_monitor.py:84-90` (**E5**: que la "primera calibración que separa" fue con `n_runs = 200, seed = 0`)
+  y el `state_dir` por default de `CKMMonitor` (**E1**).
+- Las 71 entradas `??` son las de siempre (NOTAs, PDFs, datos informativos, `_state_*`, backups
+  `process/*.bak_*`): por convención no se commitean y no son pendientes.
+
+### No pude revisar
+
+- Si cada una de las 71 entradas `??` sigue siendo intencional: las leí como clase, no una por una.
+- Los 302 `tmp_obj_*` de `.git/objects` que el ESTADO menciona: son de la PC de delamor, no de acá, y
+  no los toco.
+- Si la suite tiene tests que hoy no corren por no estar colectados (no busqué `--ignore` ni marcas
+  fuera de los 7 `xfailed`).
+
+---
+## REPORTE 1a — los parámetros de muestreo en los tres: qué hace el código. Sin código — 2026-10-27 16:40 UTC
+
+*Texto 13 punto 1a. A1.PAUSA al acceder a cada `.py`: lo que sigue sale de leer el código, no de lo que
+los docstrings afirman. Los tres son: **Monitor** (`services/monitor_service.py`), **COCO**
+(`services/coco.py`) y **copia de W** (`services/calibrate.py`, el nombre de delamor para el `D_ckm` de
+`calibrate`).*
+
+### El dato que ordena la tabla: hay una sola rutina de muestreo
+
+`services/landscape_engine.py:265` (`count_attractors`), `:330` (`mean_cS`) y `:359` (`basin_masses`)
+declaran `n_runs` y `seed` **keyword-only y sin default**: la rutina no tiene opinión. Los tres pasan a
+**esa misma función, en esos mismos dos parámetros**:
+
+| | n_runs → | seed → |
+|---|---|---|
+| Monitor | `monitor_service.py:1070`, `:1004` | ídem |
+| COCO | `coco.py:686`, `:702` | ídem |
+| copia de W | `calibrate.py:264`, `:283` | ídem |
+
+Y `landscape_engine._setup:249` hace `np.random.default_rng(seed)`, y `_muestra:257` saca cada `sigma_0`
+de ese rng: `n_runs` es **cuántas `sigma_0`** y `seed` es **qué `sigma_0`**. En los tres.
+
+### n_runs
+
+| | qué se muestrea | sobre qué W | qué se calcula | contra qué se compara después |
+|---|---|---|---|---|
+| **Monitor** | `sigma_0` (30–70% activos), `n_runs_attractors` veces (`:91` → `self._n_runs` `:140`) | `W_eff = _combine_W_Delta(W, Δ_r crudo)` (`:973`) y `W` sola en `_count_attractors` puntual | `N_eff = n_eff(basin_masses)` (`:1070`); y `basin_masses` otra vez en `_N_eff` (`:1004`) | `d_ckm(A_actual, self._A0)` (`:979`), con `_A0` propio, que **se resetea cuando W cambia** (`:689`). Va al panel y a `saturacion = N_eff/n_runs` (`:1012`) |
+| **COCO** | ídem, `n_runs` veces (`:151` → `self._n_runs` `:205`) | `W_eff = W + self._Delta` (`:280`), y `W` **sola** para el baseline (`:250`, `:292`) | `N_eff` (`:686`) y `c(S)` medio **sobre las mismas muestras** (`:702`) | `d_ckm(A_current, self._A0)` (`:294`) y `frac_rec = A_current/A0` (`:298`), contra `self.threshold` y `self.frac_rec_min` (`:640`) → zona y STOP. Su `_A0` se fija al nacer el ciclo y **no se resetea** |
+| **copia de W** | ídem, `n_runs` veces (`:212`) | `Wc`, que es `W.copy()` (`:244`), y cada `W_λ = interpolar(Wc, W_col, λ)` (`:282`) | `A0` (`:264`) y la curva de `d_ckm(A, A0)` por punto de la grilla (`:283`–`:290`) | `d_sin_cambio` (λ=0) contra `d_colapso` (λ=1) (`:295`–`:296`) → umbral = punto medio del salto, margen = el salto |
+
+**Mismo concepto.** Es el mismo parámetro de la misma función: cuántas `sigma_0` se sortean para estimar
+`N_eff`. Lo que cambia entre los tres es **sobre qué W** se cuenta y **contra qué** se compara el `N_eff`
+que sale; nada de eso es `n_runs`.
+
+- Valores de hoy: Monitor **1000** (`monitor_service.py:91`), COCO **1000** (del `setdefault` de
+  `_renacer_coco:786` contra `N_RUNS_DEFAULT`), copia de W **1000** (`CALIBRATE_N_RUNS`,
+  `ckm_monitor.py:204`, que viaja por `calibrate_n_runs`). **Los tres en 1000: unificar no mueve ningún número.**
+
+### seed
+
+| | qué se muestrea | sobre qué W | qué se calcula | contra qué se compara después |
+|---|---|---|---|---|
+| **Monitor** | qué `sigma_0` sale del rng — `count_seed` (`:95` → `self._count_seed` `:180`) | las mismas que arriba | las mismas | lo mismo; viaja en el panel como `condicion_W.count_seed` (`:988`) |
+| **COCO** | ídem — `seed` (`:152` → `self._seed` `:206`) | ídem | ídem | ídem; `_count_attractors` y `_mean_cS` comparten seed **a propósito** (`:699`: "o dejan de describir las mismas muestras") |
+| **copia de W** | ídem — `seed` (`:213`) | ídem | ídem | ídem; viaja en `condiciones.seed` (`:251`) |
+
+**Mismo concepto.** Es la semilla del **mismo** rng del mismo muestreo, con tres nombres
+(`count_seed`, `seed`, `seed`). Valores de hoy: **0** en los tres.
+
+**Y hay un segundo `seed` que NO es éste:** `calibrate.extremo_expansion(..., seed=)` (`:163`) elige
+**qué pares invierten el signo** al construir el extremo — no sortea ninguna `sigma_0`. Dos conceptos
+con el mismo nombre, que es justo lo que BABEL separa. **No lo toco**: hoy `calibrate()` no la llama
+(sólo `tests/test_calibrate_mecanismo.py`), y renombrarla es la firma del patrón de calibrate, que el
+texto 13 pone en su lista de NO. Queda dicho.
+
+### sampling_mode
+
+| | qué hace |
+|---|---|
+| **Monitor** | `:96` → `self._sampling_mode` (`:184`); decide `weighted`/`boltzmann` en `_count_attractors` (`:1065`) y en `_N_eff` (`:1005`). **Lo valida contra la Config** y rompe con `ValueError` si no coinciden (`:186`) |
+| **COCO** | `:156` → `self._sampling_mode` (`:212`), con guardia propia (`:207`); `_sampling_kwargs` (`:390`) lo traduce a los kwargs de cada conteo |
+| **copia de W** | **no lo tiene**. `grep sampling_mode services/calibrate.py` → **0 líneas**. Llama a `count_attractors` sin `weighted` ni `boltzmann`: cuenta **siempre en `uniform`** |
+
+**Mismo concepto en Monitor y COCO** —ya unificado: es el único declarado exigido de la Config
+(`ckm_landscape_config.py:173`)—, y **ausente en la copia de W**. Eso no es "se separa": es que un
+tercero no declara lo que los otros dos declaran.
+
+### n_warmup (el parámetro de Boltzmann)
+
+| | qué hace |
+|---|---|
+| **Monitor** | `:97` → `self._n_warmup = n_warmup` (`:182`), tal cual, `None` incluido (`:1007`) |
+| **COCO** | `:157` → `self._n_warmup = n_warmup if n_warmup is not None else self.N` (`:213`): lo **resuelve al construir**, contra la N de su W |
+| **copia de W** | **no lo tiene** (0 líneas), como `sampling_mode` |
+
+**Mismo concepto en los dos que lo tienen**, y con el **mismo valor efectivo**:
+`landscape_engine._setup:252` hace `n_w = n_warmup if n_warmup is not None else W_eff.shape[0]`, así que
+el `None` de Monitor y el `self.N` de COCO dan lo mismo mientras la N sea la misma — y COCO renace con
+el ciclo, así que su N es la del ciclo vigente. La diferencia es **cuándo** se resuelve, no cuánto.
+Sólo se usa con `sampling_mode="boltzmann"`; el canal corre en `uniform`.
+
+### grilla_lambda
+
+Sólo existe en la copia de W (`calibrate.py:212`), y **ya está en la Config** como `calibrate_grilla`
+(D6', 27 oct). No hay nada que unificar: ninguna otra de las tres tiene grilla. **Se separa por
+existencia, no por concepto.**
+
+### Resumen de los veredictos
+
+| parámetro | veredicto | la razón, de la tabla |
+|---|---|---|
+| `n_runs` | **mismo concepto** | el mismo argumento de la misma función en los tres: cuántas `sigma_0` |
+| `seed` | **mismo concepto** | la semilla del mismo rng del mismo muestreo, con tres nombres |
+| `seed` de `extremo_expansion` | **se separa** | elige pares de W, no sortea `sigma_0`. No se toca (patrón de calibrate) |
+| `sampling_mode` | **mismo concepto** en Monitor y COCO; **ausente** en la copia de W | la copia de W cuenta siempre `uniform` |
+| `n_warmup` | **mismo concepto** en los dos que lo tienen; **ausente** en la copia de W | mismo valor efectivo por `_setup:252`; cambia cuándo se resuelve |
+| `grilla_lambda` | **sólo de la copia de W** | las otras dos no tienen grilla |
+
+Sigo con 1b y 1c sin esperar, sobre `n_runs` y `seed`. Las ausencias de `sampling_mode` y `n_warmup`
+en la copia de W **no las implemento**: decidir cómo muestrea `calibrate` es el patrón de calibrate.
+Van como tensión al cerrar el punto 1.
+
+---
+## REPORTE 1b + 1c — un solo lugar para `n_runs` y `seed`, y la excepción declarada. **Y el default es 200, por decisión de delamor** — 2026-10-27 16:34 UTC
+
+*Texto 13 punto 1, implementación. Sigue del REPORTE 1a (16:40 UTC), que es la revisión.*
+
+### Lo primero, porque cambia un número: el default es 200
+
+delamor, en el chat, mientras esto se implementaba: ***"Y tambie fijar como default n runs 200 y
+seed 0"***. El texto 13 decía *"no cambia ningún número"*, y esta decisión lo cambia: el default único
+de los tres quedó en **`N_RUNS_DEFAULT = 200`**. La `seed` ya era 0; ahora está **decidida**, no
+heredada.
+
+**Lo dije una vez y lo dejo acá**: a 200 vuelve el dato del CP0 (`4d219ae`) — el veredicto de la única
+calibración que separó en un vivo **depende de la semilla**, 2 de 10 dicen `calibrado`; a 1000 era 0 de
+10. Y la razón escrita para el 1000 era de delamor (*"darles posibilidades para que sientan el sesgo"*).
+**No se borró**: quedó como traza fechada al lado de la constante, junto con el 1000 de P9 y la medición
+del CP0 (`ckm_landscape_config.py:53-70`).
+
+**Consecuencia visible, medida**: la suite completa pasó de **164,56 s** a **48,29 s**. Es el mismo
+código contando 5 veces menos muestras.
+
+### 1b — qué se movió
+
+| | antes | ahora |
+|---|---|---|
+| **el lugar** | `n_runs`/`seed` de la Config (los leía COCO), `calibrate_n_runs`/`calibrate_seed` de la Config, `CALIBRATE_N_RUNS = 1000` en `ckm_monitor.py`, y `n_runs_attractors`/`count_seed` de Monitor con default de función | **uno**: `CKMlandscapeConfig.n_runs` y `.seed`, leídos por `sampling_for(caso)` |
+| **Monitor** | default de función 1000 y 0, no leía la Config | `n_runs_attractors=None`, `count_seed=None`: lee `sampling_for("monitor")` |
+| **COCO** | `setdefault` contra `cfg.n_runs` | `sampling_for("coco")` |
+| **copia de W** | `calibrate_n_runs`, declarado aparte | `sampling_for("calibrate")`, vía `calibrate_declarado` |
+| **grilla** | `calibrate_grilla` en la Config | igual: es propia de `calibrate`, ninguno de los otros dos tiene grilla |
+
+Salieron: `calibrate_n_runs`, `calibrate_seed` (Config) y `CALIBRATE_N_RUNS` (`ckm_monitor.py`). Nombres
+nuevos, en inglés (BABEL): `sampling_for`, `declare_sampling_override`, `sampling_overrides`,
+`SAMPLING_CASES`, `SAMPLING_PARAMS`.
+
+### 1c — la excepción existe y se ve
+
+`sampling_overrides` lleva, por caso, el parámetro, el valor y **`declared_by`**. Sale en `panel()` y en
+`to_dict()`, y sobrevive `from_dict`. Sin declaración, `{}`: los tres leen el mismo valor.
+
+- **`declared_by` es obligatorio.** Un valor propio que nadie firma no entra (`ValueError`). Es lo que
+  pedía delamor: *"que se defina expresamente que se desea hacer eso en un driver.. se declare"*.
+- **Pasar `n_runs_attractors=` por la firma de Monitor sigue siendo posible, y ahora es una
+  declaración**: Monitor lo registra en la Config firmando con **el sitio de construcción**
+  (`archivo:línea`, por `sys._getframe(1)`), así que la traza dice quién lo pidió sin que nadie tenga
+  que pasar un nombre a mano. Igual con `coco_config={"n_runs": …}`.
+- Monitor 1000 y COCO 333, el ejemplo de delamor, **se puede** — declarándolo. Hay test.
+
+### Tests
+
+`tests/test_un_solo_muestreo_para_los_tres.py`, **17 casos nuevos**: el default único leído por los
+tres; que cambiar el valor de la Config mueve a los tres; que una declaración mueve **sólo** su caso;
+que la traza dice qué caso, qué parámetro y quién; que sin `declared_by` no entra; y que
+`calibrate_n_runs` **ya no existe** (`TypeError`).
+
+Tres tests existentes afirmaban el 1000 y ahora afirman el 200, con la cita de delamor en su docstring:
+`test_ckm_landscape_config_ciclos.py` (`test_n_runs_por_defecto_es_200`), `test_neff_y_frontera.py`
+(`test_n_runs_default_es_200`) y `test_serie2_caso0_cp1.py` (que además dejó de afirmar `>= 1000` y
+afirma `== 200`: un `>=` no detecta que el valor se mueva para arriba).
+
+**Suite completa, en serie: 889 passed, 7 xfailed, 0 failed.** (872 + 17 nuevos.)
+
+### Las tres cosas que el texto 13 pide que diga
+
+**1. `coco.py:173-175` — ¿sigue siendo cierto tal como está escrito?** No lo cambié. **Como está
+escrito, no.** Dice: *"n_runs: reinicios aleatorios para contar atractores. Sesgado hacia arriba con
+n_runs (ver `_count_attractors`) — no cambiar sin revisar el hallazgo del sweep n_runs 60→70."*
+
+- *"para contar atractores"* y el sesgo medido pertenecen a **otra cantidad**: la que crece
+  ~linealmente con `n_runs` es el **conteo de atractores distintos**, y eso vive hoy en
+  `landscape_engine.deprecated_count_attractors:306-310`. El `_count_attractors` al que el paréntesis
+  manda devuelve **`n_eff(basin_masses)`**, que no es un conteo.
+- Y sobre esa otra cantidad, lo registrado dice algo distinto: `basin_masses:369-375` cita
+  `REG_orbitas_conjuntos_invariantes_v1` — *"los conteos no convergen con n_runs; las masas de las
+  cuencas grandes sí"*. El sesgo de `N_eff` con `n_runs` **no está medido ahí**; lo que hay es la señal
+  `saturacion` del panel de Monitor (`monitor_service.py:1010-1013`), que existe justamente porque no
+  está cerrado.
+- El sweep 60→70 **existe** (`iap_chatroom/tests/test_armstrong_n_runs_sweep.py`), y **la suite no lo
+  corre**: `pyproject.toml` tiene `testpaths = ["tests"]`, y `--collect-only` lo confirma —0
+  coincidencias—. Un *"no cambiar sin revisar el hallazgo"* que apunta a un test que no se corre.
+
+**2. El `n_runs = 80` de la firma de COCO — ¿se usa en algún camino?** Sí, en **uno**, y es un test:
+`tests/test_monitor_abre_ciclos.py:169`, `COCO(W=corpus.get_W())` como `thermostat=` externo, que
+después cuenta con 80 en `m.evaluate`. Los otros dos `COCO(W=…)` sin `n_runs` del repo
+(`experiments/coco_lifetime_analytics.py:198`, `tests/test_ckm_landscape_config_ciclos.py:77`) sólo
+llaman `beta_c_corpus()`, que no muestrea. **No lo toqué** (TASK de defaults).
+
+**3. Caminos que construyen Monitor o `calibrate` sin Config.** Escaneadas las **61** construcciones de
+`MonitorService(` del repo —sin `process/`, incluye algunas menciones en docstrings—: **15 pasan
+Config, 46 no.**
+
+| grupo | cuántas | qué valor usan hoy |
+|---|---|---|
+| `tests/` sin Config | 14 | explícito: 10 (×7), 20 (×3), 40 (×1); y 3 sin nada → `N_RUNS_DEFAULT` (**200**; antes 1000) |
+| `iap_chatroom/tests/` (Armstrong y W_mixta) | 9 | 50 ó `N_RUNS` del propio test. **La suite no corre esta carpeta** |
+| `experiments/` y los dos `baseline_d_ckm.py` | 11 | 50, 30, `N_RUNS`; los que no declaran nada → **200** (antes 1000) |
+| `services/` (demos `__main__` y docstrings) | 7 | sin declarar → **200** |
+| `calibrate` offline | — | el default de la **función**, `calibrate.N_RUNS_DEFAULT = 200`, y `seed = 0`. Son **dos lugares distintos** que hoy coinciden en 200; que coincidan no los une, y queda dicho en su docstring |
+
+No les puse ningún default nuevo: los que no declaran nada caen en `N_RUNS_DEFAULT`/`SEED_DEFAULT`, que
+es **el mismo lugar** del que leen los tres.
+
+### Tensión (A1.PAUSA del punto 1)
+
+**La copia de W no declara `sampling_mode` ni `n_warmup`, y cuenta siempre en `uniform`.** Es el mismo
+agujero que D6' cerró para `n_runs` —un umbral medido con un muestreo y aplicado a otro—, en el otro
+parámetro: si el canal corriera en `weighted` o `boltzmann`, la vara de COCO saldría de una curva
+`uniform`. Hoy el canal corre en `uniform` y no se manifiesta.
+
+**No lo implementé**, y la razón es que no es mío: decidir cómo muestrea `calibrate` es **el patrón de
+calibrate**, que el texto 13 pone en su lista de NO. Lo dejo dicho, no armado.
+
+Lo mismo con el segundo `seed` de `calibrate.extremo_expansion` (REPORTE 1a): dos conceptos con un
+nombre, y renombrarlo es la firma del patrón.

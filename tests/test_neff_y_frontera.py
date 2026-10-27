@@ -311,9 +311,15 @@ def test_panel_lleva_senal_de_saturacion(tmp_path):
     assert 0.0 <= s["orbitas_unicas_frac"] <= 1.0
 
 
-def test_n_runs_default_es_1000(tmp_path):
+def test_n_runs_default_es_200(tmp_path):
+    """El default único de los tres, decidido por delamor el 27 oct 2026.
+
+    Monitor sin `n_runs_attractors` y sin Config cae en `N_RUNS_DEFAULT`, que es
+    el mismo lugar del que leen COCO y la copia de W de `calibrate`. Antes era
+    1000 y lo leía sólo Monitor.
+    """
     c = CorpusService(storage_path=str(tmp_path / "c.json"), min_texts=5,
                       top_k=10, min_df=1)
     c.ingest(TEXTS)
     m = MonitorService(c, storage_path=str(tmp_path / "m.jsonl"))
-    assert m.evaluate("rights weapons")["condicion_W"]["n_runs"] == 1000
+    assert m.evaluate("rights weapons")["condicion_W"]["n_runs"] == 200

@@ -239,7 +239,9 @@ def test_c_el_panel_lleva_la_tabla_de_parametros(canal_monitor):
     assert p["min_texts_first_W"] == 30
     assert p["min_devices_first_W"] == 2
     assert p["rebuild_every"] == 10
-    assert p["n_runs"] >= 1000
+    # El default único de los tres (delamor, 27 oct 2026: 200). Antes era
+    # `>= 1000`, con el 1000 que leía sólo Monitor.
+    assert p["n_runs"] == 200
     assert p["system_to_corpus"] is False
     assert p["declaration"].endswith("DECLARACION_extraccion_W_v2.md")
 

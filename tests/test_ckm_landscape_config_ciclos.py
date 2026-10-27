@@ -199,10 +199,15 @@ def test_n_runs_y_seed_son_declarado(cfg: CKMlandscapeConfig) -> None:
     assert "seed" not in cfg.ciclo_vigente.to_dict()
 
 
-def test_n_runs_por_defecto_es_1000(cfg: CKMlandscapeConfig) -> None:
-    """delamor, 8 oct: "n 1000". Un solo valor para Monitor y COCO (P9)."""
-    assert N_RUNS_DEFAULT == 1000
-    assert cfg.n_runs == 1000
+def test_n_runs_por_defecto_es_200(cfg: CKMlandscapeConfig) -> None:
+    """delamor, 27 oct 2026: *"Y tambie fijar como default n runs 200 y seed 0"*.
+
+    Reemplaza el 1000 del 8 oct ("n 1000", P9), que valía para Monitor y COCO.
+    Éste es el primero que vale para los **tres**: Monitor, COCO y la copia de W
+    de `calibrate`, que desde el texto 13 leen este mismo campo.
+    """
+    assert N_RUNS_DEFAULT == 200
+    assert cfg.n_runs == 200
 
 
 def test_seed_por_defecto_es_0_y_queda_declarada(cfg: CKMlandscapeConfig) -> None:

@@ -70,8 +70,9 @@ Code: tres puntos, en este orden. Por favor.
    falso positivo (los dígitos de β dentro de un timestamp) y qué afirma
    ahora. No se afloja: tiene que seguir fallando si el β viaja.
 
-NO: el margen, la grilla, el patrón de calibrate, w_sha_match, el mecanismo
-general de defaults, P14, E1, E5, el vivo.
+NO: el margen, los valores de la grilla (puede cambiar de lugar, no de
+valor), el patrón de calibrate, w_sha_match, el mecanismo general de
+defaults, P14, E1, E5, el vivo.
 
 Reporte en docs/tasks/BANDEJA_code.md (sin veredicto global), commits
 nombrando archivos (uno por punto), suite completa en serie al cerrar,

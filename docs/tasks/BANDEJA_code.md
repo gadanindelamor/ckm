@@ -14968,3 +14968,120 @@ Correrlo no habría agregado información.
 - **La dependencia del costo de `calibrate` con N.** Una sola corrida, N=20.
 
 **A1.PAUSA.**
+
+---
+## MEDICIÓN D6' — el n_runs de `calibrate`, y el veredicto que depende de la semilla. **E5** — 2026-10-27 03:20 UTC
+
+*Claude Opus 5 (Code, Codespace). A pedido de delamor: *"cuál es el n runs que considerás más
+equilibrado, un extremo es 200 el otro mil"*. Es una medición, no código del diseño.*
+
+### Sobre qué W
+
+`experiments/_state_S2-C0/corpus_state.json`, la última meseta del intento 3.
+**`sha256_W = bdb98f5be458…`, que es exactamente el `w_sha` de la única calibración `calibrado` de
+toda la historia de S2-C0** (panel `coco.calibration.condiciones.w_sha`). No es una W parecida: es
+la misma.
+
+### Lo medido: 10 semillas, los dos extremos
+
+| | `n_runs=200` | `n_runs=1000` |
+|---|---|---|
+| veredicto en 10 seeds | **2 `calibrado`, 8 `no_calibrado`** | **10 `no_calibrado`, 0 `calibrado`** |
+| margen, mínimo | −0.165505 | −0.121664 |
+| margen, máximo | **+0.011901** | **−0.036950** |
+| recorrido del margen | 0.177405 | 0.084714 |
+| costo por corrida (N=20, en caliente) | 0.060 s | 0.302 s |
+
+Detalle a 200: `calibrado` en `seed=0` (margen +0.011418, umbral 0.005709) y en `seed=9` (margen
++0.011901, umbral 0.005950). Las otras ocho, `no_calibrado` con causa `sin_separacion`.
+
+A 1000 el margen **no llega a 0 en ninguna de las 10**.
+
+El cociente de costos es **5.03×**, que es lo que predice el costo lineal en `n_runs` (ya estaba
+demostrado; esto lo confirma de paso).
+
+### Lo que esto dice del [abierto]
+
+**El número que recomiendo es 1000**, y no por costo:
+
+1. **A 200 el veredicto no es reproducible.** El vivo corrió con `seed=0`, una de las dos que dicen
+   `calibrado`. Con `seed=1..8` la misma W no separa. Un valor que cambia con la semilla no es una
+   calibración, así que 200 no es "el extremo barato": está por debajo de poder dar un veredicto.
+2. **1000 es el valor declarado de la Config** (delamor, 8 oct, P9) y es con el que Monitor estima
+   el D_ckm que COCO compara contra el umbral. Hoy el umbral sale de un N_eff de 200 muestras y se
+   aplica a uno de 1000. Y el 200 es justamente lo que D6' quiere sacar: un default de función que
+   no se resuelve contra el estado.
+
+**Lo que 1000 NO arregla.** A 1000 el recorrido del margen entre seeds es 0.0847 y el margen que el
+vivo encontró era 0.0114: sigue siendo ~7× más chico que el ruido. **1000 es el piso de
+congruencia, no la precisión.** Orden de magnitud para que el ruido baje del margen: el error del
+estimador va como 1/√n, así que harían falta ~(0.0847/0.0114)² ≈ **55–60×** más muestras (≈60.000),
+que a N=20 son ~18 s por rebuild en el hilo del mensaje. **Eso no lo medí**: es la cuenta, no una
+corrida.
+
+### El costo es **el delay por mensaje** (delamor, en el acto)
+
+delamor lo precisó mientras escribía esto: *"el delay por mensaje — es el costo de n runs"*. Es la
+unidad correcta, y cambia cómo se lee la tabla: lo que se paga no es CPU, es **el tiempo que el
+canal no atiende**, porque `calibrate` corre en el hilo del mensaje (`_calibrate`, `blocking: True`).
+
+**El ritmo real del canal, del intento 3:**
+
+- `TICK_PERIODO_S = 1.0` s (`iap_chatroom/channel.py:37`) — el tick es la unidad de tiempo del canal;
+- los devices consultan cada **5,0 s** (`poll_interval_s` declarado en `device_log.jsonl`, 8 registros);
+- **60 mensajes publicados, 27 decisiones registradas, y `calibrate` corrió 3 veces** (mensajes 37,
+  47 y 57: las tres decisiones con `motivo_no_rebuild = None`). Las otras 24 no lo llamaron
+  —`corpus_en_acumulacion`—, así que **el delay no es de todos los mensajes: es del 5% de ellos**.
+
+| | `n_runs=200` | `n_runs=1000` | el nivel de precisión (≈60.000) |
+|---|---|---|---|
+| delay en el mensaje que calibra | 0,060 s | **0,302 s** | ~18 s |
+| …en ticks del canal (1 s) | 6% de un tick | **30% de un tick** | **~18 ticks** |
+| …en poll de device (5 s) | 1,2% | 6% | **~3,6 polls** |
+| delay amortizado por mensaje (3 de 60) | 0,003 s | 0,015 s | ~0,9 s |
+
+**Lo que se lee de ahí, y es el argumento que faltaba para elegir 1000:** a 1000 el bloqueo es
+**30% de un tick**, así que **no puede perder un tick** ni llegar a un poll de device. El costo del
+n_runs, medido en la unidad de delamor, **no es el límite**: 1000 entra sin tocar el ritmo del canal.
+
+**Dónde sí es el límite:** en el nivel de precisión que haría medible el margen (~60.000 muestras),
+el bloqueo son ~18 ticks y ~3,6 polls — cada device consultaría tres o cuatro veces durante **un
+solo** mensaje bloqueado. Ahí la sombra deja de ser una propuesta cómoda y pasa a ser la condición
+para poder calibrar con precisión. Las cifras de 60.000 y 18 s son **la cuenta**, no una corrida.
+
+### Un 17% gratis, aparte del `n_runs`
+
+`calibrate` hace **6** llamadas a `count_attractors` y sólo **5** son distintas: `A0`
+(`calibrate.py:254`) y el punto λ=0 (`:258-259`) calculan la **misma matriz con la misma semilla**
+—`interpolar(Wc, W_col, 0.0)` devuelve `Wc`—. Se ve en los datos del vivo: `d_ckm` es exactamente
+`0.000000` y `frac_rec` exactamente `1.000000` en λ=0 en **las 7 curvas**. Reusar `A0` como el punto
+λ=0 baja el costo un 17% sin tocar el patrón. **No lo implementé** (el patrón no se toca en esta
+TASK; esto es del cómputo, no del patrón, pero es código y el CP0 va sin código).
+
+### Por qué va marcado E5
+
+Toca dos cosas registradas, **sin volverlas falsas**:
+
+- el **ÍTEM 6 del 22 oct** (BANDEJA) quedó como *"INTENTO 3 CORRIDO. Primera calibración que separa
+  en un vivo"*;
+- el **docstring del módulo** `ckm_monitor.py:84-90` la da como hecho de la corrida
+  (`D_CKM_THRESHOLD = 0.00571`, `FRAC_REC_MIN = 0.99488`, `source: "calibrate"` en 3 de 27).
+
+Las dos son **ciertas como hecho**: produjo esos umbrales y COCO los usó. Lo que esta medición
+agrega es que **ese veredicto es de `n_runs=200, seed=0`**, y que con el `n_runs` declarado de la
+Config la misma W **no separa en 10 de 10 semillas**. O sea: lo que quedó registrado como un
+resultado del campo es, en esa parte, un resultado del muestreo.
+
+**No toqué ninguna de las dos.** Completar ese docstring y esa entrada es **E5** y no es del CPa ni
+del CP0. Mi propuesta, para cuando se decida: agregarle al docstring una línea con `n_runs`, `seed`
+y este resultado, sin sacar nada de lo que dice.
+
+### Corrección de un número mío del CP0
+
+El CP0 (02:58 UTC) reportó **0,16 s** para `calibrate` a `n_runs=200`. Era **una sola llamada en
+frío**. En caliente, sobre 10 corridas, son **0,060 s**. El argumento del D2 —no colgar `calibrate`
+de `_rebuild`, porque en el régimen default corre en cada ingesta— **se sostiene igual** (0,06 s ×
+7 rebuilds en un test de 9 textos, y otro tanto en cada driver), pero el número que lo apoya es
+0,060 s, no 0,16 s.
+
+**A1.PAUSA.**

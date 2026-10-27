@@ -32,6 +32,12 @@ Code: cinco puntos, después del texto 14, en este orden. Por favor.
    si el timeout ocurrió al cerrar o antes (y el cierre sólo lo levantó),
    y qué dice el log del server en ese tramo. Con línea de código y de log.
    Sin arreglar nada: el arreglo, si hace falta, se decide con el reporte.
+   delamor, 27 oct: "capturar errores de mcp, o de provider, o de LLMs? es
+   construir devices.... si tiene alguna intención esa construcción de
+   devices es sano declararlo. Nada es mal o bueno". Si tu reporte propone
+   capturar o reintentar algo, por favor decí qué intención tiene esa
+   construcción del device (por ejemplo, que B dure el caso entero) y qué
+   cambiaría en lo que el vivo mide.
 
 3. El test prometido el 26 oct: AgentDeviceSkin, por default, no aplica el
    criterio local. Hoy ningún test de tests/ lo construye con o sin

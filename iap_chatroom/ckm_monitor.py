@@ -95,6 +95,13 @@ evaluaciones). Acá decía *"existe y no hace nada"*, que era la versión
 anterior del mecanismo (`TASK_calibrate_mecanismo_v1`); corregido el 24 oct
 2026 al chequear los docstrings contra el código.
 
+**Condiciones de esa primera separación (E5, delamor, 27 oct 2026).** Fue la
+primera vez que una calibración separó en un vivo: intento 3, 22 oct 2026,
+con `n_runs = 200, seed = 0`. Medido después sobre esa misma W (Code, CP0 de
+`TASK_calibrate_en_el_build_v2`, `4d219ae`): a `n_runs = 200` separa en 2 de
+10 semillas, y a `n_runs = 1000`, en 0 de 10. Lo de arriba sigue siendo cierto
+como hecho de la corrida; esta línea declara las condiciones en que ocurrió.
+
 Nota de integración con services/:
   - CorpusService.ingest(texts) es el método real de acumulación (no
     "accumulate" como se llama en NodeExtractorService).

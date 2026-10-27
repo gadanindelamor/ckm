@@ -1,13 +1,23 @@
 # ESTADO — TASK_calibrate_en_el_build_v2
 
-*Última escritura: 2026-10-27 07:20 UTC, por Claude Opus 5 (Code, Codespace).*
+*Última escritura: 2026-10-27 07:50 UTC, por Claude Opus 5 (Code, Codespace).*
 
 ## La TASK está CERRADA en CPa–CP2
 
 **Cerrada el 27 oct 2026.** CPa, CP0, CP1 y CP2, cada uno con su commit y su reporte en la BANDEJA.
 Suite al cerrar: **872 passed, 7 xfailed, 0 failed**.
 
-**CP3 —el vivo— queda FUERA de la TASK**, y sólo se corre **con orden explícita de delamor**.
+**CP3 —el vivo— quedaba FUERA de la TASK y sólo con orden explícita de delamor. delamor la dio el
+27 oct (texto 12) y CP3 CORRIÓ:** `serie2_caso0` intento 4, 1204,04 s, ZERO_SHOT, 0 errores `429`.
+Reporte en la BANDEJA (07:41 UTC), datos en `experiments/serie2_caso0_intento4_log.json` (`6d33fd2`)
+y REG **borrador** en `docs/REG_borrador_serie2_caso0_intento4.md` — pasa a `registers/` **sólo con
+el OK de delamor**.
+
+Lo que el vivo midió del flujo nuevo: el origen **calibró** (gen 1, t=0), dejó **su línea**
+(`causa: bootstrap`), las evaluaciones sin registro de calibración pasaron de **4 a 0**, los
+contadores de las decisiones que movieron W pasaron de 0 por construcción a **10 y 11**, y la vara
+de COCO salió como **130 `Threshold` `DECLARED`** con su causa. **Las siete calibraciones:
+`no_calibrado` / `sin_separacion` a `n_runs = 1000`. Ninguna separó.**
 
 ## CP2 — cerrado el 27 oct
 
@@ -42,6 +52,14 @@ Reporte completo en la BANDEJA, 07:10 UTC. Commits: `0d4598c` (CP2), `ec008f7` (
    Mi lectura: un solo campo. **E3**, de delamor. Default vigente: los dos campos.
 8. **El test de β puede fallar ~1% de las corridas** por buscar el valor como subcadena sobre el
    estado serializado (coincide con un timestamp). No lo toqué: es otra afirmación.
+9. **`w_sha_match` colapsa dos situaciones** (lo encontró el vivo): *"el registro es de otra W"* y
+   *"es de ésta y no separó"* dan las dos `False`. Cuál está mal —el valor o el nombre— **no está
+   medido**. Sin tocar.
+10. **`w_sha_live_at_calibration` no está en el registro del estado** (lo encontró el vivo): es el
+    campo que hace visible el **orden**, y CP2 persistió `duration_s` y `blocking` y a ése no. De
+    las 7 calibraciones del intento 4 se puede decir el orden de **1**. Sin tocar.
+11. **device B murió con `McpError`** (timeout en el cierre del cliente, no cuota) y corrió 90
+    vueltas contra 223 y 228. Sin diagnosticar.
 
 - **CPa** (`74d97fc`): P12, P15 y P16 registradas en `DECISIONES_opus.md`; los contadores de la
   línea de `rebuild_decisions.jsonl` se capturan al decidir, no después del reset; un test nuevo y

@@ -122,9 +122,17 @@ Los siete COCO nacieron con el default **declarado como tal y con su causa**. Es
 **Un defecto, y es de Code, encontrado por esta corrida.** `w_sha_match` dice `False` en las 65, y
 **el registro era de la misma W que COCO juzgaba** — verificado: en t=0 la W de COCO y la del
 registro son las dos `62d909d4c74e7602`. `_vara_del_coco` pone `coincide: False` en las tres ramas
-que declaran el default, y una de esas tres es *"el registro es de esta W y no separó"*, donde la
-respuesta correcta es **`True`**. El campo existe justamente para distinguir *"la vara es de otra
-W"* de *"es de ésta y no separó"*, y hoy las colapsa. Los tests del CP2 no lo vieron: el del caso
+que declaran el default, y una de esas tres es *"el registro es de esta W y no separó"*.
+
+**Lo medido es que dos situaciones distintas producen el mismo valor:** *"el registro es de otra W"*
+y *"es de ésta y no separó"* dan las dos `False`. Eso es el hallazgo.
+
+**Cuál de las dos cosas está mal no está medido.** Puede ser el **valor** —y entonces esa rama
+tiene que devolver `True`— o puede ser el **nombre**: si `w_sha_match` quiere decir *"hay vara
+medida de esta W"*, el `False` es correcto y lo que falta es un campo aparte para la coincidencia de
+sha. La primera versión de este párrafo afirmaba la primera reparación como si fuera la única;
+**delamor lo marcó** (27 oct): *"ese es la manifestación del sesgo de control, del QUERER"*.
+Corregido acá: se registra la colisión, no su arreglo. Los tests del CP2 no lo vieron: el del caso
 "no separó" afirma `causa` y `source` y no este campo.
 
 **No se tocó el código en este CP** (la unidad era el vivo y su registro). Queda reportado.

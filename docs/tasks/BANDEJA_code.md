@@ -14686,3 +14686,99 @@ Toca un principio del proyecto (**E1**).
 y si la consigna no define unidad, pausa al terminar cada paso—.
 
 **A1.PAUSA.**
+
+---
+## REPORTE CPa — TASK_calibrate_en_el_build_v2. Lo mecánico, con una extensión declarada — 2026-10-27 02:52 UTC
+
+*Claude Opus 5 (Code, Codespace). CPa no necesita OK. Regla nueva de `.py` aplicada: A1.PAUSA al
+acceder, y después de modificar, docstring propio + `grep` de los nombres tocados en el resto del
+repo.*
+
+### 1. P12, P15 y P16 registradas en `DECISIONES_opus.md`
+
+Tres secciones nuevas al final, con el formato del archivo (`### Pn — respuesta de delamor
+(fecha)`), cada una citando las palabras de delamor y **bajo qué regla se tomó** (§8 del
+protocolo). Las tres son **E1**. `DECISIONES_opus.md` es de Opus; lo escribo porque el CPa me lo
+pide explícitamente.
+
+- **P12** (21 oct, *"revertir las dos. confirmo"*): existía y estaba ejecutada; faltaba la línea.
+  Era el tercer hueco del §8 —*"la escala que no vuelve"*— que encontró mi ARRANQUE de ayer.
+  Queda anotado que sigue **abierta para delamor** la ventana del gate en 4 (`ce40d47`).
+- **P15** (27 oct): reemplaza el refuerzo del 24 oct. Al acceder a un `.py`, **A1**; después de
+  modificar, el docstring propio **más el `grep`** de los nombres tocados.
+- **P16** (27 oct): de corrido dentro de una unidad definida en la consigna, A1.PAUSA entre
+  unidades; sin unidad definida, pausa por paso.
+
+### 2. La corrección del registro. **Eran dos campos, no uno**
+
+El CPa pide corregir `n_puntos_d_ckm`. Al mirar el código, **el mismo mecanismo afecta a
+`ciclos_sin_rebuild` en la misma línea**, y lo corregí también. Lo declaro porque es más de lo que
+el CPa nombra:
+
+- `_registrar_decision` se llama en `ckm_monitor.py:571`, y el bloque de `st.get("rebuild")` pone
+  en cero `_ciclos_sin_rebuild` (`:555`), `_textos_desde_rebuild` (`:559`) y `_d_ckm_history`
+  (`:564`) **antes** de esa llamada. El registro leía los dos primeros al final.
+- O sea: **en toda decisión que movía W, la línea registraba `ciclos_sin_rebuild: 0` y
+  `n_puntos_d_ckm: 0` por construcción.** Corregir uno y dejar el otro habría dejado un arreglo que
+  se ve completo y no lo está.
+- **Por qué los dos son el mismo acto:** los dos son un valor leído después de su propio reset.
+  Clasificación de Opus para el primero (*"error de registro, no de semántica, bajo el umbral"*),
+  idéntica para el segundo.
+
+**Cómo quedó.** Los contadores se capturan al entrar al bloque de la decisión (`:491-511`), antes
+de `calibrate` y del rebuild, y viajan a `_registrar_decision` como **parámetro obligatorio y sin
+default** (misma forma que `causa` y que `n_agentes`: un default no es un conteo). Verificado que
+entre la captura y el registro **nada toca esos contadores** — `_calibrate` escribe
+`_punto_calibrate` y los umbrales de Monitor; `rebuild_por_decision` toca el corpus.
+
+**Lo que NO hice, y es la tercera pata.** `textos_desde_rebuild` —el contador del criterio que más
+dispara— **sigue sin estar en la línea**. Está propuesto desde el ÍTEM 5 del 22 oct. Agregar un
+campo es otra decisión, no ésta; queda dicho en el docstring de `_registrar_decision` para que no
+se lea como olvido.
+
+**El sentido del campo, que encontré en la BANDEJA del 10 oct y gobierna qué valor es el
+correcto** (línea 5523): *"`n_puntos_d_ckm` está para que se pueda saber si el estructural **pudo
+evaluarse**: con menos de `n+1` no se evaluó, y eso no es lo mismo que haberse evaluado y dado
+False."* Con el 0 por construcción, el campo no podía cumplir eso justo cuando el estructural
+había disparado.
+
+### 3. El test (regla de completitud)
+
+`grep` encontró **un caller en los tests**: `tests/test_should_rebuild_conectado.py:582`, que invoca
+`_registrar_decision` derecho. Antes de tocarlo verifiqué que **no es de la PoC de dominancia**: es
+`test_cp2b_la_decision_sin_salto_queda_registrada`, de la línea del registro, que es justo lo que
+se corrige. Actualizado para pasar los contadores, con el comentario de por qué.
+
+Y **un test nuevo**, porque un cambio de comportamiento sin test no está cubierto:
+`test_cp2b_los_contadores_de_la_linea_son_los_del_momento_de_decidir`.
+
+- La entrada se arma como en `test_cp2_la_jerarquia_se_respeta` (4 puntos ascendentes;
+  `_ciclos_sin_rebuild = 6`).
+- **La aserción no repite la fórmula del registro:** afirma `n_puntos_d_ckm >= 4`, que sale de la
+  **precondición del criterio** —`should_rebuild(hist, n=3)` no puede dar True con menos de
+  `n+1 = 4`—. Una línea que dice `estructural` con menos de 4 **se contradice sola**.
+- `ciclos_sin_rebuild == 7` (los 6 armados más la vuelta que no movió W por ingesta).
+- **La inversión** son las dos últimas aserciones: los contadores vivos ya están en 0 y la línea
+  igual dice lo que había al votar. Antes de la corrección los cuatro valores decían 0.
+- El valor exacto de los puntos **no lo medí**: el archivo documenta que el canal agrega un punto
+  más (serían 5), y el test no depende de eso.
+
+### 4. La regla nueva de `.py`, aplicada
+
+- **A1.PAUSA al acceder:** no afirmé desde la lectura de ayer. Volví a leer los tramos exactos
+  (`:486-556`, `:699-742`) antes de decir dónde estaba el reset.
+- **Docstring propio:** el de `_registrar_decision`, reescrito. El del módulo nombra
+  `rebuild_decisions.jsonl` (`:60`) y **no** nombra los contadores: no hacía falta tocarlo.
+- **`grep` de los nombres tocados en el resto del repo:** `_registrar_decision` (4 lugares: 3 en
+  el propio archivo y el caller del test), `ciclos_sin_rebuild` (24 lugares; los de
+  `process/iap_series_freeze_20261008/` **no se tocan**, son el freeze), `n_puntos_d_ckm` (el
+  código, un test, la TASK, DECISIONES y la BANDEJA). **Ningún docstring de otro `.py` afirmaba
+  nada sobre esto**, así que la red paralela quedó vacía esta vez.
+
+### 5. Suite
+
+`python -m pytest -q`: **851 passed, 7 xfailed, 0 failed** (850 + el test nuevo).
+`tests/test_should_rebuild_conectado.py` solo: **46 passed** (45 + el nuevo). **Las 13 siguen en
+verde.**
+
+**A1.PAUSA.**

@@ -487,3 +487,64 @@
   - **Qué deja de hacerse, y es lo que la decisión reemplaza:** el código vivo **no** carga regresiones ni compatibilidad hacia atrás para que lo viejo siga reproduciéndose. Lo viejo se reproduce **desde su copia congelada**, no desde el código de hoy. Es la misma regla de *"chau regresión"*, ahora con el dónde: lo que se conserva, se conserva en `process/`.
   - **El límite, dicho en el molde y que vale igual acá:** **NO ES REPRODUCIBLE.** Las versiones de librerías valen **mientras se puedan reinstalar**; si una se retira, queda sólo el identificador, como con los modelos por API. · revertir: n/a (es la regla con la que se congela; una copia ya hecha se borra, pero eso no devuelve nada).
 - **2026-10-18** · **delamor: la Serie 2 del IAP es nueva y no tiene nada que ver con la serie 1.** *"NADA QUE VER con IAP tests o serie uno"*. La serie 1 (casos 0.4–0.15) queda congelada en `process/iap_series_freeze_20261008/`: la Serie 2 **no se compara con ella, no la continúa y no la reinterpreta**. Identificación propia en todo lo que produzca — `serie = "S2"`, `caso = "S2-C0"`, panel, registros, nombres de archivo y carpeta propia—, nunca mezclada con la serie 1. La TASK es `docs/tasks/TASK_iap_serie2_caso0_v1.md`, **copia sin cambios** de `docs/opus/TASK_iap_serie2_caso0_v1.md` (`b9039f5`; mismo sha256 en los dos archivos). · revertir: n/a (es la condición con la que se lee todo lo que la Serie 2 produzca).
+
+### P12 — respuesta de delamor (2026-10-21)
+
+*Registrada por Code el 27 oct 2026, por el CPa de `TASK_calibrate_en_el_build_v2`. La respuesta
+existía y estaba ejecutada desde el 21 oct; lo que faltaba era esta línea. El ARRANQUE de Code del
+26 oct la encontró como el tercer hueco del §8 del protocolo —*"la escala que no vuelve"*—: la
+decisión se tomó en el chat, se ejecutó, y la tríada quedó abierta.*
+
+- **2026-10-21** · **P12 — `ea9224b` se revierte, las dos mitades** (delamor: *"revertir las dos.
+  confirmo"*). **Regla: E1** — tocaba lo que delamor había decidido, y tocaba IAP, que no se toca
+  sin verificar (su propia regla). Code no lo decide (§5).
+  - La verificación que delamor pidió antes de decidir (*"no se revierte nada sin verificar"*)
+    estaba hecha: 11 llamadas con el prompt sin tocar, **0 palabras del protocolo**; el `OP_SILENCE`
+    de qwen (n = 1) no se replicó. Suite antes del arreglo: 855 passed, 7 xfailed.
+  - Se revirtieron **(a)** `PEDIDO_GENERATE` y su línea en `_to_chat_messages`, y **(b)** la guarda,
+    `op_silence_in_generate`, `PALABRAS_DEL_PROTOCOLO` y la línea de `run_store.py`, con sus tests.
+  - **Se quedó** el arreglo de `test_delta_mensajes_cuenta_solo_ajenos`: era un defecto del test con
+    guarda o sin guarda.
+  - Ejecutada por Code en `67e340a`, a mano y no con `git revert` del commit entero, porque
+    `ea9224b` también traía cosas que se quedan. **Gate: sha256 `951d56f6…b158f` idéntico** al de
+    antes de `ea9224b`, verificado dos veces. Suite: 843 passed, 7 xfailed, 0 failed.
+  - Sigue **abierta para delamor** la ventana del gate en 4 (`ce40d47`), que el sha del texto del
+    gate no cubre · revertir: reaplicar `ea9224b` (escalar: es E1 otra vez).
+
+### P15 — respuesta de delamor (2026-10-27)
+
+- **2026-10-27** · **P15 — se reemplaza la regla de lectura de los `.py`** (delamor: *"la respuesta
+  es A1 PAUSA. eso es lo que la situación pide al acceder a un archivo .py. Es simple. saco la regla
+  de leer. queda solo la de luego de modificar un .py reviso su docstring"*). **Regla: E1** — toca
+  una regla que puso delamor (el refuerzo del 24 oct: *"los `.py` se leen completos… 1 vez si es
+  sólo lectura, 2 veces si es de lectura y escritura"*). **Ese refuerzo queda reemplazado.**
+  - **Al acceder a un `.py`: A1, la pausa.** ¿Lo que voy a afirmar sale de comprensión verificable o
+    del peso del contexto? No hay un número de lecturas: hay una pregunta.
+  - **Después de modificar un `.py`:** revisar su docstring.
+  - **La pregunta de delamor que abrió el resto:** *"los sesgos se expanden sobre una red paralela…
+    ¿y los otros docstrings de otros archivos .py, qué les sucede?"*
+  - **Lo medido que la contesta** (Code, texto 08, 26 oct): de las divergencias encontradas, **la
+    mayoría estaban en un docstring que describe OTRO archivo** — el de la Config afirma qué hace
+    Monitor; `_renacer_coco` afirma los defaults de `coco.py`; `set_coco_thresholds` afirmaba el
+    orden de llamadas de `ckm_monitor`; `ckm_monitor` citaba la ruta de un REG movido. Sólo la de
+    `calibrate.py` era del mismo archivo. **Revisar el docstring propio no alcanza.**
+- **2026-10-27** · **La propuesta de los docstrings, aceptada** (delamor: *"de acuerdo con tu
+  propuesta de docstrings"*). Después de modificar un `.py`: se revisa su docstring **y además** se
+  buscan con `grep` en el resto del repo los nombres tocados (función, clase, constante, ruta), y se
+  revisan los docstrings y comentarios donde aparecen. **La "red paralela" son las referencias** ·
+  revertir: volver al refuerzo del 24 oct (escalar: E1).
+
+### P16 — respuesta de delamor (2026-10-27)
+
+- **2026-10-27** · **P16 — gobierna lo que funcionó con el texto 08** (delamor: *"la decisión es lo
+  que funcionó con el texto 08"*). **Regla: E1** — toca un principio del proyecto (el régimen de
+  checkpoints de `CLAUDE.md` contra el punto 7 de la ESTRATEGIA del 26 oct, *"Code trabaja de
+  corrido"*).
+  - **Code trabaja de corrido dentro de una unidad definida en la consigna, y hace A1.PAUSA entre
+    unidades.**
+  - **Si la consigna no define unidad, pausa al terminar cada paso**, que es el régimen de
+    `CLAUDE.md` sin cambios.
+  - Por qué el texto 08 funcionó: **definía la unidad** (V1–V6 como una verificación, con una sola
+    A1.PAUSA al final). El punto 7 leído solo sacaba el *"esperar el OK"* de todos los pasos; con
+    esto, lo saca **dentro** de una unidad y no **entre** unidades · revertir: volver a la pausa por
+    paso en todos los casos.

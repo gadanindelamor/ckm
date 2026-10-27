@@ -490,6 +490,27 @@ class CKMMonitor:
         # ingesta; este no pasa por ahí.
         if self._last_rebuild_signal:
             sha_antes = self._corpus.w_sha()
+            # ── los contadores CON LOS QUE SE DECIDIÓ (27 oct 2026) ────────
+            # Se capturan **acá**, antes de `calibrate`, del rebuild y de los
+            # resets de más abajo. `_registrar_decision` los leía al final, o
+            # sea **después** de que el bloque de `st.get("rebuild")` los
+            # pusiera en cero: toda decisión que movía W registraba
+            # `ciclos_sin_rebuild: 0` y `n_puntos_d_ckm: 0` **por
+            # construcción**, y el campo que mostraría la evidencia del
+            # criterio que disparó valía 0 justamente cuando había disparado.
+            #
+            # Lo encontró el V1 del texto 08 (hallazgo A, BANDEJA 26 oct) en la
+            # única decisión `estructural` de un vivo: necesitó 4 puntos para
+            # disparar y la línea decía 0.
+            #
+            # Entre este punto y el registro **nada toca estos contadores**:
+            # `_calibrate` escribe `_punto_calibrate` y los umbrales de
+            # Monitor, y `rebuild_por_decision` toca el corpus. Así que esto es
+            # el valor que tenían al votar (`:469-484`).
+            contadores_al_decidir = {
+                "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
+                "n_puntos_d_ckm": len(self._d_ckm_history),
+            }
             allow_first_w = (
                 len(self._devices_seen) >= self._min_devices_first_w
             )
@@ -548,7 +569,8 @@ class CKMMonitor:
             # La decisión queda en el jsonl **haya movido W o no** (CP2b): el
             # caso que no la mueve es justamente el que `w_version` no registra.
             self._ultimo_rebuild["registro"] = self._registrar_decision(
-                self._last_rebuild_causa, st, sha_antes, clock
+                self._last_rebuild_causa, st, sha_antes, clock,
+                contadores_al_decidir,
             )
 
         # El estado de la decisión, en cada mensaje: mismo mecanismo que el
@@ -699,7 +721,8 @@ class CKMMonitor:
         }, ensure_ascii=False))
 
     def _registrar_decision(self, causa: str, st: dict,
-                            sha_antes: "str | None", clock: dict) -> dict:
+                            sha_antes: "str | None", clock: dict,
+                            contadores: dict) -> dict:
         """
         Una línea en `rebuild_decisions.jsonl` por **decisión tomada**.
 
@@ -707,6 +730,20 @@ class CKMMonitor:
         explícito: `w_version` **deduplica por sha**, así que una decisión que
         no mueve W **no deja versión**, y sin esta línea no quedaría en ningún
         lado. Con `w_cambio` se distingue de un salto.
+
+        `contadores` son los de **el momento de decidir**, capturados por
+        `on_message` antes de los resets, y es un parámetro **obligatorio y sin
+        default** (misma forma que `causa` y que `n_agentes`): leerlos acá los
+        leía después del reset, y entonces `ciclos_sin_rebuild` y
+        `n_puntos_d_ckm` valían 0 en toda decisión que movía W. El sentido de
+        `n_puntos_d_ckm` es poder saber si el estructural **pudo evaluarse**
+        —con menos de `n+1` no se evaluó, que no es lo mismo que haberse
+        evaluado y dado False (CP2b)— y con el 0 por construcción no se podía.
+        Corregido el 27 oct 2026 (CPa de `TASK_calibrate_en_el_build_v2`).
+
+        **`textos_desde_rebuild` sigue sin estar en la línea**, y es el
+        contador del criterio que más dispara: está propuesto desde el ítem 5
+        del 22 oct y agregar un campo es otra decisión, no ésta.
 
         `reloj` viene del **mismo reloj del canal** que sella los mensajes
         (`ChatChannel.get_clock()`), no de un `time.time()` aparte.
@@ -733,8 +770,9 @@ class CKMMonitor:
             "w_cambio": sha_antes != sha_despues,
             "corpus_size": len(self._corpus._texts),
             "message_count": self._message_count,
-            "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
-            "n_puntos_d_ckm": len(self._d_ckm_history),
+            # Los dos del momento de decidir, no los de después del reset.
+            "ciclos_sin_rebuild": contadores["ciclos_sin_rebuild"],
+            "n_puntos_d_ckm": contadores["n_puntos_d_ckm"],
         }
         with open(self._decisiones_path, "a") as f:
             f.write(json.dumps(reg, ensure_ascii=False, default=str) + "\n")

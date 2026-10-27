@@ -580,7 +580,14 @@ def test_cp2b_una_decision_sin_cambio_de_W_queda_en_el_jsonl(monitor) -> None:
 
     # el registro lo escribe el camino del monitor, así que se invoca derecho
     reg = cm._registrar_decision("volumen", st, sha, {"t": 1.0, "tick": 7,
-                                                      "reloj": "channel"})
+                                                      "reloj": "channel"},
+                                 # Desde el 27 oct el registro **no lee** los
+                                 # contadores: los recibe del momento de
+                                 # decidir, porque leerlos al final los leía
+                                 # después del reset. Acá se lo invoca derecho,
+                                 # así que los pone el test.
+                                 {"ciclos_sin_rebuild": cm._ciclos_sin_rebuild,
+                                  "n_puntos_d_ckm": len(cm._d_ckm_history)})
     assert reg["w_cambio"] is False, "no se declaró que W no se movió"
     assert reg["w_sha_antes"] == reg["w_sha_despues"] == sha
     assert reg["ocurrio"] is True, "la decisión sí se tomó"
@@ -608,6 +615,67 @@ def test_cp2b_la_decision_con_salto_queda_con_w_cambio_true(monitor) -> None:
     assert d[-1]["w_sha_antes"] != d[-1]["w_sha_despues"]
     assert d[-1]["reloj"] == "channel", "no se usó el reloj del canal"
     assert d[-1]["n_puntos_d_ckm"] is not None
+
+
+def test_cp2b_los_contadores_de_la_linea_son_los_del_momento_de_decidir(
+    monitor,
+) -> None:
+    """
+    **La línea del registro lleva los contadores con los que se decidió, no los
+    de después del reset** (27 oct 2026, CPa de `TASK_calibrate_en_el_build_v2`).
+
+    Hasta hoy `_registrar_decision` los leía al final, o sea **después** de que
+    el bloque de `st.get("rebuild")` los pusiera en cero: toda decisión que
+    movía W registraba `ciclos_sin_rebuild: 0` y `n_puntos_d_ckm: 0` **por
+    construcción**. Y `n_puntos_d_ckm` existe para poder saber si el estructural
+    **pudo evaluarse** —con menos de `n+1` no se evaluó, que no es lo mismo que
+    haberse evaluado y dado False (CP2b)—, así que valía 0 justamente cuando
+    había disparado. Lo encontró el V1 del texto 08 (hallazgo A) en la única
+    decisión `estructural` de un vivo: necesitó 4 puntos y la línea decía 0.
+
+    **Qué afirma y por qué no es la fórmula del registro.** La cota `>= 4` sale
+    de la **precondición del criterio**: `should_rebuild(hist, n=3)` no puede dar
+    True con menos de `n+1 = 4` puntos. Una línea que dice `estructural` con
+    menos de 4 **se contradice sola**, sin mirar cómo se escribió.
+
+    **La inversión** son las dos últimas aserciones: los contadores vivos ya
+    están en cero y la línea igual dice lo que había al votar. Antes de la
+    corrección los cuatro valores decían 0.
+
+    La entrada se arma como en `test_cp2_la_jerarquia_se_respeta`.
+    """
+    cm = monitor
+    for t in TODOS[:8]:
+        cm.on_message(_Msg(t))
+
+    cm._d_ckm_history = [-0.4, -0.3, -0.2, -0.1]   # n+1 = 4, ascendentes
+    # Un valor que no es 0 ni el umbral: si fuera `MAX_CICLOS` ganaría el
+    # estructural igual por la jerarquía, pero no se vería que el campo no es
+    # el umbral cableado.
+    cm._ciclos_sin_rebuild = 6
+
+    cm.on_message(_Msg("analysts disagree about the firearms evidence"))
+
+    assert cm._last_rebuild_causa == "estructural"
+    linea = cm.decisiones_de_rebuild()[-1]
+    assert linea["causa"] == "estructural"
+    assert linea["w_cambio"] is True, "el test necesita que W se mueva"
+
+    assert linea["n_puntos_d_ckm"] >= 4, (
+        f"la línea dice `estructural` con {linea['n_puntos_d_ckm']} puntos, y "
+        "el criterio no puede disparar con menos de n+1 = 4: el campo se está "
+        "leyendo después del reset"
+    )
+    # La vuelta no movió W por ingesta (`rebuild_suspendido` y W ya existe), así
+    # que el contador de ciclos subió uno antes de votar: 6 + 1.
+    assert linea["ciclos_sin_rebuild"] == 7, (
+        f"la línea registró {linea['ciclos_sin_rebuild']} ciclos; al votar "
+        "había 7"
+    )
+
+    # Y los contadores vivos SÍ se reiniciaron: la línea no los está leyendo.
+    assert cm._d_ckm_history == []
+    assert cm._ciclos_sin_rebuild == 0
 
 
 def test_cp2b_las_vueltas_sin_senal_no_se_registran(monitor) -> None:

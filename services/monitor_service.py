@@ -27,6 +27,15 @@ None; el resto del panel se emite igual. Con él, COCO lee Δ_r y comprime
 su propia representación (Δ_r_compresiones); Δ_r no recibe nada de COCO
 (D3, ver evaluate()).
 
+**De dónde sale la vara de COCO** (D4 de `TASK_calibrate_en_el_build_v2`, 27 oct
+2026). Monitor **no guarda** umbrales propios: los deriva en cada nacimiento del
+lugar de la calibración en el estado (`CKMlandscapeConfig.calibracion`), con
+`_vara_del_coco`, y cada uno sale como `Threshold` de `ckm_trust_rule` —
+`MEASURED` si el registro es de **esta** W y dio número, `DECLARED` con el
+default de `coco.py` y su causa si no—. Nunca los números de otra W. Antes
+vivían acá, en `_coco_thresholds`, y un registro que no separaba no los
+limpiaba: el panel decía `calibrate` con los números de la W vieja.
+
 Este docstring describe lo que el código no dice de sí mismo. La firma del
 constructor, el cuerpo de evaluate() y la escala de _combine_W_Delta viven
 en el código, y ahí se leen — copiarlos acá crea una rama que se congela
@@ -44,7 +53,10 @@ import numpy as np
 
 from node_extractor import NodeExtractorService
 from corpus_service  import CorpusService
-from coco import COCO, ThermostatState, BETA_RHO_STAR
+from coco import (COCO, ThermostatState, BETA_RHO_STAR,
+                  D_CKM_THRESHOLD, FRAC_REC_MIN)
+from calibrate import CALIBRADO
+from ckm_trust_rule import DECLARED, MEASURED, Threshold
 from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig
 from landscape_engine import (
     fases_de_orbita,
@@ -198,11 +210,22 @@ class MonitorService:
         # conectado y que se pueda comprobar que lo está son dos cosas.
         self._coco_last_eval  : Optional[str] = None   # UTC ISO, de la última observe()
         self._coco_n_evaluations: int          = 0
-        # Los umbrales con los que nace el próximo COCO, si `calibrate` los
-        # dio. `None` es **"nadie calibró"**, que no es lo mismo que "calibró y
-        # no separó": eso viaja en `_coco_calibration`.
-        self._coco_thresholds     : Optional[dict] = None
-        self._coco_calibration  : Optional[dict] = None
+        # ── la vara de COCO ya no se guarda acá (D4, 27 oct 2026) ──────────
+        # Antes vivían `_coco_thresholds` y `_coco_calibration`, y de ahí venía
+        # el caso 1: una calibración que no separaba reemplazaba el registro y
+        # **no limpiaba los números**, así que el panel decía `calibrate` con
+        # los números de la W vieja y el `w_sha` de la W que falló. Nada ataba
+        # los números a su W.
+        #
+        # Ahora el registro vive en **su lugar del estado**
+        # (`CKMlandscapeConfig.calibracion`, D3), con su `w_sha`, y la vara se
+        # **deriva** de ahí en cada nacimiento (`_vara_del_coco`). Monitor no
+        # guarda nada propio de la calibración: es la visión de delamor —*"cada
+        # uno guarda lo suyo, con su atribución, en **su lugar**"*—.
+        #
+        # La vara del COCO vigente se conserva sólo para el panel, y se escribe
+        # en el mismo bloque donde COCO nace.
+        self._coco_vara : Optional[dict] = None
 
     # ------------------------------------------------------------------
     # API pública
@@ -474,13 +497,19 @@ class MonitorService:
             # Disparos: cuántas veces aplicó OPERADOR_STOP_COCO. **0 es un
             # valor**, no una falta: la Serie 2 no le exige disparar.
             "triggers": len(th.alpha_trajectory()),
-            "thresholds": {
-                "D_CKM_THRESHOLD": th.threshold,
-                "FRAC_REC_MIN": th.frac_rec_min,
-                "source": "calibrate" if self._coco_thresholds else "default",
-                "calibrated": bool(self._coco_thresholds),
-            },
-            "calibration": self._coco_calibration,
+            "thresholds": self._panel_de_la_vara(th),
+            # El registro de la calibración, leído de **su lugar del estado**
+            # (D3). Monitor no guarda una copia.
+            "calibration": (
+                self._landscape_config.calibracion
+                if self._landscape_config is not None else None
+            ),
+            # Con qué se declaró que corre `calibrate`, y qué quedó sin
+            # declarar (D6'). Un default que se usa se ve acá.
+            "calibrate_declarado": (
+                self._landscape_config.calibrate_declarado
+                if self._landscape_config is not None else None
+            ),
             # Agregado 3 de delamor: de que W_eff mide cada uno. Desde el
             # 19 oct es **una sola** (decision de delamor tras el CP1b: Delta_r
             # no se normaliza). Lo que sigue siendo distinto es el baseline
@@ -496,44 +525,123 @@ class MonitorService:
             },
         }
 
-    def set_coco_thresholds(
-        self, valores: Optional[dict], registro: Optional[dict] = None
-    ) -> None:
+    def _panel_de_la_vara(self, th) -> dict:
         """
-        Los umbrales con los que **nace el próximo COCO**, y el registro de la
-        calibración que los produjo.
+        El bloque `thresholds` del panel, con **el origen de cada umbral**.
 
-        **Lo llama el canal ANTES del rebuild**, desde `CKMMonitor._calibrate`
-        (`iap_chatroom/ckm_monitor.py:603`), que corre sobre la W **candidata**
-        y recién después instala (`:501` antes de `:514`). Es el único caller.
-        Acá decía *"después de un rebuild"*, que era el orden anterior al 19
-        oct (delamor: *"el punto es `should_rebuild`… antes del rebuild"*);
-        corregido el 26 oct 2026 al cotejar los docstrings contra el código.
-        Los umbrales no entran al COCO vivo: nacen con el del ciclo siguiente,
-        así que "antes del rebuild" y "para el COCO de después" conviven.
-        `valores=None` deja los que haya —que pueden ser los
-        defaults de `coco.py`— y el `registro` dice que no se calibró: **no se
-        cae a 0.40 en silencio**, se ve que ese 0.40 es el default.
+        Las dos claves históricas (`D_CKM_THRESHOLD`, `FRAC_REC_MIN`) siguen
+        con el número que COCO está usando, que es lo que los paneles viejos
+        llevan. Lo que se agrega es de dónde salió **cada uno**:
 
-        No toca al COCO vivo: cambiarle el umbral en medio del ciclo lo
-        convertiría en otro instrumento sin que el ciclo cambie.
+        - `source`: `"calibrate"` si los dos se midieron, `"default"` si
+          ninguno, `"mixed"` si uno y uno — que es el caso real de `calibrate`
+          separando en `D_ckm` y no en `frac_rec`. Antes era `bool`, y un
+          "mixto" se publicaba como si fuera todo calibrado.
+        - `origen`: el `Threshold` de cada uno, con `provenance` y `source`.
+        - `w_sha_match`: **si el registro del lugar es de la W que COCO juzga**.
+          Es el campo que faltaba: nada ataba los números a su W, y por eso el
+          caso 1 no se veía.
         """
-        self._coco_calibration = registro
-        if not valores:
-            return
-        usables = {
-            "d_ckm_threshold": valores.get("D_CKM_THRESHOLD"),
-            "frac_rec_min": valores.get("FRAC_REC_MIN"),
+        vara = self._coco_vara or {}
+        d = vara.get("d_ckm_threshold")
+        f = vara.get("frac_rec_min")
+        medidos = sum(1 for t in (d, f)
+                      if t is not None and t.provenance == MEASURED)
+        return {
+            "D_CKM_THRESHOLD": th.threshold,
+            "FRAC_REC_MIN": th.frac_rec_min,
+            "source": ("calibrate" if medidos == 2
+                       else "default" if medidos == 0 else "mixed"),
+            "calibrated": medidos == 2,
+            "origen": {
+                "d_ckm_threshold": d.to_dict() if d is not None else None,
+                "frac_rec_min": f.to_dict() if f is not None else None,
+            },
+            # `None` es "no hay vara registrada todavía" (COCO externo).
+            "causa": vara.get("causa"),
+            "w_sha_match": vara.get("coincide"),
+            "w_sha_del_registro": vara.get("w_sha_del_registro"),
         }
-        # "UNKNOWN" es un valor declarado de `calibrate` (D_ckm separó y
-        # frac_rec no): no es un número y no se le pasa a COCO.
-        usables = {k: v for k, v in usables.items() if isinstance(v, (int, float))}
-        if not usables:
-            return
-        self._coco_thresholds = usables
-        if self._coco_config is None:
-            self._coco_config = {}
-        self._coco_config.update(usables)
+
+    def _vara_del_coco(self, sha_W: Optional[str]) -> dict:
+        """
+        **Los dos umbrales con los que nace el COCO de esta W, cada uno con su
+        origen** (D4 de `TASK_calibrate_en_el_build_v2`, 27 oct 2026).
+
+        Se derivan del **lugar de la calibración en el estado**
+        (`CKMlandscapeConfig.calibracion`), no de nada que Monitor guarde. Cada
+        uno sale como `Threshold` de `services/ckm_trust_rule.py`, que es el
+        vocabulario que el repo ya tenía para esto y cuyo propio docstring
+        nombra a `calibrate` como el caso `MEASURED`:
+
+        - **`MEASURED`** si el registro es de **esta** W y dio un número, con
+          `source` = la calibración y su `w_sha`;
+        - **`DECLARED`** si no, con el **default de `coco.py`** como valor y la
+          **causa** en `source`. Así *"caer en un default"* queda visible, que es
+          lo que delamor pidió: *"ahora se puede ver cuando se CAE en un default
+          de Config… lo importante es haber llegado aquí"*.
+
+        **Nunca los números de otra W** (D4). Si el registro es de otra, la
+        causa lo dice con su sha: no se hereda la vara.
+
+        **Los dos se deciden por separado**, y eso es más fino que lo de antes:
+        `calibrate` puede separar en `D_ckm` y no en `frac_rec` —y entonces
+        devuelve `FRAC_REC_MIN = "UNKNOWN"`—, así que uno queda `MEASURED` y el
+        otro `DECLARED`. Antes era todo o nada.
+        """
+        cfg = self._landscape_config
+        registro = cfg.calibracion if cfg is not None else None
+
+        def _declarada(causa: str) -> dict:
+            fuente = f"default de coco.py — {causa}"
+            return {
+                "d_ckm_threshold": Threshold(
+                    value=D_CKM_THRESHOLD, produced_by_order="coco.py",
+                    provenance=DECLARED, source=fuente),
+                "frac_rec_min": Threshold(
+                    value=FRAC_REC_MIN, produced_by_order="coco.py",
+                    provenance=DECLARED, source=fuente),
+                "causa": causa,
+                "w_sha_del_registro": (registro or {}).get("w_sha"),
+                "w_sha_de_la_W": sha_W,
+                "coincide": False,
+            }
+
+        if registro is None:
+            return _declarada("sin_registro_de_calibracion")
+        sha_reg = registro.get("w_sha")
+        if sha_reg != sha_W:
+            # **El caso 1, cerrado.** La vara de otra W no se usa: se declara
+            # el default y se dice de qué W era el registro.
+            corto = (sha_reg or "None")[:12]
+            return _declarada(f"calibracion_de_otra_W:{corto}")
+
+        estado = registro.get("estado")
+        if estado != CALIBRADO:
+            causa_reg = (registro.get("condiciones") or {}).get("causa")
+            return _declarada(f"{estado}:{causa_reg}" if causa_reg else str(estado))
+
+        valores = registro.get("valores") or {}
+        fuente_medida = f"calibrate w_sha={(sha_reg or '')[:12]}"
+        out = {"causa": None, "w_sha_del_registro": sha_reg,
+               "w_sha_de_la_W": sha_W, "coincide": True}
+        for clave, en_registro, default in (
+            ("d_ckm_threshold", "D_CKM_THRESHOLD", D_CKM_THRESHOLD),
+            ("frac_rec_min", "FRAC_REC_MIN", FRAC_REC_MIN),
+        ):
+            v = valores.get(en_registro)
+            if isinstance(v, (int, float)):
+                out[clave] = Threshold(
+                    value=float(v), produced_by_order="calibrate",
+                    provenance=MEASURED, source=fuente_medida)
+            else:
+                # `"UNKNOWN"` es un valor declarado de `calibrate`: separó en
+                # una y no en la otra. No es un número y no entra como medido.
+                out[clave] = Threshold(
+                    value=default, produced_by_order="coco.py",
+                    provenance=DECLARED,
+                    source=f"default de coco.py — {en_registro}={v!r}")
+        return out
 
     def _invalidar_si_W_cambio(self, nodes: list) -> Optional[str]:
         """
@@ -689,6 +797,20 @@ class MonitorService:
         # (el JSONL), así que no se pierde nada. Si coco_config la traía, se
         # descarta acá y se declara.
         kw.pop("landscape_history", None)
+        # ── D4: la vara sale del lugar del estado, no de acá ───────────────
+        # **Se pasan siempre los dos**, también cuando son el default de
+        # `coco.py`: así el constructor de COCO **nunca los completa en
+        # silencio** (delamor: *"nunca lo completa en silencio el argumento de
+        # una función" EXACTO*). El `Threshold` dice si el número es `MEASURED`
+        # o `DECLARED` y con qué causa, y eso va al panel.
+        #
+        # Si `coco_config` trajera un umbral, **gana la vara del estado**, que es
+        # el único lugar donde la calibración vive (D3/D4). Hoy nadie lo pasa
+        # —verificado—, y queda dicho para que no sea un descarte silencioso.
+        vara = self._vara_del_coco(self.corpus.w_sha())
+        kw["d_ckm_threshold"] = vara["d_ckm_threshold"].value
+        kw["frac_rec_min"] = vara["frac_rec_min"].value
+        self._coco_vara = vara
         anterior = self._thermostat
         self._thermostat = COCO(W=self.corpus.get_W(), **kw)
         # CP3 punto 3: el baseline se fija al nacer el ciclo, con Δ_r en cero

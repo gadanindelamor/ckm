@@ -136,8 +136,12 @@ def test_el_primer_COCO_ya_no_nace_sin_registro_de_calibracion(monitor) -> None:
     assert cal["condiciones"]["w_sha"] == coco["w_version_id"], (
         "el registro no es de la W que COCO juzga"
     )
-    # Y la vara declara de dónde sale, sea calibrada o default.
-    assert coco["thresholds"]["source"] in ("calibrate", "default")
+    # Y la vara declara de dónde sale. **`"mixed"` entró en el CP2** (D4): los
+    # dos umbrales se deciden por separado, así que `calibrate` puede separar en
+    # `D_ckm` y no en `frac_rec`. Esta aserción quedó incompleta al cerrar el
+    # CP1 y se completa acá, no se afloja: sigue exigiendo que el origen esté
+    # declarado.
+    assert coco["thresholds"]["source"] in ("calibrate", "mixed", "default")
 
 
 # ── D5: el origen deja su línea ─────────────────────────────────────────────

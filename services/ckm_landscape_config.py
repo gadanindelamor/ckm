@@ -168,28 +168,61 @@ class CKMlandscapeConfig:
     **Set síncrono (D2).** Cuando `abrir_ciclo` retorna, el ciclo nuevo ya es
     el vigente. No hay sets diferidos ni en cola.
 
-    **Declarado (I4, revisada el 7 oct).** Lo declarado se exige según quién
-    lo usa, no siempre:
-      sampling_mode — obligatorio: Monitor valida el suyo contra éste.
-      n_runs        — obligatorio: muestras de sigma_0 para contar órbitas.
-      seed          — obligatorio: la seed de ese muestreo.
+    **Declarado (I4, revisada el 7 oct; corregido el 27 oct 2026).** Lo
+    declarado se exige según quién lo usa, no siempre:
+      sampling_mode — **el único exigido**: es keyword-only y sin default, y
+                      Monitor valida el suyo contra éste (`ValueError` si no
+                      coinciden).
+      n_runs        — **con default** `N_RUNS_DEFAULT` (1000): muestras de
+                      sigma_0 para contar órbitas.
+      seed          — **con default** `SEED_DEFAULT` (0): la seed de ese
+                      muestreo.
       scale         — opcional: hoy sólo lo usa la UI.
     theta_W no está: es del Gatekeeper.
 
-    **n_runs y seed son UNO SOLO para Monitor y COCO** (delamor, 8 oct: "n
-    1000"; P9). Antes Monitor contaba con 1000 y el COCO que creaba Corpus con
-    80, sobre el mismo campo, y el docstring de Monitor dice que con 50 el
-    N_eff quedaba 5-20% por debajo. Dos aspectos de la misma cosa no pueden
-    medir con muestreos distintos, así que el valor se declara acá, una vez, y
-    COCO ya no tiene un default propio.
+    **Esas tres líneas decían "obligatorio" para `n_runs` y `seed`, y el código
+    les da default.** Era una divergencia docstring/código, encontrada por Code
+    el 26 oct (V3 del texto 08) y corregida acá el 27: **el docstring dice lo
+    que el código hace.** El valor de esos defaults **no se decide** (delamor, 27
+    oct: *"ahora cualquiera da lo mismo. Esa es la respuesta correcta"*); lo que
+    importa es que **caer en uno se pueda ver**, y hoy **no se ve**: una Config
+    construida sin `n_runs` y una construida con `n_runs=1000` dan el mismo
+    `declarado`, el mismo `panel()` y el mismo `to_dict()`. Verificado y
+    declarado; el mecanismo que lo haría visible es otra TASK.
 
-    Los umbrales de COCO (d_ckm_threshold, alpha_star, frac_rec_min) **no**
-    entran: son de Calibración, que es un proceso aparte (D6). track_landscape,
-    n_warmup y gamma quedan en la configuración de COCO.
+    **Y las otras dos afirmaciones de este bloque también eran falsas**, y van
+    corregidas acá (medido en el V3 del texto 08):
+      - decía *"n_runs y seed son UNO SOLO para Monitor y COCO"* (delamor, 8
+        oct: "n 1000"; P9). **COCO sí los toma de acá** (`_renacer_coco`,
+        `setdefault`). **Monitor no**: cuenta con su propio
+        `n_runs_attractors` y su `count_seed`, y no lee esta Config para eso.
+        Coinciden **por default** (1000 y 0 en los dos lados), no por
+        construcción, y nada lo verifica — `sampling_mode` sí tiene guardia y
+        estos dos no.
+      - decía *"COCO ya no tiene un default propio"*. **Lo tiene**:
+        `coco.py` declara `n_runs = 80` y `seed = 0` en su firma. Lo que pasa es
+        que el `setdefault` del renacimiento los pisa cuando hay Config; el 80
+        no se usa en el canal y sigue ahí.
+
+    **Los umbrales de COCO** (`d_ckm_threshold`, `frac_rec_min`): **D6 se
+    revisó el 27 oct 2026** (D3 y D4 de `TASK_calibrate_en_el_build_v2`).
+    Siguen **sin entrar como campos declarados** —la calibración es un proceso
+    aparte—, pero **el resultado de la calibración sí vive acá**, en su lugar
+    (`calibracion`, `registrar_calibracion`), firmado con el `w_sha` de la W
+    calibrada, y de ahí deriva COCO su vara. `alpha_star`, `track_landscape`,
+    `n_warmup` y `gamma` quedan en la configuración de COCO.
     """
 
     __slots__ = ("_sampling_mode", "_n_runs", "_seed", "_scale", "_config_id",
-                 "_timestamp", "_ciclos", "_lock", "_tick", "_tick_reloj")
+                 "_timestamp", "_ciclos", "_lock", "_tick", "_tick_reloj",
+                 # ── el lugar de la calibración (D3, 27 oct 2026) ───────────
+                 # `_calibracion` es el registro de la última calibración, con
+                 # su `w_sha`. Los tres `_calibrate_*` son los parámetros
+                 # **declarados** con los que corre `calibrate`: dejaron de ser
+                 # defaults de función (D6'). `None` en cualquiera de ellos es
+                 # **"nadie lo declaró"** (UNKNOWN), no un número.
+                 "_calibracion", "_calibrate_n_runs", "_calibrate_seed",
+                 "_calibrate_grilla")
 
     def __init__(
         self,
@@ -201,8 +234,27 @@ class CKMlandscapeConfig:
         config_id    : Optional[str] = None,
         timestamp    : Optional[float] = None,
         ciclos       : tuple[Ciclo, ...] = (),
+        calibrate_n_runs : Optional[int] = None,
+        calibrate_seed   : Optional[int] = None,
+        calibrate_grilla : Optional[tuple] = None,
+        calibracion      : Optional[dict] = None,
     ) -> None:
-        """Uso normal: `CKMlandscapeConfig.create(W, sampling_mode=...)`."""
+        """
+        Uso normal: `CKMlandscapeConfig.create(W, sampling_mode=...)`.
+
+        **Los cuatro últimos son el lugar de la calibración** (D3 y D6', 27 oct
+        2026). Los tres `calibrate_*` son lo **declarado**: con qué va a correr
+        `calibrate`. `calibracion` es lo **medido**: el registro de la última
+        corrida. **`None` en los cuatro quiere decir "nadie lo declaró / no hubo
+        registro"**, que es UNKNOWN — no es `nulo_calibrado`, que es un estado
+        de `calibrate` y significa *"no se ejecutó"*. La diferencia importa en
+        `from_dict`: un estado guardado antes de hoy no tiene estas claves, y
+        leerlas como `nulo_calibrado` afirmaría algo que nadie registró (I2).
+
+        **Esta Config no importa `calibrate`.** Los valores llegan de quien
+        arma la corrida —el canal—, igual que el tick: acá se **registran**, no
+        se generan. Así el estado no depende del instrumento.
+        """
         if sampling_mode not in SAMPLING_MODES:
             raise ValueError(
                 f"sampling_mode inválido: {sampling_mode!r} — esperado {SAMPLING_MODES}"
@@ -213,6 +265,29 @@ class CKMlandscapeConfig:
             raise ValueError(f"n_runs inválido: {n_runs!r} — entero >= 1")
         if not isinstance(seed, int):
             raise ValueError(f"seed inválida: {seed!r} — entero")
+        # Los declarados de `calibrate`: se validan **sólo si llegaron**.
+        # `None` es "nadie lo declaró" y es un valor legítimo del lugar.
+        if calibrate_n_runs is not None and (
+            not isinstance(calibrate_n_runs, int) or calibrate_n_runs < 1
+        ):
+            raise ValueError(
+                f"calibrate_n_runs inválido: {calibrate_n_runs!r} — entero >= 1 "
+                "o None (nadie lo declaró)"
+            )
+        if calibrate_seed is not None and not isinstance(calibrate_seed, int):
+            raise ValueError(
+                f"calibrate_seed inválida: {calibrate_seed!r} — entero o None"
+            )
+        if calibrate_grilla is not None:
+            if not calibrate_grilla:
+                raise ValueError(
+                    "calibrate_grilla vacía: una grilla sin puntos no es una "
+                    "grilla declarada; para 'nadie la declaró' va None"
+                )
+            if not all(isinstance(x, (int, float)) for x in calibrate_grilla):
+                raise ValueError(
+                    f"calibrate_grilla inválida: {calibrate_grilla!r} — números"
+                )
 
         self._sampling_mode = sampling_mode
         self._n_runs        = n_runs
@@ -226,6 +301,19 @@ class CKMlandscapeConfig:
         # anote: sin canal no hay tick, y eso es UNKNOWN, no 0.
         self._tick          : Optional[int] = None
         self._tick_reloj    : Optional[str] = None
+        # ── el lugar de la calibración (D3, 27 oct 2026) ────────────────────
+        # Lo declarado y lo medido, en el mismo lugar y distinguidos: los tres
+        # `_calibrate_*` son con qué va a correr `calibrate`; `_calibracion` es
+        # el registro de lo que salió. Un escritor —el punto único del canal,
+        # `CKMMonitor._calibrar_antes_de_instalar`— y muchos lectores.
+        self._calibrate_n_runs : Optional[int]   = calibrate_n_runs
+        self._calibrate_seed   : Optional[int]   = calibrate_seed
+        self._calibrate_grilla : Optional[tuple] = (
+            tuple(calibrate_grilla) if calibrate_grilla is not None else None
+        )
+        self._calibracion      : Optional[dict]  = (
+            dict(calibracion) if calibracion is not None else None
+        )
 
     # ── construcción ─────────────────────────────────────────────────────────
 
@@ -391,6 +479,73 @@ class CKMlandscapeConfig:
         """De qué reloj viene el tick registrado (decisión 3)."""
         with self._lock:
             return self._tick_reloj
+
+    # ── el lugar de la calibración (D3) ──────────────────────────────────────
+
+    def registrar_calibracion(self, registro: Optional[dict]) -> None:
+        """
+        Anota el registro de la última calibración. **Un solo escritor.**
+
+        Lo llama `CKMMonitor._calibrar_antes_de_instalar`, que es el punto único
+        de *"antes de instalar una W"* (D2). Nadie más escribe acá: es lo que la
+        visión de delamor pide —*"cada uno guarda lo suyo, con su atribución, en
+        **su lugar**… es DONDE, ese es el candado"*—.
+
+        **La Config registra; no genera** (igual que `registrar_tick`): acá entra
+        un registro que alguien produjo, y la Config no llama a `calibrate` ni lo
+        conoce.
+
+        **El lugar es perpetuo** (delamor, 27 oct: *"EL LUGAR DONDE NACE ES
+        PERPETUO. es el estado"*): el registro se escribe **cuando se produce**,
+        que es **antes** de que exista el ciclo al que describe —`calibrate`
+        corre sobre la W candidata y el ciclo lo abre Monitor después de
+        instalarla—. Por eso no vive dentro del `Ciclo`, que es `frozen` y nace
+        más tarde: el ciclo que nace lo **referencia** por su `w_sha`.
+
+        `None` lo deja en *"no hubo registro"*. No se mezcla con
+        `nulo_calibrado`, que es un estado de `calibrate` y dice *"no se
+        ejecutó"*: uno es "nadie anotó", el otro es "alguien anotó que no corrió".
+        """
+        with self._lock:
+            self._calibracion = dict(registro) if registro is not None else None
+
+    @property
+    def calibracion(self) -> Optional[dict]:
+        """
+        El registro de la última calibración, o `None` si no hubo ninguno.
+
+        Copia: el lugar no se edita desde afuera. `w_sha` adentro dice **de qué
+        W** es, y es lo que permite ver si la vara que usa un COCO salió de la W
+        que ese COCO juzga.
+        """
+        with self._lock:
+            return dict(self._calibracion) if self._calibracion is not None else None
+
+    @property
+    def calibrate_declarado(self) -> dict:
+        """
+        Con qué corre `calibrate`, **declarado acá y no como default de
+        función** (D6', 27 oct 2026).
+
+        `None` en un campo es **"nadie lo declaró"**, y entonces quien llame a
+        `calibrate` cae en el default de `calibrate.py` — que es exactamente lo
+        que este lugar existe para hacer visible. No se rellena con un número.
+        """
+        with self._lock:
+            return {
+                "n_runs": self._calibrate_n_runs,
+                "seed": self._calibrate_seed,
+                "grilla_lambda": (list(self._calibrate_grilla)
+                                  if self._calibrate_grilla is not None else None),
+                # Qué campos nadie declaró. Va explícito para que una lectura
+                # del panel no tenga que deducirlo de los `null`.
+                "sin_declarar": sorted(
+                    k for k, v in (("n_runs", self._calibrate_n_runs),
+                                   ("seed", self._calibrate_seed),
+                                   ("grilla_lambda", self._calibrate_grilla))
+                    if v is None
+                ),
+            }
 
     def panel(self) -> dict:
         """

@@ -121,7 +121,12 @@ from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig  # noqa: E4
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
-from calibrate import calibrate, NULO_CALIBRADO  # noqa: E402
+from calibrate import (                                       # noqa: E402
+    GRILLA_LAMBDA_DEFAULT,
+    NULO_CALIBRADO,
+    SEED_DEFAULT,
+    calibrate,
+)
 from w_version import sha256_W  # noqa: E402
 from landscape_engine import D_CKM_FORMA  # noqa: E402
 from node_extractor import MIN_DF, PERFIL_ES_EN, DECLARACION_REF  # noqa: E402
@@ -183,6 +188,21 @@ CASE = "S2-C0"
 #   - `REBUILD_EVERY = 10` mensajes: una W por mensaje no es sensato, y
 #     `min_texts*2` ataba el rebuild al umbral del primer W — con el 30, el
 #     rebuild habría sido cada 60 mensajes sin que nadie lo decidiera.
+# **El `n_runs` de `calibrate`, declarado** (D6', delamor 27 oct 2026: *"el
+# n_runs de calibrate = 1000"*). Antes era el default de la función (200), y el
+# umbral salía de un N_eff de 200 muestras para aplicarse a uno de 1000.
+#
+# **La razón es de delamor, en sus palabras**, sobre el dato de que con 1000 la
+# W del vivo no separa en ninguna de 10 semillas: *"EXACTO. Esa es la razon.
+# darles posibiliddes para que sientan el sesgo. luego lo que suceda solo
+# sucedera."* No se le agrega lectura.
+#
+# Medido antes de ponerlo (CP0, `4d219ae`): a 200 el veredicto de la única
+# calibración que separó en un vivo **depende de la semilla** —2 de 10 dicen
+# `calibrado`—; a 1000, 0 de 10. Y el costo: 0,302 s en el mensaje que calibra,
+# que es el 30% de un tick del canal y el 5% de los mensajes.
+CALIBRATE_N_RUNS = 1000
+
 TOP_K = 20
 MIN_TEXTS_FIRST_W = 30
 MIN_DEVICES_FIRST_W = 2
@@ -274,7 +294,19 @@ class CKMMonitor:
         # scale sólo lo usa la UI, y por I4 lo declarado se exige según
         # quién lo usa. sampling_mode es el default de MonitorService.
         # Ver docs/tasks/TASK_CKMlandscapeConfig_v3.md y DECISIONES_opus.md.
-        self._landscape_config = CKMlandscapeConfig(sampling_mode="uniform")
+        # **Los parámetros de `calibrate` se declaran acá, en el estado** (D6',
+        # 27 oct 2026): dejaron de ser defaults de función. El `n_runs` es el
+        # 1000 de delamor; `seed` y `grilla` son los valores que `calibrate`
+        # ya usaba, ahora **declarados** en vez de heredados de su firma.
+        #
+        # La Config no importa `calibrate`: los valores se los pasa quien arma
+        # la corrida, que es este canal. La Config registra, no genera.
+        self._landscape_config = CKMlandscapeConfig(
+            sampling_mode="uniform",
+            calibrate_n_runs=CALIBRATE_N_RUNS,
+            calibrate_seed=SEED_DEFAULT,
+            calibrate_grilla=GRILLA_LAMBDA_DEFAULT,
+        )
         # COCO es de Monitor (CP4). El canal ya no lo lee de CorpusService,
         # que dejó de crearlo: le pasa CÓMO construirlo y Monitor lo hace
         # nacer con el ciclo bootstrap y renacer en cada rebuild (D4).
@@ -715,8 +747,33 @@ class CKMMonitor:
         sha_vigente = self._corpus.w_sha()
         W = self._corpus.candidate_W()
         sha_candidata = sha256_W(W) if W is not None else None
-        registro = calibrate(W, w_sha=sha_candidata, clock=clock)
-        self._monitor.set_coco_thresholds(registro.get("valores"), registro)
+        # **Los parámetros salen del estado, no de la firma de `calibrate`**
+        # (D6'). Lo que el lugar no declara **no se rellena acá**: se deja caer
+        # en el default de `calibrate.py` y el registro dice cuál quedó sin
+        # declarar, que es lo que delamor pidió — poder ver cuándo se cae en un
+        # default.
+        declarado = self._landscape_config.calibrate_declarado
+        kw = {}
+        if declarado["n_runs"] is not None:
+            kw["n_runs"] = declarado["n_runs"]
+        if declarado["seed"] is not None:
+            kw["seed"] = declarado["seed"]
+        if declarado["grilla_lambda"] is not None:
+            kw["grilla_lambda"] = tuple(declarado["grilla_lambda"])
+        registro = calibrate(W, w_sha=sha_candidata, clock=clock, **kw)
+        duracion = round(time.monotonic() - t0, 4)
+        # ── D3: el registro va a SU LUGAR del estado ───────────────────────
+        # Un solo escritor, que es este punto. Lleva el `w_sha` de la W
+        # calibrada —lo que permite ver si la vara de un COCO salió de la W que
+        # ese COCO juzga— y el costo, que hasta hoy se medía y se descartaba:
+        # `duration_s` vivía sólo en el panel de Gradio, que no se persiste.
+        self._landscape_config.registrar_calibracion({
+            **registro,
+            "w_sha": sha_candidata,
+            "duration_s": duracion,
+            "blocking": True,
+            "parametros_declarados": declarado,
+        })
         return {
             "existe": True,
             "implementado": True,
@@ -737,7 +794,8 @@ class CKMMonitor:
             # **Cuánto tardó, medido.** Corre en el hilo del mensaje: esto es
             # el tiempo que el canal no atendió. Va al panel porque es el
             # insumo de la propuesta de la sombra.
-            "duration_s": round(time.monotonic() - t0, 4),
+            # La misma medida que fue al lugar del estado, no otra.
+            "duration_s": duracion,
             "blocking": True,
         }
 

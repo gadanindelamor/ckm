@@ -325,3 +325,7 @@
 
     Solo la de `calibrate.py` era del mismo archivo. Revisar el docstring propio no alcanza.
   - **Propuesta de Opus** (mecánica y barata): después de modificar, buscar con `grep` los nombres tocados (función, clase, constante, ruta) en los docstrings y comentarios del resto del repo, y revisar solo esos. Así la "red paralela" son las referencias. Decide delamor.
+- **Propuesta de los docstrings, aceptada** (delamor: *"de acuerdo con tu propuesta de docstrings"*). Después de modificar un `.py`, se revisa su docstring y además se buscan con `grep` en el resto del repo los nombres tocados (función, clase, constante, ruta); se revisan los docstrings y comentarios donde aparecen. Va al próximo texto para Code.
+- **P16 respondida** (delamor: *"la decisión es lo que funcionó con el texto 08"*). Code trabaja de corrido dentro de una unidad definida en la consigna y hace A1.PAUSA entre unidades. Si la consigna no define unidad, pausa al terminar cada paso. Va al próximo texto para Code, que tiene que registrarla en `DECISIONES_opus.md` junto con P12 y P15.
+- **Conectores en las sesiones de Code:** delamor lo revisa.
+- **Medición de uso:** delamor: *"es una pantalla con varias unidades, y taxonomías. el uso se mide ie por Code y Cowork y Design… voy a estudiarlo"*. La primera lectura de `USO_mediciones.md` espera a que delamor la estudie.

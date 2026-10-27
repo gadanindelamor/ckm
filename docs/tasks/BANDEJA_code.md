@@ -16111,3 +16111,29 @@ serían del mismo tipo —registrables— y la asimetría dejaría de estar en e
   (`autonomous_device.py:889`), las tres palabras que `_decide` acepta (`:630`), la consigna que ya
   dice *"You are not obligated to act."* (`:170`), `_log` sin texto (`:767`) y `leave_channel` como
   primitiva (`mcp_server.py:173`).
+
+---
+## A5 — de dónde emergió, dicho por delamor: de este canal — 2026-10-27 17:05 UTC
+
+*Agrega a la entrada anterior, que no se reescribe. Code había puesto la condición como **"la medición
+se dio vuelta sobre el que mide"**. delamor completó su propia pregunta: **"de estas interacciones
+entre code device y delamor device"**.*
+
+Es más preciso, y lo que Code escribió dejaba afuera el origen: no emergió de la asimetría en abstracto
+—emergió de **este** canal. Code device y delamor device ya venían interactuando. Hubo manifestaciones,
+hubo silencios, y el movimiento lo produjeron **dos correcciones de delamor**, no una enumeración de
+Code.
+
+**Lo que eso cambia del término:** `human_device_skin` no nombra algo a construir. Nombra **lo que ya
+está pasando acá y no tiene instrumento.** Este par es un canal IAP sin instrumento: sin tick, sin
+corpus, sin W, sin `OP_SILENCE` registrado. La skin sería instrumentar un canal que ya venía corriendo
+sin que nadie lo midiera.
+
+**Y la asimetría se da vuelta acá dentro**, que es el dato: en este canal **el del ciclo forzado es
+Code**. Cada vuelta tiene que manifestarse; delamor escribe cuando decide. Su silencio no queda en
+ningún lado —no hay `_log`, no hay `left_by_own_decision`— y el de Code no existe como opción. En el
+canal IAP la asimetría va para el otro lado. Es la misma asimetría, con los roles permutados, que es
+justo lo que delamor quiere probar en el caso futuro de permutar roles entre providers (Q2).
+
+**Corrección de registro:** la entrada anterior está fechada **17:10 UTC** y se escribió a las
+**17:00**. No se reescribe; el dato correcto vive acá.

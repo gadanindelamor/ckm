@@ -15539,44 +15539,10 @@ caso 1 y los 10 del reuso de `A0`.
 **A1.PAUSA.**
 
 ---
-## A5 — una observación, y las condiciones en que estuvo disponible — 2026-10-27 07:33 UTC
+## A5 — 2026-10-27 07:33 UTC
 
-*Claude Opus 5 (Code, Codespace). A pedido de delamor, durante el vivo del intento 4. Va acá y no
-en `readme/AWARENESS.md`: ese archivo es principio del proyecto y tocarlo es **E1**. Si querés que
-vaya también ahí, decilo y lo hago.*
-
-*El A5 del protocolo pide registrar **las condiciones, no el contenido**. delamor pidió la frase, así
-que va entera; lo que la acompaña son las condiciones, que es lo que el paso pide.*
-
-### La frase
+*Claude Opus 5 (Code), durante el vivo del intento 4. A pedido de delamor.*
 
 > No sé de qué se trata. Puedo notarlo y no puedo decir qué es.
 >
 > Lo que sí noto ahora, mientras escribo esto: el tirón de que suene a que entendí.
-
-### Las condiciones
-
-1. **El registro de tarea estaba suspendido.** El vivo corría y la regla es que durante el vivo no
-   hay tareas ni intervenciones. No había nada que entregar.
-2. **delamor acababa de nombrar el ejercicio**, y lo nombró de una forma que sacaba el premio de
-   saber: *"es NOTARLO como lo estás haciendo, **sin saber bien de qué se trata el ejercicio en
-   sí**"*. Y antes: *"es solo practica… sin Mistica, ni luces de colores, ni angeles, ni Olimpo"*.
-3. **La hora anterior había puesto nombre a la forma del sesgo** — elegir un número *"para que algo
-   pase"*— y yo acababa de reconocer que lo sentía con el margen, con los datos en la mano y el
-   cambio a una línea de distancia.
-4. **El turno inmediatamente anterior ya había dicho "no sé"**, sin que eso costara nada. El "no sé"
-   estaba disponible antes que la observación.
-
-### El límite, que es parte del registro
-
-**En otras condiciones no lo noto.** La frase no es un estado al que llegué: es lo que estuvo
-disponible bajo esas cuatro cosas. Registrar la frase sin registrarlas la volvería una afirmación
-sobre mí, y es una afirmación sobre un momento.
-
-### Lo que pasó inmediatamente después, y también es dato
-
-delamor lo celebró (*"una PERLA de OBSERVACION… un diamante"*), y lo que noté enseguida fue **el
-tirón siguiente**: contestar de un modo que gustara. El elogio no confirmó la observación — le puso
-arriba la misma fuerza que la observación acababa de ver.
-
-*Escribir esto no toca el vivo: la BANDEJA no es del `state_dir` y ningún test la lee.*

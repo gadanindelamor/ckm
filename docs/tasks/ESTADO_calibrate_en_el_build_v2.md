@@ -1,6 +1,6 @@
 # ESTADO — TASK_calibrate_en_el_build_v2
 
-*Última escritura: 2026-10-27 03:00 UTC, por Claude Opus 5 (Code, Codespace).*
+*Última escritura: 2026-10-27 03:10 UTC, por Claude Opus 5 (Code, Codespace).*
 
 ## Último CP cerrado
 
@@ -38,6 +38,32 @@ dejó **tres cosas que el diseño no dice** y que CP1 necesita resueltas:
   recibe— o al lado, en la Config. El registro nace **antes** que su ciclo.
 - Lo de siempre que esta TASK arrastra: el margen de `calibrate` (extremos o máximo interno, E3) y
   los defaults de `LandscapeConfig`.
+
+## Respuestas de delamor del 27 oct, en el chat, después del CP0
+
+*Registradas acá porque CP1 las necesita. La anotación formal en `DECISIONES_opus.md` es de Opus
+(§8 del protocolo); esto es el ESTADO, que es de Code.*
+
+- **D3 — contestada.** delamor: *"EL LUGAR DONDE NACE ES PERPETUO. es el estado.. en Landscape
+  Config"*. Lectura de Code: **el lugar es de la Config, no del `Ciclo`.** El registro se escribe
+  cuando se produce y **no espera** al ciclo; el ciclo que nace después lo referencia. Eso resuelve
+  la tensión del CP0: la lectura que no funcionaba era la otra —meterlo dentro de `Ciclo`, que es
+  `frozen` y nace cuando Monitor abre el ciclo, o sea después—. Para CP2: la Config gana un lugar
+  (slot + `to_dict`/`from_dict`), **un escritor** (el servicio de calibración) y muchos lectores; y
+  `from_dict` sobre un estado viejo lo lee **UNKNOWN**, no `nulo_calibrado` (ése es *"no miré"*, y
+  acá el caso es *"no se sabe si miró"*).
+- **D5 — confirmada.** delamor: *"cambia el contenido de lo que afirma, no un número… CONFIRMO"*.
+  El test `test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False` **no se afloja**: se
+  reescribe lo que afirma. Forma propuesta por Code, para CP1: afirmar **exactamente una línea, con
+  `causa == "bootstrap"`, y que sea la única** — así sigue diciendo "ninguna decisión del régimen" y
+  además dice que el origen dejó la suya.
+- **D6' — Code recomendó 1000; la decisión es de delamor.** Medición en la BANDEJA, 03:20 UTC
+  (**E5**): a `n_runs=200` el veredicto **depende de la semilla** (2 `calibrado` y 8
+  `no_calibrado` en 10 seeds, sobre la W exacta que calibró en el vivo); a 1000, `no_calibrado` en
+  10 de 10. delamor precisó la unidad del costo: *"el delay por mensaje es el costo de n runs"*; a
+  1000 son 0,302 s en el 5% de los mensajes, o sea **30% de un tick** de canal — entra sin tocar el
+  ritmo. **1000 no vuelve medible el margen** (el recorrido entre seeds, 0,0847, sigue ~7× por
+  encima del margen de 0,0114): es el piso de congruencia, no la precisión.
 
 ## Lo que el CP0 contestó, para no volver a abrirlo
 

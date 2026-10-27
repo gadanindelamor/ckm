@@ -17,8 +17,11 @@ Definiciones de delamor (27 oct) que CP2 aplica:
 - Defaults de LandscapeConfig: su valor no se define ("cualquiera da lo
   mismo"); lo que importa es que caer en un default se pueda ver. No cambies
   ningún número de default.
-- El margen de calibrate (extremos o máximo interno) NO se decide en esta
-  TASK: es una definición de qué mide el instrumento, sigue abierta (E3).
+- El margen de calibrate (extremos o máximo interno) no se toca. delamor:
+  "lo de siempre es el sesgo de querer ponerle el NUMERO conveniente. en vez
+  de sostener la tension". Elegir el margen, la grilla o un número para que
+  separe es ese sesgo. Por favor sostené la tensión: medí y registrá lo que
+  sale, separe o no.
 
 CP2 = D3 + D4 + D6', así:
 - D3: el registro de la calibración vive en un lugar de la Config (slot +
@@ -58,12 +61,12 @@ defaults (centinela, inventario), P14, el state_dir por default de CKMMonitor
 Cierre (después de la A1.PAUSA de CP2, si CP2 quedó en verde):
 - En docs/tasks/ESTADO_calibrate_en_el_build_v2.md: la TASK queda cerrada en
   CPa-CP2; CP3 (el vivo) fuera, sólo con orden explícita de delamor. Lista
-  de lo que la TASK deja abierto, una línea cada cosa: el margen de
-  calibrate (E3), E5 (docstring de la "primera calibración que separa", con
+  de lo que la TASK deja abierto, una línea cada cosa: la tensión del
+  margen de calibrate, sostenida (no se cambia para que separe), E5 (docstring de la "primera calibración que separa", con
   n_runs=200 seed=0), la divergencia w_version del origen, el mecanismo
   general de defaults, el state_dir por default (E1), P14.
 - Registrá en DECISIONES_opus.md las definiciones de delamor del 27 oct de
-  arriba (n_runs=1000, defaults de Config, margen abierto).
+  arriba (n_runs=1000, defaults de Config, la tensión del margen sostenida).
 
 Reporte en docs/tasks/BANDEJA_code.md (sin veredicto global), commits
 nombrando archivos, suite completa (en serie) al cerrar, pull --rebase y push.

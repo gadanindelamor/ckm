@@ -15634,3 +15634,15 @@ confirmó en el acto: *"Son 3 d_ckm"*, y le puso el nombre al tercero: **el de l
 de `calibrate`, que no mide el campo sino una copia deformada de la que nada vuelve.
 
 **A1.PAUSA.**
+
+---
+## El REG del intento 4 pasa a `registers/` — 2026-10-27 07:55 UTC
+
+*delamor: **"REG OK. pasalo"**. Clase R se toca sólo con su orden, y está dada.*
+
+- **`docs/REG_borrador_serie2_caso0_intento4.md` → `registers/REG_iap_serie2_caso0_intento4_v1.md`**
+  (`git mv`, como el del intento 3: el borrador **no** queda duplicado).
+- Encabezado al día: título = nombre de archivo, el OK citado con su fecha, y el puntero al borrador
+  original como referencia histórica.
+- La entrada del REPORTE CP3 (07:41 UTC) **no se reescribe**: apunta al borrador porque eso era
+  cierto al escribirla. El puntero nuevo vive acá y en el ESTADO.

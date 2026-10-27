@@ -1,6 +1,7 @@
-# REG_borrador_serie2_caso0_intento4 — serie2_caso0, intento 4
+# REG_iap_serie2_caso0_intento4_v1 — serie2_caso0, intento 4
 
-Clase R, **borrador**. Pasa a `registers/` **sólo con el OK de delamor**. Estructura espejada de
+Clase R. **Pasa a `registers/` con el OK de delamor** (27 oct 2026: *"REG OK. pasalo"*). Borrador
+original: `docs/REG_borrador_serie2_caso0_intento4.md`. Estructura espejada de
 `registers/REG_iap_serie2_caso0_intento3_v1.md`.
 
 - **Caso:** `serie2_caso0` (técnico) / `S2-C0`.

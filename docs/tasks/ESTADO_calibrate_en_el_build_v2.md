@@ -1,6 +1,6 @@
 # ESTADO — TASK_calibrate_en_el_build_v2
 
-*Última escritura: 2026-10-27 07:50 UTC, por Claude Opus 5 (Code, Codespace).*
+*Última escritura: 2026-10-27 07:55 UTC, por Claude Opus 5 (Code, Codespace).*
 
 ## La TASK está CERRADA en CPa–CP2
 
@@ -10,8 +10,8 @@ Suite al cerrar: **872 passed, 7 xfailed, 0 failed**.
 **CP3 —el vivo— quedaba FUERA de la TASK y sólo con orden explícita de delamor. delamor la dio el
 27 oct (texto 12) y CP3 CORRIÓ:** `serie2_caso0` intento 4, 1204,04 s, ZERO_SHOT, 0 errores `429`.
 Reporte en la BANDEJA (07:41 UTC), datos en `experiments/serie2_caso0_intento4_log.json` (`6d33fd2`)
-y REG **borrador** en `docs/REG_borrador_serie2_caso0_intento4.md` — pasa a `registers/` **sólo con
-el OK de delamor**.
+y el REG en **`registers/REG_iap_serie2_caso0_intento4_v1.md`**, pasado a Clase R con el OK de
+delamor del 27 oct (*"REG OK. pasalo"*).
 
 Lo que el vivo midió del flujo nuevo: el origen **calibró** (gen 1, t=0), dejó **su línea**
 (`causa: bootstrap`), las evaluaciones sin registro de calibración pasaron de **4 a 0**, los

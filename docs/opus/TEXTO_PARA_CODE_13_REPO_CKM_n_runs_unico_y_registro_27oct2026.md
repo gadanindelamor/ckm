@@ -40,10 +40,26 @@ Code: tres puntos, en este orden. Por favor.
          dejan de llamarse igual.
        - Si para algún parámetro la tabla no alcanza para decidir, ése no
          se implementa: A1.PAUSA sólo para ése y seguí con lo demás.
+   1c. El default es uno solo, y lo distinto se declara — delamor, 27 oct:
+       "cada n_runs tiene su nombre si conceptualmente son diferentes. lo que
+       queda fuera de ello, es la posibilidad para hacer test con criterios
+       no unificados, ie quiero probar que pasa si monitor hace relax orbit
+       con 1000 y coco lo hace con 333. explorando correlaciones entre
+       mediciones... que no sea el default, que se defina expresamente que se
+       desea hacer eso en un driver.. se declare.. Pero el default es el mismo
+       para los tres casos, y para los Q casos del futuro".
+       - Aunque 1a separe nombres, el valor por default es UNO, en la Config,
+         y lo leen los tres (y cualquier caso nuevo que se agregue).
+       - Usar valores distintos por caso (p. ej. Monitor 1000 y COCO 333) es
+         posible sólo si un driver lo pide expresamente, y queda declarado:
+         en la Config y en la traza se ve qué caso tiene un valor propio, cuál,
+         y quién lo declaró. Nunca por un default de función.
+       - Test: sin declaración, los tres leen el mismo valor; con una
+         declaración en un driver, sólo cambia el caso declarado y la traza
+         lo muestra.
    - No cambia ningún número: los valores de hoy pasan tal cual al campo
      que les toque.
-   - Test: cambiar un campo de la Config mueve exactamente a los que lo leen,
-     y a ningún otro.
+   - Test: cambiar el valor por default de la Config mueve a los tres.
    - Si un camino construye Monitor o calibrate sin Config (tests, drivers,
      calibrate offline), no lo arregles con un default nuevo: reportá cuáles
      son y qué valores usan hoy.

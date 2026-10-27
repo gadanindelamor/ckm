@@ -15085,3 +15085,120 @@ de `_rebuild`, porque en el régimen default corre en cada ingesta— **se sosti
 0,060 s, no 0,16 s.
 
 **A1.PAUSA.**
+
+---
+## P13 RESUELTA y P14 REFORMULADA por delamor — 2026-10-27 03:30 UTC
+
+*Claude Opus 5 (Code, Codespace). delamor, en el chat: *"la linea suelta resolvelo ya Code.
+Coherente con los criterios del proyecto. no puedo evaluar el impacto de ello."* y, sobre P14: *"el
+punto es que NO QUEDE LA LOGICA SIN PASAR A IAP. cuando corresponda. ese es el punto. que drivers
+SABEN mas que el IAPchatroom"*.*
+
+### P13 — resuelta. El archivo **entero** era residuo, no una línea
+
+**Qué era, mirado antes de tocar nada.** `iap_chatroom/_state/channel_ticks.jsonl`: **2 líneas, las
+dos del 22 oct**, con `tick` 1 y 0 y los relojes a 18 minutos — **dos invocaciones distintas**, cada
+una con su `ChatChannel`, no dos workers de una corrida. El archivo **no existía en agosto** y **no
+estaba trackeado**: no es una línea suelta en un archivo de la traza, es un archivo que no es de la
+traza.
+
+**Qué hice, y por qué es coherente con los criterios del proyecto.** Movido a
+`process/iap_state_residue_20261022/`, con su `NOTA_por_que_esta_aca.md`.
+
+- **No se queda** donde estaba: `iap_chatroom/_state/` es traza declarada (el corpus de agosto, 8
+  de 12 textos son joins, la condición de la serie congelada). Un directorio declarado traza no
+  puede tener líneas que ningún vivo produjo.
+- **No se borra:** es el testigo de que el aislamiento se rompió una vez. Es la misma razón que da
+  el propio guardia del `conftest.py` sobre sí mismo: *"**No se borra nada**: fallar es el punto.
+  Borrar en silencio dejaría el mecanismo intacto."* Y es el molde de `process/`: el estado previo
+  es evidencia, no ruido a descartar.
+- El nombre va en inglés, snake_case y con fecha, como el movimiento de `P1P4/` del 26 oct.
+
+**Lo que verifiqué antes de moverlo:**
+
+1. **Los tres archivos trackeados de agosto están intactos.** `corpus_state.json`: 12 textos, los
+   tres primeros son joins, 6 versiones de W con timestamps de agosto (1785557005 → 1786584450).
+   Su `mtime` es del **20 oct** y el contenido **no cambió** (`git status` limpio). Algo lo tocó sin
+   cambiarlo; **desde acá no se puede decir si fue un `save()` de contenido idéntico o una
+   operación de git, y no lo afirmo.**
+2. **La causa está cerrada.** El guardia del `conftest.py` existe desde el 20 oct (`cb4752f`),
+   compara **nombre y tamaño** —no sólo nombre— y falla nombrando el test. Las dos corridas
+   completas de hoy dejaron el archivo **sin tocar**; con el tamaño adentro, un append habría
+   fallado.
+3. **Una hipótesis mía, falsificada.** Pensé que el hueco del guardia estaba en la **colección**:
+   una escritura al importar, antes de que la fixture tome su foto. Corrí `pytest --collect-only`
+   (858 tests, ninguno ejecutado): el archivo quedó en 300 bytes, **sin cambio**. No es ahí.
+4. **Y una corrección mía, en el camino.** Dije que 5 tests construían `CKMMonitor` sin `state_dir`
+   y que ésa era la causa. **Era falso:** esos tests **sí** aíslan — parchean `mod._STATE_DIR` a un
+   tmpdir en vez de pasar el argumento (`test_clock_del_canal.py:319`,
+   `test_corpus_suelta_a_coco.py:68`). Mi `grep` encontró construcciones y no el mecanismo de
+   aislamiento, que vive en `conftest.py`. Es el mínimo local de la búsqueda textual, otra vez.
+
+**Lo que NO pude verificar:** la causa exacta del 22 oct. Ese día la BANDEJA registra la suite en
+paralelo (`-n 4`) con *"3 errores que en serie no salen"*. Reproducirlo pediría volver al código de
+ese día y escribir otra vez en la traza. **No se hizo: la causa queda como no reproducida, no como
+explicada.**
+
+**La segunda mitad de P13, decidida: la suite va en serie.** `addopts` no tiene `-n`, así que ya era
+el default; lo que faltaba era declararlo. Razón **medida**, no preferencia: en este Codespace el
+paralelo tarda **169 s contra 95 s** — es más lento *y* es la condición en la que aparecieron las
+dos líneas. Si alguien necesita paralelo, fija el `state_dir`.
+
+**Lo que no toqué, y es de delamor.** La raíz estructural es que **el `state_dir` por default de
+`CKMMonitor` es el directorio declarado traza** (F3a: *"Default: el de siempre, así que nada cambia
+para quien no lo pase"*). Las dos fixtures autouse del `conftest.py` y la eliminación del
+`CKMMonitor()` a nivel de módulo existen para proteger de ese único default. Cambiarlo es **E1**.
+
+### P14 — tu criterio aplicado: **tres cosas que los drivers saben y IAP no**
+
+Reformulaste el punto: no es si el caso **nombra** `run_store`, es que **la lógica no quede afuera
+de IAP cuando corresponde**. Con ese criterio, el guardia de hoy mira otra cosa: verifica que el
+caso no **escriba** por `run_store` (`test_caso_serie2_caso0_diseno.py:450-461`), y el caso **no
+escribe** — y aun así sabe tres cosas que IAP no sabe.
+
+**1. De qué está hecho el estado de una corrida.** Es la más fuerte.
+
+- El driver tiene la lista **completa**, 11 archivos
+  (`iap_chatroom/tests/test_caso_serie2_caso0.py:444-451`).
+- `run_store.ARCHIVOS` tiene **6**, y su comentario dice para qué existe: *"para que un test pueda
+  barrerlos sin repetir la lista (y para que agregar uno no se olvide de los tests)"*. **El driver
+  repite esos 6 literalmente** en vez de usarla — y el guardia de P14 **permite** leer
+  `run_store.ARCHIVOS`.
+- Los **otros 5** —`corpus_state.json`, `corpus_G_state.json`, `monitor_trajectory.jsonl`,
+  `rebuild_decisions.jsonl`, `rebuild_state.json`— **no tienen lista en ninguna parte**: cada uno se
+  arma adentro de su clase (`ckm_monitor.py:228`, `:236`, `:237`, `:245`, `:260`). **Nadie en IAP
+  puede contestar "de qué archivos está hecho el estado de una corrida".**
+- Y hay copias **parciales** en otros drivers: `test_caso_13:177` y `test_caso_15:162` tienen dos
+  cada uno. `corpus_state.json` aparece en **79 líneas** de `iap_chatroom/tests/`.
+- **La consecuencia, concreta:** `ZERO_SHOT` **es** la decisión de limpiar `_state` (tu regla), y lo
+  ejecuta `preservar_estado()` con la lista del driver. Si IAP gana un archivo de estado, esa
+  función **deja de preservarlo en silencio** y la corrida nueva arranca con un archivo de la
+  anterior. Es la misma clase de falla que P13, un nivel más arriba.
+
+**2. Dónde escucha el canal.** `server.py:86` declara el puerto como un literal dentro de
+`uvicorn.run(..., port=7860, ...)` —no como constante con nombre—, y **26 archivos** de
+`iap_chatroom/tests/` re-cablean `MCP_URL = "http://localhost:7860/mcp"`. IAP no declara su propia
+dirección: cada driver la vuelve a declarar. Cambiar el puerto es editar 26 archivos, y un driver
+apuntando a un puerto viejo falla como *"no conecta"*, no como *"está mal configurado"*.
+
+**3. Qué providers hay y cómo se llaman.** `iap_chatroom/providers/` tiene cuatro
+(`anthropic`, `gemini`, `groq`, `openai`) y **ningún registro nombre→clase** en todo
+`iap_chatroom/`. El único mapa es `_PROVIDERS = {"groq": …, "gemini": …}` del driver
+(`:343`), que cubre **2 de los 4**. Un caso no puede preguntarle a IAP qué providers existen.
+
+**Qué implica para el guardia, con tu criterio.** El guardia no puede seguir mirando si el caso
+escribe: tiene que mirar si el caso **declara lo que IAP debería declarar**. Para el punto 1 eso es
+comparable mecánicamente —la lista del driver contra la lista de IAP—, pero **requiere que IAP tenga
+una**. O sea el orden es: IAP declara la lista → el driver la lee → el guardia compara. Los puntos
+2 y 3 son la misma forma con el puerto y con los providers.
+
+**No implementé nada de P14**: es código, y los tres puntos agregan una declaración en IAP. Queda
+reportado para que lo decida quien corresponda.
+
+### Suite, después de mover el residuo
+
+`python -m pytest -q`: **851 passed, 7 xfailed, 0 failed** (146 s, en serie). El guardia del
+`conftest.py` no se movió y sigue cubriendo el directorio: lo que cambió es que ahora el directorio
+tiene sólo los tres archivos de agosto.
+
+**A1.PAUSA.**

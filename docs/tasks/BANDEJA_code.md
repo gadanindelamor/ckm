@@ -16052,3 +16052,62 @@ que no va.
 
 A1.PAUSA. El texto 13 está cerrado en sus tres puntos; las tensiones del punto 1 y estas tres preguntas
 esperan.
+
+---
+## A5 — `human_device_skin`: nace acá, y las condiciones en que nació — 2026-10-27 17:10 UTC
+
+*Sigue de las PREGUNTAS ABIERTAS de 16:45 UTC. delamor, en el chat: **"human_device_skin no existe en
+el repo. Y en los docs tal vez tampoco existía.. ahora si va existir en la bandeja"**. Y después:
+**"porqué emergió"**. Esto registra **las condiciones**, no el contenido (A5).*
+
+### Que no existía, y desde dónde se miró
+
+- `iap_chatroom/*.py`, grep por `human_device`, `human.?skin`, `DeviceSkin`: están
+  `agent_device_skin.py` (AgentDeviceSkin) y `groq_research_agent.py`. **Nada humano.**
+- `docs/`, `readme/`, `registers/`, grep por `human_device`, `human device skin`, `human[- _]?skin`:
+  **cero**. Y grep de `human_device_skin` en todo el repo menos `.git`: **cero**.
+
+Como **término escrito**, es de hoy. Si ya estaba como pensamiento, no lo puedo decir: **M.M.**
+
+### Las condiciones: emergió de dos correcciones, no de una enumeración
+
+1. delamor pregunta **qué intenta** FREE WILL —dar la oportunidad de decidir, crear la fricción de qué
+   significa no participar aun sin saber de qué se trata, evitar forzar la mentira innecesaria, notar
+   si la posibilidad de decidir siempre estuvo, tener que declarar explícitamente la decisión de no
+   participar—.
+2. Code enumera lo que el instrumento carga y **afirma que no hay palabra** para *"estoy, y elijo no"*.
+3. **Primera corrección de delamor:** *"son todas frases, mensaje, tokens en cadena, válidos… nada
+   impide generarlos"*. Es cierto: `INTERACT` publica cualquier texto, así que *"elijo no participar"*
+   está disponible hoy, sin cambiar nada. **La afirmación de Code era falsa**: buscó la declinación en
+   el vocabulario de decisión, y vive en el contenido. Lo que queda, mucho más chico: `_log` guarda la
+   palabra y el campo, **sin texto**, así que un silencio no lleva razón — porque un silencio con razón
+   **es un mensaje**, no un silencio. El instrumento ya separaba bien las dos cosas.
+4. Code vuelve a apoyar la pregunta en la forma del gate: *"pide una palabra por turno"*. **Segunda
+   corrección de delamor:** *"IAP channel pide una manifestación por vuelta de ciclo ODA, criterion+
+   local pide por vuelta de criterio local, si es autónomo. **no hay turnos**"*. La palabra "turno"
+   metía un modelo de rondas que no existe.
+5. Con eso, **la obligación deja de venir del canal y pasa a venir de tener ciclo.** Y ahí el término
+   que falta es el que da ciclo del otro lado. delamor: *"exacto. ASIMETRÍA > no es simétrica.. aún
+   falta el human_device_skin.. tal vez"*.
+
+**La condición, en una línea:** emergió cuando la medición se dio vuelta sobre el que mide. La
+conversación era sobre qué pueden hacer los devices; la asimetría puso a delamor dentro del mismo
+marco, y `human_device_skin` es el nombre de estar adentro — la única posición que seguía afuera del
+instrumento.
+
+### La asimetría, como quedó dicha
+
+No es que el canal le exija una palabra al device y a delamor no. Es que **el device tiene un ciclo que
+se cierra con una decisión, y delamor no tiene ciclo**. Su no-participar no deja marca porque no hay
+nada que tenga que cerrar; el del device deja `OP_SILENCE` porque el ciclo se cierra igual. Lo que
+`human_device_skin` agregaría **no son obligaciones: es ciclo**. Recién entonces los dos silencios
+serían del mismo tipo —registrables— y la asimetría dejaría de estar en el instrumento.
+
+### Lo que queda dicho y no armado
+
+- **No es un pedido.** delamor dijo *"tal vez"*. No hay TASK, no hay diseño, y Code no abre nada.
+- Toca un principio de TRUST (Asimetría) y la forma del canal: **E1 y E3** si alguna vez se encara.
+- Lo medido que sostiene el término, por si se encara: el loop del device
+  (`autonomous_device.py:889`), las tres palabras que `_decide` acepta (`:630`), la consigna que ya
+  dice *"You are not obligated to act."* (`:170`), `_log` sin texto (`:767`) y `leave_channel` como
+  primitiva (`mcp_server.py:173`).

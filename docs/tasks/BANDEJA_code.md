@@ -15336,3 +15336,204 @@ calibrate. El caso 1 —no usar la vara de otra W, declarada como `Threshold`—
   nuevos. `test_should_rebuild_conectado.py` solo: **46 passed**, con las 13 en verde.
 
 **A1.PAUSA.**
+
+---
+## REPORTE CP2 — D3 + D4 + D6'. La calibración tiene su lugar y COCO lee de ahí — 2026-10-27 07:10 UTC
+
+*Claude Opus 5 (Code, Codespace). Con el OK de Opus (texto 11). Unidad: CP2 entero, de corrido.
+Regla de `.py`: A1.PAUSA al acceder; después de modificar, el docstring propio y `grep` de los
+nombres tocados en el resto del repo.*
+
+### Lo medido antes de tocar tests, que es lo que el texto pidió primero
+
+**1. Pasar `calibrate` a `n_runs = 1000` no mueve nada.** Corrí la suite con el 1000 puesto y sin
+tocar ningún test: **1 failed, 856 passed**. Y esa falla **no es del `n_runs`**:
+
+- es `test_beta_no_va_al_device::test_el_estado_que_recibe_un_device_no_trae_ningun_beta_i`, que
+  busca el valor de β **como subcadena** sobre el estado serializado
+  (`crudo = json.dumps(estado)`; `assert repr(v) not in crudo`);
+- el β del device era `8.0`, y la cadena `"8.0"` apareció **dentro de un timestamp**
+  (`1793083758.074539` — en `…758.07…`). Ninguna otra cosa del estado la tenía;
+- **lo decisivo:** con el 1000 **puesto**, el test **pasa 3 de 3** al volver a correrlo. El
+  timestamp es un reloj de pared y no depende del `n_runs`.
+- O sea: el instrumento del test no distingue *"se publicó un β"* de *"los dígitos de ese β
+  aparecen dentro de otro float"*. Es un test que puede fallar ~1% de las corridas desde que el
+  registro de la calibración viaja en el estado. **No lo toqué**: es otra afirmación, con su
+  archivo y su historia, y el arreglo —buscar sobre la estructura y no sobre el texto— es una
+  decisión de ese test. **CP2 no lo empeora:** lo que agrega al lugar de la calibración no viaja al
+  device (el panel del device no lleva `landscape_config`).
+
+**2. D3 + D4 movieron CERO tests.** Nada tuvo que aflojarse. El texto preveía que *"un test que
+afirmaba 'calibrado' a 200"* se moviera: **no existía**. El de la Serie 2
+(`test_serie2_caso0_cp1.py:620-644`) ya estaba escrito **condicional** —si calibró, exige
+`calibrate`; si no, exige que se vea que no calibró— y pasó sin cambios.
+
+La corrida de D3+D4 tuvo **1 failed, 856 passed**, y también fue ajena:
+`test_oda_continuo::test_un_clock_sin_periodo_s_es_UNKNOWN_y_el_ciclo_sigue` le da **20 ms** al
+loop del device (`_correr(dev, client, duration=0.02)`) y después exige al menos una decisión. Pasa
+solo, pasa su archivo entero (56), y **pasó en la corrida final**. Es sensible a la carga.
+
+**3. El dato de los vivos, sin predecir el campo.** Con `n_runs = 1000`, la W del vivo —la misma,
+`sha256_W = bdb98f5be458…`— **no separa en ninguna de 10 semillas**; a 200 separaba en 2 de 10. Es
+la medición del CP0 (`4d219ae`) y queda como dato.
+
+### D3 — el lugar de la calibración, en la Config
+
+`services/ckm_landscape_config.py` gana cuatro slots, un escritor y dos lectores:
+
+- **`registrar_calibracion(registro)` — único escritor.** Lo llama el punto único del canal
+  (`_calibrar_antes_de_instalar` → `_calibrate`). La Config **registra, no genera**: no importa
+  `calibrate` ni lo conoce; los valores se los pasa quien arma la corrida.
+- **`calibracion`** (lectura, copia) y **`calibrate_declarado`** (lo declarado, más
+  `sin_declarar`).
+- El registro lleva `valores`, `estado`, `condiciones`, **`w_sha` de la W calibrada**,
+  **`duration_s`** y **`blocking`**. Los dos últimos se medían y **se descartaban**: vivían sólo en
+  `get_state()`, que es el panel de Gradio y no se persiste.
+
+**Por qué no va dentro del `Ciclo`, que era la otra lectura posible.** Tu respuesta lo resolvió —
+*"EL LUGAR DONDE NACE ES PERPETUO. es el estado"*—: el registro se escribe **cuando se produce**,
+que es **antes** de que exista el ciclo al que describe (`calibrate` corre sobre la W candidata y el
+ciclo lo abre Monitor **después** de instalarla). El `Ciclo` es `frozen` y nace más tarde; el que
+nace **referencia** el registro por su `w_sha`.
+
+**`from_dict` sobre un estado viejo lo lee `None` (UNKNOWN), no `nulo_calibrado`.** Son distintos:
+`None` es *"nadie anotó"*; `nulo_calibrado` es *"alguien anotó que no corrió"*. Rellenar con el
+segundo afirmaría algo que nadie registró (I2).
+
+### D4 — COCO lee su vara de ahí, como `Threshold`
+
+`services/monitor_service.py`: **`_coco_thresholds` y `_coco_calibration` se fueron.** Monitor ya
+no guarda nada propio de la calibración; la vara se **deriva** en cada nacimiento con
+`_vara_del_coco(sha_W)`, y cada umbral sale como **`Threshold` de `ckm_trust_rule`** — el
+vocabulario que el repo ya tenía, y cuyo propio docstring nombra a `calibrate` como el caso
+`MEASURED`:
+
+| situación | `provenance` | valor | `source` |
+|---|---|---|---|
+| registro de **esta** W, con número | `MEASURED` | el calibrado | `calibrate w_sha=…` |
+| sin registro | `DECLARED` | el default de `coco.py` | `… — sin_registro_de_calibracion` |
+| registro de **otra** W | `DECLARED` | el default | `… — calibracion_de_otra_W:<sha>` |
+| registro que no separó | `DECLARED` | el default | `… — no_calibrado:<causa>` |
+| `FRAC_REC_MIN = "UNKNOWN"` | `DECLARED` | el default | `… — FRAC_REC_MIN='UNKNOWN'` |
+
+**Tres cosas que esto cambia, y no estaban pedidas como tales:**
+
+1. **Los dos umbrales se deciden por separado.** `calibrate` puede separar en `D_ckm` y no en
+   `frac_rec`; antes era todo o nada y un mixto se publicaba como `calibrated: true`. Ahora
+   `source` es `"calibrate"`, `"default"` o **`"mixed"`**.
+2. **El panel dice de qué W salió la vara**: `w_sha_match`, `w_sha_del_registro`, `causa` y el
+   `Threshold` de cada umbral en `origen`. Era el campo que faltaba — nada ataba los números a su W.
+3. **Los dos valores se le pasan SIEMPRE a COCO**, también cuando son el default, así que su
+   constructor **nunca los completa en silencio** (*"Nunca lo completa en silencio el argumento de
+   una función" EXACTO*).
+
+**El caso 1, cerrado y con test.** `tests/test_vara_del_coco_caso1.py`, 5 tests: sin registro, con
+registro de esta W, el mixto, **el caso 1** (una que separa seguida de una que no separa **no** deja
+la vara vieja) y el registro de otra W. En los dos vivos el caso 1 **no se había producido** —75 de
+78 evaluaciones usaron los defaults y la única exitosa fue la última—, así que estaba en el código y
+no en la traza; estos tests lo producen a mano escribiendo el estado.
+
+### D6' — los parámetros de `calibrate`, declarados en el estado
+
+`n_runs = 1000` (tu decisión), `seed` y `grilla` con los valores de hoy, **declarados**. El canal
+los pasa al construir la Config (`CALIBRATE_N_RUNS = 1000` en `ckm_monitor.py`, con tu razón en tus
+palabras). **Lo que el lugar no declara no se rellena**: se cae en el default de `calibrate.py` y el
+registro dice qué quedó sin declarar.
+
+### Los defaults de `LandscapeConfig`: el docstring corregido, y la verificación
+
+**Corregido** para que diga lo que el código hace. Eran **tres** afirmaciones falsas en el mismo
+bloque, no una:
+
+1. *"n_runs — obligatorio"* / *"seed — obligatorio"*: tienen default. El único exigido es
+   `sampling_mode` (keyword-only, sin default, con guardia contra Monitor).
+2. *"n_runs y seed son UNO SOLO para Monitor y COCO"*: **COCO sí** los toma de la Config;
+   **Monitor no** — cuenta con su propio `n_runs_attractors` y su `count_seed`. Coinciden **por
+   default**, no por construcción, y nada lo verifica.
+3. *"COCO ya no tiene un default propio"*: lo tiene, `n_runs = 80` y `seed = 0` en su firma.
+
+**El valor no se decidió** (*"ahora cualquiera da lo mismo. Esa es la respuesta correcta"*). No
+cambié ningún número.
+
+**Y la verificación que pediste: caer en `N_RUNS_DEFAULT` / `SEED_DEFAULT` NO queda visible.**
+Medido:
+
+```
+Config(sampling_mode="uniform")                      -> declarado: n_runs 1000, seed 0
+Config(sampling_mode="uniform", n_runs=1000, seed=0) -> declarado: n_runs 1000, seed 0
+distinguibles?  False
+```
+
+Las dos dan el mismo `declarado`, el mismo `panel()` y el mismo `to_dict()`. **Dónde y por qué:**
+`declarado` publica el **valor**, y el valor de un default es idéntico al de una declaración
+explícita; la Config no guarda qué llegó y qué puso Python. **No lo arreglé** — el mecanismo general
+es otra TASK—. Lo que CP2 **sí** deja visible es el otro lado: los de `calibrate` llevan
+`sin_declarar`, y la vara de COCO lleva `DECLARED` con su causa.
+
+### El 17%, en su commit aparte
+
+`calibrate` hacía **6** llamadas a `count_attractors` con 5 puntos de grilla y sólo **5** eran
+distintas. El punto λ=0 es `interpolar(Wc, W_col, 0.0)`, que es `Wc`, contado con el mismo `n_runs`
+y la misma seed. **Ahora reusa `A0`.**
+
+La condición era *"resultado idéntico con la misma semilla; si no sale idéntico, no entra"*.
+**Sale idéntico**, y se verificó la **premisa**, no el ahorro: `0.0·x` da `-0.0` donde `x` es
+negativo y `-0.0 + 0.0` da `+0.0`, así que la igualdad bit a bit **podía** no cumplirse. Se mira en
+vez de suponerla: `array_equal` en las tres W (dos sintéticas y la del vivo) y el conteo en λ=0
+exactamente igual al baseline. 10 tests.
+
+Y ya se veía en los datos: `d_ckm` exactamente `0.000000` y `frac_rec` exactamente `1.000000` en λ=0
+en **las 7 curvas** de los dos vivos, que corrieron antes del reuso.
+
+### La tensión del margen, sostenida
+
+No toqué el margen, ni la grilla, ni los extremos. Lo que la medición del CP0 dejó, y queda como
+está: con el margen entre **extremos** esa W es `no_calibrado` en 10 de 10 semillas; con el
+**máximo interno** la cantidad es positiva en 10 de 10. **No elegí ninguno.** Tu frase es el
+criterio: *"lo de siempre es el sesgo de querer ponerle el NUMERO conveniente. en vez de sostener la
+tension"*.
+
+### Dos defectos míos, encontrados al medir
+
+1. **Mi archivo de tests del caso 1 estaba roto en su primera versión:** tres textos sin vocabulario
+   compartido, y con `min_df = 2` la extracción no da nodos, así que el corpus quedaba en
+   acumulación y los cinco caían con `KeyError: 'coco'`. Corregido, y `_armar` ahora **declara la
+   precondición** en vez de fallar con un KeyError.
+2. **Una aserción mía del CP1 quedó incompleta** con el vocabulario nuevo:
+   `source in ("calibrate", "default")`, sin `"mixed"`. Completada, no aflojada.
+
+### Una pregunta, que es tuya — **E3**
+
+**El `n_runs` de `calibrate` quedó en un campo aparte del de COCO, y puede derivar.** Medido sobre
+el canal como queda:
+
+| | hoy | lo lee | si cambiás `Config.n_runs` |
+|---|---|---|---|
+| `Config.n_runs` | 1000 | COCO | **se mueve** |
+| `Monitor._n_runs` | 1000 | Monitor | no (es suyo) |
+| `Config.calibrate_n_runs` | 1000 | `calibrate` | **no** (campo aparte) |
+
+Los tres están en 1000 **por coincidencia de valor**. Antes de CP2 el 200 de `calibrate` era un
+default de función, invisible; ahora está declarado, **pero en su propio campo**. Y el umbral que
+sale de `calibrate` es justo lo que COCO compara contra su `D_ckm`: si no comparten `n_runs`, el
+umbral se estima con un muestreo y se aplica a otro — que es lo que el CP0 midió (200 contra 1000).
+
+**Mi lectura:** lo coherente es **un solo campo** —que `calibrate` lea `cfg.n_runs` y
+`calibrate_n_runs` desaparezca, dejando `seed` y `grilla` como propios, que sí no tienen contraparte
+en Monitor ni COCO—. Hoy no cambiaría ningún número. **No lo decido**: es qué mide el instrumento
+contra qué. **Default vigente mientras no haya respuesta:** quedan los dos campos, declarado acá.
+
+### Lo que no toqué
+
+El patrón de `calibrate` (colapso, grilla, margen); el mecanismo general de defaults; **P14**; el
+`state_dir` por default de `CKMMonitor` (**E1**); el docstring **E5** de `ckm_monitor.py:84-90`; el
+vivo. Y el test de β, por lo dicho arriba.
+
+### Suite
+
+Cuatro corridas completas, en serie: **1 failed** con el 1000 (ajena, no reproduce),
+**1 failed** con D3+D4 (ajena, sensible a la carga), **5 failed** por mi defecto en el archivo
+nuevo, y la final: **872 passed, 7 xfailed, 0 failed** (148 s). Son los 857 del CP1 más los 5 del
+caso 1 y los 10 del reuso de `A0`.
+
+**A1.PAUSA.**

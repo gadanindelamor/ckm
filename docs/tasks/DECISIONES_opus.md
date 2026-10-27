@@ -548,3 +548,40 @@ decisión se tomó en el chat, se ejecutó, y la tríada quedó abierta.*
     A1.PAUSA al final). El punto 7 leído solo sacaba el *"esperar el OK"* de todos los pasos; con
     esto, lo saca **dentro** de una unidad y no **entre** unidades · revertir: volver a la pausa por
     paso en todos los casos.
+
+### Definiciones de delamor para el CP2 (2026-10-27)
+
+*Registradas por Code el 27 oct, por el cierre de `TASK_calibrate_en_el_build_v2`.*
+
+- **2026-10-27** · **D6', el `n_runs` de `calibrate` es 1000** (delamor: *"el n_runs de calibrate =
+  1000"*). **Regla: E3** — cambia con qué muestreo mide el instrumento. Cierra D6'.
+  - **La razón es de delamor, en sus palabras**, sobre el dato medido de que con 1000 la W del vivo
+    no separa en ninguna de 10 semillas: *"EXACTO. Esa es la razon. darles posibiliddes para que
+    sientan el sesgo. luego lo que suceda solo sucedera."* No se le agrega lectura.
+  - Lo medido que lo precede (Code, CP0, `4d219ae`): a 200 el veredicto **depende de la semilla**
+    —2 de 10 dicen `calibrado` sobre la W exacta del vivo—; a 1000, 0 de 10. Costo: 0,302 s en el
+    mensaje que calibra, el 30% de un tick del canal, en el 5% de los mensajes.
+  - Dónde quedó: declarado en el estado (`CKMlandscapeConfig.calibrate_declarado`), no como default
+    de función · revertir: el default de `calibrate.py` sigue en 200 para quien no lo declare.
+- **2026-10-27** · **Los defaults de `LandscapeConfig`: el valor no se decide; lo que importa es
+  que caer en uno se pueda ver** (delamor: *"no definirían nada mas alla de TAPAR excepciones de
+  flujo del codigo. Ahora se puede ver cuando se CAE en un default de Config. lo importante es
+  haber llegado aqui, al punto donde se puede detectar las caídas en defauls. ahora cualquiera da lo
+  mismo. Esa es la respuesta correcta."*). **Regla: E1** — es una definición suya sobre qué se
+  decide y qué no.
+  - **No se cambió ningún número.** Lo que sí: el docstring de la Config decía *"obligatorio"* para
+    `n_runs` y `seed` teniendo default, y otras dos cosas que el código no sostiene. Corregido para
+    que diga lo que el código hace.
+  - **Verificado y declarado, sin arreglar:** hoy **caer en `N_RUNS_DEFAULT` / `SEED_DEFAULT` de la
+    Config NO queda visible** — una Config construida sin `n_runs` y una con `n_runs=1000` dan el
+    mismo `declarado`, el mismo `panel()` y el mismo `to_dict()`. El mecanismo general es otra TASK ·
+    revertir: n/a (es una verificación).
+- **2026-10-27** · **El margen de `calibrate` no se toca: la tensión se sostiene** (delamor: *"lo de
+  siempre es el sesgo de querer ponerle el NUMERO conveniente. en vez de sostener la tension"*).
+  **Regla: E3**, y la decisión es **no decidir ahora**.
+  - **No es una decisión pendiente sobre el margen**: es un sesgo con objetivo declarado — elegir
+    extremos o máximo interno, o un número, **para que separe**. El margen queda como está y lo que
+    mide se registra, **separe o no**.
+  - El dato que la sostiene (Code, CP0): con el margen entre **extremos** esa W es `no_calibrado` en
+    10 de 10 semillas; con el **máximo interno** la cantidad es positiva en 10 de 10. **No se eligió
+    ninguno** · revertir: n/a.

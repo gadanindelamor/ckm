@@ -360,3 +360,4 @@
   - Pendiente E5 (anotar que la "primera calibración que separa" fue con `n_runs=200, seed=0`): sin respuesta todavía.
 - **P13 (Code, resuelta por delamor en el chat de Code):** el archivo entero era residuo; movido a `process/iap_state_residue_20261022/`. Suite en serie por default. Queda de delamor (E1): el `state_dir` por default de `CKMMonitor` es el directorio declarado traza.
 - **P14 reformulada por delamor** (*"que drivers SABEN mas que el IAPchatroom"*): Code encontró tres cosas que los drivers declaran y IAP no (la lista de archivos de estado de una corrida, el puerto, el registro de providers). Sin implementar. Espera decisión de quién la toma.
+- **La razón de `n_runs = 1000`** (delamor, sobre la línea *"con 1000 la W del vivo no separa en ninguna de las 10 semillas. Va como dato"*): *"EXACTO. Esa es la razon. darles posibiliddes para que sientan el sesgo. luego lo que suceda solo sucedera."* Se registra como su razón, sin agregarle lectura.

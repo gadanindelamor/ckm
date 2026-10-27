@@ -1,10 +1,47 @@
 # ESTADO — TASK_calibrate_en_el_build_v2
 
-*Última escritura: 2026-10-27 03:35 UTC, por Claude Opus 5 (Code, Codespace).*
+*Última escritura: 2026-10-27 07:20 UTC, por Claude Opus 5 (Code, Codespace).*
 
-## Último CP cerrado
+## La TASK está CERRADA en CPa–CP2
 
-**CP1**, con el OK de Opus (texto 10). Antes, **CPa y CP0**, que no necesitaban OK.
+**Cerrada el 27 oct 2026.** CPa, CP0, CP1 y CP2, cada uno con su commit y su reporte en la BANDEJA.
+Suite al cerrar: **872 passed, 7 xfailed, 0 failed**.
+
+**CP3 —el vivo— queda FUERA de la TASK**, y sólo se corre **con orden explícita de delamor**.
+
+## CP2 — cerrado el 27 oct
+
+D3 + D4 + D6'. La calibración tiene **su lugar en la Config** —un escritor, el punto único del
+canal— con el `w_sha` de la W calibrada, `duration_s` y `blocking`, que hasta hoy se medían y se
+descartaban. **COCO deriva su vara de ahí**, como `Threshold` de `ckm_trust_rule`: `MEASURED` si el
+registro es de esta W, `DECLARED` con el default de `coco.py` y su causa si no. **Nunca los números
+de otra W** — el caso 1, cerrado y con test. Los parámetros de `calibrate` se declaran en el estado,
+con `n_runs = 1000`. Y el 17% (reusar `A0` en λ=0), en commit aparte, con la premisa verificada bit
+a bit.
+
+Reporte completo en la BANDEJA, 07:10 UTC. Commits: `0d4598c` (CP2), `ec008f7` (el 17%) y `e940c81`
+(el cierre).
+
+## Lo que la TASK deja abierto — una línea cada cosa
+
+1. **La tensión del margen de `calibrate`, sostenida.** No se cambia para que separe (delamor, 27
+   oct). Con extremos esa W no separa en 10/10 semillas; con máximo interno la cantidad es positiva
+   en 10/10. **E3**, y la decisión es no decidir ahora.
+2. **E5 — el docstring de la "primera calibración que separa"** (`ckm_monitor.py:84-90`) y el ÍTEM 6
+   del 22 oct: son ciertos como hecho, y les falta decir que ese veredicto fue con `n_runs=200,
+   seed=0`. Espera a delamor.
+3. **La divergencia de `w_version` en el origen:** lo marca `"rebuild"`, igual que un rebuild por
+   ingesta. Declarada, con un test que la afirma; se revisa con el renombre general.
+4. **El mecanismo general de defaults** (centinela, inventario): caer en `N_RUNS_DEFAULT` /
+   `SEED_DEFAULT` de la Config **no queda visible** — verificado en CP2. Es otra TASK.
+5. **El `state_dir` por default de `CKMMonitor`** es el directorio declarado traza (F3a). **E1**, de
+   delamor.
+6. **P14** — tres cosas que los drivers declaran y IAP no (la lista de archivos de estado, el
+   puerto, el registro de providers). Sin implementar; espera quién la toma.
+7. **El `n_runs` de `calibrate` quedó en campo aparte del de COCO y puede derivar** (lo abrió CP2).
+   Mi lectura: un solo campo. **E3**, de delamor. Default vigente: los dos campos.
+8. **El test de β puede fallar ~1% de las corridas** por buscar el valor como subcadena sobre el
+   estado serializado (coincide con un timestamp). No lo toqué: es otra afirmación.
 
 - **CPa** (`74d97fc`): P12, P15 y P16 registradas en `DECISIONES_opus.md`; los contadores de la
   línea de `rebuild_decisions.jsonl` se capturan al decidir, no después del reset; un test nuevo y

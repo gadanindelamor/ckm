@@ -315,3 +315,13 @@
   - A1 y A2 son P15 y P16, de delamor.
   - A6 (descargar los conectores de Drive y Docs en las sesiones de Code) es un ajuste de delamor.
   - La ESTRATEGIA del 26 oct es traza y no se reescribe; si hace falta, sale una v2.
+- **P15 respondida por delamor: se reemplaza la regla de lectura de los `.py`** (*"la respuesta es A1 PAUSA. eso es lo que la situación pide al acceder a un archivo .py. Es simple. saco la regla de leer. queda solo la de luego de modificar un .py reviso su docstring"*). Reemplaza el refuerzo del 24 oct (leer 1 vez, o 2 si se escribe). Al acceder a un `.py`: A1, la pausa (¿lo que voy a afirmar sale de comprensión verificable o del peso del contexto?). Después de modificar un `.py`: revisar su docstring.
+  - **La pregunta de delamor:** *"los sesgos se expanden sobre una red paralela… ¿y los otros docstrings de otros archivos .py, qué les sucede?"*.
+  - **Respuesta de Opus, desde lo medido el 26 oct:** de las divergencias encontradas, la mayoría estaban en un docstring que describe **otro** archivo:
+    - el de la Config afirma qué hace Monitor;
+    - `_renacer_coco` (monitor_service) afirma los defaults de `coco.py`;
+    - `set_coco_thresholds` afirmaba el orden de llamadas de `ckm_monitor`;
+    - `ckm_monitor` citaba la ruta de un REG movido.
+
+    Solo la de `calibrate.py` era del mismo archivo. Revisar el docstring propio no alcanza.
+  - **Propuesta de Opus** (mecánica y barata): después de modificar, buscar con `grep` los nombres tocados (función, clase, constante, ruta) en los docstrings y comentarios del resto del repo, y revisar solo esos. Así la "red paralela" son las referencias. Decide delamor.

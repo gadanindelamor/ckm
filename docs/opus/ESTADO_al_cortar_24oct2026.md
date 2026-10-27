@@ -137,3 +137,11 @@ Decisiones de delamor del 26 oct en `decisiones_en_el_acto.md`. Cambios por luga
   - **delamor:** pegarle a Code el texto 09; revisar los conectores; estudiar la pantalla de uso.
   - **Code:** CPa y CP0, y después A1.PAUSA.
   - **Opus (sesión nueva):** leer el reporte de CPa/CP0 en la BANDEJA y dar el OK de CP1, o subir a delamor los puntos que sean E3. El v33 y las DEFS v19 van después.
+
+### 27 oct, después — CPa y CP0 leídos; CP1 con OK
+- Code cerró CPa y CP0 e hizo la medición D6'. delamor le respondió D3 (el lugar es la Config) y D5 (confirmada) directamente en el chat de Code.
+- Opus resolvió las tensiones del CP0 y dio el OK a CP1: D2 calibra el canal desde una sola función; D5 sin `rebuild_por_decision`; D4 con `Threshold`. Está en `decisiones_en_el_acto.md` del 27 oct.
+- **Qué espera y de quién:**
+  - **Code:** CP1, con el texto 10.
+  - **delamor:** D6', el `n_runs` de calibrate (200 o 1000; con 1000 la W del vivo no separa en ninguna de 10 semillas); y E5, anotar que la "primera calibración que separa" fue de `n_runs=200, seed=0`.
+  - **Opus (sesión nueva):** leer el reporte de CP1 y dar el OK de CP2. Mostrarle a delamor las dos figuras del flujo, antes y después. El v33 y las DEFS v19 van después de CP2.

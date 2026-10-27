@@ -770,9 +770,20 @@ class CKMMonitor:
         # calibrada —lo que permite ver si la vara de un COCO salió de la W que
         # ese COCO juzga— y el costo, que hasta hoy se medía y se descartaba:
         # `duration_s` vivía sólo en el panel de Gradio, que no se persiste.
+        #
+        # **Y lleva `w_sha_live_at_calibration`** (texto 13 punto 2, decisión de
+        # Opus): el sha de la W que estaba **viva al calibrar**, que es el dato
+        # que hace visible el **orden** —calibrar antes de instalar—. Se medía
+        # arriba y viajaba sólo en el panel, que no se persiste: se descartaba.
+        # `None` es el origen, donde no había ninguna W viva.
+        #
+        # No se toca `w_sha_match` (`monitor_service.py:610`): delamor marcó como
+        # sesgo de control el arreglo que se proponía, y la colisión —dos
+        # situaciones distintas con el mismo valor— queda registrada como está.
         self._landscape_config.registrar_calibracion({
             **registro,
             "w_sha": sha_candidata,
+            "w_sha_live_at_calibration": sha_vigente,
             "duration_s": duracion,
             "blocking": True,
             "parametros_declarados": declarado,

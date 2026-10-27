@@ -223,3 +223,36 @@ def test_el_causal_event_del_origen_sigue_siendo_rebuild_DIVERGENCIA(
     assert "rebuild_por_decision" not in eventos[0], (
         "el origen tomó el camino de la decisión del régimen"
     )
+
+
+# ── el registro del estado trae el orden (texto 13 punto 2, 27 oct 2026) ─────
+
+def test_el_lugar_del_estado_trae_la_W_viva_al_calibrar(monitor) -> None:
+    """
+    **El sha de la W viva al calibrar deja de descartarse.**
+
+    Hasta hoy `w_sha_live_at_calibration` se medía y viajaba **sólo** en el
+    panel, que no se persiste: el dato que hace visible el orden —calibrar
+    antes de instalar— no quedaba en ningún lado. Ahora está en el registro de
+    la calibración, al lado de `duration_s` y `blocking`.
+
+    En el origen vale `None`, porque no había ninguna W viva. Es el mismo valor
+    que el panel ya afirmaba, ahora en el lugar que sobrevive al panel.
+    """
+    cm = monitor
+    for t in TEXTOS[:3]:
+        cm.on_message(_Msg(t))
+
+    registro = cm._landscape_config.calibracion
+    assert registro is not None, "no hay registro en el lugar del estado"
+    assert "w_sha_live_at_calibration" in registro, (
+        "el registro no trae la W viva al calibrar: el orden no es verificable "
+        "desde el estado"
+    )
+    assert registro["w_sha_live_at_calibration"] is None, (
+        "había una W viva al calibrar el origen: se calibró después de instalar"
+    )
+    # y es el mismo dato que el panel, no otro
+    assert (registro["w_sha_live_at_calibration"]
+            == cm._punto_calibrate["w_sha_live_at_calibration"])
+    assert registro["w_sha"] == cm._corpus.w_sha()

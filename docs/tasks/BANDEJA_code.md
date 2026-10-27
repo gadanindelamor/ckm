@@ -15910,3 +15910,22 @@ calibrate**, que el texto 13 pone en su lista de NO. Lo dejo dicho, no armado.
 
 Lo mismo con el segundo `seed` de `calibrate.extremo_expansion` (REPORTE 1a): dos conceptos con un
 nombre, y renombrarlo es la firma del patrón.
+
+---
+## REPORTE punto 2 — `w_sha_live_at_calibration` deja de descartarse — 2026-10-27 16:55 UTC
+
+*Texto 13 punto 2 (decisión de Opus bajo el umbral).*
+
+- El sha de la W **viva al calibrar** se medía en `_calibrar_antes_de_instalar` y viajaba **sólo** en el
+  panel (`punto_calibrate`), que no se persiste. Ahora va también al registro de la calibración, en el
+  lugar del estado, al lado de `duration_s` y `blocking`
+  (`iap_chatroom/ckm_monitor.py:773-786`). Es el dato que hace visible **el orden**: calibrar antes de
+  instalar.
+- `w_sha_match` **no se tocó**: la colisión queda registrada como está. delamor marcó como sesgo de
+  control el arreglo que yo proponía, y eso quedó escrito en el código, al lado del cambio.
+- **Tests, los dos casos:**
+  - `tests/test_bootstrap_calibra_y_registra.py::test_el_lugar_del_estado_trae_la_W_viva_al_calibrar`
+    — el origen: el registro trae la clave y vale `None`, y es **el mismo dato** que el panel, no otro.
+  - `tests/test_should_rebuild_conectado.py::test_cp2_el_punto_de_calibrate_ahora_CORRE` — el salto:
+    en el registro el valor **no** es `None`, es el sha del origen. Es el caso que el test del origen
+    no puede ver: con sólo el `None` no se verifica que el campo traiga algo.

@@ -463,6 +463,13 @@ def test_cp2_el_punto_de_calibrate_ahora_CORRE(monitor) -> None:
     assert pc["w_sha_live_at_calibration"] == sha_del_origen, (
         "al calibrar el salto, la W viva tenía que ser la del origen"
     )
+    # **Y lo mismo en el lugar del estado** (texto 13 punto 2, 27 oct 2026): el
+    # panel no se persiste, el registro sí. Acá el valor **no** es None, que es
+    # el caso que el test del origen no puede ver.
+    registro = cm._landscape_config.calibracion
+    assert registro["w_sha_live_at_calibration"] == sha_del_origen, (
+        "el registro del estado no trae la W que estaba viva al calibrar"
+    )
     assert pc["existe"] is True
     assert pc["implementado"] is True
     assert pc["task"] == "TASK_calibrate_mecanismo_v1"

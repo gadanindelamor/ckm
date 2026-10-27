@@ -14782,3 +14782,189 @@ Y **un test nuevo**, porque un cambio de comportamiento sin test no está cubier
 verde.**
 
 **A1.PAUSA.**
+
+---
+## REPORTE CP0 — el diseño D1–D6' contra el repo. Sin código — 2026-10-27 02:58 UTC
+
+*Claude Opus 5 (Code, Codespace). CP0 no necesita OK. Sin implementar nada. Lo que corrí es
+**una medición** (§ D6'), no código del diseño.*
+
+### D1 — el nacimiento con su propia condición. **No rompe nada, y quita la causa de las 30 de `a7d065f`**
+
+`a7d065f` cayó con **30 failed** porque hizo del bootstrap **una cuarta causa de la jerarquía**: el
+nacimiento pasaba a depender de que un criterio votara, y el de volumen pide
+`_textos_desde_rebuild >= rebuild_every`. Su propio mensaje de commit lo dice: *"en las
+configuraciones donde `min_texts < rebuild_every` W nace más tarde o no nace"*, y media suite usa
+`min_texts = 3` o `5`.
+
+**D1 no es eso.** Dice explícitamente que **no** es un criterio de la jerarquía. Con la condición
+propia —`_W is None` y `no_rebuild_reason(allow_first_W) is None`— el nacimiento **no mira ningún
+contador**, así que ocurre en el mismo mensaje en que ocurre hoy: cuando el corpus cruza
+`min_texts` y hay devices suficientes. Las dos compuertas ya están escritas en un solo lugar
+(`corpus_service.py:385-399`) y ya se evalúan en el camino vivo (`ckm_monitor.py:521`).
+
+**Consecuencia verificada:** la jerarquía no cambia, los tres `elif` quedan igual, y **las 13 de la
+PoC de dominancia no se mueven por D1**. Lo que sí se mueve es por D5 (abajo).
+
+### D2 — **quién** ejecuta los pasos 2 y 3 no está dicho, y la respuesta tiene un costo medido
+
+D2 da el orden (candidata → calibrar → registrar → instalar → COCO lee) y **no dice quién corre los
+pasos 2 y 3**. Las dos lecturas posibles, con lo que cada una cuesta:
+
+**(a) El canal (`CKMMonitor`), como hoy.** Entonces el hook *"antes de instalar"* queda **en dos
+lugares**: el del origen (nuevo) y el del régimen (`:523`). Dos lugares con la misma regla escrita a
+mano se separan el día que uno cambie — que es textualmente la razón por la que existe
+`no_rebuild_reason` (su docstring: *"Dos lugares con la misma regla escrita a mano se separan el día
+que uno cambie"*).
+
+**(b) El que instala (`CorpusService._rebuild`), un solo hook para los dos caminos.**
+- **Imports: no hay ciclo.** `calibrate.py` importa **sólo** `landscape_engine`
+  (`calibrate.py:95-101`), y nada de `services/` lo importa hoy (los tres importadores son
+  `ckm_monitor.py:118`, `experiments/driver_cp1b_escala_delta_r.py:51` y
+  `tests/test_calibrate_mecanismo.py:40`). `corpus_service → calibrate` se puede agregar.
+- **Pero el costo lo descarta tal cual.** `rebuild_suspendido` tiene **default `False`**, y hay un
+  test que exige que siga así (`test_should_rebuild_conectado.py:995`: *"el default tiene que seguir
+  en False"*). En ese régimen —el de los tests y de **9 drivers de `experiments/`**— `ingest` llama
+  a `_rebuild()` en **cada ingesta** pasado `min_texts`. Colgar `calibrate` de `_rebuild` lo haría
+  correr en cada ingesta de todo el régimen default: medido, **0,16 s por corrida** (abajo), o sea
+  ~1,1 s agregados a un test de 9 textos, y otro tanto en cada driver.
+- Lo que haría falta para (b) es que `_rebuild` distinga *"instalo porque nace o porque se
+  decidió"* de *"instalo porque la ingesta reconstruye"*. Eso es otro diseño, no este.
+
+**No lo decido.** Lo que el CP0 puede decir es que **(b) no es gratis y (a) duplica el hook**, y que
+el texto del diseño no elige.
+
+### D3 — el lugar en el estado: **el registro existe antes que el ciclo al que pertenece**
+
+Esta es la tensión que veo, y no es de implementación:
+
+- **El orden de D2 pone `calibrate` ANTES de instalar W.** El ciclo se abre **después**: lo abre
+  Monitor en `_invalidar_si_W_cambio` → `_abrir_ciclo` (`monitor_service.py:538-585`, `:701-723`),
+  en la primera `evaluate` con la W nueva.
+- O sea: **cuando el registro de la calibración se produce, el `Ciclo` al que describe todavía no
+  existe.** Hoy el lugar provisorio es `Monitor._coco_calibration`, que es exactamente el "guardar
+  por su cuenta" que la visión quiere sacar.
+- **`Ciclo` es `@dataclass(frozen=True)`** (`ckm_landscape_config.py:104-126`) con 8 campos
+  (`w_version_id`, `N`, `mu_W`, `beta_c_nonzero`, `beta_c_global`, `causa`, `t_senal`,
+  `t_rebuild`), y tiene `to_dict`/`from_dict` (`:147`, `:151`). Si el registro va **dentro** del
+  Ciclo, `abrir_ciclo` tiene que recibirlo, y hoy su firma no lo toma (`:314`). Si va **al lado**,
+  la Config gana un campo y su `__slots__` (`:191`) y su `to_dict`/`from_dict` (`:413`, `:426`)
+  también.
+- **Y la compatibilidad de lectura:** `from_dict` sobre un estado viejo no tendría el campo. Tiene
+  que leerse como **UNKNOWN y no como "no se calibró"** — son las dos cosas que `calibrate.py`
+  separa a propósito (`nulo_calibrado` = *"no miré"* contra `no_calibrado` = *"miré y no
+  encontré"*). Rellenar con `nulo_calibrado` afirmaría algo que nadie registró (I2).
+
+**Dónde D3 ya tiene apoyo en el código:** el criterio del módulo de la Config es *"cada campo se
+ubica según qué lo hace cambiar"*, y `registrar_tick` es el molde exacto de *"un escritor, muchos
+lectores"* (Monitor trae el tick y declara de qué reloj salió; la Config *"registra; no genera"*).
+
+### D4 — **[abierto] contestado: no choca, y coincide con algo que ya existe**
+
+Tres verificaciones:
+
+1. **No choca con los tests: uno ya exige lo que D4 pide.**
+   `tests/test_serie2_caso0_cp1.py:620-644`
+   (`test_h_coco_no_sigue_con_el_0_40_del_modulo_despues_de_calibrate`) está escrito **condicional**:
+   si calibró, exige `source == "calibrate"` y `calibrated is True`; **si no**, exige
+   `calibrated is False` y que `coco["calibration"]["estado"]` sea el del punto. Su docstring:
+   *"Si no calibró, lo que se exige es que **se vea** que no calibró — no que el 0.40 se presente
+   como medido."* Eso **es** D4.
+2. **El único lugar que hoy hace falso al caso 1 es `monitor_service.py:480-481`**: `source` y
+   `calibrated` se derivan de `self._coco_thresholds`, que **no se limpia nunca** (`:533`). D4 pide
+   que se limpie o se ate a la W. Ningún test afirma que persista.
+3. **El vocabulario que D4 pide ya existe en el repo, con otro nombre.**
+   `services/ckm_trust_rule.py:255-368` tiene un `Threshold` con `value`, **`source`**,
+   `provenance`, `produced_by_order` y un `calibrated` **derivado** (`:351`), y levanta
+   `ValueError` si `value is None` sin `source` (`:298-300`: *"value=None exige `source`: quién
+   declaró que no se sabe"*). Es un **módulo puro** (no importa nada del repo) y **ya está en
+   producción**: `iap_chatroom/local_criterion.py` es su primera instancia.
+   - O sea: *"los defaults declarados como tales, con su causa"* no hay que inventarlo. Está hecho,
+     probado (`tests/test_ckm_trust_rule.py:230-249`) y se puede poner en el lugar del estado sin
+     crear ningún import nuevo hacia arriba.
+   - **Lo digo desde dónde miré:** `grep` de `source`/`calibrated` en `tests/`, `services/` e
+     `iap_chatroom/`. No busqué si hay un tercer mecanismo con otro nombre todavía.
+
+### D5 — **la hipótesis de la TASK es cierta para D1 y falsa para D5. Se mueven tres tests**
+
+La TASK dice: *"la hipótesis es que las 13 de `test_should_rebuild_conectado.py` no se mueven;
+verificarlo"*. Verificado: **D1 no las mueve** (la jerarquía no cambia). **D5 sí mueve tres**, y
+ninguna es de dominancia: las tres **cuentan decisiones**, y el origen agregaría una línea.
+
+| test | qué afirma hoy | con D5 |
+|---|---|---|
+| `test_cp2b_las_vueltas_sin_senal_no_se_registran` (`:681-691`) | `decisiones_de_rebuild() == []` y `n_decisiones_registradas == 0` tras 8 textos | pasa a **1**: el origen deja su línea |
+| `test_cp2b_el_jsonl_sobrevive_al_reinicio_y_la_cuenta_sigue` (`:735-749`) | `len(...) == 1` y `_n_decisiones == 1` | pasa a **2**. Lo que afirma —append-only, el índice sigue— **no cambia**; cambia el número |
+| `test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False` (`:1008-1036`) | `decisiones_de_rebuild() == []` | pasa a **1**, y **lo que afirma deja de ser cierto como está escrito** |
+
+**El tercero es el que importa.** Su docstring dice: *"en este régimen el camino nuevo **no
+participa**, no es que participe y dé lo mismo"*. Con D5 el camino del origen **sí participa** (no
+depende de contadores, que es justamente D1). No es que el test haya que aflojarlo: **lo que
+afirmaba cambia de contenido**, y eso es de delamor o de Opus, no mío.
+
+**Cómo se actualizarían sin aflojar nada** (propuesta, no hecho): en vez de bajar la aserción a
+*"hay alguna"*, afirmar **exactamente una línea, con `causa == "bootstrap"`, y que sea la única**.
+Así cada test sigue afirmando lo mismo que afirmaba —ninguna decisión del régimen— y además afirma
+que el origen dejó la suya.
+
+**Dos cosas más de D5:**
+
+- **`test_d_cada_decision_registrada_lleva_la_identificacion`
+  (`test_serie2_caso0_cp1.py:317-324`) NO se mueve**: la línea del origen pasa por
+  `_registrar_decision`, que agrega `series` y `case` a todas.
+- **El `causal_event` es una decisión que D5 no toma.** Hoy el origen deja `causal_event: "rebuild"`
+  (lo escribe `_rebuild(causa=None)`, `corpus_service.py:570-572`). Si el origen pasa por
+  `rebuild_por_decision("bootstrap")`, pasa a `rebuild_por_decision:bootstrap`, y eso mueve tres
+  aserciones más, **todas de `CorpusService` directo y ninguna del canal**:
+  `test_should_rebuild_conectado.py:1002` (CP5: *"el rebuild por ingesta cambió de marca"*), `:1088`
+  y `:1091`, más `tests/test_w_version.py:54`. Si en cambio el origen instala con `_rebuild()` y la
+  línea del jsonl se escribe aparte, el `causal_event` no se toca y esas cuatro quedan quietas.
+  **Son dos diseños distintos y D5 no dice cuál.**
+
+### D6' — **[abierto] con un número, y un hueco de registro**
+
+**Medido ahora, una sola corrida, sobre la W real** (la última meseta del intento 3,
+`experiments/_state_S2-C0/corpus_state.json`, N=20):
+
+- `calibrate(W, n_runs=200)` → **0,16 s**, `estado = calibrado`.
+- Devolvió **exactamente** `D_CKM_THRESHOLD = 0.0057089516518649686` y
+  `FRAC_REC_MIN = 0.9948824174485196`, los mismos del vivo. O sea: **`calibrate` es determinista con
+  `seed = 0`** y la medición de ayer se reproduce desde el estado guardado.
+
+**El 1000 no lo corrí, porque es demostrable en una línea:** el costo es
+`len(grilla) × count_attractors(n_runs)`, y `count_attractors` hace `n_runs` relajaciones
+independientes, así que el costo es **lineal en `n_runs`**: 1000 es exactamente **5×** → ~0,8 s.
+Correrlo no habría agregado información.
+
+- **Lo que esto dice del [abierto]:** a N=20 la diferencia entre 200 y 1000 son ~0,6 s de canal que
+  no atiende, por rebuild. **Lo que no está medido es la dependencia con N**: la relajación es
+  O(iteraciones × N²), así que el número de arriba no se extrapola a una W grande. El techo del
+  instrumento con N=146 (fourforums) ya está declarado en otro lado.
+- **Y el hueco:** `_calibrate` **mide** cuánto tardó y lo pone en `duration_s` con
+  `blocking: True` (`ckm_monitor.py:648-650`), pero ese dict vive sólo en `get_state()`, que es el
+  panel de Gradio y **no se persiste**. Lo busqué en los 7 JSONL del intento 3 y en los `.bak` del
+  2: el único `duration_s` que hay es **el del device** (1200,0 s, su corrida). **El dato con el que
+  se decidiría este [abierto] se produjo en los dos vivos y se descartó.** No lo toqué.
+
+### Tensiones del diseño, juntas
+
+1. **D2 no dice quién** corre los pasos 2 y 3, y las dos lecturas tienen costo distinto (arriba).
+2. **D3 pide un lugar para un registro que nace antes que su ciclo.**
+3. **D5 no dice si el origen cambia de `causal_event`**, y de eso dependen 4 aserciones más.
+4. **D5 mueve 3 tests**, uno de ellos en el contenido de lo que afirma, no en un número.
+5. **D4 coincide con `Threshold` de `ckm_trust_rule.py`**: si se escribe otra forma para lo mismo,
+   el repo queda con dos vocabularios de "umbral declarado".
+6. **El costo de `calibrate` se mide y no se registra** (D6').
+
+### Lo que no pude verificar
+
+- **Si los 3 tests que D5 mueve son 3 de los 13.** Para saberlo habría que reaplicar `a7d065f`, y
+  está prohibido. Lo que sí digo: el tercero habría fallado también bajo `a7d065f` y **por la misma
+  razón** (el origen dejando su línea), así que es plausible que estuviera entre los 13. No lo
+  afirmo.
+- **Si hay un tercer mecanismo de "umbral declarado"** además de `Threshold` y de
+  `thresholds.source` del panel. Miré con `grep` de `source`/`calibrated` en `tests/`, `services/` e
+  `iap_chatroom/`.
+- **La dependencia del costo de `calibrate` con N.** Una sola corrida, N=20.
+
+**A1.PAUSA.**

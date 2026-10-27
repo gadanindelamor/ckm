@@ -1,5 +1,10 @@
 # ESTADO — TASK_calibrate_en_el_build_v1
 
+> **SUPERADA el 27 oct 2026.** `docs/tasks/TASK_calibrate_en_el_build_v2.md` reemplaza a la v1 (sus
+> opciones A y B quedaron atrás: delamor decidió *"otra opción"*, que es el diseño D1–D6' de la v2).
+> El estado vivo está en `docs/tasks/ESTADO_calibrate_en_el_build_v2.md`. Lo de abajo queda como
+> estaba: describe hasta dónde llegó la v1.
+
 *Última escritura: 2026-10-26 23:10 UTC, por Claude Opus 5 (Code, Codespace).*
 *Lo pide el §3 del `PROTOCOLO_code_continuidad_v1`: la TASK estaba en curso sin ESTADO.*
 

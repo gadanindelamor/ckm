@@ -329,3 +329,12 @@
 - **P16 respondida** (delamor: *"la decisión es lo que funcionó con el texto 08"*). Code trabaja de corrido dentro de una unidad definida en la consigna y hace A1.PAUSA entre unidades. Si la consigna no define unidad, pausa al terminar cada paso. Va al próximo texto para Code, que tiene que registrarla en `DECISIONES_opus.md` junto con P12 y P15.
 - **Conectores en las sesiones de Code:** delamor lo revisa.
 - **Medición de uso:** delamor: *"es una pantalla con varias unidades, y taxonomías. el uso se mide ie por Code y Cowork y Design… voy a estudiarlo"*. La primera lectura de `USO_mediciones.md` espera a que delamor la estudie.
+- **El diseño del bootstrap: decidido por delamor** (*"el diseño que decido es el congruente a la dirección de tu interpretación precisa y orientada a la Visión"*; ante la pregunta de qué sigue: *"la que está más arriba"*, o sea el diseño antes que el v33). Opus escribe `docs/tasks/TASK_calibrate_en_el_build_v2.md`, que reemplaza a la v1.
+  - **D1:** el nacimiento tiene su propia condición.
+  - **D2:** la calibración ocurre antes de instalar cualquier W.
+  - **D3:** el resultado de la calibración vive en su lugar del estado, firmado con su W. Revisa D6.
+  - **D4:** nunca se usa la vara de otra W; si no hay calibración, se usan los defaults declarados como tales.
+  - **D5:** el origen deja su línea de decisión.
+  - **D6':** los parámetros de `calibrate` se declaran en el estado; su valor queda abierto.
+
+  CPa (lo mecánico) y CP0 no necesitan OK. CP1 y CP2 los aprueba Opus; los puntos que sean E3 suben a delamor. Texto para Code: `docs/opus/TEXTO_PARA_CODE_09_REPO_CKM_TASK_calibrate_v2_27oct2026.md`. El v33 va después.

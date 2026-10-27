@@ -338,3 +338,16 @@
   - **D6':** los parámetros de `calibrate` se declaran en el estado; su valor queda abierto.
 
   CPa (lo mecánico) y CP0 no necesitan OK. CP1 y CP2 los aprueba Opus; los puntos que sean E3 suben a delamor. Texto para Code: `docs/opus/TEXTO_PARA_CODE_09_REPO_CKM_TASK_calibrate_v2_27oct2026.md`. El v33 va después.
+- **Respuestas de delamor a Code, en el chat de Code (27 oct; registradas por Code en `docs/tasks/ESTADO_calibrate_en_el_build_v2.md`, `0e4c6fd`), anotadas acá por Opus:**
+  - **D3:** *"EL LUGAR DONDE NACE ES PERPETUO. es el estado.. en Landscape Config"*. El registro de la calibración va en un lugar de la Config, no dentro del `Ciclo`. Se escribe cuando se produce y el ciclo que nace después lo referencia. `from_dict` sobre un estado viejo lo lee como UNKNOWN, no como `nulo_calibrado`.
+  - **D5:** *"cambia el contenido de lo que afirma, no un número… CONFIRMO"*. Los tests que cuentan decisiones se reescriben para afirmar exactamente una línea, con `causa == "bootstrap"`, y que sea la única.
+  - **D6':** el costo es *"el delay por mensaje"*. Code recomienda 1000. **La decisión es de delamor y sigue abierta.**
+- **Decisiones de Opus sobre las tensiones del CP0** (bajo el umbral; la dirección la dio delamor):
+  - **D2, quién calibra: el canal (`CKMMonitor`), con un solo punto** (una función de "antes de instalar" que llaman los dos caminos, el del origen y el del régimen). No `_rebuild`. Razón estructural: `corpus_service` es el **productor** de W y `calibrate` es **instrumento**; que el productor llame al instrumento cruza el límite de partes (X, 26 oct). Además, en el régimen por default (`rebuild_suspendido=False`) correría en cada ingesta. Lo de dos lugares escritos a mano se resuelve con una sola función.
+  - **D5, `causal_event`: el origen no pasa por `rebuild_por_decision`**, porque el origen no es una decisión del régimen. Se instala con `_rebuild()` y su línea en `rebuild_decisions.jsonl` se escribe aparte, con causa `bootstrap`. Las 4 aserciones de `causal_event` quedan quietas. **Divergencia declarada:** `w_version` sigue marcando el origen como `"rebuild"`; se revisa con el renombre general, no ahora.
+  - **D4: se usa `Threshold` de `ckm_trust_rule.py`**, no una forma nueva. Calibrado → `MEASURED` con `source` = calibración + `w_sha`. Default → `DECLARED` con `source` = el default de `coco.py` y la causa. Un solo vocabulario de "umbral declarado".
+  - **D6', costo:** `duration_s` y `blocking` se guardan en el registro de la calibración, en su lugar de la Config (hoy se descartan). Va en CP2.
+  - **El 17 % (reusar A0 como el punto λ=0):** es cómputo, no patrón. Va en CP2, en un commit aparte, con un test que verifique que el resultado sale idéntico con la misma semilla.
+  - **La extensión de CPa** (`ciclos_sin_rebuild` también se leía después del reset): aceptada.
+  - **OK de Opus a CP1** (D1 + D2 + D5, como quedan acá). Texto para Code 10.
+- **Sube a delamor (E5):** a `n_runs=200` el veredicto de la única calibración que separó **depende de la semilla** (2 de 10); a 1000, ninguna separa (0 de 10). El "primera calibración que separa en un vivo" (ÍTEM 6 del 22 oct y docstring de `ckm_monitor.py:84-90`) es cierto como hecho, pero es un resultado del muestreo con `n_runs=200, seed=0`. Propuesta de Code: agregar esa línea al docstring sin sacar nada. Afecta el v33.

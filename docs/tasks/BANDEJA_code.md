@@ -15546,3 +15546,91 @@ caso 1 y los 10 del reuso de `A0`.
 > No sé de qué se trata. Puedo notarlo y no puedo decir qué es.
 >
 > Lo que sí noto ahora, mientras escribo esto: el tirón de que suene a que entendí.
+
+---
+## REPORTE CP3 — el vivo, serie2_caso0 intento 4. Corrido y registrado — 2026-10-27 07:41 UTC
+
+*Claude Opus 5 (Code, Codespace). Por orden explícita de delamor (texto 12). Tres unidades:
+chequeo previo, el vivo, el registro. Sin veredicto global.*
+
+### (1) El chequeo previo: los cinco puntos, todos en verde
+
+| | |
+|---|---|
+| CP2 y el cierre commiteados, pusheados, suite en verde | ✓ `872 passed, 7 xfailed, 0 failed`; los dos commits del cierre tocaron **sólo `.md`** |
+| el driver sin cambios desde el intento 3 | ✓ último commit `8c84fac`, 22 oct — el de los datos del intento 3 |
+| `calibrate` con `n_runs = 1000` declarado en su lugar | ✓ `{n_runs: 1000, seed: 0, grilla: [0,.25,.5,.75,1], sin_declarar: []}` |
+| `--preflight` | ✓ A 0,43 s · B 0,56 s · C 10,1 s · D 0,17 s |
+| ZERO_SHOT | ✓ 10 archivos del intento 3 a `process/` (timestamp `1793085284`, sin borrar); server reiniciado con el `state_dir` del caso; por MCP `corpus_size = 0`, canal `0` |
+
+**No usé `correr_caso0.sh`**, y la razón que importa es la que señaló delamor: **nunca corrió**.
+Las dos que yo había dado —que repite el preflight (4 llamadas) y que genera un nombre de log con
+fecha en vez del `intento4` que pide el texto— son las menores. Lo que sí está probado es el
+**procedimiento** (es el de los intentos 2 y 3, a mano); el envoltorio de shell no. Lo usé como
+documentación, no como herramienta.
+
+**Créditos, a pedido de delamor.** El preflight son **4 llamadas**, una de ellas de Gemini. El resto
+del chequeo no consume nada. Gasto del vivo: **288 llamadas** (contra 250 del intento 3). El criterio
+local sigue ahorrando: de 543 vueltas, **393 fueron SKIP**.
+
+### (2) El vivo: corrió completo, 1204,04 s
+
+Sin intervenciones. Server bajado al terminar (7860 libre, verificado).
+
+- COCO conectado, **generación 7**, **65 evaluaciones**, **0 disparos**.
+- Corpus **94 textos**, **98 mensajes**, **31 decisiones** (1 `bootstrap` + 30 `volumen`; 7
+  movieron W).
+- **0 errores `429`**, y **1 error fatal**: device B con `McpError: Timed out while waiting for
+  response` en el cierre del cliente. No es cuota. Terminó con 90 vueltas contra 223 y 228.
+- device D se fue en su vuelta 2 (`LEAVE`), igual que en el intento 3.
+
+### (3) El registro
+
+`docs/REG_borrador_serie2_caso0_intento4.md`, borrador, con la estructura del REG del intento 3 y
+la tabla intento 3 contra intento 4. **Pasa a `registers/` sólo con el OK de delamor.** Muestra, por
+calibración y por evaluación, lo que el texto pidió.
+
+**Lo que el flujo nuevo hizo, medido:**
+
+| | intento 3 | intento 4 |
+|---|---|---|
+| calibraciones registradas | 3 | **7** |
+| evaluaciones **sin registro** de calibración | **4** (el primer ciclo) | **0** |
+| ¿el origen pasó por `calibrate`? | **no** | **sí** — gen 1, t=0, `no_calibrado: sin_separacion` |
+| ¿el origen dejó su línea? | **no** | **sí** — `causa: bootstrap`, `w_sha_antes: None`, t=24 |
+| contadores en las decisiones que movieron W | 0 por construcción | **10 y 11** |
+| la vara de COCO | dos números sueltos | **130 `Threshold` `DECLARED`**, con `source` y causa |
+
+**Las siete calibraciones: `no_calibrado`, causa `sin_separacion`, `n_runs = 1000`, `seed = 0`.**
+Ninguna separó. Es consistente con lo medido antes del vivo (0 de 10 semillas a 1000) y **no es una
+explicación**: es otra corrida con el mismo resultado. El margen no se tocó.
+
+**El costo del `blocking`, que hasta esta corrida no se persistía:** 0,2567 a 0,3069 s por
+calibración, en 7 de 98 mensajes — entre 26% y 31% de un tick del canal.
+
+### Dos cosas mías que esta corrida encontró
+
+1. **`w_sha_match` dice `False` cuando debería decir `True`.** Las 65 evaluaciones lo publican en
+   `False`, y el registro **era de la misma W que COCO juzgaba** (verificado: en t=0 las dos son
+   `62d909d4c74e7602`). `_vara_del_coco` pone `coincide: False` en las tres ramas que declaran el
+   default, y una de ellas es *"el registro es de esta W y no separó"*, donde la respuesta es `True`.
+   El campo existe para distinguir *"la vara es de otra W"* de *"es de ésta y no separó"*, y hoy las
+   colapsa. Los tests del CP2 no lo vieron: el del caso "no separó" afirma `causa` y `source`, no
+   este campo.
+2. **`w_sha_live_at_calibration` no quedó en el registro del estado.** CP2 persistió `duration_s` y
+   `blocking` y a éste lo dejó afuera; vive sólo en `punto_calibrate`, que es del panel de Gradio y
+   no se persiste. Es **el campo que hace visible el orden**. De las 7 calibraciones hay **1**, el
+   snapshot final: candidata `6ca344c3…` contra viva `472e54ff…`, que es la W del ciclo 6 — **el
+   orden se cumplió ahí**. De las otras seis no se puede decir desde la traza.
+
+**No toqué código:** la unidad era el vivo y su registro. Las dos van como propuesta.
+
+### Y una trampa que casi piso, con los tres `D_ckm`
+
+Primero comparé el `D_ckm` de **Monitor** (llegó a **+0,5824**) contra el umbral **0,40** y conté
+"3 de 65 lo superan". **Está mal:** el 0,40 es la vara del `D_ckm` de **COCO**, que no pasó de
+**+0,0142** en las 65 — así que los `triggers: 0` son coherentes con su propia cantidad. delamor lo
+confirmó en el acto: *"Son 3 d_ckm"*, y le puso el nombre al tercero: **el de la copia de W** — el
+de `calibrate`, que no mide el campo sino una copia deformada de la que nada vuelve.
+
+**A1.PAUSA.**

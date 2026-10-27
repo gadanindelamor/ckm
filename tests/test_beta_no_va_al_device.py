@@ -38,13 +38,41 @@ pasaría igual si los β_i no existieran—. Se hacen las dos cosas:
 
 El inverso también está: `test_el_instrumento_agarra_un_beta_filtrado` inyecta
 β_i en el panel a mano y comprueba que estos tests fallarían.
+
+### El cambio del 27 oct 2026: se busca en la estructura, no en el texto
+
+*Texto 13 punto 3, decisión de Opus. No se aflojó nada: sigue fallando si el β
+viaja.*
+
+**Qué afirmaba.** `test_el_estado_que_recibe_un_device_no_trae_ningun_beta_i`
+serializaba el estado entero con `json.dumps` y afirmaba que `repr(v)` de cada
+β **no aparecía como subcadena** de ese texto.
+
+**Por qué daba falso positivo.** `repr(6.0)` es `"6.0"`, y el estado lleva
+números que no son β —`timestamp`, `t_rebuild`, `tick_period_s`—. Los dígitos de
+un β pueden caer **adentro** de uno de esos números: un timestamp que termine en
+`…16.0` contiene `"16.0"`. El test fallaba entonces por una coincidencia de
+dígitos, anunciando una fuga que no existía. Es el caso que se reportó en el CP2
+(BANDEJA, 27 oct 07:10 UTC) como "test sensible".
+
+**Qué afirma ahora.** Recorre el estado **por su estructura** —cada hoja con la
+ruta donde vive— y afirma que **ninguna hoja numérica es** un β de device
+(`math.isclose`, `rel_tol=1e-6`, para agarrar también una copia redondeada). Un
+timestamp no puede dar igual a un β: son dos órdenes de magnitud distintos, y la
+comparación ya no es de dígitos sino de valores. Cuando falla, además, **dice en
+qué ruta** encontró el β, que la subcadena no podía decir.
+
+Y los nombres se siguen buscando, también por estructura: en las **claves** del
+camino y en las hojas de texto, no en el JSON entero.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -135,17 +163,56 @@ def con_beta_i(monitor):
     return monitor
 
 
-def _valores_prohibidos(monitor) -> list[str]:
+def _valores_prohibidos(monitor) -> list[float]:
     """
-    Los β_i y el β_collective, como texto. Lo que no puede aparecer.
+    Los β_i y el β_collective, **como números**. Lo que no puede viajar.
 
     Se buscan **los valores**, no la palabra: un panel que publicara el β_i
     bajo otra clave pasaría un test que sólo mirara nombres.
+
+    Números y no `repr`: el `repr` convertía esto en una búsqueda de dígitos,
+    que es de donde salía el falso positivo del timestamp (ver el docstring del
+    módulo, 27 oct 2026).
     """
     beta = monitor._monitor._thermostat.beta_status()
-    vals = [repr(v) for v in beta["devices"].values()]
-    vals += [repr(beta["beta_collective"])]
-    return vals
+    vals = [v for v in beta["devices"].values() if v is not None]
+    if beta["beta_collective"] is not None:
+        vals.append(beta["beta_collective"])
+    return [float(v) for v in vals]
+
+
+def _hojas(obj, ruta: str = "estado"):
+    """
+    Cada hoja del estado, con **la ruta donde vive**: `(ruta, valor)`.
+
+    Recorrer la estructura en vez de serializarla es lo que permite comparar
+    valores con valores. Y la ruta es lo que hace que un fallo diga *dónde*.
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _hojas(v, f"{ruta}.{k}")
+    elif isinstance(obj, (list, tuple)):
+        for i, v in enumerate(obj):
+            yield from _hojas(v, f"{ruta}[{i}]")
+    else:
+        yield ruta, obj
+
+
+def _es_el_beta(valor, prohibidos: list[float]) -> Optional[float]:
+    """
+    El β al que una hoja numérica es igual, o `None`.
+
+    `math.isclose` con `rel_tol=1e-6`: agarra también una copia redondeada del
+    β —un panel que publicara `round(beta, 4)` no se escaparía— y **no** puede
+    confundirse con un timestamp, que está nueve órdenes de magnitud más arriba.
+    Los `bool` quedan afuera: en Python son `int`, y `True` no es un β.
+    """
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None
+    for b in prohibidos:
+        if math.isclose(float(valor), b, rel_tol=1e-6):
+            return b
+    return None
 
 
 # ── (1) el β_i existe y está donde Opus dijo ─────────────────────────────────
@@ -171,16 +238,34 @@ def test_beta_i_vive_en_el_panel_de_monitor_y_no_en_el_del_canal(con_beta_i):
 def test_el_estado_que_recibe_un_device_no_trae_ningun_beta_i(con_beta_i):
     """
     `get_state()` es **literalmente** lo que `get_monitor_state` devuelve al
-    device (`mcp_server.get_monitor_state`). Se serializa entero y se busca
-    cada β_i por su valor y cada clave por su nombre.
+    device (`mcp_server.get_monitor_state`). Se recorre **entero, por su
+    estructura**, y se afirma que ninguna hoja **es** un β_i y que ninguna
+    clave del camino lo nombra.
+
+    Antes se serializaba y se buscaba `repr(β)` como subcadena del JSON, que es
+    de donde salía el falso positivo del timestamp. El docstring del módulo
+    dice qué afirmaba, por qué fallaba y qué afirma ahora.
     """
     estado = con_beta_i.get_state()
-    crudo = json.dumps(estado, default=str)
+    prohibidos = _valores_prohibidos(con_beta_i)
+    assert prohibidos, "sin β_i no hay nada cuya ausencia verificar"
 
-    for v in _valores_prohibidos(con_beta_i):
-        assert v not in crudo, f"β de device en el estado del device: {v}"
-    for clave in ("beta_i", "beta_collective", "beta_status", "thermostat"):
-        assert clave not in crudo, f"clave de β de device en el estado: {clave}"
+    nombres = ("beta_i", "beta_collective", "beta_status", "thermostat")
+    for ruta, valor in _hojas(estado):
+        cual = _es_el_beta(valor, prohibidos)
+        assert cual is None, (
+            f"β de device en el estado del device: {cual} en {ruta}"
+        )
+        # Los nombres: en las claves del camino y en las hojas de texto.
+        for nombre in nombres:
+            assert nombre not in ruta, (
+                f"clave de β de device en el estado: {nombre} en {ruta}"
+            )
+            if isinstance(valor, str):
+                assert nombre not in valor, (
+                    f"nombre de β de device en un valor del estado: "
+                    f"{nombre} en {ruta}"
+                )
 
 
 def test_el_beta_c_del_corpus_si_esta_y_no_se_confunde_con_el_del_device(
@@ -195,7 +280,7 @@ def test_el_beta_c_del_corpus_si_esta_y_no_se_confunde_con_el_del_device(
     assert coco["connected"] is True
     assert "beta_c" in coco and "mu_W" in coco
     # y no es ninguno de los β_i
-    assert repr(coco["beta_c"]) not in _valores_prohibidos(con_beta_i)
+    assert _es_el_beta(coco["beta_c"], _valores_prohibidos(con_beta_i)) is None
 
 
 # ── (2) el prompt ────────────────────────────────────────────────────────────
@@ -244,14 +329,25 @@ def _prompts_vistos(con_beta_i, monkeypatch) -> list[str]:
 
 
 def test_el_prompt_del_device_no_trae_ningun_beta_i(con_beta_i, monkeypatch):
-    """Ni el suyo ni el de los otros dos."""
+    """
+    Ni el suyo ni el de los otros dos.
+
+    Acá el prompt **es** texto, así que la búsqueda es textual; lo que cambió el
+    27 oct es que el número se busca **con borde**, no como subcadena suelta: un
+    β que viaje aparece como número y no pegado a otros dígitos. Así este test
+    no hereda el falso positivo que tenía el del estado.
+    """
+    import re
     prohibidos = _valores_prohibidos(con_beta_i)
     for texto in _prompts_vistos(con_beta_i, monkeypatch):
         bajo = texto.lower()
         assert "beta" not in bajo, f"la palabra beta en el prompt: {texto!r}"
         assert "β" not in texto, f"β en el prompt: {texto!r}"
         for v in prohibidos:
-            assert v not in texto, f"valor de β de device en el prompt: {v}"
+            patron = r"(?<![\d.])" + re.escape(repr(v)) + r"(?![\d])"
+            assert not re.search(patron, texto), (
+                f"valor de β de device en el prompt: {v}"
+            )
 
 
 def test_el_gate_no_tiene_ninguna_ranura_para_un_beta(con_beta_i):
@@ -291,10 +387,15 @@ def test_el_instrumento_agarra_un_beta_filtrado(con_beta_i, monkeypatch):
 
     monkeypatch.setattr(CKMMonitor, "get_state", con_fuga)
 
-    crudo = json.dumps(con_beta_i.get_state(), default=str)
-    assert any(v in crudo for v in _valores_prohibidos(con_beta_i)), (
+    prohibidos = _valores_prohibidos(con_beta_i)
+    hojas = list(_hojas(con_beta_i.get_state()))
+    assert any(_es_el_beta(v, prohibidos) is not None for _, v in hojas), (
         "con la fuga puesta, el estado tendría que traer los β_i"
     )
+    # Y el test de arriba, con esta fuga, tiene que **fallar**: es lo que
+    # sostiene que no pase por no mirar.
+    with pytest.raises(AssertionError, match="β de device en el estado"):
+        test_el_estado_que_recibe_un_device_no_trae_ningun_beta_i(con_beta_i)
     # y el prompt no: el gate no tiene ranura para β. Eso es la segunda
     # barrera, y queda declarado cuál de las dos protege qué.
     for texto in _prompts_vistos(con_beta_i, monkeypatch):

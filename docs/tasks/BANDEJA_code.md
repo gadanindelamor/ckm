@@ -15912,7 +15912,7 @@ Lo mismo con el segundo `seed` de `calibrate.extremo_expansion` (REPORTE 1a): do
 nombre, y renombrarlo es la firma del patrón.
 
 ---
-## REPORTE punto 2 — `w_sha_live_at_calibration` deja de descartarse — 2026-10-27 16:55 UTC
+## REPORTE punto 2 — `w_sha_live_at_calibration` deja de descartarse — 2026-10-27 16:37 UTC
 
 *Texto 13 punto 2 (decisión de Opus bajo el umbral).*
 
@@ -15929,3 +15929,126 @@ nombre, y renombrarlo es la firma del patrón.
   - `tests/test_should_rebuild_conectado.py::test_cp2_el_punto_de_calibrate_ahora_CORRE` — el salto:
     en el registro el valor **no** es `None`, es el sha del origen. Es el caso que el test del origen
     no puede ver: con sólo el `None` no se verifica que el campo traiga algo.
+
+---
+## REPORTE punto 3 — el test de β busca en la estructura. Y el cierre del texto 13 — 2026-10-27 16:45 UTC
+
+*Texto 13 punto 3 (decisión de Opus bajo el umbral). Cierra el texto 13 entero.*
+
+### El test de β
+
+**Qué afirmaba:** `json.dumps` del estado entero, y `repr(β)` **no es subcadena** de ese texto.
+
+**Por qué daba falso positivo:** `repr(6.0)` es `"6.0"`, y el estado lleva números que no son β
+—`timestamp`, `t_rebuild`, `tick_period_s`—. Los dígitos de un β caen **adentro** de uno de esos
+números: un timestamp que termine en `…16.0` contiene `"16.0"`. El test anunciaba una fuga que no
+existía. Es el "test sensible" reportado en el CP2.
+
+**Qué afirma ahora:** recorre el estado **por su estructura** —`_hojas()` da cada hoja con la ruta
+donde vive— y afirma que **ninguna hoja numérica es** un β de device, con `math.isclose(rel_tol=1e-6)`.
+Un timestamp está nueve órdenes de magnitud por encima de un β: la comparación dejó de ser de dígitos y
+es de valores. Los nombres (`beta_i`, `beta_collective`, `beta_status`, `thermostat`) se buscan en las
+**claves del camino** y en las hojas de texto, no en el JSON entero. Y cuando falla, **dice en qué
+ruta**, que la subcadena no podía decir.
+
+**No se aflojó:**
+- el `rel_tol=1e-6` agarra también una **copia redondeada** del β: un panel que publicara
+  `round(beta, 4)` no se escapa, y la subcadena anterior sí lo dejaba pasar;
+- el test inverso (`test_el_instrumento_agarra_un_beta_filtrado`) ahora **llama al test de arriba con
+  la fuga puesta y exige que falle** (`pytest.raises(AssertionError, match="β de device en el
+  estado")`). Antes sólo comprobaba que la fuga estuviera en el JSON; ahora comprueba que **el
+  detector la agarra**;
+- el del prompt sigue siendo textual —un prompt **es** texto— pero el número se busca **con borde**
+  (`(?<![\d.])…(?![\d])`), para que no herede el mismo falso positivo.
+
+Todo declarado en el docstring del módulo: qué afirmaba, por qué fallaba y qué afirma ahora.
+
+### El cierre del texto 13
+
+**Suite completa, en serie: 890 passed, 7 xfailed, 0 failed, 49,32 s.** Arrancó la sesión en 872 passed
+y 164,56 s. Los 18 de diferencia son 17 del punto 1 y 1 del punto 2; el tiempo es el `n_runs = 200`.
+
+**Commits** (uno por punto, nombrando archivos): `801170e` punto 1, `71b119d` punto 2, y el del punto 3
+con este reporte.
+
+**Sobre el ESTADO.** El texto 13 no es una TASK y no tiene `ESTADO_<task>.md`; el estado de esto es
+esta BANDEJA. Y **no toqué** `docs/tasks/ESTADO_calibrate_en_el_build_v2.md`, que es la traza de una
+TASK cerrada, aunque una línea suya haya quedado vieja: dice *"el costo de `calibrate` se mide y no se
+persiste"*, y desde el CP2 `duration_s` y desde hoy `w_sha_live_at_calibration` **sí** se persisten. El
+puntero nuevo vive acá, no reescrito allá.
+
+---
+## PREGUNTAS ABIERTAS traídas por delamor durante el punto 1 — en background, sin abrir — 2026-10-27 16:45 UTC
+
+*Las trajo delamor en el chat mientras esto corría, **pensando en voz alta** y pidiendo explícitamente
+que queden como pregunta abierta. No las abro: quedan acá para que no se pierdan en el silencio
+absorbente del canal (§8). Ninguna de las tres es de Code.*
+
+### Q1 — la terquedad de no cambiar los nombres a `d_ckm`
+
+delamor: *"algo para explorar, por qué podría ser esta aparente terquedad de no cambiar los nombres a
+d_ckm?"*
+
+**Lo medible, que es el mapa de dónde viven esos nombres:**
+
+| dónde | qué dice |
+|---|---|
+| `monitor_service.py:1049`, `coco.py:682` | `count_attractors` *"conserva el nombre por regresión"* |
+| `monitor_service.py:956` | *"A_actual y A0 **SON** N_eff y N_eff0 — solo se llaman distinto"* |
+| `monitor_service.py:960` | el panel lleva **el mismo número** en `D_ckm` y en `D_masa_cuencas` |
+| `coco.py:294-298`, `:369` | el estado publica `A_current`, `A0`, `frac_rec` |
+| `calibrate.py:264`, `:286` | `A0 = count_attractors(...)` y, en el mismo dict, `"n_eff": float(A)` — los dos nombres conviven en una línea |
+| `landscape_engine.py:306-310` | el conteo de verdad, `deprecated_count_attractors`, y su sesgo |
+
+**La razón escrita ya no se sostiene:** dice *"por regresión"*, y el proyecto derogó la regresión (*"chau
+regresión"*). El nombre quedó; su razón no.
+
+**Lo que no puedo medir** (M.M.): si la omisión es deliberada. Lo que sí: los nombres viejos sostienen
+una ontología —*atractores*, objetos discretos que se cuentan y se pierden— y `N_eff` no es eso.
+Mientras el nombre diga `A0`, `D_ckm` se lee como *"cuántos se perdieron"* y **no pide** la pregunta que
+el rename sí pediría: distancia entre qué y qué. Y ése es justo el frente abierto (calibración,
+umbrales). Renombrar es corregir, y acá no se corrige en silencio.
+
+### Q2 — permutar roles de devices entre providers y modelos
+
+delamor: *"vamos a hacer un test del vivo, cuando las condiciones sean propicias… pienso en permutar
+roles de devices entre providers, entre modelos… cambiarle el rol o el nombre de device D a qwen,
+darle device A por ejemplo, y luego observar, en estado de pregunta, abierto, qué sucede en el test
+IAP"*.
+
+Queda anotado como **diseño de un caso futuro**, no como pedido. Un vivo no se corre sin orden
+explícita, y las condiciones que él mismo enumera —límite de uso, créditos, providers— no están
+declaradas en ningún lado todavía. El antecedente más cercano es P14 (los drivers declaran archivos de
+estado, puerto y providers; IAP no), que sigue **sin decisión**.
+
+### Q3 — FREE WILL: si un device se va, ¿se lo vuelve a invitar?
+
+delamor: *"si qwen deja la experiencia ie LEAVE, no invitarlo a participar sería congruente a no
+obligarlo? a no instanciarlos? y además qué sucede al hacer la primitiva LEAVE? cierra la instancia del
+LLM?"* — y después, precisando: *"a eso me refería, a que los intentos nuevos no lo instancien. No a
+que ese registro de 'se fue' persistido lo determine en forma mecánica"*.
+
+**Lo medido, en respuesta a la parte factual:**
+- `LEAVE` **no es una primitiva**: es una de las tres palabras de decisión del ODA, junto con
+  `INTERACT` y `OP_SILENCE` (`autonomous_device.py:630`). Las primitivas del canal son las ocho
+  `@mcp.tool` del server; la que corresponde es **`leave_channel`** (`mcp_server.py:173-177`), el
+  simétrico de `join_channel`. delamor lo corrigió él mismo en el chat.
+- **No cierra ninguna instancia de LLM: no hay instancia que cerrar.** Cada turno es una llamada HTTP
+  al provider; el modelo no está instanciado. El que está instanciado es el **device**. `LEAVE` hace
+  un tick, llama `leave_channel` → `device_manager.unregister`, pone `_se_fue = True` y loguea
+  (`autonomous_device.py:704-709`). Lo que termina es la inscripción en el canal y el loop del device
+  (`:889`, `:953`), y queda en el resumen como `left_by_own_decision` (`:972`).
+- `_se_fue` vive en el objeto, en memoria del proceso, y **no se persiste** en el estado del canal.
+
+**A3, una corrección mía registrada:** propuse que, para que "no volver a invitarlo" fuera
+implementable, el `LEAVE` tenía que dejar marca afuera del proceso. delamor lo corrigió: *"no a que ese
+registro de 'se fue' persistido lo determine en forma mecánica"*. Lo que propuse era un candado —una
+marca que decide sola—, y eso convierte el principio en mecanismo. Es sesgo de control.
+
+**Sin eso:** no hace falta construir nada. El `LEAVE` ya queda legible donde se arma el intento
+siguiente —el resumen de la corrida y la línea `LEAVE` del `device_log.jsonl`—, y a quién se invita lo
+declara el caso. La decisión es de delamor y queda atribuida. Lo que haría falta construir es justo lo
+que no va.
+
+A1.PAUSA. El texto 13 está cerrado en sus tres puntos; las tensiones del punto 1 y estas tres preguntas
+esperan.

@@ -1,10 +1,10 @@
 # ESTADO — TASK_calibrate_en_el_build_v2
 
-*Última escritura: 2026-10-27 03:10 UTC, por Claude Opus 5 (Code, Codespace).*
+*Última escritura: 2026-10-27 03:35 UTC, por Claude Opus 5 (Code, Codespace).*
 
 ## Último CP cerrado
 
-**CPa y CP0**, los dos del 27 oct, en un commit cada uno. Ninguno necesitaba OK (lo dice la TASK).
+**CP1**, con el OK de Opus (texto 10). Antes, **CPa y CP0**, que no necesitaban OK.
 
 - **CPa** (`74d97fc`): P12, P15 y P16 registradas en `DECISIONES_opus.md`; los contadores de la
   línea de `rebuild_decisions.jsonl` se capturan al decidir, no después del reset; un test nuevo y
@@ -14,6 +14,25 @@
 - **CP0**: la evaluación de D1–D6' contra el repo, sin código. Reporte en la BANDEJA, 02:58 UTC.
 
 **Suite: 851 passed, 7 xfailed, 0 failed.** Las 13 de `test_should_rebuild_conectado.py`, en verde.
+
+## CP1 — cerrado el 27 oct
+
+D1 + D2 + D5 implementados: el origen nace por su condición propia
+(`CorpusService.build_first_W()`), pasa por el punto único de calibración del canal
+(`_calibrar_antes_de_instalar`, que llaman los dos caminos) y deja su línea en
+`rebuild_decisions.jsonl` con causa `bootstrap`, escrita aparte.
+
+- **El caso 2 del REG queda cerrado:** el primer ciclo ya no trae `calibration: None` sino un
+  registro con su estado y su `w_sha`. Con el corpus de test da `no_calibrado: sin_separacion`, así
+  que los umbrales siguen en 0,40 / 0,60 — **pero ahora se ve por qué**.
+- **Divergencia declarada, no corregida:** `w_version` marca el origen como `"rebuild"`. Hay un test
+  que afirma la divergencia para que una corrección futura no pase sola.
+- **Se movieron 5 tests, no 3**, y los dos que mi CP0 no vio afirmaban sobre **claves del panel**
+  (`ultimo_rebuild_por_decision`, `punto_calibrate`), no sobre el archivo de decisiones. Los cinco
+  reescritos para afirmar lo mismo de otra forma; el del CP5 cambió el contenido de lo que afirma,
+  con su docstring.
+- Tests nuevos: `tests/test_bootstrap_calibra_y_registra.py`, 6.
+- Suite al cerrar: **857 passed, 7 xfailed, 0 failed**. Las 13 de la PoC, en verde.
 
 ## Qué espera, y de quién
 

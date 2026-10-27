@@ -33,6 +33,12 @@ panel declara dónde escribió.
 
 **El rebuild lo decide esta clase, no la ingesta** (TASK_should_rebuild_
 conectado_v1):
+  - **el nacimiento de W no es una decisión del régimen** (D1, 27 oct 2026):
+    tiene su condición propia —no hay W y `no_rebuild_reason` devuelve `None`—,
+    **no es un criterio de la jerarquía** y no mira ningún contador. Lo instala
+    `CorpusService.build_first_W()` y deja su línea en
+    `rebuild_decisions.jsonl` con causa `bootstrap`. Desde ese día la ingesta
+    recibe `allow_first_W=False`: **ya no construye ninguna W**;
   - la señal se calcula con la jerarquía **estructural > volumen > tiempo**,
     y `_last_rebuild_causa` dice **cuál** de los tres disparó (CP2);
   - **cuáles votan** lo decide `criterios_rebuild`. El default son los tres, o
@@ -111,7 +117,7 @@ if str(_SERVICES_DIR) not in sys.path:
     sys.path.insert(0, str(_SERVICES_DIR))
 
 from behavior_graph import BehaviorGraph  # noqa: E402
-from ckm_landscape_config import CKMlandscapeConfig  # noqa: E402
+from ckm_landscape_config import CAUSA_BOOTSTRAP, CKMlandscapeConfig  # noqa: E402
 from corpus_service import CorpusService  # noqa: E402
 from firma_ckm import FirmaService  # noqa: E402
 from monitor_service import MonitorService  # noqa: E402
@@ -380,34 +386,88 @@ class CKMMonitor:
             self._corpus.ingest(
                 [message.text],
                 landscape_signal=signal,
-                # **El primer W espera ≥ 30 mensajes de ≥ 2 devices** (tabla
-                # de la Serie 2). La cantidad la mira `CorpusService` con su
-                # `min_texts`; cuántos devices hay sólo lo sabe el canal.
+                # **La ingesta no construye ninguna W** (D1, 27 oct 2026).
+                # El nacimiento tiene su condición propia y ocurre en el bloque
+                # de abajo, después de esta ingesta y antes de `evaluate`.
                 #
-                # **Acá se probó `allow_first_W=False` el 24 oct 2026 (CP1 de
-                # `TASK_calibrate_en_el_build_v1`) y se revirtió el mismo
-                # día.** La idea era que `ingest` no construyera ninguna W,
-                # para que la primera naciera por el camino de la decisión y
-                # pasara por `calibrate`. **La suite lo tumbó: 30 failed, 6
-                # errors.**
+                # **Por qué acá va `False` fijo y no el permiso de devices.**
+                # El permiso sigue existiendo —el primer W espera ≥ 30 mensajes
+                # de ≥ 2 devices, tabla de la Serie 2—, pero ahora lo evalúa
+                # **quien construye el origen**, no la ingesta. La cantidad la
+                # mira `CorpusService` con su `min_texts`; cuántos devices hay
+                # sólo lo sabe el canal; y las dos juntas ya están escritas una
+                # sola vez en `no_rebuild_reason`.
                 #
-                # El motivo, medido: el bloque de la decisión construye la
-                # primera W **sólo si algún criterio vota**, y el de volumen
-                # pide `_textos_desde_rebuild >= rebuild_every`. En el vivo
-                # eso se cumple —`min_texts = 30` contra `rebuild_every = 10`,
-                # el contador ya pasó 10 cuando el corpus llega a 30—, pero
-                # **en las configuraciones donde `min_texts < rebuild_every`
-                # W nace más tarde o no nace**, y media suite usa
-                # `min_texts = 3` o `5`.
-                #
-                # Así que `ingest` **no es sólo una segunda puerta: es la que
-                # hace que W nazca cuando el corpus alcanza su umbral,
-                # independientemente del ritmo del rebuild.** Eso no estaba en
-                # la TASK y es lo que la suite agregó.
-                allow_first_W=(
-                    len(self._devices_seen) >= self._min_devices_first_w
-                ),
+                # **Acá se probó `allow_first_W=False` el 24 oct y se revirtió
+                # el mismo día** (CP1 de la v1 de la TASK): la suite lo tumbó
+                # con **30 failed, 6 errors**, porque entonces el nacimiento
+                # pasaba a depender de que **votara un criterio**, y el de
+                # volumen pide `_textos_desde_rebuild >= rebuild_every`: donde
+                # `min_texts < rebuild_every`, W nacía tarde o no nacía. **D1 no
+                # es eso:** el origen **no es un criterio de la jerarquía** y no
+                # mira ningún contador, así que nace en el mismo mensaje en que
+                # nacía por la ingesta.
+                allow_first_W=False,
             )
+
+        # ── D1 + D2 + D5 — el nacimiento de W (27 oct 2026) ────────────────
+        # **La condición propia del origen**, y no un criterio: no hay W y el
+        # corpus ya tiene con qué (`no_rebuild_reason` mira las dos compuertas,
+        # cantidad y permiso de devices, y está escrita una sola vez).
+        #
+        # Va **acá**: después de la ingesta —el texto de este mensaje cuenta
+        # para la primera W— y **antes** de `evaluate`, que es quien abre el
+        # ciclo `bootstrap` y hace nacer a COCO con la vara que sale de la
+        # calibración de abajo.
+        #
+        # **El orden es el de D2**: W candidata → calibrar → instalar → COCO
+        # lee. Lo mismo que hace el camino del régimen, y por el mismo punto
+        # único (`_calibrar_antes_de_instalar`).
+        if self._corpus.mode == "accumulation":
+            allow_first_w = (
+                len(self._devices_seen) >= self._min_devices_first_w
+            )
+            if self._corpus.no_rebuild_reason(allow_first_w) is None:
+                # Los contadores **del momento de decidir**, antes de que el
+                # reset de más abajo los toque (misma razón que en el bloque de
+                # la decisión). En el origen son los que son: el estructural no
+                # pudo evaluarse porque todavía no hubo ninguna evaluación con
+                # corpus establecido, y `n_puntos_d_ckm = 0` es cierto acá.
+                contadores_del_origen = {
+                    "ciclos_sin_rebuild": self._ciclos_sin_rebuild,
+                    "n_puntos_d_ckm": len(self._d_ckm_history),
+                }
+                self._punto_calibrate = self._calibrar_antes_de_instalar(
+                    clock, allow_first_w
+                )
+                if self._corpus.build_first_W(allow_first_W=allow_first_w):
+                    # **D5: el origen deja su línea.** Era el único cambio de W
+                    # de una corrida sin registro en `rebuild_decisions.jsonl`
+                    # (hallazgo B del texto 08). Se escribe **aparte**, no por
+                    # `rebuild_por_decision`: el origen no es una decisión del
+                    # régimen, así que no toma su camino ni su `causal_event`.
+                    #
+                    # El `st` que se le pasa al registro es `{"rebuild": True}`
+                    # porque eso es lo que pasó: W se instaló. No hay
+                    # `motivo_no_rebuild` que declarar.
+                    self._ultimo_rebuild = {
+                        "causa": CAUSA_BOOTSTRAP,
+                        # **Declarado:** `w_version` marca el origen como
+                        # `"rebuild"`, igual que un rebuild por ingesta, porque
+                        # se instala con `_rebuild()`. La divergencia está
+                        # declarada y no se corrige acá (decisión de Opus, 27
+                        # oct): se revisa con el renombre general.
+                        "causal_event": "rebuild",
+                        "ocurrio": True,
+                        "motivo_no_rebuild": None,
+                        "w_sha": self._corpus.w_sha(),
+                    }
+                    self._ultimo_rebuild["registro"] = (
+                        self._registrar_decision(
+                            CAUSA_BOOTSTRAP, {"rebuild": True}, sha_before,
+                            clock, contadores_del_origen,
+                        )
+                    )
         sha_after = self._corpus.w_sha()
 
         self._message_count += 1
@@ -514,25 +574,13 @@ class CKMMonitor:
             allow_first_w = (
                 len(self._devices_seen) >= self._min_devices_first_w
             )
-            # ── `calibrate`, ANTES del rebuild (delamor, 19 oct) ───────────
-            # Sólo si el rebuild va a ocurrir: calibrar una W que no se va a
-            # instalar sería calibrar contra nada. El motivo lo da el corpus,
-            # que es quien tiene la condición.
-            reason = self._corpus.no_rebuild_reason(allow_first_w)
-            if reason is None:
-                self._punto_calibrate = self._calibrate(clock)
-            else:
-                # **No se calibró, y se ve por qué.** No es "calibró y no
-                # separó" (`no_calibrado`): es que no hubo salto que calibrar.
-                self._punto_calibrate = {
-                    "existe": True,
-                    "implementado": True,
-                    "task": "TASK_calibrate_mecanismo_v1",
-                    "state": NULO_CALIBRADO,
-                    "values": {},
-                    "reason": reason,
-                    "moment": "antes del rebuild, sobre la W candidata",
-                }
+            # ── `calibrate`, ANTES de instalar (delamor, 19 oct; D2) ───────
+            # **El mismo punto que usa el origen.** Desde el 27 oct la
+            # calibración no cuelga de la decisión sino de *"antes de instalar
+            # una W"*, y los dos caminos entran por la misma función.
+            self._punto_calibrate = self._calibrar_antes_de_instalar(
+                clock, allow_first_w
+            )
             st = self._corpus.rebuild_por_decision(
                 self._last_rebuild_causa,
                 # **El mismo permiso que en la ingesta.** Sin esto, el criterio
@@ -577,6 +625,46 @@ class CKMMonitor:
         # `save()` de CorpusService, que también guarda en cada ingesta.
         self._guardar_rebuild_state()
 
+    def _calibrar_antes_de_instalar(
+        self, clock: "dict | None", allow_first_w: bool
+    ) -> dict:
+        """
+        **El punto único de calibración: antes de instalar una W.** Lo llaman
+        los **dos** caminos — el del origen y el del régimen (D2 de
+        `TASK_calibrate_en_el_build_v2`, 27 oct 2026).
+
+        **Por qué un solo punto.** Hasta hoy la calibración colgaba del bloque
+        de la decisión del régimen, y **el origen no es una decisión del
+        régimen**: por eso la primera W nunca pasaba por acá y el COCO del
+        primer ciclo arrancaba con los defaults por construcción. Con la
+        calibración colgada de *"antes de instalar"*, el origen entra por el
+        mismo lugar sin agregar una causa a la jerarquía.
+
+        **Y por qué en el canal y no en `CorpusService`** (decisión de Opus, 27
+        oct): `corpus_service` es el **productor** de W y `calibrate` es
+        **instrumento**; que el productor llame al instrumento cruza el límite
+        entre las partes. Además, en el régimen por default
+        (`rebuild_suspendido=False`) `_rebuild` corre en **cada ingesta**, así
+        que colgarlo de ahí calibraría en cada mensaje de todos los tests y
+        drivers de ese régimen — 0,060 s por corrida, medido.
+
+        Devuelve lo que va al panel. Si el corpus no tiene con qué, **no se
+        calibró y se ve por qué**: `nulo_calibrado` con la razón del corpus, que
+        no es lo mismo que `no_calibrado` —calibró y no separó—.
+        """
+        reason = self._corpus.no_rebuild_reason(allow_first_w)
+        if reason is not None:
+            return {
+                "existe": True,
+                "implementado": True,
+                "task": "TASK_calibrate_mecanismo_v1",
+                "state": NULO_CALIBRADO,
+                "values": {},
+                "reason": reason,
+                "moment": "antes de instalar, sobre la W candidata",
+            }
+        return self._calibrate(clock)
+
     def _calibrate(self, clock: "dict | None" = None) -> dict:
         """
         Corre `calibrate` **sobre la W candidata, antes de instalarla**, y deja
@@ -607,14 +695,18 @@ class CKMMonitor:
         (`w_sha_live_at_calibration`). Si fueran iguales habiendo cambiado W,
         la calibración habría corrido después de instalar.
 
-        **Sólo lo llama el camino del rebuild** (`on_message`, el bloque de la
-        decisión). La primera W la construye `ingest()` antes de ese bloque,
-        así que **no pasa por acá** y el COCO del primer ciclo arranca con los
-        defaults. Medido en las dos corridas vivas: su `calibration.estado` es
-        `None` —ni siquiera `nulo_calibrado`—, 11 de 51 evaluaciones en el
-        intento 2 y 4 de 27 en el 3
+        **Lo llaman los dos caminos, por un solo punto**
+        (`_calibrar_antes_de_instalar`): el del origen y el del régimen. Hasta
+        el 27 oct 2026 **sólo** lo llamaba el camino del rebuild, y la primera
+        W la construía `ingest()` antes de ese bloque, así que **no pasaba por
+        acá** y el COCO del primer ciclo arrancaba con los defaults por
+        construcción. Medido en las dos corridas vivas de entonces: su
+        `calibration.estado` era `None` —ni siquiera `nulo_calibrado`—, 11 de 51
+        evaluaciones en el intento 2 y 4 de 27 en el 3
         (`registers/REG_calibrate_no_corre_en_el_build_v1.md`, que es el REG
-        con el OK de delamor; el borrador en `docs/` ya no existe).
+        con el OK de delamor; el borrador en `docs/` ya no existe). **Eso es lo
+        que el D1 + D2 de `TASK_calibrate_en_el_build_v2` cerró**; este párrafo
+        describe lo que había, no lo que hay.
 
         No instancia nada nuevo: usa `services/calibrate.py` donde está, y le
         pasa una copia que `calibrate` vuelve a copiar y no toca.

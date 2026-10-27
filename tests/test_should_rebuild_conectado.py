@@ -397,14 +397,29 @@ def test_cp2_en_acumulacion_no_reconstruye_y_lo_dice(monitor) -> None:
 
 
 def test_cp2_el_panel_lleva_la_causa(monitor) -> None:
-    """El `causal_event` en el panel (TASK, punto 2)."""
+    """
+    El `causal_event` en el panel (TASK, punto 2).
+
+    **Qué cambió el 27 oct (D5).** `ultimo_rebuild_por_decision` ya no es `None`
+    antes del primer salto: **el origen lo llena**, con causa `bootstrap` y
+    `causal_event: "rebuild"` —la divergencia declarada del CP1—. Lo que este
+    test afirma no cambió: que el panel diga **cuál** fue la causa y que `None`
+    en `rebuild_causa` sea *"no votó ningún criterio"* y no *"no sé"*. El origen
+    no es un criterio, así que `rebuild_causa` sigue en `None`.
+    """
     cm = monitor
     for t in TODOS[:8]:
         cm.on_message(_Msg(t))
     panel = cm.get_state()
     assert panel["rebuild_senal"] is False
     assert panel["rebuild_causa"] is None, "None es 'no hubo', no 'no sé'"
-    assert panel["ultimo_rebuild_por_decision"] is None
+    # El origen, y sólo el origen.
+    ur = panel["ultimo_rebuild_por_decision"]
+    assert ur is not None, "el origen no quedó en el panel"
+    assert ur["causa"] == "bootstrap"
+    assert ur["causal_event"] == "rebuild", (
+        "divergencia declarada del CP1: el origen se instala con _rebuild()"
+    )
 
     cm.on_message(_Msg(TODOS[8]))
     panel = cm.get_state()
@@ -422,14 +437,32 @@ def test_cp2_el_punto_de_calibrate_ahora_CORRE(monitor) -> None:
 
     Lo que **no** cambió: que el punto esté en el panel. Lo que cambió es qué
     dice.
+
+    **Y cambió otra vez el 27 oct (D2).** Antes del primer salto el punto ya
+    **no** es `None`: la calibración dejó de colgar de la decisión y cuelga de
+    *"antes de instalar una W"*, así que **el origen pasa por el mismo punto**.
+    Ese era el agujero que el REG midió — el COCO del primer ciclo arrancaba con
+    los defaults por construcción. Acá se afirma que el registro del origen está
+    y que el del salto lo reemplaza con **su** W.
     """
     cm = monitor
     for t in TODOS[:8]:
         cm.on_message(_Msg(t))
-    assert cm.get_state()["punto_calibrate"] is None, "no hubo salto todavía"
+    pc_origen = cm.get_state()["punto_calibrate"]
+    assert pc_origen is not None, "el origen no pasó por el punto de calibración"
+    assert pc_origen["w_sha_live_at_calibration"] is None, (
+        "había W viva al calibrar el origen"
+    )
+    sha_del_origen = pc_origen["w_sha"]
 
     cm.on_message(_Msg(TODOS[8]))
     pc = cm.get_state()["punto_calibrate"]
+    assert pc["w_sha"] != sha_del_origen, (
+        "el registro del salto quedó con la W del origen"
+    )
+    assert pc["w_sha_live_at_calibration"] == sha_del_origen, (
+        "al calibrar el salto, la W viva tenía que ser la del origen"
+    )
     assert pc["existe"] is True
     assert pc["implementado"] is True
     assert pc["task"] == "TASK_calibrate_mecanismo_v1"
@@ -517,11 +550,17 @@ def test_cp3_el_volumen_vuelve_a_disparar_al_completar_el_ciclo(monitor) -> None
 
 def test_cp3_la_cuenta_se_reinicia_tambien_en_el_rebuild_por_ingesta(monitor) -> None:
     """
-    El reset está atado al **sha**, no a la vía: la primera W la construye la
-    ingesta, y el ciclo que nace ahí arranca su cuenta en cero igual.
+    El reset está atado al **sha**, no a la vía: el ciclo que nace con la
+    primera W arranca su cuenta en cero igual.
 
     Si el reset estuviera sólo en el camino de la decisión, el primer ciclo
     contaría los textos de la acumulación y dispararía antes de tiempo.
+
+    **El nombre del test es de antes del 27 oct 2026** y queda: desde D1 la
+    primera W **no** la construye la ingesta (recibe `allow_first_W=False`) sino
+    `build_first_W()`, por la condición propia del origen. Lo que el test afirma
+    **se fortalece**: el reset ocurre aunque la vía haya cambiado, que es
+    exactamente lo que significa estar atado al sha y no a la vía.
     """
     cm = monitor
     cm.on_message(_Msg(TODOS[0]))
@@ -681,14 +720,26 @@ def test_cp2b_los_contadores_de_la_linea_son_los_del_momento_de_decidir(
 def test_cp2b_las_vueltas_sin_senal_no_se_registran(monitor) -> None:
     """
     Acordado: **una línea por mensaje sería el ruido** que el filtro del canal
-    existe para evitar. Que la señal nunca se levantó se lee de que el archivo
-    esté vacío, más el panel.
+    existe para evitar.
+
+    **Qué cambió el 27 oct 2026 (D5).** El archivo ya no está vacío: **el origen
+    deja su línea**, con causa `bootstrap`. Era el único cambio de W de una
+    corrida que no quedaba registrado (hallazgo B del texto 08). Lo que este
+    test afirma **no cambió** —ninguna vuelta sin señal se registra—, y ahora lo
+    afirma de la única forma que lo distingue: hay **exactamente una** línea, y
+    es la del origen, que **no es una decisión del régimen**.
     """
     cm = monitor
-    for t in TODOS[:8]:                        # ninguna señal
+    for t in TODOS[:8]:                        # ninguna señal del régimen
         cm.on_message(_Msg(t))
-    assert cm.decisiones_de_rebuild() == []
-    assert cm.get_state()["n_decisiones_registradas"] == 0
+
+    d = cm.decisiones_de_rebuild()
+    assert len(d) == 1, f"se registró algo más que el origen: {d}"
+    assert d[0]["causa"] == "bootstrap"
+    assert cm.get_state()["n_decisiones_registradas"] == 1
+    # Y ninguna de las tres causas del régimen aparece.
+    assert not [x for x in d if x["causa"] != "bootstrap"]
+    assert cm._last_rebuild_causa is None, "votó un criterio de la jerarquía"
 
 
 def test_cp2b_un_reinicio_a_mitad_de_meseta_no_reinicia_los_contadores(
@@ -741,12 +792,17 @@ def test_cp2b_el_jsonl_sobrevive_al_reinicio_y_la_cuenta_sigue(
     cm1 = CKMMonitor(min_texts=3, rebuild_every=6, min_devices_first_w=1, state_dir=state)
     for t in TODOS:
         cm1.on_message(_Msg(t))
-    assert len(cm1.decisiones_de_rebuild()) == 1
+    # **Dos desde el 27 oct (D5):** la del origen (`bootstrap`) y la del primer
+    # salto del régimen. Lo que el test afirma —append-only, y el índice sigue
+    # de donde iba— no cambió; cambió el número.
+    d1 = cm1.decisiones_de_rebuild()
+    assert len(d1) == 2, f"decisiones registradas: {[x['causa'] for x in d1]}"
+    assert d1[0]["causa"] == "bootstrap", "la primera no es la del origen"
 
     monkeypatch.setattr(CKMMonitor, "_instance", None)
     cm2 = CKMMonitor(min_texts=3, rebuild_every=6, min_devices_first_w=1, state_dir=state)
-    assert len(cm2.decisiones_de_rebuild()) == 1, "el reinicio pisó el jsonl"
-    assert cm2._n_decisiones == 1, "el índice `t` no siguió de donde iba"
+    assert len(cm2.decisiones_de_rebuild()) == 2, "el reinicio pisó el jsonl"
+    assert cm2._n_decisiones == 2, "el índice `t` no siguió de donde iba"
     monkeypatch.setattr(CKMMonitor, "_instance", None)
 
 
@@ -1009,15 +1065,26 @@ def test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False(
     tmp_path, monkeypatch
 ) -> None:
     """
-    **Medido antes de afirmarlo: 0 decisiones en 9 mensajes.**
+    **Lo que este test afirma cambió el 27 oct 2026, y no es un número** (D5;
+    delamor: *"cambia el contenido de lo que afirma, no un número. CONFIRMO"*).
 
-    El mecanismo: los tres contadores se reinician **cuando cambia el sha**, y
-    en este régimen la ingesta reconstruye W en cada mensaje. Así que ninguno
-    de los tres llega a su umbral y la señal no se levanta nunca.
+    **Lo que afirmaba:** 0 decisiones en 9 mensajes, medido. En el régimen
+    `rebuild_suspendido=False` la ingesta reconstruye W en cada mensaje, los
+    tres contadores se reinician **cuando cambia el sha**, y entonces ninguno
+    llega a su umbral: *"el camino nuevo **no participa**, no es que participe y
+    dé lo mismo"*.
 
-    Es lo que hace que el CP5 sea una regresión real y no una coincidencia: en
-    este régimen el camino nuevo **no participa**, no es que participe y dé lo
-    mismo.
+    **Lo que afirma ahora, y por qué.** Con D1 el **origen** dejó de ser una
+    decisión del régimen: tiene su condición propia, **no mira ningún contador**
+    y por eso **sí ocurre** en este régimen — y con D5 deja su línea. Así que la
+    frase vieja dejó de ser cierta como estaba escrita: hay **una** decisión, la
+    del origen.
+
+    Lo que el CP5 vino a proteger **sigue en pie y es lo que se afirma**: de los
+    **tres criterios de la jerarquía**, ninguno participa en este régimen. Eso
+    se afirma ahora sobre las causas —ninguna línea con `estructural`,
+    `volumen` ni `tiempo`— en vez de sobre el archivo vacío, que mezclaba el
+    origen con el régimen.
     """
     monkeypatch.setattr(CKMMonitor, "_instance", None)
     cm = CKMMonitor(min_texts=3, rebuild_every=6, min_devices_first_w=1, state_dir=tmp_path / "_state")
@@ -1030,9 +1097,16 @@ def test_cp5_el_camino_de_la_decision_queda_INERTE_con_suspendido_False(
 
     assert cm._last_rebuild_causa is None
     assert cm._last_rebuild_signal is False
-    assert cm.decisiones_de_rebuild() == [], (
-        f"hubo decisiones en un régimen donde no debería haberlas: "
-        f"{cm.decisiones_de_rebuild()}"
+
+    d = cm.decisiones_de_rebuild()
+    # Exactamente una, la del origen, y es la única.
+    assert len(d) == 1, (
+        f"en este régimen sólo el origen deja línea: {[x['causa'] for x in d]}"
+    )
+    assert d[0]["causa"] == "bootstrap"
+    assert not [x for x in d if x["causa"] in ("estructural", "volumen",
+                                               "tiempo")], (
+        f"participó un criterio de la jerarquía: {[x['causa'] for x in d]}"
     )
     monkeypatch.setattr(CKMMonitor, "_instance", None)
 

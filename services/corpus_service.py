@@ -13,13 +13,22 @@ completa acá (regla del 10 oct: el docstring se actualiza con el código).
      implicar rebuilds continuos"* — este régimen es el que esa frase descarta,
      y queda como el de los tests y drivers que ya lo usaban.
   2. `rebuild_suspendido=True` (**el canal vivo**): W se construye **una vez** y
-     la ingesta no la reconstruye más.
+     la ingesta no la reconstruye más. **Desde el 27 oct el canal tampoco deja
+     que la ingesta construya la primera** (le pasa `allow_first_W=False`): el
+     origen lo instala `build_first_W()`, que llama el canal cuando se cumple su
+     condición propia. Ver el punto 4.
   3. **Por decisión**: `rebuild_por_decision(causa)`, con la `causa`
      **obligatoria y sin default** — un rebuild sin causa declarada no es una
      decisión. **`rebuild_suspendido` no lo bloquea**: ese flag impide el
      rebuild automático por ingesta, no el salto decidido. La causa queda en el
      `causal_event` de `w_version`, y con el corpus en acumulación **no
      reconstruye y lo dice** (`rebuild: False`, `motivo_no_rebuild`).
+  4. **El origen**: `build_first_W()` (27 oct 2026, D1 de
+     `TASK_calibrate_en_el_build_v2`). **El nacimiento de W no es una decisión
+     del régimen**: tiene su propia condición —no hay W y `no_rebuild_reason`
+     devuelve `None`— y **no es un criterio de la jerarquía**. Instala con
+     `_rebuild()`, así que el `causal_event` sigue siendo `"rebuild"` y no
+     `rebuild_por_decision:*`. Quién lo llama y cuándo es del canal, no de acá.
 
 Quién decide el salto no vive acá: lo decide `CKMMonitor` con la jerarquía
 estructural > volumen > tiempo (`TASK_should_rebuild_conectado_v1`). `_rebuild`
@@ -397,6 +406,45 @@ class CorpusService:
         if self._W is None and not allow_first_W:
             return "primer_W_no_habilitado"
         return None
+
+    def build_first_W(self, allow_first_W: bool = True) -> bool:
+        """
+        **Instala la PRIMERA W.** `True` si la construyó; `False` si no había
+        nada que construir. (D1 de `TASK_calibrate_en_el_build_v2`, 27 oct 2026.)
+
+        **Por qué existe, y por qué no es `rebuild_por_decision`.** El
+        nacimiento de W **no es una decisión del régimen**: `should_rebuild` y
+        `rebuild_por_decision` son del flujo en régimen, y el origen ocurre una
+        vez, antes de que haya algo contra qué medir un gradiente o un ciclo.
+        Hasta el 27 oct lo construía `ingest`, y por eso **no pasaba por el
+        punto de calibración**, que vivía en el bloque de la decisión: el cambio
+        de sha ponía en cero los tres contadores en la misma vuelta, así que
+        ningún criterio podía votar en el mensaje en que W nacía (candado doble,
+        medido por Code en el V1 del texto 08).
+
+        **Instala con `_rebuild()`**, no con `rebuild_por_decision`, así que el
+        `causal_event` de `w_version` sigue siendo `"rebuild"`. **Divergencia
+        declarada, sin corregir** (decisión de Opus, 27 oct): `w_version` marca
+        el origen igual que un rebuild por ingesta; se revisa con el renombre
+        general, no acá. Lo que sí distingue al origen es su línea en
+        `rebuild_decisions.jsonl`, con causa `bootstrap`, que escribe el canal.
+
+        **La condición es la misma que ya estaba escrita una sola vez**
+        (`no_rebuild_reason`), así que acá no se repite a mano: con W ya
+        construida devuelve `False` sin tocar nada —el origen ocurre una vez— y
+        con el corpus en acumulación o sin el permiso de devices, también.
+
+        **Puede devolver `False` habiendo pasado la condición:** si la
+        extracción no da nodos, `_rebuild` vuelve sin instalar. Por eso lo que
+        se devuelve es si W **existe** después, no si la condición se cumplió.
+        """
+        if self._W is not None:
+            return False
+        if self.no_rebuild_reason(allow_first_W) is not None:
+            return False
+        self._rebuild()
+        self.save()
+        return self._W is not None
 
     def rebuild_por_decision(self, causa: str,
                              allow_first_W: bool = True) -> dict:

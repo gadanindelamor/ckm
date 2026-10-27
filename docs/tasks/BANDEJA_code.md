@@ -15202,3 +15202,137 @@ reportado para que lo decida quien corresponda.
 tiene sólo los tres archivos de agosto.
 
 **A1.PAUSA.**
+
+---
+## REPORTE CP1 — D1 + D2 + D5. El origen nace por su condición, calibra y deja su línea — 2026-10-27 03:32 UTC
+
+*Claude Opus 5 (Code, Codespace). Con el OK de Opus (texto 10). De corrido dentro del CP1, A1.PAUSA
+al terminar. Regla de `.py`: A1.PAUSA al acceder —releí los tramos exactos antes de escribir, no
+afirmé desde la lectura de hace unas horas—, y después de modificar, el docstring propio más el
+`grep` de los nombres tocados.*
+
+### D1 — el nacimiento tiene su condición propia
+
+**`services/corpus_service.py`: `build_first_W()` nuevo** (`:410`). Instala la primera W y devuelve
+si la construyó. No repite la condición a mano: pregunta a `no_rebuild_reason`, que ya la tenía
+escrita una sola vez. Devuelve `False` también si la extracción no dio nodos, así que lo que
+devuelve es si W **existe** después, no si la condición se cumplió.
+
+**`iap_chatroom/ckm_monitor.py`: la ingesta ya no construye ninguna W** (`:404`,
+`allow_first_W=False` fijo) y el nacimiento vive en un bloque propio (`:407-462`), **después** de la
+ingesta —el texto de este mensaje cuenta para la primera W— y **antes** de `evaluate`, que es quien
+abre el ciclo `bootstrap` y hace nacer a COCO.
+
+**Por qué no repite lo de `a7d065f`.** Aquél hizo del bootstrap una **cuarta causa de la
+jerarquía**, y entonces el nacimiento pasaba a depender de que votara un criterio: con
+`min_texts < rebuild_every` W nacía tarde o no nacía, y la suite lo tumbó con 30 failed. Acá el
+origen **no es un criterio y no mira ningún contador**, así que nace en el mismo mensaje en que
+nacía por la ingesta. Medido: las 13 de la PoC de dominancia quedaron en verde sin tocarlas.
+
+### D2 — un solo punto de calibración, el del canal
+
+**`_calibrar_antes_de_instalar(clock, allow_first_w)`** (`ckm_monitor.py:628`). Lo llaman los **dos**
+caminos: el del origen (`:440`) y el del régimen (`:581`). Adentro está lo que antes vivía suelto en
+el bloque de la decisión: si el corpus no tiene con qué, devuelve `nulo_calibrado` **con la razón
+del corpus**, que no es lo mismo que `no_calibrado`.
+
+Queda en el canal y no en `_rebuild`, como decidió Opus: `corpus_service` es el **productor** de W y
+`calibrate` es **instrumento**. Y lo medido que lo respalda: en el régimen por default
+(`rebuild_suspendido=False`) `_rebuild` corre en **cada ingesta**, a 0,060 s por corrida.
+
+### D5 — el origen deja su línea, escrita aparte
+
+La línea se escribe con `_registrar_decision(CAUSA_BOOTSTRAP, {"rebuild": True}, sha_before, …)`
+(`:447-461`), **no** por `rebuild_por_decision`: el origen no es una decisión del régimen, así que no
+toma su camino. `CAUSA_BOOTSTRAP` se importa de `ckm_landscape_config` (`:114`) — **el nombre ya
+existía** y es el mismo con el que Monitor abre el primer ciclo.
+
+**Divergencia declarada, no corregida** (decisión de Opus): el origen se instala con `_rebuild()`, así
+que `w_version` lo marca `"rebuild"`, igual que un rebuild por ingesta. Lo que lo distingue es su
+línea, no su marca. Hay un test que **afirma la divergencia** para que una corrección futura no pase
+sola: `test_el_causal_event_del_origen_sigue_siendo_rebuild_DIVERGENCIA`.
+
+### Lo que la medición corrigió de mi propio CP0: **se movieron 5 tests, no 3**
+
+Corrí la suite **antes** de tocar ningún test, para medir en vez de predecir. Mi CP0 dijo *"se mueven
+tres tests"*. **Se movieron cinco.** Los dos que no vi:
+
+| test | qué afirmaba | por qué se movió |
+|---|---|---|
+| `test_cp2_el_panel_lleva_la_causa` (`:407`) | `panel["ultimo_rebuild_por_decision"] is None` antes del primer salto | **D5**: el origen llena ese campo del panel |
+| `test_cp2_el_punto_de_calibrate_ahora_CORRE` (`:429`) | `panel["punto_calibrate"] is None`, *"no hubo salto todavía"* | **D2**: el origen pasa por el punto, y pasa antes de cualquier salto |
+
+**Por qué los dejé pasar.** Audité el **archivo** de decisiones (`grep` de `decisiones_de_rebuild` y
+`rebuild_decisions`) y no las **claves del panel** que el origen ahora llena. Es el mínimo local de
+la búsqueda textual, por tercera vez en el día: el concepto era *"qué cosas se vuelven no-vacías
+cuando el origen deja rastro"*, y busqué por el nombre de un archivo.
+
+**Los cinco, reescritos para afirmar lo mismo de otra forma**, no aflojados:
+
+1. `test_cp2b_las_vueltas_sin_senal_no_se_registran`: en vez del archivo vacío, **exactamente una**
+   línea, que es la del origen, y ninguna con causa del régimen.
+2. `test_cp2b_el_jsonl_sobrevive_al_reinicio_y_la_cuenta_sigue`: 1 → **2** (origen + primer salto).
+   Lo que afirma —append-only, el índice sigue— no cambió.
+3. `test_cp5_…_INERTE_con_suspendido_False`: **cambia el contenido de lo que afirma**, como confirmó
+   delamor. Su docstring dice ahora qué afirma y por qué: de los **tres criterios de la jerarquía**
+   ninguno participa en ese régimen —eso es lo que el CP5 vino a proteger y sigue en pie—, y el
+   origen **sí** ocurre, porque no mira contadores. La frase vieja (*"el camino nuevo no
+   participa"*) mezclaba el origen con el régimen.
+4. `test_cp2_el_panel_lleva_la_causa`: afirma que el panel trae el origen con `causa: bootstrap` y
+   `causal_event: "rebuild"` (la divergencia), y que `rebuild_causa` sigue en `None` —el origen no
+   es un criterio—.
+5. `test_cp2_el_punto_de_calibrate_ahora_CORRE`: afirma que el registro del origen está, y que el
+   del salto lo reemplaza con **su** W: `w_sha_live_at_calibration` del salto es el sha del origen.
+
+Y un docstring más, corregido sin que el test se moviera:
+`test_cp3_la_cuenta_se_reinicia_tambien_en_el_rebuild_por_ingesta` decía *"la primera W la construye
+la ingesta"*. Ya no. Lo que el test afirma **se fortaleció** —el reset está atado al sha y no a la
+vía, y ahora la vía cambió y el reset ocurre igual—; el nombre queda, declarado como de antes.
+
+### Tests nuevos: `tests/test_bootstrap_calibra_y_registra.py`, 6
+
+- `test_la_primera_W_pasa_por_calibrate` — `punto_calibrate` existe y tiene uno de los tres estados.
+  `state is None` era el síntoma que midió el REG.
+- `test_la_primera_W_se_calibro_ANTES_de_instalarse` — **el orden, visible sin mirar el código**: en
+  el origen, `w_sha_live_at_calibration` es `None` (no había W viva) y `w_sha` es el de la W que
+  quedó instalada. Si se calibrara después de instalar, el primer campo traería el sha nuevo.
+- `test_el_primer_COCO_ya_no_nace_sin_registro_de_calibracion` — el bloque `coco.calibration` del
+  panel ya no es `None`, y su `w_sha` es el de la W que COCO juzga.
+- `test_el_origen_deja_su_linea_con_causa_bootstrap` — una línea, `w_sha_antes is None` (antes del
+  origen no había W), `w_cambio` True, y la identificación de la serie también en esa línea.
+- `test_el_origen_no_es_un_criterio_de_la_jerarquia` — `CAUSA_BOOTSTRAP` **no** está en
+  `CRITERIOS_POR_DEFAULT`, y en el mensaje del nacimiento ningún criterio votó.
+- `test_el_causal_event_del_origen_sigue_siendo_rebuild_DIVERGENCIA` — la divergencia, afirmada.
+
+**Lo que esos tests NO afirman:** que la calibración **separe**. Si separa o no es del campo.
+
+### El primer ciclo, medido de punta a punta (`min_texts=3`, corpus de test)
+
+| | antes (medido en los dos vivos) | ahora |
+|---|---|---|
+| `coco.calibration` | **`None`** — ni siquiera `nulo_calibrado` | `{"estado": "no_calibrado", causa: "sin_separacion"}` |
+| `punto_calibrate` | `None` hasta el primer salto | existe, con `w_sha_live_at_calibration: None` |
+| `thresholds` | 0.40 / 0.60, `source: "default"` | 0.40 / 0.60, `source: "default"` |
+| línea del origen en el jsonl | **no había** | una, `causa: "bootstrap"` |
+
+**El 0.40 / 0.60 sigue**, y eso es correcto: con este corpus `calibrate` **corrió y no separó**. Lo
+que cambió es que **ahora se ve por qué** — `no_calibrado: sin_separacion` en vez de `calibration:
+None`. **El caso 2 del REG queda cerrado** (*"primer ciclo → no hay calibrate → default"*): hay
+calibrate. El caso 1 —no usar la vara de otra W, declarada como `Threshold`— es D4 y es CP2.
+
+### Lo que no toqué
+
+- **CP2** entero: el lugar de la calibración en la Config, `Threshold`, `duration_s`, el 17%.
+- El **patrón** de `calibrate`, su grilla y su margen.
+- El **`n_runs`**: es de delamor (D6'), y sigue en 200.
+- El **docstring E5** de `ckm_monitor.py:84-90`.
+- El vivo.
+
+### Suite
+
+- **Antes de tocar ningún test**, para medir qué se movía: **5 failed, 846 passed, 7 xfailed**. Las
+  cinco, en `test_should_rebuild_conectado.py`, y ninguna de las 13 de la PoC.
+- **Al cerrar: `857 passed, 7 xfailed, 0 failed`** (122 s, en serie). Son los 851 de antes más los 6
+  nuevos. `test_should_rebuild_conectado.py` solo: **46 passed**, con las 13 en verde.
+
+**A1.PAUSA.**

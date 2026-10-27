@@ -29,3 +29,22 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
 - Los commits de Opus en la PC dejan locks en `.git`. El permiso de borrado se pide de nuevo en cada sesión.
 - En `.git/objects` siguen 302 `tmp_obj_*` viejos; no se tocaron.
 - Hay dos tests sensibles en la suite, reportados por Code: el de β (falso positivo por un timestamp) y `test_oda_continuo` (20 ms, depende de la carga).
+
+---
+## 27 oct, tarde — el texto 13, cerrado por Code
+- **Hecho:**
+  - Monitor, COCO y la copia de W leen `n_runs` y `seed` de un solo lugar en la Config.
+  - Un valor distinto por caso sólo entra si alguien lo firma con `declared_by`.
+  - `w_sha_live_at_calibration` se guarda en el registro de la calibración.
+  - El test de β busca en la estructura.
+  - Suite: 890 passed, 7 xfailed, 0 failed, 49 s.
+- **Decidido por delamor:** el default de muestreo es **200** y la semilla es 0. Reemplaza el 1000 de esta mañana, que queda como traza. A 200 vuelve la dependencia de la semilla medida en el CP0.
+- **Opus (próxima sesión):**
+  - las DEFS v19: §10 y §12 dicen 1000 → 200; los renglones del CP2 pasan a "implementado"; y lo del texto 13;
+  - el docstring de `coco.py:173-175`, que Code midió que ya no es cierto tal como está escrito;
+  - después, el v33.
+- **delamor — lo nuevo, con qué hay que decidir:**
+  - **La copia de W cuenta siempre en `uniform`.** Qué es: `calibrate` no declara `sampling_mode` ni `n_warmup`. Si el canal corriera en `weighted` o `boltzmann`, la vara de COCO saldría de una curva `uniform`. Hoy el canal corre en `uniform` y no se nota. Hay que decidir si `calibrate` lee el modo de muestreo de la Config. Es el patrón de calibrate (E3).
+  - **Dos `seed` con el mismo nombre en `calibrate`.** Qué es: el de `extremo_expansion` elige qué pares invierten el signo; no sortea `sigma_0`. Hay que decidir si se renombra (BABEL). Hoy no se usa en el flujo.
+  - **Q1–Q3, que trajiste vos y quedan abiertas** (BANDEJA, 16:45 UTC): los nombres de `d_ckm`, permutar roles de devices entre providers, y FREE WILL después de un `LEAVE`.
+  - **A5:** `human_device_skin` nace en la BANDEJA, con sus condiciones (17:00–17:10 UTC). No es un pedido.

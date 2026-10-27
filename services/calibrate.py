@@ -88,8 +88,18 @@ CP2.
 ## Recursos
 
 El costo de estimar `N_eff` crece con N y con `n_runs`: cada punto de la grilla
-es un `count_attractors`. Queda **declarado** en `condiciones.n_runs` y
-`condiciones.n_evaluaciones`, no escondido en un default.
+es un `count_attractors`, **menos λ=0, que es el baseline y se reusa** (27 oct
+2026). Con la grilla de 5 puntos son **5** conteos y no 6. Queda **declarado** en
+`condiciones.n_runs` y `condiciones.n_evaluaciones`, no escondido en un default.
+
+**`n_evaluaciones` sigue siendo `len(grilla_lambda)`** y no el número de
+conteos: declara **cuántos puntos tiene la curva**, que es lo que describe la
+medición. El costo en conteos es uno menos, y está dicho acá.
+
+**El `n_runs` del canal vivo no sale de acá.** Desde el 27 oct 2026 lo declara
+el estado (`CKMlandscapeConfig.calibrate_declarado`, D6'), con el **1000** que
+decidió delamor; `N_RUNS_DEFAULT = 200` queda como el default de la función para
+quien la llame sin declararlo, y el registro dice qué quedó sin declarar.
 """
 
 from __future__ import annotations
@@ -255,8 +265,22 @@ def calibrate(
 
     curva = []
     for lam in grilla_lambda:
-        W_lam = interpolar(Wc, W_col, lam)
-        A = count_attractors(W_lam, n_runs=n_runs, seed=seed)
+        if lam == 0.0:
+            # **El punto λ=0 ES el baseline, no otra medición** (27 oct 2026).
+            # `interpolar(Wc, W_col, 0.0)` devuelve `1.0·Wc + 0.0·W_col`, que es
+            # `Wc`, y se contaba con el **mismo** `n_runs` y la **misma** seed:
+            # eran **6** llamadas a `count_attractors` y sólo **5** distintas.
+            # Reusar `A0` baja el costo **un 17%** y **no toca el patrón**: no
+            # cambia la grilla, ni los extremos, ni el margen.
+            #
+            # Se ve en los datos de los dos vivos: `d_ckm` es exactamente
+            # `0.000000` y `frac_rec` exactamente `1.000000` en λ=0 en **las 7
+            # curvas** registradas. La identidad está verificada con la misma
+            # semilla en `tests/test_calibrate_reusa_A0_en_lambda_cero.py`.
+            A = A0
+        else:
+            W_lam = interpolar(Wc, W_col, lam)
+            A = count_attractors(W_lam, n_runs=n_runs, seed=seed)
         curva.append({
             "lambda": float(lam),
             "n_eff": float(A),

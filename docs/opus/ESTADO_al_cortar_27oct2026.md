@@ -100,3 +100,9 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
 - **Próxima sesión de Opus (nueva, desde este ESTADO):** las DEFS v19 primero y después el v33, con el corte del 28 oct. Lo verificado hasta los reportes de hoy entra; el texto 18 entra si llega antes; lo demás va a otros papers.
 - **Los textos 17, 18 y 19:** pendientes. Se evalúan dentro del plan de cierre del repo; delamor decide si Code los hace antes.
 - **Actualización (delamor):** los textos 17, 18 y 19 **esperan** hasta saber qué respaldo necesita el paper. El v33 se escribe primero; de ahí sale qué se le pide a Code.
+
+---
+## 28 oct, último — DEFS v20 y el plan del v33
+- **Hechos:** las DEFS v20 (`docs/defs/DEFS_CKM_estado_actual_v20.md`) y el plan del v33 (`docs/opus/PLAN_v33_28oct2026.md`). El paper no se escribió en esta sesión (decisión de Opus, con el OK de delamor).
+- **Próxima sesión de Opus:** el plan, §5, en orden: leer el plan, las DEFS v20 y el v32 entero → R5 y R6 → el texto para Code con R2, R3 y R4 → el `_borrador` → el `_print` → el review frío.
+- **Para delamor:** pegarle a Code sólo el **punto 1 del texto 18** (el R1 del plan). Los textos 17 y 19 esperan el plan de cierre del repo.

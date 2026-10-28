@@ -75,3 +75,20 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
   - el criterio local es implementación, no paso;
   - `human_device_skin` (¿evolución de la GUI?);
   - Q1–Q3.
+
+---
+## 28 oct — reportes de 14, 15 y 16 leídos; decisiones; textos 17, 18 y 19
+- **Decidido por delamor:**
+  - la medida de referencia es la del código (la banda);
+  - λ\* cerrado por declaración;
+  - IAP declara lo suyo (los archivos de estado, el puerto, los casos en `cases/`, el state_dir por corrida), con la implementación delegada en Opus;
+  - devices: aún no;
+  - la regla amarrete;
+  - todo sin criterio local;
+  - el orden de prioridades: instrumento, IAP, devices, servicios.
+- **Definición candidata, sin registrar:** "W supera el piso" ⇔ N_eff(W, μ) > F(N, μ), con F exacto por forma cerrada. Espera el reporte del texto 18.
+- **Code, en orden:** el 17, el 18 y el 19.
+- **Opus (sesión nueva), por dirección de delamor:** *"cerrar DEFS y paper. luego continuar exploración"*.
+  - **DEFS v19:** 1000 → 200; CP2 implementado; texto 13; E5 resuelto; la medida de referencia (la banda; la validación del paper bajo el hipercubo); el lema del piso (paridad, forma cerrada); la masa de cuenca como una de las mediciones; la torsión y los `rechazados` según la fase; los resultados del 18 y la definición si se registra.
+  - **v33,** según el plan del 26 oct más lo anterior.
+- **Después, la exploración:** el caso 1 (sin definir); otro intento del caso cero con permutación de roles y providers, sin criterio local; el skin.

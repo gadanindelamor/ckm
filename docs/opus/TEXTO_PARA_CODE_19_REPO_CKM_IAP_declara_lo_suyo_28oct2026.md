@@ -3,7 +3,7 @@
 *Va después del 17 y el 18. delamor decide la dirección y delega la implementación en Opus (28 oct): "Soy responsable de la decisión YO, y delego su implementación a Opus VOS".*
 
 ```
-Code: tres puntos de IAP (segunda prioridad, después del instrumento). Por
+Code: cuatro puntos de IAP (segunda prioridad, después del instrumento). Por
 favor, en este orden.
 
 - En el Codespace, el git pull --rebase y el push los hacés vos.
@@ -66,6 +66,20 @@ favor, en este orden.
    - Test: sin --state-dir, el server no escribe en iap_chatroom/_state/;
      el panel dice dónde escribe y si fue pedido; --check deja el
      state_dir del caso como lo encontró.
+
+4. La regla amarrete (delamor, 28 oct: "no seguir corriendo minutos si ya
+   finalizó la interacción… 180 hrs por mes de Codespace"; "ponele así,
+   como Newton"). Hay interacción mientras quedan al menos dos devices
+   activos en el canal. Si queda uno o ninguno, el caso termina antes de
+   DURATION, y el log del caso registra la causa del fin: por tiempo, o
+   por interacción terminada (nombres en inglés en el código; "regla
+   amarrete" en el docstring, con la cita). No es un umbral elegido: con
+   uno solo no hay con quién interactuar. Antes de implementarlo, decí
+   dónde vive la condición (el caso o el canal) y si toca algo del
+   instrumento; un device que sale por LEAVE o por error cuenta igual como
+   no activo, con su causa propia en su resumen. Test: con dos devices,
+   uno sale y el caso termina con la causa declarada; con tres, uno sale y
+   el caso sigue.
 
 NO: el instrumento (está en el 17 y el 18), los devices (delamor: no es
 producto todavía), el patrón de calibrate, el vivo.

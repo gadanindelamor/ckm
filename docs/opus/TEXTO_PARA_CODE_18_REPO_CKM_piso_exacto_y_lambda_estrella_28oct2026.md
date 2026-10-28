@@ -1,9 +1,9 @@
-# Texto para Code — 18 — repo ckm — el margen contra el piso exacto, y λ* — 28 oct 2026 (Opus 5.5)
+# Texto para Code — 18 — repo ckm — el margen contra el piso exacto (λ* cerrado) — 28 oct 2026 (Opus 5.5)
 
 *Va después del texto 17. delamor, 28 oct: "si. de acuerdo. el MATIZ: el punto 2 que no vuelva dentro de 4 días a golpear la puerta. cerremos y avancemos".*
 
 ```
-Code: dos mediciones, sin tocar services/. Por favor, en este orden.
+Code: una medición, sin tocar services/. Por favor, en este orden.
 Es instrumento: primera prioridad (delamor: CKM, IAP, devices, servicios).
 
 - En el Codespace, el git pull --rebase y el push los hacés vos.
@@ -15,8 +15,7 @@ Es instrumento: primera prioridad (delamor: CKM, IAP, devices, servicios).
   delamor. Enumeración exacta: cada estado pesado por su probabilidad bajo
   sample_s0, como en experiments/piso_del_colapso.py.
 - Sin interpretación, y sin elegir ningún número para que algo separe.
-- Unidad: los dos puntos, de corrido. A1.PAUSA al final, o antes si el
-  costo del punto 2 pasa lo declarado abajo.
+- Unidad: el punto 1, de corrido. A1.PAUSA al final.
 
 Contexto (definición candidata, todavía no registrada): con los extremos,
 el margen de calibrate es d(1) = 1 − ln F / ln N_eff0, con F = N_eff del
@@ -34,25 +33,12 @@ F tiene forma cerrada (N impar: 2; N par: 1/((1−2,5/N)²/2 +
      estado) y lo que da el IC del 14.1.
    Con la W bdb98f5b del intento 3 (la única que separó) en primera fila.
 
-2. λ* — dónde termina de colapsar cada W, para que no quede pendiente.
-   Definición operativa, sin tolerancia elegida: λ* es el menor λ de la
-   grilla en que la partición en órbitas de W_λ = (1−λ)·W + λ·colapso es
-   IGUAL a la del colapso (cada estado en la misma órbita que bajo el
-   ferromagneto), por enumeración exacta. Si no se alcanza antes de λ = 1,
-   se reporta "no antes de 1", con la fracción de estados (pesada por la
-   medida) cuya órbita todavía difiere en cada λ.
-   - Grilla: λ de 0 a 1 en pasos de 0,05.
-   - Para cada λ de la grilla: N_eff exacto de W_λ y la fracción que
-     difiere. Es la curva exacta de calibrate, sin semilla.
-   - Costo: estimalo antes de correr (≈16 s por enumeración con N=20). Si
-     las 14 W pasan de ~1 h de Codespace, corré primero las 3 del intento 3
-     y 1 del intento 4, reportá, y A1.PAUSA con la estimación del resto.
-   - Reportá también si λ* varía entre W y cuánto, y si coincide con el
-     salto entre 0,5 y 0,75 que se ve en las curvas muestreadas. Sin decir
-     qué significa.
-   - Si encontrás una cota analítica de λ* (por ejemplo en función de las
-     sumas por fila de |W|), escribila como "a verificar" y comparala con
-     lo medido; si no, no la busques más allá de lo razonable.
+2. λ*: NO se hace. Cerrado por declaración (delamor y Opus, 28 oct): λ*
+   es un número por cada W, no por N; la enumeración sólo alcanza N chico
+   (~20) y con N grande obliga a muestrear, que es el ruido que la
+   definición evita; y la definición candidata no lo necesita. Si algún
+   día hace falta describir una W por cuánto resiste el colapso, se busca
+   una cota analítica, no una enumeración.
 
 NO: cambiar calibrate, el margen, la grilla del instrumento, el estimador,
 el n_runs; registrar la definición (lo hace Opus con tu reporte); el vivo.

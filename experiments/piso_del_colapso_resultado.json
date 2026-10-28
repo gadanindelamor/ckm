@@ -1,0 +1,459 @@
+{
+ "que": "el piso de N_eff en el extremo de colapso, por enumeración",
+ "texto": "docs/opus/TEXTO_PARA_CODE_14_REPO_CKM_simpson_y_piso_del_colapso_27oct2026.md, punto 2",
+ "escala": 1.0,
+ "nota_escala": "el piso no depende de la escala: e>0 sólo multiplica h y no cambia signos",
+ "exhaustivo": [
+  {
+   "N": 10,
+   "estados": 1024,
+   "discrepancias": 0,
+   "periodos": {
+    "1": 772,
+    "2": 252
+   },
+   "colas": {
+    "0": 254,
+    "1": 770
+   }
+  },
+  {
+   "N": 11,
+   "estados": 2048,
+   "discrepancias": 0,
+   "periodos": {
+    "1": 2048
+   },
+   "colas": {
+    "0": 2,
+    "1": 2046
+   }
+  },
+  {
+   "N": 12,
+   "estados": 4096,
+   "discrepancias": 0,
+   "periodos": {
+    "1": 3172,
+    "2": 924
+   },
+   "colas": {
+    "0": 926,
+    "1": 3170
+   }
+  },
+  {
+   "N": 13,
+   "estados": 8192,
+   "discrepancias": 0,
+   "periodos": {
+    "1": 8192
+   },
+   "colas": {
+    "0": 2,
+    "1": 8190
+   }
+  }
+ ],
+ "paso_vectorizado": [
+  {
+   "N": 19,
+   "estados": 524288,
+   "discrepancias_en_el_primer_paso": 0
+  },
+  {
+   "N": 20,
+   "estados": 1048576,
+   "discrepancias_en_el_primer_paso": 0
+  },
+  {
+   "N": 21,
+   "estados": 2097152,
+   "discrepancias_en_el_primer_paso": 0
+  }
+ ],
+ "muestra_estratificada": [
+  {
+   "N": 19,
+   "muestreados": 1000,
+   "por_a": 50,
+   "discrepancias": 0
+  },
+  {
+   "N": 20,
+   "muestreados": 1050,
+   "por_a": 50,
+   "discrepancias": 0
+  },
+  {
+   "N": 21,
+   "muestreados": 1100,
+   "por_a": 50,
+   "discrepancias": 0
+  }
+ ],
+ "enumeracion": [
+  {
+   "N": 10,
+   "medida": "hipercubo",
+   "estados_enumerados": 1024,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.376953125,
+   "masa_todos_menos": 0.376953125,
+   "masa_total_S0": 0.24609375,
+   "n_orbitas_periodo_2": 126,
+   "masa_de_cada_orbita_periodo_2": 0.001953125,
+   "aporte_de_la_cola_a_sigma_m2": 0.00048065185546875,
+   "simpson": 0.28466796875,
+   "n_eff_exacto": 3.5128644939965694,
+   "n_eff_forma_cerrada": 3.5128644939965694,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 10,
+   "medida": "codigo",
+   "estados_enumerados": 1024,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999999,
+   "masa_todos_mas": 0.3749999999999998,
+   "masa_todos_menos": 0.375,
+   "masa_total_S0": 0.25000000000000006,
+   "n_orbitas_periodo_2": 126,
+   "masa_de_cada_orbita_periodo_2": 0.0019841269841269845,
+   "aporte_de_la_cola_a_sigma_m2": 0.0004960317460317462,
+   "simpson": 0.2817460317460316,
+   "n_eff_exacto": 3.5492957746478893,
+   "n_eff_forma_cerrada": 3.5492957746478875,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 11,
+   "medida": "hipercubo",
+   "estados_enumerados": 2048,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.5,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.5,
+   "n_eff_exacto": 2.0,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 11,
+   "medida": "codigo",
+   "estados_enumerados": 2048,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999998,
+   "masa_todos_mas": 0.4999999999999999,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.4999999999999999,
+   "n_eff_exacto": 2.0000000000000004,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 12,
+   "medida": "hipercubo",
+   "estados_enumerados": 4096,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.38720703125,
+   "masa_todos_menos": 0.38720703125,
+   "masa_total_S0": 0.2255859375,
+   "n_orbitas_periodo_2": 462,
+   "masa_de_cada_orbita_periodo_2": 0.00048828125,
+   "aporte_de_la_cola_a_sigma_m2": 0.00011014938354492188,
+   "simpson": 0.2999687194824219,
+   "n_eff_exacto": 3.3336809308831947,
+   "n_eff_forma_cerrada": 3.3336809308831947,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 12,
+   "medida": "codigo",
+   "estados_enumerados": 4096,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999999,
+   "masa_todos_mas": 0.3958333333333333,
+   "masa_todos_menos": 0.3958333333333333,
+   "masa_total_S0": 0.2083333333333333,
+   "n_orbitas_periodo_2": 462,
+   "masa_de_cada_orbita_periodo_2": 0.00045093795093795083,
+   "aporte_de_la_cola_a_sigma_m2": 9.39454064454064e-05,
+   "simpson": 0.31346200096200094,
+   "n_eff_exacto": 3.190179342092644,
+   "n_eff_forma_cerrada": 3.190179342092644,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 13,
+   "medida": "hipercubo",
+   "estados_enumerados": 8192,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.5,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.5,
+   "n_eff_exacto": 2.0,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 13,
+   "medida": "codigo",
+   "estados_enumerados": 8192,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999999,
+   "masa_todos_mas": 0.4999999999999999,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.4999999999999999,
+   "n_eff_exacto": 2.0000000000000004,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 19,
+   "medida": "hipercubo",
+   "estados_enumerados": 524288,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.5,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.5,
+   "n_eff_exacto": 2.0,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 19,
+   "medida": "codigo",
+   "estados_enumerados": 524288,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.4999999999999999,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.4999999999999999,
+   "n_eff_exacto": 2.0000000000000004,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 20,
+   "medida": "hipercubo",
+   "estados_enumerados": 1048576,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.41190147399902344,
+   "masa_todos_menos": 0.41190147399902344,
+   "masa_total_S0": 0.17619705200195312,
+   "n_orbitas_periodo_2": 92378,
+   "masa_de_cada_orbita_periodo_2": 1.9073486328125e-06,
+   "aporte_de_la_cola_a_sigma_m2": 3.3606920624151826e-07,
+   "simpson": 0.3393259846343426,
+   "n_eff_exacto": 2.947018634831633,
+   "n_eff_forma_cerrada": 2.947018634831633,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 20,
+   "medida": "codigo",
+   "estados_enumerados": 1048576,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999999,
+   "masa_todos_mas": 0.43749999999999983,
+   "masa_todos_menos": 0.4375,
+   "masa_total_S0": 0.1250000000000001,
+   "n_orbitas_periodo_2": 92378,
+   "masa_de_cada_orbita_periodo_2": 1.35313602805863e-06,
+   "aporte_de_la_cola_a_sigma_m2": 1.691420035073289e-07,
+   "simpson": 0.3828126691420034,
+   "n_eff_exacto": 2.6122437437645316,
+   "n_eff_forma_cerrada": 2.612243743764531,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 21,
+   "medida": "hipercubo",
+   "estados_enumerados": 2097152,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 1.0,
+   "masa_todos_mas": 0.5,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.5,
+   "n_eff_exacto": 2.0,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 21,
+   "medida": "codigo",
+   "estados_enumerados": 2097152,
+   "C(N,a)_coincide_con_la_enumeracion": true,
+   "pesos_suman_1": 0.9999999999999999,
+   "masa_todos_mas": 0.4999999999999999,
+   "masa_todos_menos": 0.5,
+   "masa_total_S0": 0.0,
+   "n_orbitas_periodo_2": 0,
+   "masa_de_cada_orbita_periodo_2": 0.0,
+   "aporte_de_la_cola_a_sigma_m2": 0.0,
+   "simpson": 0.4999999999999999,
+   "n_eff_exacto": 2.0000000000000004,
+   "n_eff_forma_cerrada": 2.0,
+   "enum_igual_a_cerrada": true,
+   "enumerado": true
+  },
+  {
+   "N": 40,
+   "medida": "hipercubo",
+   "n_eff_exacto": null,
+   "n_eff_forma_cerrada": 2.6144596237360678,
+   "enumerado": false
+  },
+  {
+   "N": 40,
+   "medida": "codigo",
+   "n_eff_exacto": null,
+   "n_eff_forma_cerrada": 2.275555555555262,
+   "enumerado": false
+  }
+ ],
+ "sample_s0": [
+  {
+   "N": 20,
+   "muestras": 200000,
+   "max_abs_dif": 0.0005900000000000349,
+   "P_S0_teorica": 0.1250000000000001,
+   "P_S0_empirica": 0.125295
+  },
+  {
+   "N": 21,
+   "muestras": 200000,
+   "max_abs_dif": 0.0010073809523808153,
+   "P_S0_teorica": 0.0,
+   "P_S0_empirica": 0.0
+  }
+ ],
+ "distribucion_exacta": [
+  {
+   "N": 20,
+   "n_runs": 200,
+   "medida": "codigo",
+   "masa_cubierta": 0.9999999999997993,
+   "n_eff_exacto": 2.6122437437645316,
+   "media": 2.5988268100372247,
+   "sesgo_media_menos_exacto": -0.013416933727306901,
+   "sd": 0.14039821239737357,
+   "q": {
+    "0.5%": 2.284408909194746,
+    "2.5%": 2.3507287259050305,
+    "25%": 2.495944090852365,
+    "50%": 2.5889967637540456,
+    "75%": 2.6899798251513114,
+    "97.5%": 2.8956131460836834,
+    "99.5%": 3.0102347983142685
+   },
+   "min": 1.7927572606669058,
+   "max": 4.42282176028306,
+   "colisiones_esperadas_en_la_cola": 0.003365925869795845
+  },
+  {
+   "N": 20,
+   "n_runs": 1000,
+   "medida": "codigo",
+   "masa_cubierta": 0.9999999999988086,
+   "n_eff_exacto": 2.6122437437645316,
+   "media": 2.6095333217688843,
+   "sesgo_media_menos_exacto": -0.0027104219956473052,
+   "sd": 0.06252018116758552,
+   "q": {
+    "0.5%": 2.4579687346376957,
+    "2.5%": 2.49195099827557,
+    "25%": 2.5663530583229397,
+    "50%": 2.6076843241664536,
+    "75%": 2.6512399849409567,
+    "97.5%": 2.737356151934216,
+    "99.5%": 2.780048150433965
+   },
+   "min": 2.2374768421146842,
+   "max": 3.186336986999745,
+   "colisiones_esperadas_en_la_cola": 0.08448643075191077
+  }
+ ],
+ "cuantil_de_lo_medido": {
+  "2.4369_con_n_runs_200": 0.11538871221798307,
+  "2.5353_con_n_runs_1000": 0.114858748853671
+ },
+ "muestreo_real": [
+  {
+   "N": 20,
+   "n_runs": 200,
+   "n_semillas": 1000,
+   "seed0": 2.436944072133545,
+   "media": 2.60324006154188,
+   "sd": 0.14283692364428563,
+   "min": 2.217049107637734,
+   "max": 3.084515731030229,
+   "q2.5": 2.3553175056284883,
+   "q50": 2.597065491358232,
+   "q97.5": 2.9130316634467763,
+   "cuantil_de_seed0": 0.108
+  },
+  {
+   "N": 20,
+   "n_runs": 1000,
+   "n_semillas": 1000,
+   "seed0": 2.5352655437130482,
+   "media": 2.6101163522626867,
+   "sd": 0.06235696629430818,
+   "min": 2.4186604490968726,
+   "max": 2.859512167224272,
+   "q2.5": 2.4931463422563604,
+   "q50": 2.6112251346086572,
+   "q97.5": 2.7266444900194764,
+   "cuantil_de_seed0": 0.117
+  }
+ ]
+}

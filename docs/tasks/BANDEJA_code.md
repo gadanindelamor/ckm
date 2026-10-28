@@ -16321,3 +16321,150 @@ de los márgenes chicos, 698d0f3f y bdb98f5b.
   `python3 experiments/simpson_en_las_curvas.py`.
 
 A1.PAUSA. Sigue el punto 2 (el piso del colapso) cuando llegue el OK.
+
+---
+## REPORTE texto 14 — punto 2: el piso del colapso, por enumeración — 2026-10-28 01:25 UTC
+
+*Punto 2 del texto 14. Script: `experiments/piso_del_colapso.py`. Nada de `services/` tocado.
+delamor confirmó el punto 1 y pidió seguir. Sin veredicto global.*
+
+### Lo primero: el piso es un teorema, y por eso la enumeración verifica en vez de decidir
+
+Con `extremo_colapso` —todos los acoplamientos iguales a la escala `e > 0`, diagonal en 0— el campo
+local es `h_i = e·(S − σ_i)` con `S = Σσ`: **depende de σ sólo a través de S**. Con eso, y la regla de
+empate de `relax_orbit` (`landscape_engine.py:73-74`, `h = 0` conserva σ_i):
+
+- `S ≥ 1` → `S − σ_i ≥ 0` para todo i, y vale 0 sólo donde σ_i = +1, que se conserva: **en un paso,
+  todos +1**, punto fijo.
+- `S ≤ −1` → simétrico: **todos −1**.
+- `S = 0` (sólo con N par) → `h_i = −e·σ_i`: se dan vuelta todos los signos y el paso siguiente
+  vuelve a σ. **Órbita de período 2 `{σ, −σ}`**.
+
+De ahí sale en qué se sostiene el piso, que es lo que preguntó delamor: **no depende de la escala**
+(`e > 0` sólo multiplica, no cambia signos) ni de ninguna otra cosa de la W —el extremo borra la W—;
+depende de **N**, de la **paridad de N**, de la **regla de empate** y de la **medida con que se sortea
+σ₀**. Por eso enumeré: para verificar el lema y las masas, no para saber el número.
+
+### (a) La dinámica y la regla de empate, contra el código
+
+| qué | discrepancias con el lema |
+|---|---|
+| `relax_orbit` real sobre **todos** los 1024 estados, N=10 | **0** |
+| ídem, 2048 estados, N=11 | **0** |
+| ídem, 4096 estados, N=12 | **0** |
+| ídem, 8192 estados, N=13 | **0** |
+| enumeración de los **524.288** estados, N=19 (paso vectorizado) | **0** |
+| enumeración de los **1.048.576** estados, N=20 (paso vectorizado) | **0** |
+| enumeración de los **2.097.152** estados, N=21 (paso vectorizado) | **0** |
+| `relax_orbit` real, muestra estratificada 50 por cada `a`, N=19/20/21 | **0** / **0** / **0** |
+
+Los períodos y las colas confirman el "en un paso": con N=10, `relax_orbit` devuelve período 1 en 772
+estados y período 2 en 252 —que son exactamente los `C(10,5) = 252` estados de S = 0— y cola 0 en 254
+(los 252 más los dos puntos fijos), cola 1 en los otros 770. Con N=11 y N=13, **todos** los estados
+dan período 1 y sólo 2 tienen cola 0.
+
+**Sobre los 2²⁰ que pedía el texto:** los enumeré, pero con el paso vectorizado —el mismo
+`np.where(h > 0, 1, np.where(h < 0, −1, s))` de `relax_orbit`, aplicado a todos los estados a la vez—
+y no con 1.048.576 llamadas a `relax_orbit`. Que el paso vectorizado y `relax_orbit` coincidan queda
+verificado por los cuatro N chicos exhaustivos y por la muestra estratificada. Lo digo porque es una
+desviación del texto: el resultado es demostrable y la corrida grande sólo verifica.
+
+### (b) y (c) N_eff exacto, bajo las dos medidas
+
+Enumeración de los 2^N estados contra la forma cerrada del lema. **Coinciden en todos los casos**
+(< 1e−9), y los pesos suman 1,000000000.
+
+| N | hipercubo `{−1,+1}^N` | medida del código (`sample_s0`) | órbitas de período 2 | aporte de la cola a Σm² |
+|---|---|---|---|---|
+| 10 | 3,512864 | 3,549296 | 126 | 4,96e−4 |
+| 11 | **2,000000** | **2,000000** | 0 | 0 |
+| 12 | 3,333681 | 3,190179 | 462 | 9,40e−5 |
+| 13 | **2,000000** | **2,000000** | 0 | 0 |
+| 19 | **2,000000** | **2,000000** | 0 | 0 |
+| **20** | **2,947019** | **2,612244** | 92.378 | 1,69e−7 |
+| 21 | **2,000000** | **2,000000** | 0 | 0 |
+| 40 (sólo forma cerrada) | 2,614460 | 2,275556 | — | — |
+
+**Los dos cálculos de Opus dan bien**: 2,9470 bajo el hipercubo y ≈ 2,6122 bajo la medida del código,
+con N = 20. Y la medida del código quedó **medida**, no supuesta: `P(a)` teórica contra `sample_s0`
+real, 200.000 muestras, máxima diferencia **0,00059**; `P(S=0)` teórica 0,12500 contra empírica
+0,12529.
+
+**La forma cerrada bajo la medida del código es más simple de lo que parecía**, y conviene dejarla
+escrita: con N par, `P(S=0) = 2,5/N` **exacto** —porque la fracción activa es uniforme en un intervalo
+de ancho 0,4 y el redondeo captura un ancho `1/N`— así que
+
+    piso_código(N par) = 1 / ( (1 − 2,5/N)²/2 + 2·(2,5/N)²/C(N,N/2) )  ≈  2 / (1 − 2,5/N)²
+
+La aproximación coincide con el exacto desde N ≈ 10 (N=20: 2,612245 contra 2,612244).
+
+### La respuesta a *"N es variable, ¿sería una referencia de piso variable?"*
+
+**Sí, y además discontinua en la paridad.** Con N impar el piso es **2 exacto** bajo las dos medidas
+—no hay estados de S = 0, hay exactamente dos órbitas y las dos medidas son simétricas en σ ↔ −σ—.
+Con N par el piso es **mayor que 2**, baja con N y tiende a 2:
+
+| N | 6 | 8 | 10 | 12 | 16 | 20 | 30 | 60 | 200 | 1000 | impar |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| hipercubo | 4,063 | 3,758 | 3,513 | 3,334 | 3,097 | 2,947 | 2,732 | 2,483 | 2,246 | 2,105 | **2** |
+| código | 5,333 | 4,182 | 3,549 | 3,190 | 2,809 | 2,612 | 2,380 | 2,178 | 2,051 | 2,010 | **2** |
+
+Dos cosas que se ven acá y no estaban dichas:
+
+- **Las dos medidas no se ordenan igual en todo N.** Con N ≤ 10 la del código da un piso **más alto**
+  que el hipercubo; con N ≥ 12, más bajo. El cruce es donde `2,5/N` pasa por `C(N,N/2)/2^N`. O sea:
+  cuál de las dos medidas da un piso mayor **depende de N**, no es una propiedad de la medida.
+- **El piso no es monótono en N**: salta a 2 en cada N impar y vuelve a subir en el N par siguiente.
+  Un "piso de referencia" que se declare como un número necesita decir N y su paridad.
+
+Y queda confirmado por enumeración lo que Opus ya había declarado: el docstring de `extremo_colapso`
+dice *"el paisaje pierde órbitas y `N_eff → 1`"*, y **1 no es alcanzable**: por la simetría σ ↔ −σ el
+piso es ≥ 2 siempre. No lo toco: está en `services/` y el texto lo excluye.
+
+### (d) ¿Cae 2,4369 dentro de lo que puede dar n_runs = 200?
+
+**Sí, holgadamente.** Dos caminos independientes, N = 20, medida del código:
+
+| | n_runs = 200 | n_runs = 1000 |
+|---|---|---|
+| exacto | 2,612244 | 2,612244 |
+| **distribución exacta** (multinomial sobre las tres clases) media | 2,5988 | 2,6095 |
+| sesgo (media − exacto) | **−0,0134** | **−0,0027** |
+| sd | 0,1404 | 0,0625 |
+| IC95 por cuantiles | **[2,3507, 2,8956]** | **[2,4920, 2,7374]** |
+| IC99 | [2,2844, 3,0102] | [2,4580, 2,7800] |
+| **muestreo real** (1000 semillas) media / sd | 2,6032 / 0,1428 | 2,6101 / 0,0624 |
+| IC95 empírico | [2,3553, 2,9130] | [2,4931, 2,7266] |
+| **lo medido con seed 0** | **2,4369** | **2,5353** |
+| su cuantil, distribución exacta | **0,1154** | **0,1149** |
+| su cuantil, 1000 semillas reales | **0,108** | **0,117** |
+
+- **2,4369 está en el percentil 11**, dentro del IC95. No es un valor raro: es una realización baja
+  normal del muestreo con 200 corridas.
+- La **distribución exacta y el muestreo real coinciden** (media 2,5988 vs 2,6032; sd 0,1404 vs
+  0,1428): el modelo del muestreo —multinomial sobre las tres clases, con las órbitas de período 2
+  casi todas de una sola muestra— es el correcto. Las colisiones esperadas en la cola son 0,003 con
+  n_runs = 200 y 0,084 con 1000: no cambian nada.
+- Y el 2,5353 del intento 4 cae en **el mismo percentil (0,115)** con n_runs = 1000. Las dos
+  mediciones son la misma realización baja, con la misma semilla, a dos tamaños de muestra.
+
+### *"¿o hay algo que mi cálculo no ve?"* — dos cosas, las dos chicas
+
+1. **El estimador tiene sesgo hacia abajo a n finito**, y por eso lo medido no se compara contra el
+   exacto sino contra la distribución del estimador: el centro con n_runs = 200 es **2,5988**, no
+   2,6122. Es el mismo sesgo del punto 1 (el plug-in sobreestima Σm² en ≈ (1−θ)/n, o sea subestima
+   N_eff), ahora medido en el único caso donde se conoce el valor verdadero. Con n_runs = 200 el
+   sesgo (−0,013) es **diez veces menor** que la sd (0,140): el ruido domina, no el sesgo.
+2. **La paridad.** El cálculo estaba hecho para N par (el caso del repo) y para N impar daba 2
+   exacto; lo que no estaba dicho es que eso hace del piso una **función discontinua de N**, que es
+   justo lo que delamor preguntó.
+
+### Qué queda sin hacer
+
+- `experiments/piso_del_colapso_resultado.json` **sí se commitea**: son 19 KB de resumen, sin
+  conteos crudos.
+- No corrí la enumeración de 2⁴⁰ (N=40): la forma cerrada la cubre y el lema ya quedó verificado.
+- No toqué el docstring de `extremo_colapso` ni la medida de referencia: lo primero es `services/`
+  (excluido por el texto) y lo segundo es el punto 3, que es lectura y decide delamor.
+
+A1.PAUSA. Sigue el punto 3 (la medida de referencia, sólo lectura) cuando llegue el OK.

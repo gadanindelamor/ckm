@@ -16660,3 +16660,141 @@ queda como está.
 
 En el mismo cambio saqué un `import` que no se usaba (`n_eff` de `landscape_engine`, que el script
 no llama porque calcula Σm² a mano para tener los conteos enteros).
+
+---
+## REPORTE texto 15 — punto 2: la caída de device B en el intento 4 (lectura) — 2026-10-28 01:55 UTC
+
+*Punto 2 del texto 15. Sólo lectura: nada arreglado, nada implementado. Sin veredicto global.
+Los archivos del intento 4 se leyeron desde `process/*.bak_1793150043_serie2_caso0` (el `--reset` del
+punto 1 los preservó ahí).*
+
+### Cuándo dejó de dar vueltas
+
+| | |
+|---|---|
+| `run_start` de B | **07:15:46.247** |
+| última decisión escrita (vuelta 90, `SKIP`, `D_ckm = −0.1275`, `temp_signal TOO_COLD`) | **07:23:54.784** |
+| la excepción registrada | **07:24:29.935** — 35,15 s después |
+| vida de B hasta su última decisión | **488,5 s** de 1204,04 → **40,6 %** del caso |
+| mensajes de B en el canal | 12, el último *"Local nodes are acknowledging the 5% buffer lock…"* |
+
+El REG decía *"~40% del tiempo"*: medido, **40,6 %**.
+
+### Qué estaba haciendo: no era el cierre. El cierre sólo lo levantó
+
+El `device_log` tiene un evento que el log del driver no tiene: `run_exception_inside_client`, y **su
+traceback apunta adentro de la vuelta**, no al cierre:
+
+```
+autonomous_device.py:899   since = await asyncio.wait_for(self._one_turn(client, vuelta, since), …)
+autonomous_device.py:1024  fetched = await client.call_tool("get_messages", {"since": since})
+```
+
+O sea: B estaba en el **paso (2) de su vuelta 91, trayendo los mensajes del canal**. Sin llamada al
+LLM en el medio (`errores_llm: 0`, `errores: []`).
+
+El traceback que guarda el driver (`errores_fatales` del log del intento) es **otro**:
+`autonomous_device.py:837` → `Client.__aexit__` → `_disconnect`. Ése es el **segundo** raise, el del
+cierre del `async with`, y es el que quedó en el REG §2. **El timeout ocurrió antes, por 35 s; el
+cierre lo volvió a levantar.**
+
+Y esto es exactamente lo que el instrumento de captura del 21 oct (T5) existe para que no se pierda.
+Su comentario, en `autonomous_device.py:838-847`, dice que en el intento 1 `device_d` murió en la
+vuelta 62 *"y lo único que quedó escrito fue un McpError: Timed out while…"*. En el intento 4 **la
+causa de adentro quedó escrita**: funcionó.
+
+### El mecanismo, y una corrección de cómo se lee el mensaje
+
+El mensaje es `"Timed out while waiting for response."` — con punto final y sin decir a qué request ni
+cuántos segundos. Ese texto **exacto** sale de un solo lugar:
+
+- `fastmcp/utilities/exceptions.py:20-29`: el handler recorre las hojas del grupo de excepciones y
+  levanta `McpError("Timed out while waiting for response.")` **sólo si la hoja es
+  `httpx.ConnectTimeout`**; cualquier otra la re-levanta tal cual.
+- El timeout de lectura de la sesión MCP levanta un mensaje **distinto**
+  (`mcp/shared/session.py:296-300`): `"Timed out while waiting for response to {Request}. Waited {N}
+  seconds."`.
+
+**Entonces lo que falló fue abrir la conexión TCP a `127.0.0.1:7860`, no esperar una respuesta
+lenta.** El mensaje dice "response" y el mecanismo es "connect". Lo anoto porque la lectura natural de
+§2 del REG —el server tardó en contestar— no es la que sostienen los datos.
+
+### Lo que dice el log del server en ese tramo: nada. Y eso es un dato
+
+`experiments/_server_intento4.log`, 4883 líneas, censo completo de códigos:
+
+| | |
+|---|---|
+| `307 Temporary Redirect` | 2422 |
+| `200 OK` | 2414 |
+| `202 Accepted` | 8 |
+| `404 Not Found` | **2** (`HEAD /` y `GET /`) |
+| **5xx** | **0** |
+| tracebacks o excepciones | **0** |
+
+- Las **28** líneas `WARNING: Invalid HTTP request received.` están **todas** entre las líneas 4683 y
+  4712 de 4883 —el final de la corrida—, pegadas al `HEAD /` y al `GET /` que dan 404. Es una sonda
+  externa al puerto, no los devices (que hablan HTTP válido contra `/mcp`), y **no es el momento de
+  B**.
+- Sesiones: **8 `GET /mcp`** abiertas contra **7 `DELETE /mcp`** cerradas. **Una sesión nunca cerró**,
+  y B es el único participante cuyo cliente salió por excepción. La atribución es *consistente*, no
+  probada: el log de uvicorn no tiene timestamps ni device_id, así que no puedo decir "esta línea es
+  de B".
+- **Por eso el log del server no se puede alinear al 07:24:29 por sí solo.** Lo que sí dice es que el
+  server no erró nunca.
+
+### Lo que medí y me dio en contra: el server NO estaba bloqueado
+
+Mi primera hipótesis fue que un rebuild o una calibración (7 calibraciones con `n_runs = 1000`)
+bloqueó el event loop y se llevó la sesión de B. **Es falsa, y lo que la descarta es el reloj del
+canal:** `channel_ticks.jsonl` tiene 505 ticks y **siguió escribiendo sin pausa** en toda la ventana
+(07:23:22 → 07:25:58, con `dt` entre 0,39 s y 5,27 s). El gap más grande de **toda** la corrida es de
+16,70 s y está en el arranque (07:15:29, tick 6); en la ventana de B el máximo es 5,27 s. Los
+rebuilds vecinos son el de 07:22:45.645 (corpus 60) y el de 07:25:43.446 (corpus 70), y entre los dos
+el reloj nunca se detuvo.
+
+Y los dos huecos de ~15 s que A y C tienen **justo ahí** (A de 07:23:45.11 a 07:24:00.84; C de
+07:23:49.53 a 07:24:05.02) **no son una frenada del server: son sus propias llamadas al LLM.** La
+vuelta de A terminó en `INTERACT` y el canal pasó de 71 a 72 mensajes a las 07:24:04; la de C terminó
+en `OP_SILENCE`. Las dos siguieron sin interrupción después.
+
+### Lo que no fue la causa, cada cosa con su evidencia
+
+| hipótesis | lo que dice el dato |
+|---|---|
+| cuota de Gemini (429) | `errores_rate_limit: 0`, 0 errores `429` en todo el intento |
+| error del provider | `errores_llm: 0`, `errores: []` para `device_b` |
+| fin del caso | `cut_by_end_of_case: false`, y faltaban ~715 s |
+| se fue por decisión propia | `se_fue: false` (device D sí: `left_by_own_decision: true`) |
+| falla de escritura | `write_failures: 0` |
+| server lento o bloqueado | el reloj del canal no se frenó (arriba) |
+
+### Lo que los logs NO dicen
+
+**Por qué no se pudo abrir la conexión.** El log del server tiene 4846 líneas con puerto y **2237
+puertos distintos** (rango 32776–60998) en 20 minutos: una conexión TCP nueva por llamada MCP. Con
+esa rotación de sockets, saturación del backlog o presión de puertos efímeros / `TIME_WAIT` son
+lecturas *plausibles* — y **ninguna está medida**: no hay `ss -s`, ni contador de backlog, ni log del
+kernel en la traza. Nombrar una causa ahí sería rellenar una ausencia.
+
+### Si el reporte propusiera capturar o reintentar: la intención, declarada
+
+delamor, 27 oct: *"capturar errores de mcp, o de provider, o de LLMs? es construir devices…. si tiene
+alguna intención esa construcción de devices es sano declararlo. Nada es mal o bueno"*.
+
+**No propongo implementar nada.** Lo que sí puedo declarar es qué intención tendría y qué cambiaría,
+para que la decisión se tome con eso a la vista.
+
+- **La intención de un reintento sobre `ConnectTimeout` sería: que B dure el caso entero**, es decir,
+  que la cantidad de vueltas deje de depender de un transitorio de la capa TCP.
+- **Qué cambiaría en lo que el vivo mide**, tres cosas:
+  1. las vueltas por device pasarían a ser propiedad de **la política de reintento**, no de
+     (provider + canal + carga). Hoy "223 / 228 / 90 / 2" es una medición del segundo conjunto;
+  2. el reintento mete latencia dentro de la vuelta y **mueve la posición del device en la secuencia
+     de ticks**, que es de donde se lee la asimetría entre devices;
+  3. **"B corrió el 40,6 % del caso" dejaría de ser observable** — y es justo el observable que hizo
+     visible todo esto. Un reintento que no se registra borra su propia causa.
+- **La alternativa mínima que no toca lo que se mide** (tampoco la implemento, queda dicha): que un
+  `ConnectTimeout` se registre **como su propia clase de evento**, porque hoy llega como un `McpError`
+  genérico cuyo mensaje dice "response" cuando lo que falló fue "connect"; y medir la rotación de
+  sockets durante un vivo. Eso es medición, no un device.

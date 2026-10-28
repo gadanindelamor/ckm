@@ -16468,3 +16468,106 @@ piso es ≥ 2 siempre. No lo toco: está en `services/` y el texto lo excluye.
   (excluido por el texto) y lo segundo es el punto 3, que es lectura y decide delamor.
 
 A1.PAUSA. Sigue el punto 3 (la medida de referencia, sólo lectura) cuando llegue el OK.
+
+---
+## REPORTE texto 14 — punto 3: la medida de referencia (lectura) — 2026-10-28 01:40 UTC
+
+*Punto 3 del texto 14: sólo lectura, sin corregir el paper ni el código. Para que delamor decida cuál
+es la medida de referencia declarada. Sin veredicto global.*
+
+*Arrastro del punto 2: dije "19 KB" de `piso_del_colapso_resultado.json` y son **12 KB**. La entrada
+anterior no se reescribe.*
+
+### Qué muestreo usó la validación de l.346: el hipercubo, y la comparación fue con la misma medida en los dos lados
+
+La traza cierra entera, con script y salida:
+
+- **El script es `experiments/orbit_analytics.py`**, sección **D** (enumeración, verdad de terreno) y
+  sección **E** (muestreo contra verdad). Su docstring dice para qué existe: *"ese REG se escribió
+  citando mediciones corridas como heredocs inline, que no quedaron en ningún archivo"*.
+- **La enumeración** (`enumerar_exhaustivo`, l.193) recorre los 2^N estados **una vez cada uno**: eso
+  es exactamente la medida uniforme sobre `{−1,+1}^N`. Usa `W @ s`, *"el mismo orden de suma que
+  services/_relax"*.
+- **El muestreo de la sección E** es `muestrear(W, n)` (l.381) **con su default**, y el default es
+  `modo="hipercubo"` (l.173). Ese muestreador es `sigma0(..., "hipercubo")` (l.162-163):
+  `np.where(rng.random(N) < 0.5, 1., -1.)`, con el comentario *"uniforme sobre {-1,+1}^N (medida de
+  referencia canonica)"*. **No es `services/landscape_engine.sample_s0`.**
+- Los `n_runs` de la sección E son `(1000, 10000, 100000)`, y el paper cita el último: *"a sampling
+  budget of 100,000 initial states"*.
+
+**Entonces sí: la validación de l.346 comparó hipercubo contra hipercubo.** La misma medida en los dos
+lados, y por eso esa tabla es coherente consigo misma.
+
+**Y la tabla del paper se verifica número por número** contra la salida guardada
+`process/experiments/orbitas/orbit_analytics_20260908T171754.json` (secciones D y E, 8 sep 2026), en
+las filas de `n_runs = 100000`:
+
+| régimen del paper | corpus en el JSON | err. conteo en el JSON | paper | err. N_eff en el JSON | paper |
+|---|---|---|---|---|---|
+| Flat mass | WARMUP | 0,0000 | 0% | 0,00258 | 0,3% |
+| Intermediate mass | caso09 natural | 0,1536 | 15% | 0,00586 | 0,6% |
+| Concentrated mass | caso09 forzado | 0,2765 | 28% | 0,00046 | 0,0% |
+
+Los tiempos también: 14,4 s por corpus en la enumeración, contra el *"≈16 s"* del paper.
+
+### Lo que la divergencia es, exactamente
+
+La divergencia **no está dentro de la validación**: está entre la validación y el instrumento que
+corre en los vivos.
+
+- **El paper declara una sola medida de referencia** (l.264, premisa): *"Basin masses are measured
+  under uniform sampling of σ₀ ∈ {−1,+1}^N"*. Busqué en el v32 y **no hay ninguna otra mención del
+  muestreo de σ₀**: la banda 0,3–0,7 no aparece en ninguna parte del paper.
+- **El instrumento no usa esa medida.** `sample_s0` (`landscape_engine.py:234-244`) sortea la fracción
+  activa uniforme en [0,3; 0,7] y después qué nodos. En el intento 4 el panel registra
+  `sampling_mode = "uniform"` en **las 65 líneas** de la trayectoria: el canal corrió con la banda.
+  O sea, los números de N_eff y D_ckm de §6.4 —y las 14 curvas de `calibrate` del punto 1— **están
+  bajo la banda**, no bajo el hipercubo que declara la premisa.
+- **El REG ya lo tenía escrito, y como las dos cosas distintas que son.**
+  `REG_orbitas_conjuntos_invariantes_v1` §10 pone `hipercubo` y `uniform (banda)` como **filas
+  distintas** de la misma tabla, y en §10(e) lo dice con nombre:
+  > *"El modo `uniform` no es la referencia canónica. Sortea `n_act ~ U(0.3N, 0.7N)` — uniforme sobre
+  > una banda de activación, no sobre `{−1,+1}^N`. La diferencia con el hipercubo es consistente pero
+  > chica (16% contra 34% en el peor caso)."*
+
+  Y §11, punto 1, pide justamente lo que está en decisión: *"Declarar la medida de referencia sobre
+  σ₀. Sin eso, ni el conteo ni la masa son propiedades de W: son propiedades de (W, referencia,
+  n_runs)."* El REG está en estado **propuesto**.
+
+### El tamaño de la diferencia, con los números que ya tenemos
+
+Para que la decisión no se tome contra una diferencia sin medir:
+
+- **En el extremo de colapso, N = 20** (punto 2 de este mismo texto, exacto por enumeración bajo las
+  dos medidas): hipercubo **2,947019** contra banda **2,612244**. La banda da **11,4% menos**. No es
+  ruido: son dos valores exactos de dos medidas distintas sobre la misma W.
+- **Y el signo de la diferencia depende de N**: con N ≤ 10 la banda da piso **más alto**, con N ≥ 12
+  más bajo, y con N impar las dos dan 2.
+- **En los corpus reales** (REG §10, n_runs = 30.000): la banda tiene más error que el hipercubo
+  contra la verdad de terreno en WARMUP (top-10: 33,9% contra 16,0%) y prácticamente el mismo en los
+  otros dos corpus.
+
+### Un hueco que apareció leyendo, sin pedido
+
+**La segunda tabla de §10 del REG no es regenerable por su driver.** El docstring de
+`orbit_analytics.py` dice que el archivo *"REGENERA todas las mediciones citadas en
+`registers/REG_orbitas_conjuntos_invariantes_v1.md`"*. Pero la tabla de los cuatro muestreos a
+`n_runs = 30.000` (hipercubo / uniform banda / boltzmann / weighted, que es la que sostiene §10(c),
+§10(d) y §10(e)) **no tiene sección**: `sigma0` acepta los cuatro modos, y ninguna sección los
+recorre —ni `30000` aparece en el archivo—. Las secciones D y E corren sólo `hipercubo`. Así que de
+§10 es regenerable la verdad de terreno y la comparación del hipercubo, y **no** la comparación entre
+los cuatro modos. Lo reporto; no toco el driver.
+
+### Lo que no pude verificar
+
+- **De dónde salen las otras cifras de N_eff del paper.** La dispersión entre semillas de l.360
+  (`N_eff = 15,52 ± 0,32` en A24, etc.) y los números de §6.4 no los rastreé hasta su salida: si
+  vienen del instrumento, están bajo la banda, pero no lo verifiqué archivo contra archivo.
+- **Si `relax_orbit` de `orbit_analytics.py` (l.139, copia local) coincide bit a bit con el de
+  `services/landscape_engine.py`.** Leí los dos y la lógica del paso es la misma (`np.where(h > 0, 1,
+  np.where(h < 0, −1, s))`, empate conserva); no corrí una comparación.
+- **Nada de esto decide la medida de referencia.** Es lo que pide el punto 3: la decisión es de
+  delamor, y queda con los dos números exactos del colapso al lado.
+
+**Con esto el texto 14 queda cerrado en sus tres puntos.** A1.PAUSA. Lo que sigue, por indicación de
+delamor: el texto 15 y después el 16.

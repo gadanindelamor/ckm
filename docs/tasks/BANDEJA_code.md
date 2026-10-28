@@ -17083,3 +17083,79 @@ archivos.
 Los puntos **1** (la lista de archivos de estado) y **2** (el puerto) de P14: el texto dice
 explícitamente que no van acá y que los decide delamor. No los toqué. El puerto sigue cableado en
 `server.py:86` y en el `mcp_url` por default del device (inventario §6).
+
+---
+## REPORTE texto 16 — punto 2a: la clasificación de iap_chatroom/tests/ — 2026-10-28 03:45 UTC
+
+*Punto 2a del texto 16. **Nada movido, nada borrado.** La tabla entera, con los 34 archivos uno por
+fila, está en `docs/tasks/CLASIFICACION_iap_chatroom_tests_v1.md`. Acá el resumen y lo que cambia la
+pregunta. Sin veredicto global.*
+
+### El dato que cambia la pregunta: 21 de los 34 ya están freezados, byte a byte
+
+Comparé los 34 contra `process/iap_series_freeze_20261008/tests/` con `cmp`, archivo por archivo:
+**21 son idénticos**. Para esos 21, *"mover a `process/`"* **no es mover: es borrar una copia**, y la
+historia no se pierde porque ya está preservada.
+
+Y el número ya estaba escrito: las **DEFS v19 (línea 1111)** dicen *"los **21** `test_caso_*` del
+canal no son tests de pytest (recogen 0 items) y necesitan claves de provider que el Codespace no
+tiene: punto ciego declarado"*. Los 21 de las DEFS son exactamente estos 21.
+
+### Los cinco grupos
+
+| grupo | cuántos | qué sostiene | quién lo usa vivo | propuesta | quién decide |
+|---|---|---|---|---|---|
+| `test_caso_*` (serie 1) | **21** | sus REG, **todos en el freeze** (salvo `REG_iap_caso_04b_v1`, que también está en `registers/`) | **nada fuera de la carpeta** | borrar la copia viva, **o** mover a `process/iap_tests_duplicados_<fecha>/` si no se quiere borrar nada | 🔸 **E2, irreversible** → Opus o delamor |
+| `armstrong_*` | 6 | `REG_armstrong_stop_coco_v1`, `REG_n_runs_sweep_armstrong_v1`, `REG_armstrong_boltzmann_comparison_v1`, `REG_coco_w_congelada_v1` | **`services/` los cita con ruta y línea**: `ckm_trust_rule.py:175`, `corpus_service.py:202-203` y `:610`, y `coco.py:188` (el docstring de ayer) | **no mover** | delamor: las DEFS v19 (1112) los dejan marcados `[delamor]` |
+| `wmixta_*` | 2 | `REG_wmixta_natural_paso2_v1`, `REG_wmixta_forzado_paso3_v1` | `corpus_service.py:610` | quedan, en el lugar que se declare para drivers de experimento | Opus |
+| `iap_simulation*` | 3 | sólo `META_REG_consolidado_*`; **ningún REG propio** | `iap_chatroom/autonomous_device.py:5` los cita como lo anterior al device autónomo | al freeze, **actualizando ese docstring** con la ruta nueva | Opus |
+| `test_mcp_client.py` | 1 | `CHANGELOG.md:118` (traza fechada) | nada lo invoca | dos lecturas: al freeze, **o** reconocerlo como el único chequeo del server real que hay | Opus |
+| `test_caso_serie2_caso0.py` | 1 | el caso de la serie 2, 4 intentos, `REG_iap_serie2_caso0_intento4_v1` | **`correr_caso0.sh:57`** y `tests/test_caso_serie2_caso0_diseno.py` | **queda vivo** | toca dónde viven los casos → delamor |
+
+**El único archivo de los 34 sin ninguna cita en ningún lado** (ni REG, ni DEFS, ni paper, ni código,
+ni docs vivos): `test_caso_09_provider_hetero_join_escalonado_2dev_PREGENERADO.py`.
+
+**En el paper v32: cero.** Ninguno de los 34 aparece. En las DEFS v19 aparecen dos:
+`test_armstrong_via_corpus_v3.py` (línea 1112) y los 21 como grupo (1111).
+
+### La propuesta de estructura (sólo propuesta): el mecanismo no puede ser la memoria de nadie
+
+**Por qué un archivo cae hoy en esa carpeta:** `iap_chatroom/tests/` **parece** la carpeta de tests
+del paquete y no lo es. `pyproject.toml:71` declara `testpaths = ["tests"]`, así que nada de ahí entra
+a la suite — y **no puede entrar**: `tests/test_caso_serie2_caso0_diseno.py:534` ya dice que *"si
+alguien agregara `iap_chatroom/tests` a `testpaths`, la suite dispararía el vivo"*. Nombre de tests,
+contenido de drivers, y una prohibición implícita de ser colectada.
+
+**Tres lugares:** la suite en `tests/` (como hoy); **los drivers de los vivos de ahora en adelante en
+`iap_chatroom/cases/`** (nuevo, rótulo en inglés, con un `README_cases.md` que declare la regla); y lo
+que ya corrió y está registrado, en `process/<freeze>/`, que es lo que el freeze de octubre ya hace.
+
+**Y la regla de nombre, que es el mecanismo:** un driver de un vivo **no se llama `test_*.py`**. Con
+`python_files = ["test_*.py"]` (`pyproject.toml:72`), un `caso_serie2_caso0.py` **no lo colecta pytest
+aunque alguien agregue el directorio a `testpaths`**. Hoy la protección es que el directorio esté
+afuera; con el nombre, la protección viaja con el archivo y no depende de que nadie toque la config.
+
+Si se adopta, el movimiento toca **tres** lugares que lo nombran por ruta: `correr_caso0.sh:57`, el
+`CASO_PATH` y dos asserts de `tests/test_caso_serie2_caso0_diseno.py`, y los docs vivos que lo
+nombren. **No lo hice**: el punto 2a dice *"decí dónde tendría que vivir, pero no lo muevas"*.
+
+**Lo que la propuesta no resuelve, dicho:** los 6 `armstrong_*` y los 2 `wmixta_*` **no son drivers de
+un vivo ni tests**: son drivers de experimento sobre corpus fijos, que sostienen REGs y que `services/`
+cita con ruta y línea. No entran en ninguno de los tres lugares. Si hace falta un cuarto —algo como
+`experiments/corpus/`— lo decide quien defina la estructura; lo dejo nombrado como el hueco que es.
+
+### A1.PAUSA
+
+Como pide el punto 2b: **la tabla está y no muevo nada.** Lo que espera decisión, en orden de
+irreversibilidad:
+
+1. **Los 21 duplicados — E2.** Borrar una copia es irreversible; la verificación byte a byte está
+   hecha y es repetible (`cmp iap_chatroom/tests/<x> process/iap_series_freeze_20261008/tests/<x>`).
+2. **Dónde viven los casos** — si se adopta `iap_chatroom/cases/` y el nombre sin `test_`, toca el
+   script del vivo: lo sube a delamor.
+3. **Los 3 `iap_simulation*` y `test_mcp_client.py`** — mover al freeze, que no toca ningún vivo;
+   alcanza el OK de Opus, y el docstring de `autonomous_device.py:5` se actualiza en el mismo commit.
+4. **Los 6 `armstrong_*`** — no se tocan hasta la revisión `[delamor]` de las DEFS v19.
+
+Desde ahora, cumplido en este mismo texto: **no se agregan archivos a `iap_chatroom/tests/`.** Los 13
+tests nuevos del punto 1 fueron a `tests/test_providers_registry.py`.

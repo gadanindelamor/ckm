@@ -99,3 +99,4 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
 - **El plan:** las DEFS v19, el paper v33, el plan de cierre del repo y el release; *"y vemos qué sucede"*.
 - **Próxima sesión de Opus (nueva, desde este ESTADO):** las DEFS v19 primero y después el v33, con el corte del 28 oct. Lo verificado hasta los reportes de hoy entra; el texto 18 entra si llega antes; lo demás va a otros papers.
 - **Los textos 17, 18 y 19:** pendientes. Se evalúan dentro del plan de cierre del repo; delamor decide si Code los hace antes.
+- **Actualización (delamor):** los textos 17, 18 y 19 **esperan** hasta saber qué respaldo necesita el paper. El v33 se escribe primero; de ahí sale qué se le pide a Code.

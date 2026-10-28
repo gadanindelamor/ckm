@@ -15,6 +15,11 @@ Hay dos tests que **afirman el agujero** en vez de taparlo:
 test: si el piso dejara de hacer falta, esos dos fallarían y habría que venir
 a leerlos.
 
+Desde el 28 oct (texto 15, punto 3) también fija el **default del skin**:
+`AgentDeviceSkin` acepta un `local_criterion` —lo pasa a `AutonomousDevice`— y
+por default no lo tiene, así que no filtra ninguna vuelta y declara la ausencia
+como `None`, no como un panel en cero.
+
 Todo con stubs. No hay providers ni red.
 """
 
@@ -30,7 +35,11 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
-from iap_chatroom.autonomous_device import AutonomousDevice           # noqa: E402
+from iap_chatroom.agent_device_skin import AgentDeviceSkin            # noqa: E402
+from iap_chatroom.autonomous_device import (                          # noqa: E402
+    DECISION_END_OF_CASE,
+    AutonomousDevice,
+)
 from iap_chatroom.channel import ChatChannel                          # noqa: E402
 from iap_chatroom.local_criterion import (                             # noqa: E402
     DECISION_SKIP,
@@ -845,3 +854,80 @@ def test_el_piso_por_default_no_habria_disparado_en_un_vivo_como_el_02() -> None
     panel = dev.panel_criterio()
     assert panel["piso_dentro_del_horizonte"] is False
     assert panel["vueltas_para_ver_el_piso"] == 14
+
+
+# ── el skin, sin criterio por default (texto 15, punto 3) ───────────────────
+
+def _skin(provider, wrapped, **kw) -> AgentDeviceSkin:
+    """
+    Un `AgentDeviceSkin` con los mismos defaults que `_device`.
+
+    `AgentDeviceSkin.__init__` pasa `*args, **kwargs` a `AutonomousDevice`, así
+    que **acepta `local_criterion`**: que no lo aplique por default es que
+    nadie se lo pasa, no que lo rechace. Si algún día debe rechazarlo, es otra
+    decisión y no está tomada.
+    """
+    return AgentDeviceSkin(device_id=kw.pop("device_id", "skin"),
+                           provider=provider,
+                           system_prompt="stub",
+                           poll_interval=0.0,
+                           wrapped_agent=wrapped, **kw)
+
+
+def test_un_skin_sin_criterio_no_filtra_ninguna_vuelta(canal) -> None:
+    """
+    **Prometido el 26 oct y pedido en el texto 15, punto 3.**
+
+    `AgentDeviceSkin` por default **no aplica el criterio local**: ninguna
+    vuelta sale `SKIP`, y **todas** llegan al agente envuelto. Lo segundo es lo
+    que distingue "no filtró" de "no corrió": si una vuelta se filtrara antes
+    del gate, el agente tendría menos llamadas que vueltas evaluadas.
+
+    El caso 0 de la Serie 2 no usa skin (`test_caso_serie2_caso0_diseno.py`),
+    y ningún driver del repo le pasa un `local_criterion` a un skin (grep del
+    28 oct: 0 ocurrencias). Este test fija el default por si eso cambia.
+    """
+    llamadas = []
+
+    async def wrapped(observation: dict):
+        llamadas.append(observation)
+        return None                      # OP_SILENCE: no publica nada
+
+    dev = _skin(ProviderStub(["OP_SILENCE"] * 50), wrapped)
+    _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
+
+    decisiones = dev.decisiones()
+    assert decisiones, "el skin no dio ninguna vuelta: el test no mide nada"
+    tipos = {d["decision"] for d in decisiones}
+    assert DECISION_SKIP not in tipos, \
+        f"un skin sin local_criterion filtró vueltas: {tipos}"
+    # **La aserción va en una sola dirección, y eso es a propósito.** Primero
+    # la escribí como igualdad y falló 1 de 2 corridas: la vuelta se puede
+    # cortar por fin de caso (`DECISION_END_OF_CASE`, autonomous_device.py:938)
+    # entre la llamada al agente y el registro de la decisión, o antes de la
+    # llamada. Esa fila no mide nada sobre el filtro, así que se saca; y de las
+    # completas, **una vuelta filtrada sería una decisión sin llamada al
+    # agente**, que es lo que la desigualdad prohíbe.
+    completas = [d for d in decisiones if d["decision"] != DECISION_END_OF_CASE]
+    assert len(llamadas) >= len(completas), \
+        (f"{len(completas)} vueltas completas y {len(llamadas)} llamadas al "
+         "agente: alguna vuelta no llegó al gate")
+    # y ninguna vuelta trae motivo de criterio
+    assert all(d.get("criterio_motivo") is None for d in decisiones)
+
+
+def test_un_skin_sin_criterio_declara_la_ausencia_no_un_panel_en_cero(canal) -> None:
+    """
+    La ausencia es el estado del observador (§19), igual que en
+    `test_sin_filtro_el_panel_es_None_no_un_panel_en_cero` para
+    `AutonomousDevice`: cero skips porque no hay filtro y cero skips porque el
+    filtro llamó siempre son dos cosas distintas.
+    """
+    async def wrapped(observation: dict):
+        return None
+
+    dev = _skin(ProviderStub(["OP_SILENCE"] * 50), wrapped)
+    _correr(dev, ClientStub(canal, dev.device_id), duration=0.05)
+
+    assert dev.panel_criterio() is None
+    assert dev.costo()["local_criterion"] is None

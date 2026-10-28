@@ -16798,3 +16798,59 @@ para que la decisión se tome con eso a la vista.
   `ConnectTimeout` se registre **como su propia clase de evento**, porque hoy llega como un `McpError`
   genérico cuyo mensaje dice "response" cuando lo que falló fue "connect"; y medir la rotación de
   sockets durante un vivo. Eso es medición, no un device.
+
+---
+## REPORTE texto 15 — punto 3: el test del skin sin criterio local — 2026-10-28 02:10 UTC
+
+*Punto 3 del texto 15, prometido el 26 oct. Dos tests nuevos en `tests/test_local_criterion.py`.
+Sin veredicto global.*
+
+### Qué quedó escrito
+
+Dos tests, al final de `tests/test_local_criterion.py`, con un helper `_skin()` que construye un
+`AgentDeviceSkin` con los mismos defaults que el `_device()` que ya estaba:
+
+1. **`test_un_skin_sin_criterio_no_filtra_ninguna_vuelta`** — ninguna decisión es `SKIP`, ninguna
+   trae `criterio_motivo`, y **todas las vueltas completas llegaron al agente envuelto**. Lo tercero
+   es lo que distingue *"no filtró"* de *"no corrió"*.
+2. **`test_un_skin_sin_criterio_declara_la_ausencia_no_un_panel_en_cero`** — `panel_criterio()` es
+   `None` y `costo()["local_criterion"]` es `None`. Es el espejo exacto de
+   `test_sin_filtro_el_panel_es_None_no_un_panel_en_cero`, que hace lo mismo para `AutonomousDevice`.
+
+También actualicé el docstring del módulo (regla de `.py`): dice desde cuándo el archivo fija además
+el default del skin.
+
+### El grep que pedía el punto: ningún driver le pasa un criterio a un skin
+
+**0 ocurrencias.** Los 18 archivos del repo que construyen o nombran un `AgentDeviceSkin` —los 9 de
+`iap_chatroom/` (incluido `groq_research_agent.py`) y los 9 del freeze
+`process/iap_series_freeze_20261008/`— tienen **cero** menciones de `local_criterion`. El caso 0 de
+la Serie 2 ya tenía su propio test de que no usa skin (`test_caso_serie2_caso0_diseno.py`).
+
+Y una cosa que conviene que esté dicha, porque el test la fija sin afirmarla de más:
+**`AgentDeviceSkin` acepta un `local_criterion`** — su `__init__` pasa `*args, **kwargs` a
+`AutonomousDevice`. Que no lo aplique por default es que **nadie se lo pasa**, no que lo rechace. Si
+el skin debe rechazarlo, es la decisión de delamor que el texto deja afuera, y no la implementé.
+
+### Una aserción mía que era flaky, y lo que la arregló
+
+La primera versión afirmaba `len(llamadas) == len(decisiones)`. **Falló 1 de 2 corridas.** La causa
+no es el skin: es que una vuelta se puede cortar por fin de caso
+(`DECISION_END_OF_CASE`, `autonomous_device.py:938`) **entre** la llamada al agente y el registro de
+la decisión, o antes de la llamada — y con `duration = 0.05` eso pasa seguido. Es la misma rama que
+el punto 3 del texto 13 destapó.
+
+Lo que quedó: se saca la fila de `END_OF_CASE` —no mide nada sobre el filtro— y la aserción va **en
+una sola dirección**, `len(llamadas) >= len(completas)`, porque **una vuelta filtrada sería una
+decisión sin llamada al agente**, que es justo lo que la desigualdad prohíbe. El porqué está en un
+comentario en el test, no sólo acá. **6 de 6 corridas verdes** después del cambio.
+
+### El test tiene poder: lo verifiqué al revés
+
+Un test que pasa porque no mide nada pasa igual. Corrí la inversión aparte (fuera de la suite, en el
+scratchpad): el **mismo** skin **con** `local_criterion=_filtro(piso_vueltas=3)` da 520 decisiones
+con `{'SKIP', 'OP_SILENCE'}`, **130** llamadas al agente contra 520 decisiones, y
+`panel_criterio()` distinto de `None`. O sea: las **tres** aserciones de los dos tests nuevos fallan
+si el skin filtra. No son tautologías.
+
+`tests/test_local_criterion.py`: **48 passed** (46 antes), en serie, 6 corridas.

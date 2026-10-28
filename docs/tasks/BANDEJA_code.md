@@ -16854,3 +16854,91 @@ con `{'SKIP', 'OP_SILENCE'}`, **130** llamadas al agente contra 520 decisiones, 
 si el skin filtra. No son tautologías.
 
 `tests/test_local_criterion.py`: **48 passed** (46 antes), en serie, 6 corridas.
+
+---
+## REPORTE texto 15 — punto 4: inventario de defaults — 2026-10-28 02:35 UTC
+
+*Punto 4 del texto 15. Sólo lectura, insumo de la TASK de defaults: **no se implementó ni se decidió
+nada**. El inventario entero está en `docs/tasks/INVENTARIO_defaults_v1.md`; acá el resumen.*
+
+### El censo
+
+Con AST sobre `services/`, `iap_chatroom/` e `iap_chatroom/providers/` (sin `tests/` ni
+`experiments/`): **117** constantes de módulo —de las cuales **25 numéricas** y **92** nombres, rutas,
+prompts, nombres de archivo y dicts de mapeo—, **171** defaults de argumento y **10** campos de
+dataclass con valor.
+
+Dejé afuera de la tabla, declarado en §0 del inventario: las 92 constantes que son **nombres** (no hay
+otro valor que declarar: cambiarlas cambia el nombre de un estado, no el régimen de una corrida), los
+defaults `None` que son **el UNKNOWN del parámetro** (su ausencia ya viaja declarada), y
+`services/analytics.py` y `basin_distance`, que **no están en el camino vivo**.
+
+### Lo que el punto preguntaba del CP2: pasa en casi todos lados, y hay cuatro excepciones
+
+El CP2 midió que en la Config **un default y una declaración explícita del mismo valor no se
+distinguen**. Pasa igual en `sampling_mode`, `poll_interval`, `duration`, `trigger_mode`, `mcp_url`,
+`grilla_lambda`, `representacion`, los umbrales de temperatura y toda la declaración de extracción:
+**el valor viaja, el hecho de ser default no**. Leyendo la traza se sabe con qué valor corrió y no se
+sabe si alguien lo eligió.
+
+**Los cuatro lugares donde sí se distingue**, que resuelven lo mismo de cuatro maneras distintas:
+
+1. **`panel.coco.thresholds`** — el más completo: `source: "default"`, `calibrated: false`,
+   `provenance: DECLARED` y `origen.<param>.source = "default de coco.py — no_calibrado:sin_separacion"`.
+   Dice que es default, de qué archivo y **por qué**.
+2. **`calibrate_declarado.sin_declarar`** — declara **qué no se declaró**, como lista (vacía en el
+   intento 4). El único que nombra la ausencia como lista.
+3. **`startup.was_requested()`** → `server.py:56`: `(pedido por --state-dir)` contra `(default)`.
+   Distingue las dos cosas **y se pierde**: va al stdout del server, no al panel ni a ningún `.jsonl`.
+4. **`local_criterion = None`** → `panel_criterio()` es `None` y no un panel en cero.
+
+Y uno simétrico, que declara que lo **tocaron**: `force_w_pos` queda en `corpus_state.json` y marca
+la W en su `causal_event`.
+
+### El `state_dir` (E1): el mecanismo existe y el panel no lo tiene
+
+No decido nada —está en los NO—, pero esto es lo que encontré y es lo que el punto pedía incluir. El
+docstring de `iap_chatroom/startup.py:43-47` dice, textual, que **"el panel tiene que poder decir cuál
+de las dos fue"** (default pedido contra default por omisión), y para eso guarda `_was_requested`
+aparte del valor. **Hoy el panel no lo dice**: el único consumidor de `startup.declaracion()` es el
+`print` de `server.py:56-57`. El `state_dir` del **device** sí viaja (`costo().state_dir` en el
+`device_log`); el del **monitor** no. Son dos mitades del mismo flujo con distinta visibilidad, y los
+dos residuos medidos (P13 el 22 oct, P17 hoy) caen del lado que no viaja.
+
+### Seis defaults cuya firma dice un régimen distinto del que corre
+
+No es una lista de errores: es donde **leer el código y leer la corrida dan distinto**.
+
+| parámetro | la firma dice | el vivo corre | quién lo cambia |
+|---|---|---|---|
+| `COCO.n_runs` | 80 | 200 | `monitor_service.py:849`, `sampling_for("coco")` |
+| `CorpusService.min_texts` | 3 | 30 | `ckm_monitor.MIN_TEXTS_FIRST_W` |
+| `BehaviorGraph.min_texts` | 5 | 30 | `ckm_monitor.py:293` |
+| `CorpusService.rebuild_suspendido` | `False` | **`True`** | `ckm_monitor.py:282` |
+| `AutonomousDevice.poll_interval` | 2.0 | 5.0 | el caso |
+| `AutonomousDevice.run(duration)` | 60.0 | 1200.0 | el caso (`DURATION`) |
+
+Más dos defaults de módulo que no son el que corre: el modelo de gemini (`gemini-2.5-flash` contra el
+`gemini-3.5-flash-lite` del caso) y el de groq (`llama-3.3-70b-versatile`; quedó registrado antes que
+la cuenta no sirve los `llama`, **no lo verifiqué hoy**: verificarlo gasta una llamada).
+
+**El 80 de la firma de COCO es un default inalcanzable en el camino vivo:** lo sobrescribe
+`sampling_for("coco")`, y sin Config cae en `self._n_runs` (`monitor_service.py:854`). El valor
+efectivo viaja; el 80 no aparece nunca en una traza. Es el punto 5 de este texto.
+
+### Marcados como resueltos por el texto 13
+
+`n_runs` y `seed`: un solo lugar (`ckm_landscape_config.N_RUNS_DEFAULT = 200`, `SEED_DEFAULT = 0`),
+leídos por `sampling_for(caso)` para Monitor, COCO y la copia de W, y en la traza **tres veces**
+(`panel.landscape_config`, `panel.condicion_W`, `calibrate_declarado`). Son las dos únicas filas con
+✅ en el inventario.
+
+### Dos cosas que aparecieron y no estaban en la lista
+
+- **El puerto 7860 está cableado dos veces**: literal en `server.py:86` (`uvicorn.run(host="0.0.0.0",
+  port=7860)`) y otra vez en el `mcp_url` por default de `AutonomousDevice`. No es un default de
+  función: es una constante en la llamada. **Ningún archivo de la corrida dice en qué puerto corrió.**
+  Es P14 punto 2, que espera a delamor.
+- **`host="0.0.0.0"`** expone el puerto a toda interfaz, y en un Codespace eso es lo que encontró la
+  sonda externa del intento 4 (las 28 líneas `Invalid HTTP request received` del punto 2 de este
+  texto). Dicho como dato, no como propuesta.

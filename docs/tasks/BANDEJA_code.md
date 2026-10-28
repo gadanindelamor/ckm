@@ -16194,3 +16194,130 @@ delamor indica por dónde seguir: `docs/opus/TEXTO_PARA_CODE_14_REPO_CKM_simpson
 - Si la suite deja tests sin colectar (no busqué `--ignore` ni marcas fuera de los 7 `xfailed`).
 - Corrí la suite con el orden por default del plugin de random, no en serie forzada
   (`-p no:randomly`): no toqué código, era el chequeo de arranque.
+
+---
+## REPORTE texto 14 — punto 1: el intervalo de Simpson sobre las curvas — 2026-10-28 01:05 UTC
+
+*`docs/opus/TEXTO_PARA_CODE_14_REPO_CKM_simpson_y_piso_del_colapso_27oct2026.md`, punto 1.
+Script: `experiments/simpson_en_las_curvas.py`. Nada de `services/` tocado. Sin veredicto global.*
+
+### Antes de medir: tres tensiones con el texto
+
+- **T1 — "las 7 curvas" son 14, en dos condiciones de muestreo.** Los registros de `calibrate` viven
+  en el panel (`coco.calibration`) de la trayectoria del Monitor. Intento 2
+  (`process/monitor_trajectory.jsonl.bak_1792649008_serie2_caso0`): **4** curvas. Intento 3
+  (`...bak_1793085284...`): **3**. Intento 4 (`experiments/_state_S2-C0/`): **7**. Las 7 curvas con
+  `n_runs = 200` cuyo λ=1 da **2,4369** son las de los intentos **2 y 3**; las del intento **4**
+  corrieron con **`n_runs = 1000`** y su λ=1 da **2,5353**. El 2,4369 del punto 2 **no es del intento
+  4**: es de los dos anteriores.
+- **T2 — los conteos por cuenca no están en el registro, y las W intermedias tampoco.** El registro
+  guarda `n_eff`, `d_ckm`, `frac_rec` y el `w_sha`; `w_version_history` guarda shas, no matrices.
+  **Se recomputaron**, como autoriza el texto: cada W se reconstruye desde el prefijo del corpus con
+  `CorpusService._compute` —arrastrando la selección de nodos anterior, porque el desempate del
+  `top_k` depende de ella— y **se verifica contra su sha antes de usarla**. Las **17** W registradas
+  en los tres intentos verifican su sha, las 14 con curva incluidas.
+- **T3 — la recomputación quedó verificada contra el registro.** Los **70 puntos** de las 14 curvas
+  dan `n_eff` **idéntico al registrado** (diferencia < 1e-9). La recomputación no es una
+  aproximación de lo que corrió: es lo que corrió.
+
+### Las dos fórmulas, verificadas antes de usarlas
+
+Contra muestreo multinomial con masas verdaderas conocidas, 20.000 réplicas por caso:
+
+| masas | n | sesgo plug-in medido | (1−θ)/n | sesgo insesgado | var medida | var delta | delta/medida |
+|---|---|---|---|---|---|---|---|
+| 0,5 0,3 0,15 0,05 | 200 | +0,003412 | 0,003175 | +0,000238 | 4,530e−4 | 4,455e−4 | 0,983 |
+| 0,5 0,3 0,15 0,05 | 1000 | +0,000608 | 0,000635 | −0,000027 | 8,917e−5 | 8,910e−5 | 0,999 |
+| 0,44 0,44 0,12 | 200 | +0,002978 | 0,002992 | −0,000014 | 2,211e−4 | 2,163e−4 | 0,978 |
+| 0,44 0,44 0,12 | 1000 | +0,000687 | 0,000598 | +0,000088 | 4,296e−5 | 4,325e−5 | 1,007 |
+| 0,9 0,05 0,03 0,02 | 200 | +0,000688 | 0,000931 | −0,000244 | 1,347e−3 | 1,338e−3 | 0,993 |
+| 0,9 0,05 0,03 0,02 | 1000 | +0,000202 | 0,000186 | +0,000016 | 2,689e−4 | 2,676e−4 | 0,995 |
+| diez de 0,1 | 200 | +0,004492 | 0,004500 | −0,000008 | 4,496e−6 | **0** | **0,000** |
+| diez de 0,1 | 1000 | +0,000903 | 0,000900 | +0,000003 | 1,789e−7 | **0** | **0,000** |
+
+- **El estimador insesgado de Simpson está bien escrito.** `Σ c_k(c_k − 1)/(n(n − 1))` da sesgo medido
+  ≤ 2,4e−4 en todos los casos, contra +0,003 a +0,0045 del plug-in. Es insesgado exacto, no
+  asintótico: con `c_k ~ Bin(n, m_k)`, `E[c_k(c_k − 1)] = n(n − 1)·m_k²`.
+- **El plug-in sobreestima Σm² en ≈ (1 − θ)/n**, medido: las dos columnas coinciden en los seis casos
+  no degenerados. Sobre Σm² es hacia arriba, así que **sobre N_eff = 1/Σm² es hacia abajo**.
+- **La fórmula del método delta da la varianza bien, con un hueco declarado.** Ratio 0,978–1,007 en
+  los casos no degenerados. **Pero se anula exactamente con masas iguales**: ahí
+  `Σm³ = (Σm²)² = 1/k²`, el término de primer orden desaparece y la fórmula devuelve 0 cuando la
+  varianza medida es 4,5e−6 (n=200). En el punto uniforme la varianza es O(1/n²) y el método delta no
+  la ve: **el intervalo de una curva cerca de masas iguales sale más angosto de lo que es.** No lo
+  corrijo —no es lo que pide el texto—, queda dicho.
+
+### El sesgo del plug-in en las curvas que existen
+
+`N_eff` insesgado menos `N_eff` plug-in, sobre los 70 puntos, siempre **hacia arriba**:
+
+| n_runs | mínimo | máximo |
+|---|---|---|
+| 200 (intentos 2 y 3, 35 puntos) | +0,0101 | +0,0182 |
+| 1000 (intento 4, 35 puntos) | +0,0020 | +0,0039 |
+
+### Los márgenes, con su intervalo
+
+El margen es `d_colapso − d_sin_cambio`; el intervalo propaga el de `N_eff(λ=1)` con `N_eff0` fijo
+(λ=0 es el baseline reusado, las mismas muestras).
+
+| intento | w_sha | estado | margen | IC95 | contiene 0 |
+|---|---|---|---|---|---|
+| 2 | fa1d1864 | no_calibrado | −0,270535 | [−0,4034, −0,1490] | no |
+| 2 | 18138650 | no_calibrado | −0,269075 | [−0,4018, −0,1477] | no |
+| 2 | 3d2e8f1d | no_calibrado | −0,249751 | [−0,3805, −0,1302] | no |
+| 2 | c049d2e8 | no_calibrado | −0,266888 | [−0,3994, −0,1457] | no |
+| 3 | 5d657507 | no_calibrado | −0,249215 | [−0,3799, −0,1297] | no |
+| 3 | 698d0f3f | no_calibrado | −0,048469 | [−0,1581, +0,0518] | **sí** |
+| 3 | **bdb98f5b** | **calibrado** | **+0,011418** | **[−0,0920, +0,1060]** | **sí** |
+| 4 | 62d909d4 | no_calibrado | −0,335205 | [−0,3997, −0,2735] | no |
+| 4 | 2edc58cb | no_calibrado | −0,311834 | [−0,3752, −0,2512] | no |
+| 4 | b01bce1b | no_calibrado | −0,326846 | [−0,3909, −0,2655] | no |
+| 4 | 5459b10c | no_calibrado | −0,308141 | [−0,3713, −0,2477] | no |
+| 4 | 0ad12b69 | no_calibrado | −0,311962 | [−0,3753, −0,2513] | no |
+| 4 | 472e54ff | no_calibrado | −0,323175 | [−0,3871, −0,2620] | no |
+| 4 | 6ca344c3 | no_calibrado | −0,315653 | [−0,3792, −0,2548] | no |
+
+**La única calibración que separó en un vivo tiene un margen cuyo intervalo contiene 0.** Es la
+`bdb98f5b` del intento 3, la que dio `D_CKM_THRESHOLD = 0,00571`: margen +0,011418 contra un IC95 de
+ancho 0,198. Lo mismo, dicho desde el otro lado: **su λ=1 superpone con λ=0** (abajo). Lo mido y lo
+registro; no toco el margen, ni el estimador, ni `n_runs`.
+
+### Superposición con el intervalo de λ=0
+
+Cuántas curvas tienen el IC95 de `N_eff(λ)` superpuesto con el de `N_eff(λ=0)`:
+
+| λ | n_runs = 200 (7 curvas) | n_runs = 1000 (7 curvas) |
+|---|---|---|
+| 0,25 | 5 / 7 | 4 / 7 |
+| 0,50 | 1 / 7 | 0 / 7 |
+| 0,75 | 2 / 7 | 0 / 7 |
+| 1,00 | 2 / 7 | 0 / 7 |
+
+Con `n_runs = 1000` ningún λ ≥ 0,5 superpone con λ=0. Con 200, dos curvas superponen en λ=1 —las dos
+de los márgenes chicos, 698d0f3f y bdb98f5b.
+
+### Dos cosas que aparecieron midiendo, no pedidas
+
+- **λ=0,75 y λ=1,0 son la misma medición: conteos idénticos en las 14 curvas** (no sólo `n_eff`
+  parecido: las listas de conteos son iguales elemento por elemento). Para las σ₀ que el muestreo
+  visita, el colapso ya está completo en λ=0,75, así que la grilla de 5 puntos tiene **4 puntos
+  distintos**. No cambio la grilla (está en los NO).
+- **La forma de la cuenca en el colapso.** En λ=1 con `n_runs = 1000`: `[449, 439, 2, 1, 1, …]`, 113
+  cuencas, de las cuales **110 de conteo 1**. Dos cuencas grandes de ≈ 0,44 y una cola de órbitas de
+  una muestra. Es exactamente la estructura que el punto 2 predice por construcción (todos +1, todos
+  −1, y las órbitas de período 2 de los σ con ΣΣσ = 0), y es la razón por la que `N_eff` del colapso
+  no es 2: la cola de singletons aporta `k/n²` a Σm².
+
+### Qué queda sin hacer, de este punto
+
+- El intervalo **no** incluye la correlación entre puntos de una curva (misma seed → mismas σ₀). Los
+  intervalos reportados son marginales, y la superposición que informo es la de dos intervalos
+  marginales, no un test sobre la diferencia pareada. Está declarado en el docstring del script.
+- No recomputé las curvas del intento 1: no tiene trayectoria del Monitor respaldada
+  (`process/monitor_trajectory.jsonl.bak_*` existe sólo para 1792649008 y 1793085284).
+- `experiments/simpson_en_las_curvas_resultado.json` (92 KB, casi todo los conteos) **no se commitea**,
+  por la convención de los dumps; el script es determinista y lo regenera con
+  `python3 experiments/simpson_en_las_curvas.py`.
+
+A1.PAUSA. Sigue el punto 2 (el piso del colapso) cuando llegue el OK.

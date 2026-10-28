@@ -16942,3 +16942,79 @@ leídos por `sampling_for(caso)` para Monitor, COCO y la copia de W, y en la tra
 - **`host="0.0.0.0"`** expone el puerto a toda interfaz, y en un Codespace eso es lo que encontró la
   sonda externa del intento 4 (las 28 líneas `Invalid HTTP request received` del punto 2 de este
   texto). Dicho como dato, no como propuesta.
+
+---
+## REPORTE texto 15 — punto 5: el docstring de coco.py, y 3 tests que desaparecieron — 2026-10-28 02:55 UTC
+
+*Punto 5 del texto 15. Sin cambiar código ni el 80 de la firma. Sin veredicto global.*
+
+### Lo que decía y lo que dice
+
+`services/coco.py`, entrada `n_runs` del docstring de `__init__`. **Lo que decía** (3 líneas):
+*"reinicios aleatorios para contar atractores. Sesgado hacia arriba con n_runs (ver
+_count_attractors) — no cambiar sin revisar el hallazgo del sweep n_runs 60→70."* Las tres
+afirmaciones eran falsas o inverificables hoy:
+
+1. **"contar atractores"** — `_count_attractors` devuelve `n_eff(basin_masses)`, una masa, no un
+   conteo (`coco.py:682-684`: *"conserva el nombre por regresión"*).
+2. **"sesgado hacia arriba"** — ése es el sesgo del **conteo**, que crece con `n_runs` y no satura, y
+   que vive hoy en `landscape_engine.deprecated_count_attractors`. El sesgo del estimador que
+   **sí** corre es **hacia abajo**.
+3. **"el hallazgo del sweep 60→70"** — está en `iap_chatroom/tests/test_armstrong_n_runs_sweep.py`,
+   que es un driver y **no corre en la suite** (medido en el texto 13).
+
+**Lo que dice ahora** nombra las tres cosas y cita la medición del texto 14, punto 2, que es la única
+que tenemos contra un **valor verdadero conocido**: en el extremo de colapso con N=20 el exacto es
+**2,6122** y la media del estimador **2,5988** a `n_runs = 200` y **2,6095** a 1000, con sd 0,140 y
+0,062 — o sea, a 200 el ruido es diez veces el sesgo. Y agrega lo que el punto 4 encontró: **este
+default no es el que corre** (`sampling_for("coco")`, `monitor_service.py:849`; sin Config, el
+`n_runs` del Monitor, `:854`), así que el 80 de la firma no llega a un vivo. El 80 no se tocó.
+
+El nombre del driver va entero en una línea **a propósito**, y lo dice el propio docstring: partido
+no lo encuentra un grep.
+
+### El grep de los nombres tocados: dos lugares más con la misma redacción, no corregidos
+
+- `services/coco.py:333` — comentario: *"`_count_attractors` (n_runs finito, ver sweep n_runs
+  60→70)"*. Misma referencia al sweep.
+- `services/coco.py:403` — docstring de `sampling_mode`: *"el modo con el que `observe()` cuenta
+  atractores"*. Mismo "cuenta atractores".
+- `services/monitor_service.py:125` dice *"contar atractores (D_ckm) y masas de cuenca (N_eff)"*, que
+  **sí** distingue las dos cosas; no lo leo como la misma divergencia.
+
+**No los toqué**: el punto 5 nombra 173-175 y me quedo ahí. Los reporto para que la decisión de
+extenderlo sea de quien corresponde. En `registers/` y en las TASK la frase vieja aparece 7 veces más
+—traza, no se reescribe.
+
+### La suite: 889 passed, y por qué no son 892
+
+**Suite completa en serie: 889 passed, 7 xfailed, 0 failed, 72,13 s.** En el ARRANQUE de hoy eran
+**890**, y agregué **2** tests en el punto 3: deberían ser **892**. Faltan **3**, y la causa está
+medida:
+
+`tests/test_calibrate_reusa_A0_en_lambda_cero.py:53-59` tiene `_Ws()`, que parametriza *"las W sobre
+las que se verifica. **La del vivo si está**"* — y la del vivo es
+`experiments/_state_S2-C0/corpus_state.json`, que el **`--reset` del punto 1 movió a `process/`**. Sin
+ese archivo, `_Ws()` devuelve 2 W sintéticas en vez de 3, y los **3** tests parametrizados pierden su
+caso `vivo_S2-C0`. Verificado en la colección: hoy el archivo colecta **7** items y los ids son sólo
+`sintetica_N12` y `sintetica_N20`; con la W del vivo colectaba **10**. 890 + 2 − 3 = **889**. La
+cuenta cierra exacta.
+
+**Lo que esto es:** correr `--check` **baja la cobertura de la suite en 3 tests y nada lo dice**. No
+hay `skip`, no hay warning: el archivo degrada a sintético en silencio. Es la forma del default
+tácito, en los tests: la ausencia no se anuncia. Y además **el recuento de la suite no es comparable
+entre corridas** si no se declara si el `state_dir` del vivo estaba.
+
+### PREGUNTA P18 (NO BLOQUEA) — la W del vivo en la suite
+
+**Qué es:** 3 tests parametrizados usan la W del último vivo *si el archivo está*, y el `--reset` del
+`correr_caso0.sh` se lo lleva. Hoy eso cambia qué cubre la suite sin dejar marca.
+
+**Qué hay que decidir:** si ese caso se ancla a la copia preservada en `process/` —reproducible, con
+su timestamp, como ya hace `experiments/simpson_en_las_curvas.py` desde hoy— o si la ausencia se
+declara (un parámetro que se salta diciendo por qué), o si queda como está.
+
+**Default vigente y reversible:** queda como está. No toco el test: **anclar el caso cambia qué
+afirma** y eso no lo decido yo.
+
+**Por qué no la decido:** toca qué cubre la suite, y el `state_dir` de fondo es **E1**.

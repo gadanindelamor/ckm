@@ -170,9 +170,29 @@ class COCO:
             frac_rec_min: A_current/A0 por debajo de esto → zona "deep".
             dynamic_alpha: si True, alpha varía con D_ckm (_alpha_for);
                 si False, siempre alpha_star.
-            n_runs: reinicios aleatorios para contar atractores. Sesgado
-                hacia arriba con n_runs (ver _count_attractors) — no
-                cambiar sin revisar el hallazgo del sweep n_runs 60→70.
+            n_runs: muestras de sigma_0 por evaluación. Lo que se estima
+                con ellas es N_eff = 1/Σm² sobre masas de cuenca
+                (_count_attractors devuelve n_eff(basin_masses) y conserva
+                el nombre por regresión), **no** un conteo de atractores.
+                El sesgo del estimador con n_runs finito es **hacia abajo**,
+                medido contra un valor verdadero conocido (texto para Code
+                14, punto 2, 28 oct 2026: en el extremo de colapso con
+                N=20 el exacto es 2,6122 y la media del estimador 2,5988 a
+                n_runs=200 y 2,6095 a 1000, con sd 0,140 y 0,062). A
+                n_runs=200 el ruido es diez veces el sesgo.
+                El sesgo **hacia arriba** era del conteo de atractores, que
+                crece con n_runs y no satura; eso vive en
+                landscape_engine.deprecated_count_attractors, con su
+                medición en el docstring. El hallazgo del sweep n_runs
+                60→70 está en el driver
+                `iap_chatroom/tests/test_armstrong_n_runs_sweep.py`, que
+                **no corre en la suite** (medido en el texto 13). El
+                nombre entero va en una línea a propósito: partido no lo
+                encuentra un grep.
+                Este default **no es el que corre**: el valor lo pone
+                CKMlandscapeConfig vía sampling_for("coco")
+                (monitor_service.py:849) y, sin Config, el n_runs del
+                Monitor (:854). El 80 de la firma no llega a un vivo.
             seed: semilla del RNG de conteo de atractores.
             track_landscape: si True, cada STOP mide A/c(S) antes y
                 después de comprimir (más caro, ~3x relajaciones).

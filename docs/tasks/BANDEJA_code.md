@@ -16137,3 +16137,60 @@ justo lo que delamor quiere probar en el caso futuro de permutar roles entre pro
 
 **Corrección de registro:** la entrada anterior está fechada **17:10 UTC** y se escribió a las
 **17:00**. No se reescribe; el dato correcto vive acá.
+
+---
+## ARRANQUE — 2026-10-28 00:48 UTC
+
+*Sesión nueva de Code. Protocolo §2 (`docs/tasks/PROTOCOLO_code_continuidad_v1.md`, leído entero).
+delamor indica por dónde seguir: `docs/opus/TEXTO_PARA_CODE_14_REPO_CKM_simpson_y_piso_del_colapso_27oct2026.md`.*
+
+### Revisé
+
+1. Locks: `ls .git/*.lock` — ninguno.
+2. `git log -1`: `0b0bd22` *docs(opus): ESTADO 27 oct — cierre*. `git pull --rebase origin main`:
+   `Already up to date`. `git status -sb`: `## main...origin/main` (sin adelanto ni atraso).
+3. `git status --porcelain`: **cero** archivos tracked modificados o staged. 72 entradas `??`.
+4. `docs/opus/ESTADO_al_cortar_27oct2026.md` entero (las tres secciones: mañana, tarde y cierre) y el
+   final de `docs/opus/decisiones_en_el_acto.md` (27 oct, desde la fila misteriosa hasta "capturar
+   errores es construir devices").
+5. `docs/tasks/DECISIONES_opus.md`: los `Pn` registrados, contra los `Pn` de la BANDEJA.
+6. Los archivos de salida de la última corrida (`experiments/_state_S2-C0/`, intento 4): los 7
+   `.jsonl` con `json.loads` sobre la última línea, y los 3 `.json` con `json.load` completo.
+7. Suite completa: `python -m pytest tests -q`.
+8. Los tres textos pendientes nombrados en el ESTADO (14, 15, 16): existen en `docs/opus/`.
+
+### Encontré
+
+- **La última corrida cerró completa.** 7 `.jsonl`, última línea parseable en todos
+  (`device_log.jsonl` 556 líneas, `monitor_trajectory.jsonl` 65, `channel_messages.jsonl` 98); los 3
+  `.json` de estado parsean enteros. No hay ningún `.tmp` suelto posterior al 20 oct fuera de `.git`:
+  por §4, nada quedó a medio escribir. El REG del intento 4 está en
+  `registers/REG_iap_serie2_caso0_intento4_v1.md`.
+- **Suite: 890 passed, 7 xfailed, 0 failed, 74,11 s.** Mismo recuento que el cierre del texto 13
+  (ESTADO 27 oct tarde). Los dos tests sensibles (el de β y `test_oda_continuo`) pasaron; el de β ya
+  busca en la estructura desde `9a01ea4`.
+- **Preguntas abiertas (§8): una.**
+  - **P14 — DEFAULT VIGENTE, SIN DECISIÓN.** Punto 3 (el registro de providers) lo decidió delamor el
+    27 oct (*"un driver de test lo sabe. hay que llevar ese knowhow a IAP"*) y va en el texto 16. Los
+    puntos 1 (los archivos de estado de una corrida) y 2 (el puerto) **siguen esperando su palabra**.
+    No hay entrada `P14` en `DECISIONES_opus.md`: la respuesta vive en `decisiones_en_el_acto.md`.
+  - P13 resuelta (27 oct 03:30 UTC). P1–P10, P12, P15, P16 con entrada en `DECISIONES_opus.md`.
+    **P11 nunca se preguntó**: en la BANDEJA aparece sólo como "la próxima es P11". P8 tiene
+    respuesta en decisiones sin `Pn` en la BANDEJA.
+- **Esperan a delamor, ninguna de Code** (ESTADO 27 oct, cierre): la medida de referencia (que es el
+  punto 3 de este texto 14), **E1** el `state_dir` por default, **P14** puntos 1 y 2, el patrón de
+  calibrate con la tensión del margen, las dos semillas de `calibrate`, Q1–Q3, J1, J2, los subgrafos
+  chicos, `W_asim`, la figura Monitor contra COCO y el REG del intento 2.
+- **E5 ya está resuelto** (`293fd44`): el docstring de `ckm_monitor.py` declara las condiciones de la
+  primera separación en un vivo. El ESTADO de la mañana lo pedía; el del cierre lo da por hecho.
+- Las 72 entradas `??` son las de siempre (NOTAs, PDFs, docs de respaldo, `_state_*`, backups
+  `process/*.bak_*`, `scripts/`): por convención no se commitean y no son pendientes.
+
+### No pude revisar
+
+- Si cada una de las 72 entradas `??` sigue siendo intencional: las leí como clase, no una por una.
+- Los 302 `tmp_obj_*` de `.git/objects` que el ESTADO menciona: son de la PC de delamor, no de acá.
+- La BANDEJA entera: leí el tramo nuevo desde el último commit, no los 907 KB.
+- Si la suite deja tests sin colectar (no busqué `--ignore` ni marcas fuera de los 7 `xfailed`).
+- Corrí la suite con el orden por default del plugin de random, no en serie forzada
+  (`-p no:randomly`): no toqué código, era el chequeo de arranque.

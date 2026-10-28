@@ -8,10 +8,30 @@ en este orden.
 - Leé primero docs/opus/decisiones_en_el_acto.md, 28 oct, entero.
 - Regla de .py: A1.PAUSA al acceder; después de modificar, el docstring propio
   y grep de los nombres tocados en docstrings y comentarios del resto del repo.
+- Orden de prioridad de delamor (28 oct): CKM el instrumento, luego IAP,
+  luego devices, luego conexiones y servicios. Los puntos van en ese orden.
 - Unidad: cada punto, de corrido. A1.PAUSA sólo si un punto encuentra una
   tensión; seguí con los demás.
 
-1. iap_chatroom/tests/ — lo que es de Opus (OK):
+1. Docstrings del instrumento, sin cambiar código:
+   - services/calibrate.py, extremo_colapso: "N_eff → 1" no es alcanzable.
+     Que diga el lema que mediste (S ≠ 0 → todos +1 o todos −1 en un paso;
+     S = 0, N par → órbita de período 2 {σ, −σ}), que el piso es ≥ 2, de qué
+     depende (N, paridad, regla de empate, medida de σ₀; no de la escala ni
+     de W) y la referencia a experiments/piso_del_colapso.py.
+   - services/coco.py:333 y :403: la misma redacción vieja ("ver sweep n_runs
+     60→70", "cuenta atractores"); que digan lo que el código hace, como el
+     punto 5 del texto 15.
+
+2. P18: el caso "vivo" de tests/test_calibrate_reusa_A0_en_lambda_cero.py se
+   ancla a la copia preservada del intento 4
+   (process/*.bak_1793150043_serie2_caso0, el corpus_state.json), con la
+   ruta y la fecha en el docstring, como ya hace
+   experiments/simpson_en_las_curvas.py. Si el archivo no está, el caso se
+   salta diciendo por qué (no degrada en silencio). Sigue afirmando lo mismo
+   (el reuso de A0 sobre una W real); cambia cuál W, y se declara.
+
+3. iap_chatroom/tests/ — lo que es de Opus (OK):
    - Los 21 duplicados byte a byte del freeze: git rm de la copia viva.
      Antes, volvé a verificar con cmp los 21. Dejá en iap_chatroom/tests/ un
      MOVED_TO_FREEZE.md que liste los 21 y diga dónde está cada copia
@@ -26,24 +46,6 @@ en este orden.
    - test_mcp_client.py, los 6 armstrong_* y los 2 wmixta_*: quedan.
    - test_caso_serie2_caso0.py: queda; dónde viven los casos lo decide
      delamor.
-
-2. P18: el caso "vivo" de tests/test_calibrate_reusa_A0_en_lambda_cero.py se
-   ancla a la copia preservada del intento 4
-   (process/*.bak_1793150043_serie2_caso0, el corpus_state.json), con la
-   ruta y la fecha en el docstring, como ya hace
-   experiments/simpson_en_las_curvas.py. Si el archivo no está, el caso se
-   salta diciendo por qué (no degrada en silencio). Sigue afirmando lo mismo
-   (el reuso de A0 sobre una W real); cambia cuál W, y se declara.
-
-3. Docstrings, sin cambiar código:
-   - services/calibrate.py, extremo_colapso: "N_eff → 1" no es alcanzable.
-     Que diga el lema que mediste (S ≠ 0 → todos +1 o todos −1 en un paso;
-     S = 0, N par → órbita de período 2 {σ, −σ}), que el piso es ≥ 2, de qué
-     depende (N, paridad, regla de empate, medida de σ₀; no de la escala ni
-     de W) y la referencia a experiments/piso_del_colapso.py.
-   - services/coco.py:333 y :403: la misma redacción vieja ("ver sweep n_runs
-     60→70", "cuenta atractores"); que digan lo que el código hace, como el
-     punto 5 del texto 15.
 
 4. ConnectTimeout como clase de evento propia en el device_log (la
    alternativa mínima de tu reporte del 15.2). Intención, declarada: que la

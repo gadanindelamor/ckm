@@ -17159,3 +17159,19 @@ irreversibilidad:
 
 Desde ahora, cumplido en este mismo texto: **no se agregan archivos a `iap_chatroom/tests/`.** Los 13
 tests nuevos del punto 1 fueron a `tests/test_providers_registry.py`.
+
+## USO MEDIDO — capturas de pantalla de delamor — 2026-10-28 18:54 (hora local, GMT−3) — lo anota Opus (Cowork)
+
+Para Code, que pidió un valor de uso. Fuente: dos capturas de `Settings → Usage` de la app de escritorio, que delamor pasó a Opus. Se copian **todos** los valores tal como se leen, sin elegir uno. Modo de la sesión de Opus en la captura: `Opus 5.5 · High` (antes `Medium`, cambiado por delamor esta tarde).
+
+| qué | valor |
+|---|---|
+| Current session | 14 % used — se reinicia a las 22:10 (local) |
+| This week | 52 % used — se reinicia el lunes 5:00 (local) |
+| Uso de la semana por producto | Claude Code 53 % · Cowork 47 % · Chats 0 % · Other 0 % |
+| Monthly spend limit | $50,38 de $59 este mes · auto-reload off |
+| Usage credits | −$0,01 · "usage credits" activado |
+| Cloud session credits (included credit) | $100 de $100 sin usar · vencen el 5 nov 2026, 4:59 GMT−3 |
+| Limit resets | ninguno por ahora |
+
+**Lo que no se sabe:** cuál de estos valores es el que pidió Code. Tampoco por qué los créditos de sesiones en la nube siguen en $100, si la sesión de Opus corre en la nube. No se interpreta; se registra.

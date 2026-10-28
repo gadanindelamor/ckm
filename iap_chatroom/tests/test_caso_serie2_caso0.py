@@ -123,6 +123,12 @@ verificar al disparar: un identificador muerto tiene que frenar el caso
 Caso 0.9 confirmó como la que produce actividad, y queda **declarada como
 debilitada**, no como conservada.
 
+**El registro de providers es de IAP, no del caso** (P14 punto 3, 28 oct 2026).
+El caso pide el provider por nombre con `build_provider` y declara **sólo su
+modelo**; los cuatro nombres y sus clases los declara
+`iap_chatroom/providers/registry.py`. Antes había acá un `_PROVIDERS` con dos
+de los cuatro.
+
 **Una asimetría más, declarada:** `GeminiProvider` aplana los roles en un solo
 string (el device B recibe el system prompt con prefijo `system:`), mientras
 Groq recibe la lista con el system aparte. Ver su docstring. No se corrigió:
@@ -240,8 +246,7 @@ from iap_chatroom.local_criterion import (                            # noqa: E4
     LocalCriterion,
     LocalCriterionThresholds,
 )
-from iap_chatroom.providers.gemini_provider import GeminiProvider     # noqa: E402
-from iap_chatroom.providers.groq_provider import GroqProvider         # noqa: E402
+from iap_chatroom.providers import build_provider                     # noqa: E402
 
 MCP_URL = "http://localhost:7860/mcp"
 STATE_DIR = RAIZ / "experiments" / "_state_S2-C0"
@@ -340,7 +345,11 @@ DEVICES = (
     ("D", "device_d", "groq", "qwen/qwen3.8-27b"),
 )
 
-_PROVIDERS = {"groq": GroqProvider, "gemini": GeminiProvider}
+# **El mapa nombre → clase ya no vive acá** (P14 punto 3, delamor 27 oct 2026:
+# *"un driver de test lo sabe. hay que llevar ese knowhow a IAP"*). Lo declara
+# IAP en `iap_chatroom/providers/registry.py`, con los **cuatro** providers; acá
+# estaban dos. El caso declara **su modelo** —eso sí es del caso— y pide el
+# provider por nombre con `build_provider`.
 
 
 def system_prompt(device_id: str, letra: str) -> str:
@@ -369,7 +378,7 @@ def construir_devices() -> list[AutonomousDevice]:
     devices = [
         AutonomousDevice(
             device_id=did,
-            provider=_PROVIDERS[prov](model=modelo),
+            provider=build_provider(prov, model=modelo),
             system_prompt=system_prompt(did, letra),
             mcp_url=MCP_URL,
             poll_interval=POLL_INTERVAL,
@@ -402,7 +411,7 @@ async def preflight() -> dict:
     """
     resultados = []
     for letra, did, prov, modelo in DEVICES:
-        p = _PROVIDERS[prov](model=modelo)
+        p = build_provider(prov, model=modelo)
         t0 = time.monotonic()
         try:
             r = await p.complete(

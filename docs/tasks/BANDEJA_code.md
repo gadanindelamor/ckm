@@ -17018,3 +17018,68 @@ declara (un parámetro que se salta diciendo por qué), o si queda como está.
 afirma** y eso no lo decido yo.
 
 **Por qué no la decido:** toca qué cubre la suite, y el `state_dir` de fondo es **E1**.
+
+---
+## REPORTE texto 16 — punto 1: el registro de providers lo declara IAP — 2026-10-28 03:20 UTC
+
+*`docs/opus/TEXTO_PARA_CODE_16_REPO_CKM_providers_en_IAP_y_iap_tests_es_process_27oct2026.md`, punto 1.
+P14 punto 3, decidido por delamor el 27 oct: *"un driver de test lo sabe. hay que llevar ese knowhow a
+IAP"*. Sin veredicto global.*
+
+### Qué quedó
+
+**`iap_chatroom/providers/registry.py`** (nuevo), exportado desde `providers/__init__.py`:
+`PROVIDERS` (nombre → clase, los **cuatro**), `PROVIDER_CLASSES`, `provider_names()`,
+`provider_class(name)`, `build_provider(name, model=None, api_key=None)` y `UnknownProvider`.
+
+**El nombre no se escribe dos veces.** Cada clase ya declaraba el suyo
+(`Provider.name`: `anthropic`, `gemini`, `groq`, `openai`), así que el registro se **arma desde las
+clases** —`{cls.name: cls for cls in PROVIDER_CLASSES}`— y no hay un segundo lugar donde el nombre
+pueda divergir. Es lo que evita que el hueco vuelva: si alguien agrega un provider y se olvida del
+registro, o escribe el nombre distinto en los dos lados, falla un test.
+
+**El driver del caso** (`iap_chatroom/tests/test_caso_serie2_caso0.py`): se fue el
+`_PROVIDERS = {"groq": …, "gemini": …}` (2 de 4) y los dos `import` de clases; ahora pide
+`build_provider(prov, model=modelo)` en `construir_devices` y en `preflight`. **El caso sigue
+declarando su modelo** —eso sí es del caso—; lo que ya no declara es qué providers existen. Docstring
+del caso actualizado con el por qué y la fecha.
+
+**El guardia de P14** (`tests/test_caso_serie2_caso0_diseno.py`,
+`test_el_caso_no_declara_su_propio_mapa_de_providers`): que el caso no vuelva a declarar un
+`_PROVIDERS`, que no importe clases de provider para elegir con ellas, que use `build_provider`, y
+—la parte que un `assert` sobre el texto no puede dar— que **cada nombre que el caso usa esté en el
+registro de IAP**, nombrando los registrados si falla.
+
+**Tests del registro** (`tests/test_providers_registry.py`, 13): los cuatro están; cada nombre da su
+clase; cada nombre **construye** su clase con el modelo declarado (con una `api_key` de prueba: los
+`__init__` arman el cliente del SDK y no llaman a nada); `model=None` deja el default de la clase y
+no lo pisa con `None` —verificado **contra construir la clase directo**, no contra el literal del
+código—; un nombre que no existe levanta `UnknownProvider` **con los cuatro nombres en el mensaje**;
+el nombre no está escrito dos veces; e importar el registro no construye nada (se verifica borrando
+las cuatro variables de entorno y reimportando).
+
+Van en `tests/`, no en `iap_chatroom/tests/`: desde el punto 2 de este texto ahí no se agregan
+archivos.
+
+### Suite
+
+**903 passed, 7 xfailed, 0 failed, 54,12 s**, en serie. La cuenta cierra: 889 del cierre del texto 15
++ 13 del registro + 1 del guardia nuevo = **903**.
+
+### Dos cosas que encontré de paso
+
+- **El grep de los nombres tocados:** `_PROVIDERS` ya no aparece en ningún `.py` vivo. Queda nombrado
+  —como historia, en pasado— en el docstring del registro, en el del caso y en el del guardia. En
+  `docs/opus/` y en los ESTADO aparece como traza fechada: no se reescribe.
+- **La afirmación del inventario sobre los modelos `llama` ya estaba en el repo, y no la había
+  visto**: el docstring de `preflight` del caso dice *"un modelo que el provider retiró —le pasó a
+  `llama-3.3-70b-versatile` entre que se escribió el orden y hoy— tiene que frenar el caso acá"*.
+  O sea: el default de módulo de `GroqProvider` es **el modelo que el provider retiró**, y está
+  medido en el repo, no sólo en mi memoria. Lo dejo dicho acá porque ayer lo reporté como "no
+  verificado hoy"; el dato estaba, en el archivo que toqué.
+
+### Lo que no hice
+
+Los puntos **1** (la lista de archivos de estado) y **2** (el puerto) de P14: el texto dice
+explícitamente que no van acá y que los decide delamor. No los toqué. El puerto sigue cableado en
+`server.py:86` y en el `mcp_url` por default del device (inventario §6).

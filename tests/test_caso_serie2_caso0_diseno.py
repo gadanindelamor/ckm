@@ -467,6 +467,41 @@ def test_el_caso_pasa_el_state_dir_y_nada_mas(caso):
     assert "shutil.move" in cuerpo and "preservar_estado" in cuerpo
 
 
+def test_el_caso_no_declara_su_propio_mapa_de_providers(caso):
+    """
+    **P14 punto 3** (delamor, 27 oct 2026: *"un driver de test lo sabe. hay que
+    llevar ese knowhow a IAP"*; texto para Code 16, punto 1).
+
+    El guardia de *"sin lógica en los drivers"* mira acá lo mismo que mira con
+    el `state_dir`: el caso **pide**, IAP **declara**. Hasta el 28 oct el caso
+    tenía su propio `_PROVIDERS` con **dos** de los cuatro providers, y era el
+    único mapa nombre → clase del repo.
+
+    Lo que se exige: que el caso no vuelva a declarar un mapa, que no importe
+    clases de provider para elegir con ellas, y que **cada nombre que usa esté
+    en el registro de IAP** — que es la parte que un `assert` sobre el texto no
+    puede dar.
+    """
+    from iap_chatroom.providers import provider_names
+
+    cuerpo = CASO_PATH.read_text().split('"""', 2)[2]
+
+    assert "_PROVIDERS" not in cuerpo, "el caso volvió a declarar su mapa"
+    assert "build_provider" in cuerpo, "el caso no pide el provider por nombre"
+    for clase in ("GroqProvider", "GeminiProvider", "AnthropicProvider",
+                  "OpenAIProvider"):
+        assert f"import {clase}" not in cuerpo, (
+            f"el caso importa {clase}: elegir la clase es del registro"
+        )
+
+    registrados = provider_names()
+    for letra, did, prov, modelo in caso.DEVICES:
+        assert prov in registrados, (
+            f"{did} pide el provider {prov!r}, que no está en el registro de "
+            f"IAP ({', '.join(registrados)})"
+        )
+
+
 def test_el_state_dir_es_el_del_orden(caso):
     """
     `experiments/_state_S2-C0/`, como lo escribe el orden. El nombre sigue al

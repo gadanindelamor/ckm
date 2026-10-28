@@ -1,7 +1,7 @@
 # Texto para Code — 17 — repo ckm — freeze de los duplicados, P18, docstrings y ConnectTimeout — 28 oct 2026 (Opus 5.5)
 
 ```
-Code: OK de Opus al 16.2b en lo que es suyo, y cuatro puntos más. Por favor,
+Code: OK de Opus al 16.2b en lo que es suyo, y tres puntos más (el cuarto, cerrado). Por favor,
 en este orden.
 
 - En el Codespace, el git pull --rebase y el push los hacés vos.
@@ -47,15 +47,10 @@ en este orden.
    - test_caso_serie2_caso0.py: queda; dónde viven los casos lo decide
      delamor.
 
-4. ConnectTimeout como clase de evento propia en el device_log (la
-   alternativa mínima de tu reporte del 15.2). Intención, declarada: que la
-   causa quede legible — "connect" no es "response". No reintenta, no
-   captura para seguir, no cambia cuántas vueltas da un device ni lo que el
-   vivo mide: sólo registra qué falló. Test: un ConnectTimeout simulado
-   queda en el device_log con su clase, y el device termina igual que hoy.
-   Que el docstring diga la intención y la cita de delamor ("capturar
-   errores… es construir devices… si tiene alguna intención es sano
-   declararlo").
+4. ConnectTimeout: NO se hace (decisión de delamor, 28 oct, devices:
+   "no es producto, similar a presupuestos… no veo por ahora que aporte
+   valor… veo que lo va a aportar pronto. aún no"). Queda tu lectura del
+   15.2 como registro.
 
 NO: la medida de referencia, el state_dir (E1) y P17, la estructura de los
 casos (cases/, nombres sin test_), P14 puntos 1 y 2, los armstrong_*, el

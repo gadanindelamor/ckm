@@ -92,3 +92,10 @@ La traza completa está en `docs/opus/decisiones_en_el_acto.md`, 27 oct. Esto es
   - **DEFS v19:** 1000 → 200; CP2 implementado; texto 13; E5 resuelto; la medida de referencia (la banda; la validación del paper bajo el hipercubo); el lema del piso (paridad, forma cerrada); la masa de cuenca como una de las mediciones; la torsión y los `rechazados` según la fase; los resultados del 18 y la definición si se registra.
   - **v33,** según el plan del 26 oct más lo anterior.
 - **Después, la exploración:** el caso 1 (sin definir); otro intento del caso cero con permutación de roles y providers, sin criterio local; el skin.
+
+---
+## 28 oct, cierre del día — cambio de fase
+- delamor: *"TRUST, el proyecto está cambiando de fase, acumulación a EVALUACIÓN.. CKM cierra y se transforma en TRAZA VIVA"*.
+- **El plan:** las DEFS v19, el paper v33, el plan de cierre del repo y el release; *"y vemos qué sucede"*.
+- **Próxima sesión de Opus (nueva, desde este ESTADO):** las DEFS v19 primero y después el v33, con el corte del 28 oct. Lo verificado hasta los reportes de hoy entra; el texto 18 entra si llega antes; lo demás va a otros papers.
+- **Los textos 17, 18 y 19:** pendientes. Se evalúan dentro del plan de cierre del repo; delamor decide si Code los hace antes.

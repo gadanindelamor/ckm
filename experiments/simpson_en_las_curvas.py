@@ -27,9 +27,12 @@ Para cada punto de cada curva de `calibrate` (cada λ de la grilla):
 
 ## Condiciones
 
-- Las curvas son las de los intentos **2, 3 y 4** de `serie2_caso0`
-  (`process/monitor_trajectory.jsonl.bak_1792649008...`,
-  `...bak_1793085284...` y `experiments/_state_S2-C0/monitor_trajectory.jsonl`).
+- Las curvas son las de los intentos **2, 3 y 4** de `serie2_caso0`, las tres
+  en `process/`: `...bak_1792649008...`, `...bak_1793085284...` y
+  `...bak_1793150043...`. El intento 4 vivía en `experiments/_state_S2-C0/`
+  cuando esto se escribió, y el `--reset` del `correr_caso0.sh --check` del 28
+  oct lo preservó en `process/` con su timestamp (texto 15, punto 1). La ruta
+  se actualizó acá: el script apunta a donde está la evidencia hoy.
   **Son 14 curvas en dos condiciones de muestreo**: los intentos 2 y 3 con
   `n_runs = 200` y el intento 4 con `n_runs = 1000`; las dos con `seed = 0`.
 - Los conteos por cuenca **no están en el registro**, y las W intermedias
@@ -70,7 +73,7 @@ sys.path.insert(0, str(ROOT / "services"))
 
 from calibrate import extremo_colapso, interpolar          # noqa: E402
 from corpus_service import CorpusService                    # noqa: E402
-from landscape_engine import n_eff, relax_orbit             # noqa: E402
+from landscape_engine import relax_orbit                    # noqa: E402
 from w_version import sha256_W                              # noqa: E402
 
 Z = 1.959963984540054   # 95% normal
@@ -82,8 +85,9 @@ INTENTOS = [
                  "process/corpus_state.json.bak_1792649008_serie2_caso0"),
     ("intento3", "process/monitor_trajectory.jsonl.bak_1793085284_serie2_caso0",
                  "process/corpus_state.json.bak_1793085284_serie2_caso0"),
-    ("intento4", "experiments/_state_S2-C0/monitor_trajectory.jsonl",
-                 "experiments/_state_S2-C0/corpus_state.json"),
+    # el intento 4, preservado en process/ por el --reset del 28 oct
+    ("intento4", "process/monitor_trajectory.jsonl.bak_1793150043_serie2_caso0",
+                 "process/corpus_state.json.bak_1793150043_serie2_caso0"),
 ]
 
 

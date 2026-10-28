@@ -16571,3 +16571,92 @@ los cuatro modos. Lo reporto; no toco el driver.
 
 **Con esto el texto 14 queda cerrado en sus tres puntos.** A1.PAUSA. Lo que sigue, por indicación de
 delamor: el texto 15 y después el 16.
+
+---
+## REPORTE texto 15 — punto 1: correr_caso0.sh --check — 2026-10-28 01:45 UTC
+
+*`docs/opus/TEXTO_PARA_CODE_15_REPO_CKM_hacia_el_proximo_vivo_27oct2026.md`, punto 1. Sin veredicto
+global. Ningún vivo corrido.*
+
+### Paso por paso, qué hizo
+
+Antes: `ss -ltn` sin nada en el 7860 y ningún proceso `iap_chatroom/server.py`.
+
+| paso | qué hizo | resultado |
+|---|---|---|
+| 0 | puerto 7860 libre | pasó, no abortó |
+| 1 | `--reset`: preservar el estado del intento 4 | **los 10 archivos movidos** a `process/*.bak_1793150043_serie2_caso0` |
+| 2 | server con `--state-dir experiments/_state_S2-C0` | pid 21331, respondió en el **intento 3** del loop de espera (≈6 s) |
+| 3 | por MCP: `corpus_size = 0`, mensajes `= 0`, `coco = {'connected': None, 'reason': 'no evaluation yet'}` | pasó |
+| 4 | preflight de los 4 modelos | **los 4 OK**: A `groq/openai/gpt-oss-120b` 0,362 s · B `gemini/gemini-3.5-flash-lite` 0,611 s · C `groq/openai/gpt-oss-20b` 0,309 s · D `groq/qwen/qwen3.8-27b` 0,205 s |
+| 5 | `--check`: no corre el vivo | salió con `exit 0` |
+| trap | apagó el server | 7860 libre de nuevo, `Finished server process [21331]` en el log |
+
+**`--check` corrió entero en la primera corrida, sin ningún arreglo.** No hubo nada que corregir en el
+script, así que no hay commit de arreglo ni segunda corrida. Gastó las 4 llamadas anunciadas, una de
+ellas de Gemini (queda 1 menos de las 20 del día). El log del server
+(`experiments/_server_caso0_20261028T011357Z.log`, 35 líneas) **no tiene ningún error, traceback ni
+excepción**: sólo los 307/200 de MCP y el arranque y apagado limpios.
+
+### El estado del intento 4 quedó preservado — verificado archivo por archivo
+
+Los 10 archivos están en `process/` con el timestamp `1793150043`, y los recuentos son **los mismos
+que medí en el ARRANQUE de hoy**, antes del reset:
+
+`call_filter_records` 543 · `channel_messages` 98 · `channel_ticks` 505 · `device_decisions` 543 ·
+`device_log` 556 · `monitor_trajectory` 65 · `rebuild_decisions` 31 líneas, todas con la última línea
+parseable; `corpus_state.json`, `corpus_G_state.json` y `rebuild_state.json` parsean enteros.
+
+### Lo que el `--check` dejó atrás: una línea de tick en el state_dir
+
+`experiments/_state_S2-C0/` **no quedó vacío**. Tiene un archivo:
+
+```
+channel_ticks.jsonl  →  {"tick": 7, "t": 1793150062.478459, "reloj": "channel",
+                         "n_mensajes": 0, "con_mensajes": false,
+                         "written_at_utc": "2026-10-28T01:14:22.478468+00:00"}
+```
+
+**El mecanismo:** el paso 2 arranca un server de verdad con ese `state_dir`, y ese server corre su
+reloj mientras el `--check` lo consulta. El tick 7 es del `--check`, no del intento 4 —el del intento
+4 se movió a `process/` en el paso 1—. La verificación del paso 3 mira `corpus_size` y mensajes del
+canal, **no los ticks**, así que no lo ve.
+
+Es **la misma forma** que la "fila misteriosa" de P13 (una línea suelta en `channel_ticks.jsonl` de un
+state_dir), ahora con su mecanismo a la vista y en otro lugar: ahí era un residuo del 22 oct, acá lo
+produce el propio `--check`.
+
+**Por qué no lo arreglo:** la corrección natural es del `state_dir` —que es **E1**, y el texto 15 lo
+pone explícitamente en los NO, esperando este mismo `--check` y el inventario—. Y además el impacto
+real es chico, por una razón que conviene dejar escrita: **el próximo `correr_caso0.sh` sin
+`--no-reset` hace el `--reset` primero, que mueve `channel_ticks.jsonl` con esta línea adentro a
+`process/`**, así que el vivo arranca limpio igual. La línea sólo sobrevive a un vivo si se corre con
+`--no-reset`.
+
+### PREGUNTA P17 (NO BLOQUEA) — ¿el `--check` limpia lo que deja?
+
+**Qué es:** `correr_caso0.sh --check` levanta un server real contra el `state_dir` del caso y le deja
+una línea de tick (arriba). Hoy nadie la ve: ni el paso 3 del script, ni la suite.
+
+**Qué hay que decidir:** si `--check` tiene que dejar el `state_dir` como lo encontró (por ejemplo,
+repitiendo la preservación al salir), o si alcanza con que esté dicho y el `--reset` del próximo vivo
+se lo lleve.
+
+**Default vigente y reversible:** no toco nada. Queda la línea, dicha acá y en el docstring de ningún
+archivo —por eso la pregunta—. Reversible con un `rm` o con el `--reset`.
+
+**Por qué no la decido:** toca el `state_dir`, que es E1 y está esperando decisión de delamor, y toca
+la semántica de una bandera del script que corre delamor sin Code presente.
+
+### Una ruta que quedó vieja por el reset, y la actualicé
+
+El `--reset` movió el intento 4, y `experiments/simpson_en_las_curvas.py` (texto 14, punto 1) apuntaba
+a `experiments/_state_S2-C0/`. Actualicé las dos rutas del intento 4 a
+`process/*.bak_1793150043_serie2_caso0` y lo dije en el docstring del script, con la fecha y el
+motivo. **Lo volví a correr desde la ruta nueva: las 14 curvas y los 70 puntos dan exactamente lo
+mismo** (margen bit a bit idéntico, `coincide_con_el_registro` en los 70). No es una traza fechada
+reescrita: es el script apuntando a donde está la evidencia hoy; la entrada de la BANDEJA del punto 1
+queda como está.
+
+En el mismo cambio saqué un `import` que no se usaba (`n_eff` de `landscape_engine`, que el script
+no llama porque calcula Σm² a mano para tener los conteos enteros).

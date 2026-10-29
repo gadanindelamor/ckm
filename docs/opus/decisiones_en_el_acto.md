@@ -494,3 +494,8 @@
   - El bloque de arriba del v29 registra las razones: los puntos M1–M9 del review y *"CKM no extrae ni tokeniza; la extracción se declara"* (delamor, 14 oct). Desde el v29 el abstract dice *"the code is held to implement what the paper declares"*.
   - El corte v28 → v29 del mapa (39 bloques) tiene entonces razón registrada. La del v14 → v15 sigue sin buscar. Opus le pregunta a delamor si la quiere.
 - **La razón del corte v14 → v15: no se busca por ahora** (delamor: *"no gracias Opus no aún"*). Estado en el repo: sólo esta línea y el ESTADO de la tarde.
+- **El v33 `_borrador`, escrito en la sesión del barrido** (delamor: *"vas a generar la V33 y luego las necesidades del paper v33 y las tareas para el repo. Aquí PAUSA A1"*; *"entendí que se hacía en la misma sesión del barrido para no perder el contexto"*). Opus lo armó sobre el v32: aplicó 60 cambios uno por uno y les sumó el bloque de arriba (qué cambia, *Pendientes*, *Retirado* y la traza v29–v32). A1 a mitad de la escritura (delamor: *"AWARENESS"*):
+  - salió del cuerpo *"no part of the instrument regulates the field it represents"*, que viene del doc X (candidata);
+  - lo no verificado de fourforums (O1–O7, las aristas) pasó a *Pendientes*;
+  - quedó declarado que las DEFS v20 no se leyeron enteras.
+  El barrido encontró dónde estaba AUTO-5: en §7.6, y vuelve con ella. Para delamor: la notación *"D_ckm^calibrate"*. Estado en el repo: `docs/opus/PAPER_Landscape_Driven_Device_v33_borrador_opus.md`, `docs/opus/NECESIDADES_v33_y_tareas_repo_29oct2026.md`. **A1.PAUSA:** se revisa con delamor antes de armar los textos para Code.

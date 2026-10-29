@@ -493,3 +493,4 @@
   - v14 y v15 son de fines de septiembre (mtime 23 y 28 sep). El review del v28 es del 12 oct (`docs/opus/REVIEW_REPORT_PAPER_Landscape_Driven_Device_v28.md`; la verificación de Opus se llama "review de Kimi", en `antropic/___paper/verificacion_review_kimi_12oct2026.md`). El v29 es del 15 oct.
   - El bloque de arriba del v29 registra las razones: los puntos M1–M9 del review y *"CKM no extrae ni tokeniza; la extracción se declara"* (delamor, 14 oct). Desde el v29 el abstract dice *"the code is held to implement what the paper declares"*.
   - El corte v28 → v29 del mapa (39 bloques) tiene entonces razón registrada. La del v14 → v15 sigue sin buscar. Opus le pregunta a delamor si la quiere.
+- **La razón del corte v14 → v15: no se busca por ahora** (delamor: *"no gracias Opus no aún"*). Estado en el repo: sólo esta línea y el ESTADO de la tarde.

@@ -16,7 +16,7 @@ La traza está en `docs/opus/decisiones_en_el_acto.md`, en "29 oct (sesión de l
 ## Espera a delamor (lee lo generado y vuelve)
 1. **§7.6, la representación del conocimiento: ¿vuelve al v33, y en qué forma?** Salió en v29 como "Propuesta" y no se encontró su confirmación. El 23 oct delamor dijo *"…perspectivas de lo mismo… si va"*.
 2. **¿Se corrigen en el v33 las cinco líneas de "COCO … field regulator"?** Son el título de §4.2.1 y las líneas 312, 329, 702 y 706.
-3. **¿Se busca la razón del corte v14 → v15 fuera del paper?** Es el corte más grande del mapa y no tiene razón registrada.
+3. ~~La razón del corte v14 → v15~~: el giro que buscaba delamor está en v28 → v29, con razones registradas en el v29; la del v14 → v15 no se busca por ahora (delamor). §7.6 entra y las líneas de COCO se corrigen (ítems 1 y 2, decididos: ver `PLAN_v33` §6).
 4. **"no se traduce":** aparece sólo en las DEFS v15, en un bloque de la extracción. ¿Es el ejemplo del panel?
 5. **Qué se hace con el mapa.**
 

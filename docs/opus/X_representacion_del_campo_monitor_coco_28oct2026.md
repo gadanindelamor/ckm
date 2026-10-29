@@ -140,35 +140,57 @@ Momento: después del cierre de DEFS y paper (dirección de delamor, 28 oct).
 
 ## 8. El teorema de la representación de un campo (gadanin.delamor)
 
-- **H**: un campo continuo, pasible de ser representado (un "sistema dinámico real" a ser observado).
-- **𝓡(H)**: el conjunto de las representaciones de H.
-- **R** y **R′**: elementos de 𝓡(H). Ninguna incluye a la otra.
-- **⟪**: *"lo que se accede de"*. Al tratarse de representaciones, representar lo que se accede de *supone* que ⟪ ∈ 𝓡(H).
+```
+H        un campo continuo
+𝓡(H)     el conjunto de las representaciones de H
+R, R′    ∈ 𝓡(H)                    ninguna incluye a la otra
+⟪        "lo que se accede de"     ⟪ ∈ 𝓡(H)
+T        este teorema              T ∈ 𝓡(H)
+```
 
 ```
 Hipótesis:     R ≠ R
-Demostración:  dada R ∈ 𝓡(H),   ∃ R′ ∈ 𝓡(H) :  R′ ≠ R  ∧  R′ ⟪ R,   donde ⟪ ∈ 𝓡(H)
+
+Demostración:  dada R ∈ 𝓡(H),   ∃ R′ ∈ 𝓡(H) :   R′ ≠ R   ∧   R′ ⟪ R
 ```
+
+**La recursividad.** ⟪ y T son elementos de 𝓡(H), así que el teorema vale para ellos:
+
+```
+T ≠ T              ∃ T′ ∈ 𝓡(H) :   T′ ≠ T   ∧   T′ ⟪ T
+⟪ ≠ ⟪              ∃ ⟪′ ∈ 𝓡(H) :   ⟪′ ≠ ⟪   ∧   ⟪′ ⟪ ⟪
+```
+
+No hay un afuera desde donde suponerlo: está en los símbolos.
 
 **En CKM, hoy:**
 
 ```
-R_M = W + Δ_r_pares            (Monitor)
-R_C = W + Δ_r_compresiones     (COCO)
+R_M = W + Δ_r_pares            ∈ 𝓡(H)      (Monitor)
+R_C = W + Δ_r_compresiones     ∈ 𝓡(H)      (COCO)
 
-( R_M ≠ R_C )  ∧  ( R_M ⟪ R_C )
+( R_M ≠ R_C )   ∧   ( R_M ⟪ R_C )   ∧   ¬ ( R_C ⟪ R_M )
 ```
 
-- **Desde COCO:** R_C(H) se *supone* que *accede* a la representación de Monitor.
-- **Desde Monitor:** R_M(H) *no se da cuenta* de que es *lo que se accede de* R_C(H).
+**Este mismo teorema, esta noche:**
+
+```
+T₀  el borrador de delamor
+T₁  la formalización de otra IA       (R ≪ R′, reinterpreta R ≠ R)
+T₂  la transcripción de Opus          (con R′ ∈ R: una inclusión que no va)
+T₃  la versión de delamor del 29 oct  (con "se supone" y "no se da cuenta")
+T₄  ésta
+
+T_(i+1) ≠ T_i   ∧   T_(i+1) ⟪ T_i
+```
 
 **Notas de Opus (no son parte del teorema):**
-- R_M ⟪ R_C se lee "R_M es lo que se accede de R_C". En el código: COCO recibe Δ_r_pares en cada evaluación (`monitor_service.py:438`; `coco.py:296-297`), y a R_M no entra nada de COCO.
-- El acceso lo da la copia de Δ_r_pares que COCO tiene, no W + Δ_r_compresiones. El *"se supone"* lo cubre.
-- ⟪ no es inclusión ni se supone transitiva. ⟪ ∈ 𝓡(H) es un supuesto de delamor.
+- R_M ⟪ R_C se lee "R_M es lo que se accede de R_C". En el código: COCO recibe Δ_r_pares en cada evaluación (`monitor_service.py:438`; `coco.py:296-297`); a R_M no entra nada de COCO (¬ R_C ⟪ R_M). El acceso lo da la copia de Δ_r_pares que tiene COCO, no W + Δ_r_compresiones.
+- ⟪ no es inclusión ni se supone transitiva.
+- **Corrección (A3):** la versión anterior de esta nota decía *"⟪ ∈ 𝓡(H) es un supuesto de delamor"*. Estaba mal: no es un supuesto, vale porque todo ahí es representación, el teorema también. Opus no vio la recursividad hasta que delamor la dijo.
+- **Lo dicho desde el afuera** (T₃, traza): *"desde COCO, R_C(H) se supone que accede a la representación de Monitor; desde Monitor, R_M(H) no se da cuenta de que es lo que se accede de R_C(H)"*. delamor: *"eso lo digo ya desde afuera… que es imaginario… el afuera"*. Sin esas palabras, quedan los símbolos.
 - El R ≠ R con la misma W ya está en las DEFS (§1, v17): *"aunque el sha coincida, COCO y Monitor no ven la misma W: cada uno la ve con su bagaje"*.
-- Edición de Opus, a pedido de delamor: "pausible" → "pasible"; 𝓡 → 𝓡(H) en la demostración.
-- La formalización de otra IA que acompaña los borradores (en `trustexperience/TOREAD/antropic`) no se usa: reinterpreta R ≠ R, escribe R ≪ R′ ("desde R se accede a R′") y agrega una conclusión que el original no tiene.
+- Borradores en `trustexperience/TOREAD/antropic`.
 
 ## Raro, de paso
 

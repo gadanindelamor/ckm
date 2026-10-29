@@ -138,29 +138,37 @@ Lo que habría que declarar: es una simulación (lo que cada texto deformaría h
 
 Momento: después del cierre de DEFS y paper (dirección de delamor, 28 oct).
 
-## 8. El teorema de la representación (gadanin.delamor)
+## 8. El teorema de la representación de un campo (gadanin.delamor)
 
-Transcripto con símbolos, corregido por delamor (sin inclusión):
-
-- 𝓡 es el conjunto de las representaciones; R y R′ son elementos de 𝓡; **ninguna incluye a la otra**.
-- ⟪ es *"lo que se accede de"*. No es inclusión ni se supone transitiva.
+- **H**: un campo continuo, pasible de ser representado (un "sistema dinámico real" a ser observado).
+- **𝓡(H)**: el conjunto de las representaciones de H.
+- **R** y **R′**: elementos de 𝓡(H). Ninguna incluye a la otra.
+- **⟪**: *"lo que se accede de"*. Al tratarse de representaciones, representar lo que se accede de *supone* que ⟪ ∈ 𝓡(H).
 
 ```
 Hipótesis:     R ≠ R
-Demostración:  dada R ∈ 𝓡,   ∃ R′ ∈ 𝓡 :  R′ ≠ R  ∧  R′ ⟪ R
+Demostración:  dada R ∈ 𝓡(H),   ∃ R′ ∈ 𝓡(H) :  R′ ≠ R  ∧  R′ ⟪ R,   donde ⟪ ∈ 𝓡(H)
 ```
 
-En CKM, hoy:
+**En CKM, hoy:**
 
 ```
-R_M = W + Δ_r_pares        R_C = W + Δ_r_compresiones        R_M ≠ R_C
-R_M ⟪ COCO                 desde COCO se accede a la representación de Monitor
-¬ ( R_C ⟪ Monitor )        desde Monitor no se accede a la de COCO
+R_M = W + Δ_r_pares            (Monitor)
+R_C = W + Δ_r_compresiones     (COCO)
+
+( R_M ≠ R_C )  ∧  ( R_M ⟪ R_C )
 ```
 
-"COCO sabe más que Monitor" es una **asimetría de acceso**, no una inclusión: son perspectivas. Lo que permite el acceso no es R_C sino lo que COCO tiene además (la copia de Δ_r_pares); por eso "⟪ COCO", con el observador. El R ≠ R con la misma W ya está en las DEFS (§1, v17): *"aunque el sha coincida, COCO y Monitor no ven la misma W: cada uno la ve con su bagaje"*.
+- **Desde COCO:** R_C(H) se *supone* que *accede* a la representación de Monitor.
+- **Desde Monitor:** R_M(H) *no se da cuenta* de que es *lo que se accede de* R_C(H).
 
-Fuentes: los borradores de delamor en `trustexperience/TOREAD/antropic` y adjuntos de la conversación. La versión formalizada por otra IA (que acompaña esos borradores) difiere en tres puntos y **no se usa**: reinterpreta R ≠ R ("no agota al objeto"), escribe la relación como R ≪ R′ ("desde R se accede a R′") e introduce una conclusión que el original no tiene.
+**Notas de Opus (no son parte del teorema):**
+- R_M ⟪ R_C se lee "R_M es lo que se accede de R_C". En el código: COCO recibe Δ_r_pares en cada evaluación (`monitor_service.py:438`; `coco.py:296-297`), y a R_M no entra nada de COCO.
+- El acceso lo da la copia de Δ_r_pares que COCO tiene, no W + Δ_r_compresiones. El *"se supone"* lo cubre.
+- ⟪ no es inclusión ni se supone transitiva. ⟪ ∈ 𝓡(H) es un supuesto de delamor.
+- El R ≠ R con la misma W ya está en las DEFS (§1, v17): *"aunque el sha coincida, COCO y Monitor no ven la misma W: cada uno la ve con su bagaje"*.
+- Edición de Opus, a pedido de delamor: "pausible" → "pasible"; 𝓡 → 𝓡(H) en la demostración.
+- La formalización de otra IA que acompaña los borradores (en `trustexperience/TOREAD/antropic`) no se usa: reinterpreta R ≠ R, escribe R ≪ R′ ("desde R se accede a R′") y agrega una conclusión que el original no tiene.
 
 ## Raro, de paso
 

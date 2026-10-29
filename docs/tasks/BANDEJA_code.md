@@ -17175,3 +17175,55 @@ Para Code, que pidió un valor de uso. Fuente: dos capturas de `Settings → Usa
 | Limit resets | ninguno por ahora |
 
 **Lo que no se sabe:** cuál de estos valores es el que pidió Code. Tampoco por qué los créditos de sesiones en la nube siguen en $100, si la sesión de Opus corre en la nube. No se interpreta; se registra.
+
+## ARRANQUE — 2026-10-29 22:33 UTC — sesión nueva de Code (Opus 5)
+
+### Revisé
+
+1. **Locks.** `.git/*.lock`: ninguno.
+2. **Git.** `git pull --rebase origin main` limpio, sin conflicto. HEAD `9070cbe`
+   ("docs(opus): decisiones — Opus no trabaja en paralelo con Code; R7 y R9 en lote después").
+   `git status`: **0 archivos modificados o staged**; 83 entradas, todas `??` (untracked a propósito:
+   PDFs y docs de respaldo, `_state_*`, los `.bak_*_serie2_caso0` de `process/`, resultados
+   informativos). Nada sin commitear que no se esperara.
+3. **Estado y decisiones.** Último ESTADO: `docs/opus/ESTADO_al_cortar_29oct2026_noche.md`
+   (hay cinco del 29: `_noche` es el último; antes `_tarde`, `_v33`).
+   `docs/opus/decisiones_en_el_acto.md` leído hasta el final (29 oct noche).
+   Abierto: **texto 20** (`TEXTO_PARA_CODE_20_…_margen_exacto_simetria_cpe_torsion_29oct2026.md`) y
+   después el **texto 21** (el vivo, intento 5), en serie. El 20 reemplaza entero al 18.
+4. **Salidas de la última corrida.** Última corrida en el repo: `--check` del caso 0, 28 oct 01:14
+   (`experiments/_server_caso0_20261028T011357Z.log`, termina en *"Application shutdown complete /
+   Finished server process"*: cerró). El último **vivo** es el intento 4, 27 oct 07:35
+   (`experiments/_vivo_intento4_stdout.log`, última línea *"log ->
+   experiments/serie2_caso0_intento4_log.json"*, 98 mensajes en el canal: terminó).
+   **Ningún `*.tmp` suelto** en todo el repo (regla §4: un archivo sin `.tmp` está completo).
+5. **Suite completa**, en serie (`bash tests/run_tests.sh -p no:randomly -q`):
+   **903 passed, 7 xfailed, 0 failed**, 71,7 s.
+
+### Encontré
+
+- **Preguntas abiertas: cuatro.** `P13`, `P14`, `P17`, `P18` — están en la BANDEJA y **no** tienen
+  un `Pn:` que las nombre en `docs/tasks/DECISIONES_opus.md` (que llega hasta P16; P12 sí está
+  respondida, línea 491). Las cuatro son **NO BLOQUEA** y las cuatro están marcadas **[delamor]**:
+  - **P13 — DEFAULT VIGENTE, SIN DECISIÓN.** (1) la línea de tick suelta: se deja donde está;
+    (2) la suite en paralelo: el default es correrla, y medido acá el paralelo **no acelera**.
+  - **P14 — DEFAULT VIGENTE, SIN DECISIÓN.** El guardia del caso distingue `read` de escritura
+    sobre `run_store`. Reversible en una línea.
+  - **P17 — DEFAULT VIGENTE, SIN DECISIÓN.** Si `--check` tiene que dejar el `state_dir` como lo
+    encontró. Hoy no se toca nada.
+  - **P18 — DEFAULT VIGENTE, SIN DECISIÓN.** Si los 3 tests parametrizados con la W del vivo se
+    anclan a la copia preservada en `process/`. Hoy queda como está.
+- El `monitor_trajectory.jsonl` de la **raíz** del repo es del **9 oct** (65 KB) y su última línea
+  trae `"thermostat": null` y no trae `periodo_orbita` ni `n_torsion`. No es el de los intentos 2–4:
+  ésos están en los `_state_*` y en los `.bak_*_serie2_caso0` de `process/`. Lo anoto porque el
+  punto 4a del texto 20 los va a buscar ahí, no en la raíz.
+- `experiments/_state_S2-C0/` tiene **un solo archivo** (`channel_ticks.jsonl`, 150 bytes, 28 oct
+  01:14): es lo que dejó el `--check`, que es justo lo que pregunta P17.
+
+### No pude revisar
+
+- Si P13, P14, P17 y P18 fueron respondidas **fuera del repo** (un chat, otra sesión). Desde el
+  repo no se ve; por eso las arrastro como default vigente.
+- Los dos textos para Code (20 y 21) no me los pegó delamor en esta sesión: los leí de
+  `docs/opus/`. Si la versión que delamor quiere pegar difiere de la del repo, no lo puedo saber.
+

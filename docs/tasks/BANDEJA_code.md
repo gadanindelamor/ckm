@@ -17315,7 +17315,7 @@ porque es la que se compara con `calibrate`. No cambio nada en `services/`. **No
 delamor, y Opus registra la definición.
 
 
-## REPORTE texto 20 — punto 2 — N_eff ≥ 2 por la simetría σ ↔ −σ (R3) — 2026-10-29 23:16 UTC
+## REPORTE texto 20 — punto 2 — N_eff ≥ 2 por la simetría σ ↔ −σ (R3) — 2026-10-29 22:58 UTC
 
 Script: `experiments/simetria_neff_dos.py`. Salida: `experiments/simetria_neff_dos_resultado.json`.
 Reutiliza `margen_exacto_14W` (la enumeración) y `piso_del_colapso` (la medida y la forma cerrada).
@@ -17451,4 +17451,80 @@ chico, no lo es.
 
 El enunciado quedó probado con su condición exacta; no hay nada que decidir acá. La definición la
 registra Opus con este reporte (el valor 2/3 y la cota son del modelo: **E3**).
+
+
+## REPORTE texto 20 — punto 3 — el "15.52 → 5.27" del CP-E (R2) — 2026-10-29 23:01 UTC
+
+Scripts y evidencia: `experiments/driver_cpe_rango_neff_salida_0e042ac.txt` y
+`..._salida_HEAD.txt` (las dos salidas **completas**), y
+`experiments/cpe_0e042ac_vs_head.py` con `..._resultado.json` (la comparación celda por celda).
+No toqué `services/`, ni el driver, ni los corpus.
+
+**Cómo:** `git worktree add --detach` sobre `0e042ac` (14 oct 2026) en un directorio **fuera del
+repo**, y `experiments/driver_cpe_rango_neff.py` **sin ningún cambio**. El worktree quedó borrado
+(`git worktree remove`), y lo verifico abajo.
+
+**Dos cosas que el texto 20 preveía y no hicieron falta:**
+
+- El driver es **el mismo archivo** en los dos commits (`git diff 0e042ac HEAD --
+  experiments/driver_cpe_rango_neff.py` vacío) y **corre en HEAD sin adaptaciones**: la copia
+  `driver_cpe_rango_neff_head.py` del punto 3b no se escribió, porque no hubo nada que adaptar.
+- Los **tres corpus son idénticos** entre los dos commits (`git diff --stat` vacío sobre los tres).
+  Lo que cambió es `services/node_extractor.py` (+93 líneas) y `services/corpus_service.py` (+223).
+
+El driver declara `n_runs = 1000` y las **seeds 0–9**, y eso se respeta: es una **reproducción**, no
+una medición nueva, así que no se le ponen los defaults de hoy (200 / 0).
+
+### (a) La reproducción en 0e042ac: los números del paper salen
+
+| lo que cita §4.3.2 | qué es, medido en 0e042ac | valor |
+|---|---|---|
+| 15.52 ± 0.32 | A24, base (top_k=20, pool ×3, 703 sw) | **15,519 ± 0,323** (N=20, [15,024; 16,125]) |
+| **A24 "+1 texto"** | A24 con un texto más de vocabulario ya visto | **5,269 ± 0,145** (N=20, [5,086; 5,552]) |
+| 5.27 ± 0.16 | **D12, base** | **5,271 ± 0,159** (N=20, [5,039; 5,501]) |
+| 10.10 ± 0.20 | E7, base | **10,101 ± 0,200** (N=12) |
+| el 66 % | columna "+1 texto" de A24 = \|extra − base\|/base | **0,660** |
+
+**La duda del v33 queda resuelta, y la respuesta es que son dos números distintos que coinciden
+redondeados.** El "5.27" de la frase *"un texto más mueve N_eff un 66 % en A24 (15.52 → 5.27)"* es el
+**A24 "+1 texto" = 5,269 ± 0,145**, y el "5.27 ± 0.16" de la tabla del paper es el **D12 base =
+5,271 ± 0,159**. Son dos mediciones sobre **corpus distintos**, con sd distintas, que a dos decimales
+dan las dos 5,27. El 66 % de A24 es real y está reproducido: 15,519 → 5,269.
+
+### (b) y (c) La misma tabla en HEAD: 38 de 42 celdas no se superponen
+
+| lo que cita el paper | 0e042ac | HEAD | dif rel |
+|---|---|---|---|
+| A24 base "15.52" | 15,519 ± 0,323 (N=20) | **4,876 ± 0,179** (N=20) | **−0,686** |
+| A24 "+1 texto" "5.27" | 5,269 ± 0,145 (N=20) | **8,997 ± 0,274** (N=20) | **+0,708** |
+| D12 base "5.27" | 5,271 ± 0,159 (N=20) | **3,063 ± 0,091** (**N=19**) | **−0,419** |
+| E7 base "10.10" | 10,101 ± 0,200 (N=12) | **4,788 ± 0,121** (**N=7**) | **−0,526** |
+
+Celda por celda, sobre las **42** celdas comparables (base, 5 top_k, 4 pool, 3 stopwords y "+1 texto"
+por cada uno de los tres corpus):
+
+- **38 de 42 celdas no se superponen** entre los dos commits, comparando los rangos de las **mismas**
+  10 seeds. Las 4 que se superponen son A24 top_k=15, A24 top_k=25, A24 sw_0 y D12 top_k=25.
+- **En 25 de 42 celdas cambia N** (la cantidad de nodos que el extractor selecciona): D12 pasa de 20 a
+  19 nodos en la base, y E7 de 12 a **7**.
+- **El texto extra generado es idéntico** en los tres corpus (`texto_extra_igual: true` los tres), así
+  que la diferencia no viene de que el "+1 texto" sea otro.
+- **La dirección del efecto se da vuelta en A24:** en 0e042ac un texto más **baja** N_eff un 66 %
+  (15,519 → 5,269); en HEAD lo **sube** un 85 % (4,876 → 8,997).
+- La tabla de perillas también cambia de forma: en D12 y E7, `pool` pasa a mover **0,000** en HEAD
+  (contra 1,974 y 0,936 en 0e042ac), y `top_k` en E7 pasa de 1,747 a **0,000**.
+
+**Entonces: los cuatro números de §4.3.2 son de `0e042ac` y ninguno de los cuatro se reproduce con el
+extractor de hoy.** No es sólo que los valores se muevan: cambia N, cambia el signo del efecto de "+1
+texto" en A24, y tres perillas dejan de mover nada en dos corpus. Lo que cambió entre los dos commits
+es el extractor (`min_df = 2`, el signo por palabra completa con NFC, el pool ≤ top_k; los commits que
+Opus ya identificó: 9414157, 595d0b7 y otros), con los corpus fijos.
+
+**No propongo qué hacer con la frase del paper:** es **E3** (semántica del modelo y del paper) y
+además toca qué declara §4.3.2. Lo decide delamor con el reporte; Opus registra.
+
+### Worktree
+
+`git worktree list` después de `remove`: sólo `/workspaces/ckm`. `git status` del repo: sin cambios
+fuera de lo que este punto agrega.
 

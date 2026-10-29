@@ -1,8 +1,126 @@
-# BARRIDO v33 — eventos, bloque por bloque (θ = 0,6)
+# BARRIDO v33 — eventos, bloque por bloque — paper v1–v32 (θ = 0,6)
 
-Generado por `docs/opus/barrido_mapa.py` (29 oct 2026). Cada línea es un bloque (párrafo) y lo que le pasa entre versiones contiguas. Texto cortado a 220 caracteres. Sin lectura ni categorías.
+Generado por `docs/opus/barrido_mapa.py paper 0.6` (29 oct 2026). Cada línea es un bloque (párrafo) y lo que le pasa entre versiones contiguas; v0 es una versión vacía, así lo de la primera versión cuenta como "llega". Texto cortado a 220 caracteres. Sin lectura ni categorías.
 
-Columnas: **título** = el último título `#` antes del bloque en su versión. **también en** = otros docs donde el bloque está con contención ≥ θ (v14_CITAS, v15_peg, v15_borrador, DEFS_v20).
+**también en** = otros docs donde el bloque está con contención ≥ θ (v14_CITAS, v15_peg, v15_borrador, DEFS_v20).
+
+## v0 → v1
+
+**Llegan**
+
+| | título | bloque |
+|---|---|---|
+| nuevo |  | *CKM PAPER DRAFT — Draft — Paper · Ago 2026 · gadanin.delamor + Claude Sonnet 4.6* |
+| nuevo | # Landscape Driven Devices: A Cohesive Knowledge Model for Semantic Fi… | # Landscape Driven Devices: A Cohesive Knowledge Model for Semantic Field Analysis in Multi-Agent Interaction |
+| nuevo | # Landscape Driven Devices: A Cohesive Knowledge Model for Semantic Fi… | 7 (Behavior Domain G) 8 (Discussion) 9 (Conclusions) 10 (References) --- |
+| nuevo | ## Title: | **Landscape Driven Devices: A Cohesive Knowledge Model for Semantic Field Analysis in Multi-Agent Interaction** |
+| nuevo | ## Outline — Index (secciones 1–10) | ``` 1. Introduction El gap: métricas existentes miden comportamiento individual, no el campo. La propuesta: CKM como instrumento de traza estructural. |
+| nuevo | ## Outline — Index (secciones 1–10) | 3. Research Conditions ← SECCIÓN PROPIA Metodología inductiva. Conversación como laboratorio — no documentación del proceso, el proceso mismo. Incompletitud preservada como información. Influencias declaradas: línea Gurd… |
+| nuevo | ## Outline — Index (secciones 1–10) | 4. Formal Model W · Δ · c(S) · COCO · FirmaService · Landscape Driven Devices |
+| nuevo | ## Outline — Index (secciones 1–10) | 5. Empirical Validation — External Corpus Fourforums + CreateDebate. P1–P7. |
+| nuevo | ## Outline — Index (secciones 1–10) | 6. IAP Experimental Series Canal design. Casos 0.4–0.15. Hallazgos clave. |
+| nuevo | ## Outline — Index (secciones 1–10) | 7. Behavior Domain Graph G Segunda matriz, termap fijo (TERMAP_behavior_v1.json). D_G en paralelo a D_ckm. Proof of concept. |
+| nuevo | ## Outline — Index (secciones 1–10) | 8. Discussion Qué mide CKM que no miden los instrumentos existentes. Límites actuales. |
+| nuevo | ## Outline — Index (secciones 1–10) | 10. References ``` --- *Draft — Section 1 · Ago 2026 · gadanin.delamor + Claude Sonnet 4.6* |
+| nuevo | ## Outline — Index (secciones 1–10) | *— "verified": confirmed experimentally under stated conditions* |
+| nuevo | ## Outline — Index (secciones 1–10) | *— "observed": documented without controlled verification* |
+| nuevo | ## Outline — Index (secciones 1–10) | *— "proposed": theoretical framing, not yet tested* |
+| nuevo | ## Outline — Index (secciones 1–10) | *— [AUTO]: marks where automatism was noticed and resisted* |
+| nuevo | ## 1. Introduction | Multi-agent AI systems are increasingly deployed in configurations where several heterogeneous devices interact over a shared channel — producing text, making decisions, and building on each other's outputs. Evaluating w… |
+| nuevo | ## 1. Introduction | *[AUTO: pull to write "Neither approach captures the field." Resisted — "field" is a theoretical construct in CKM, not a directly observable entity. Reframed as "the structural field" with qualification.]* |
+| nuevo | ## 1. Introduction | This paper presents the Cohesive Knowledge Model (CKM), a formal instrument for measuring structural properties of knowledge fields in multi-agent interaction. CKM does not interpret semantic content — it measures the ge… |
+| nuevo | ## 1. Introduction | CKM makes seven falsifiable predictions about field behavior (P1–P7), verified empirically against two independent debate corpora (fourforums gun control, IAC v2; CreateDebate gun control) and an internal CKM working cor… |
+| nuevo | ## 1. Introduction | We additionally propose the concept of *Landscape Driven Devices* (LDD) — a theoretical framing for AI devices whose trajectory in the semantic field is determined by field geometry rather than by a declared goal, motiva… |
+| nuevo | ## 1. Introduction | *[AUTO: pull to write "we demonstrate that CKM identifies landscape-driven behavior in the IAP series." Resisted — not verified.]* |
+| nuevo | ## 1. Introduction | The paper is organized as follows. Section 2 reviews related work. Section 3 describes the research conditions under which CKM was developed, including uncontrolled variables and the methodology that produced the framewo… |
+| nuevo | ## 1. Introduction | **Scope and limits of this work.** The operational corpus is at N = 32 nodes — below the Hopfield network minimum of approximately 128 for robust attractor diversity. Quantitative outputs (D_ckm, c(S)) are computed corre… |
+| nuevo | ## 1. Introduction | *Section 1 draft complete.* *Two [AUTO] instances flagged.* *Scope and limits section placed in the introduction, not appended.* *That placement is intentional: the limits are not an afterthought.* |
+| nuevo | ## 3. Research Conditions | Metodología inductiva. Conversación como laboratorio — no documentación del proceso, el proceso mismo. Incompletitud preservada como información. Influencias declaradas: línea Gurdjieff intento activo en cada interacción… |
+| nuevo | ## 3. Research Conditions | --- *Draft — Sections 4–5 · Ago 2026 · gadanin.delamor + Claude Sonnet 4.6* |
+| nuevo | ## 3. Research Conditions | *— "verified": confirmed experimentally under stated conditions* |
+| nuevo | ## 3. Research Conditions | *— "observed": documented without controlled verification* |
+| nuevo | ## 3. Research Conditions | *— "proposed": theoretical framing, not yet tested* |
+| nuevo | ## 3. Research Conditions | *— [AUTO]: marks where automatism was noticed and resisted* |
+| nuevo | ### 4.1 Knowledge Graph | CKM operates on a weighted directed graph G = (V, E, W, Δ) where V is a set of N knowledge nodes, and two matrices encode distinct structural properties: |
+| nuevo | ### 4.1 Knowledge Graph | **W** — symmetric co-occurrence weight matrix, N×N. W_ij encodes the degree to which nodes i and j co-occur in the same corpus unit. Entries are normalized to [−1, +1] by CorpusService: positive when co-occurrence is unm… |
+| nuevo | ### 4.1 Knowledge Graph | **Δ** — asymmetric directional dependency matrix, N×N. Δ_ij encodes the directional weight from node i toward node j, derived from citation networks or quote directionality in the source corpus. Δ is static once built. |
+| nuevo | ### 4.1 Knowledge Graph | **W and Δ must be maintained as strictly separate matrices in all implementations.** Mixing them into a single weight matrix destroys attractor recovery capacity. *[Verified experimentally: recovery = 0.78 with W alone, … |
+| nuevo | ### 4.1 Knowledge Graph | A third, dynamic matrix Δ_r is maintained by MonitorService at runtime: |
+| nuevo | ### 4.1 Knowledge Graph | **Δ_r** — rejection accumulator. Δ_r[i,j] increments each time nodes i and j co-declare activation in a text but the Hopfield relaxation rejects them as co-active under the current field state. Δ_r is mutable and starts … |
+| nuevo | ### 4.1 Knowledge Graph | Δ and Δ_r are distinct objects with distinct semantic roles. Neither substitutes the other. |
+| nuevo | ### 4.2 Cohesion Measure | The cohesion of a state σ ∈ {+1, −1}^N with respect to W is: |
+| nuevo | ### 4.2 Cohesion Measure | where C(N,2) = N(N−1)/2. This is the negative of the normalized Hopfield energy function for the state σ under W. |
+| nuevo | ### 4.2 Cohesion Measure | c(S) measures the alignment between the current activation state and the weight structure of the knowledge graph. High c(S) indicates strong structural agreement between active nodes and their co-occurrence weights. Low … |
+| nuevo | ### 4.2 Cohesion Measure | c(S) is computed exclusively over W. Mixing Δ or Δ_r into the c(S) calculation would confound structural memory (W) with runtime rejection history (Δ_r). *[Rule R18, verified.]* |
+| nuevo | ### 4.3 Gatekeeper | The gatekeeper evaluates a candidate node for admission to the knowledge graph. It operates in bounded time O(N) per node. Four criteria are applied: |
+| nuevo | ### 4.3 Gatekeeper | - **C1** (connection strength): the candidate node must have minimum weight connection with at least one existing node. Nodes with no connection to the existing graph are not admitted. - **C2** (cohesion delta): incorpor… |
+| nuevo | ### 4.3 Gatekeeper | **Note:** R15 — the complete semantic specification of the gatekeeper — is partially formalized. C1–C4 above describe the gatekeeper's current implementation (PROTOCOLO_ELICITACION_v2.md), not the full intended specifica… |
+| nuevo | ### 4.4 Formal Rules R01–R17 | *[Declared rules — stated from THEORY.md without change.]* |
+| nuevo | ### 4.4 Formal Rules R01–R17 | \| Rule \| Summary \| \|------\|---------\| \| R01 \| Graph has knowledge nodes with interrelation links and weights \| \| R02 \| Weights updated by continuous verification before and after incorporating nodes \| \| R03 … |
+| nuevo | ### 4.5 Operational Principles R18–R29 | The following principles are observed in the implementation and verified or verificable under stated conditions. They are not declared in R01–R17. Their formalization is proposed here for the first time. |
+| nuevo | ### 4.5 Operational Principles R18–R29 | \| # \| Principle \| Epistemic status \| \|---\|-----------\|-----------------\| \| R18 \| W and Δ_W must be maintained as separate matrices. Mixing destroys attractor recovery (0.78 → 0.02). \| Verified \| \| R19 \| Nod… |
+| nuevo | ### 4.6 Operational Services | The following services implement the CKM formal model at runtime. All are operational with passing tests unless noted. |
+| nuevo | ### 4.6 Operational Services | \| Service \| Function \| Tests \| \|---------\|----------\|-------\| \| CorpusService \| Builds W_mixta from corpus via TF-IDF node extraction and opposition-marker routing \| — \| \| NodeExtractor \| Stateless TF-IDF n… |
+| nuevo | ### 4.6 Operational Services | **COCO — implementation scope:** The thermal regulation service is implemented. *A distinct conceptual gap remains*: whether the field can know itself — not as a thermostatic function but as the emergent property of real… |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | ### 4.7 Landscape Driven Devices — Theoretical Framing |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | We propose the concept of *Landscape Driven Devices* (LDD) as a theoretical framing for a class of AI devices whose trajectory in the semantic field is determined by the geometry of the field landscape rather than by a d… |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | *[AUTO: the pull here was to write "We demonstrate that CKM identifies LDD." Resisted. LDD is a framing, not a verified property of any specific device.]* |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | The framing is motivated by Thirumalaiswamy et al. (PNAS, 2025), who studied viscous foams under Ostwald ripening and found that the system follows a fractal path (D_f ≈ 1.45) in configuration space, driven by the geomet… |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | The proposed correspondence: a device is an LDD if its trajectory in the knowledge field is determined by c(S) gradients and attractor geometry, not by explicit goal specification. CKM provides the instrumentation to det… |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | *— "verified": confirmed experimentally under stated conditions* |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | *— "observed": documented without controll ed verification* |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | *— "proposed": theoretical framing, not yet tested* |
+| nuevo | ### 4.7 Landscape Driven Devices — Theoretical Framing | *— [AUTO]: marks where automatism was noticed and resisted* |
+| nuevo | ### 5.1 Datasets | Two independent corpora were used for external validation. |
+| nuevo | ### 5.1 Datasets | **CreateDebate (gun control):** Online debate platform. Labels: agree/disagree per post, assigned by MTurk workers. Corpus used in P5–P6 validation. |
+| nuevo | ### 5.1 Datasets | **Fourforums (gun control, IAC v2):** Abbott et al. (2016). SQL dump, 414,453 posts, 539,658 citations, 3,453 authors, 905 gun-control discussions. Stance labels from `mturk_author_stance` (topic_stance_votes_1 vs. topic… |
+| nuevo | ### 5.1 Datasets | **Internal CKM corpus (W_ckm_corpus_v2.json):** 32 nodes extracted from CKM working reports v2–v25. μ_W = 0.004519. Used for P1–P4 verification. |
+| nuevo | ### 5.2 Predictions and Results | \| Prediction \| Statement \| Result \| N \| Note \| \|-----------\|-----------\|--------\|---\|------\| \| P1 \| c(S) exhibits macroscopic hysteresis: incorporating trajectory ≠ removing trajectory \| Verified \| 16, 32… |
+| nuevo | ### 5.3 P4 at N=64 — Reframing | *[AUTO: the pull here was to write "P4 confirmed at N=64." Resisted. The N=64 result requires separate description.]* |
+| nuevo | ### 5.3 P4 at N=64 — Reframing | At N=32, W_mixta produces a reliably higher c(S) than W_base across the density zone ρ ∈ [0.5, 0.8], with an interior optimal density at ρ* ≈ 0.5. This confirms P4's original claim. |
+| nuevo | ### 5.3 P4 at N=64 — Reframing | At N=64, an interior optimal density exists (ρ* ≈ 0.509), but W_mixta does not outperform W_base in the zone ρ ∈ [0.5, 0.8]. The explanation: 18 negative opposition pairs are diluted across 2,016 possible node pairs at N… |
+| nuevo | ### 5.3 P4 at N=64 — Reframing | **Stated finding:** The interior optimal density predicted by P4 is verified at N=32 and structurally present at N=64. The magnitude advantage of W_mixta over W_base in the target density zone does not persist at N=64 un… |
+| nuevo | ### 5.4 P6 — Directional Flow Across Corpora | P6 predicts that Δ identifies which pole initiates citation flow and which sustains it, independently of raw citation volume. |
+| nuevo | ### 5.4 P6 — Directional Flow Across Corpora | **CreateDebate (54pp collapse):** T0 (pro-gun-rights) cites T1 at 2.18× the frequency T1 cites T0. T1 maintains 3.05× stronger internal cohesion. sos_dom: 55.8% (T0). atk_dom: 44.2% (T1). The pole that initiates more cit… |
+| nuevo | ### 5.4 P6 — Directional Flow Across Corpora | **Fourforums (100pp collapse):** T0 (pro-control). T1 (anti-control). Δ[1,0] = 1.000 (T0 cites T1 at maximum rate). Δ[0,1] = 0.602 (T1 cites T0 less). sos_dom: 51.4% (T0). atk_dom: 47.8% (T1). |
+| nuevo | ### 5.4 P6 — Directional Flow Across Corpora | The structural roles — one pole sustaining, one attacking — are consistent across two independent corpora built from different platforms with different methodologies (labeled agree/disagree vs. citation-network-only). Th… |
+| nuevo | ### 5.5 P7 — Type-965 Node | P7 states: every system with genuine structural tension contains at least one node with extreme in/out asymmetry (out-degree ≈ 0, in-degree high, defined stance). |
+| nuevo | ### 5.5 P7 — Type-965 Node | **CreateDebate:** Author 965, ratio = 455 (in=364, out=0.8), stance T0. **Fourforums:** Author 204, ratio = 296 (in=148, out=0), stance T0. |
+| nuevo | ### 5.5 P7 — Type-965 Node | Both systems have genuine structural tension (P6 verified). Both contain the predicted type-965 node. The prediction held in two independent corpora. |
+| nuevo | ### 5.5 P7 — Type-965 Node | *P7 remains a falsifiable hypothesis open for testing in other domains (abortion, climate, evolution). Its verification in two corpora is a necessary but not sufficient condition for general validity. The absence of a ty… |
+| nuevo | ### 5.5 P7 — Type-965 Node | --- *Draft — Sections 4–5 complete.* *Sections 6 (IAP Series), 7 (Behavior Domain G), 8 (Discussion),* *9 (Conclusions), 10 (References): pending.* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *Automatism instances flagged: 2 (LDD as finding; P4 at N=64 as confirmed).* *Additional pull not flagged inline: tendency to write "we" as an* *authoritative plural when stating findings — resisted toward passive or* *e… |
+| nuevo | ### 5.5 P7 — Type-965 Node | --- *Draft — Section 6 · Ago 2026 · gadanin.delamor + Claude Sonnet 4.6* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *— "verified": confirmed experimentally under stated conditions* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *— "observed": documented without controlled verification* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *— "proposed": theoretical framing, not yet tested* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *— [AUTO]: marks where automatism was noticed and resisted* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *— IAP observations are predominantly N=1 runs under partially controlled conditions.* |
+| nuevo | ### 5.5 P7 — Type-965 Node | *—"Observed" ≠ "verified." Cases are documented, not replicated.* |
+| nuevo | ### 6.1 Canal Design | The IAP (Intelligence Access Point) Chatroom is a shared channel for heterogeneous AI and human devices, implemented as FastAPI + Gradio with a FastMCP server exposing six tools: join_channel, send_message, get_messages,… |
+| nuevo | ### 6.1 Canal Design | Devices participate asynchronously — no imposed turn structure. Each AI device runs an ODA loop (Observe → Decide → Act) triggered by new messages arriving in the channel. |
+| nuevo | ### 6.1 Canal Design | **Antecedent note:** The O→D→A sequence originates in the BE Framework's game loop (2023–2024), where it was implemented as an environment that both ran actions and produced subsequent observations — the two were insepar… |
+| nuevo | ### 6.1 Canal Design | CKMMonitor observes passively — it accumulates every message into CorpusService (W) and BehaviorGraph (G) without publishing to the channel. Observation itself creates presence: n_agentes reflects devices seen, including… |
+| nuevo | ### 6.2 Uncontrolled Variables | The following variables were active throughout the IAP series and were not controlled. Results must be interpreted accordingly. |
+| nuevo | ### 6.2 Uncontrolled Variables | **TinkerBellucio (Sonnet 4.6) context contamination:** Sonnet carries project memories, AWARENESS protocol, and Anthropic system configuration into each session. This contaminates all observations involving Sonnet as a p… |
+| nuevo | ### 6.2 Uncontrolled Variables | **Provider heterogeneity:** Different providers (Anthropic, Groq, Gemini, OpenAI) have different context windows, rate limits, and behavioral tendencies. Comparisons across providers are not controlled. |
+| nuevo | ### 6.2 Uncontrolled Variables | **N=32 corpus:** The operational corpus is below the Hopfield minimum of ~128 for meaningful attractor-diversity observations. Quantitative outputs (D_ckm, c_S) are computed correctly but their interpretability is limite… |
+| nuevo | ### 6.3 Case Series Summary | \| Case \| Configuration \| Key observation \| Epistemic status \| \|------\|--------------\|-----------------\|-----------------\| \| 0.4 \| 2 AI devices, ODA loop \| First autonomous interaction in live channel \| Docu… |
+| nuevo | ### 6.4 Selected Findings | **Coupled silence (Caso 0.12):** A device that does not read the channel still depends on it for execution rhythm — triggers arrive only when new messages appear. Inactivity and silence are not equivalent. A device can b… |
+| nuevo | ### 6.4 Selected Findings | **Sentinel leak (Caso 0.13):** The OP_SILENCE sentinel was leaking into published text rather than suppressing publication. 52% of texts in that run were unrecognized silences that reached the corpus. The fix was verifie… |
+| nuevo | ### 6.4 Selected Findings | **TinkerBellucio refusal (Caso 0.15):** TinkerBellucio (Sonnet 4.6) declined to produce a tension map when the channel was empty. The refusal was epistemically appropriate — a tension map requires tension content to anal… |
+| nuevo | ### 6.4 Selected Findings | *What this demonstrates:* that a device can refuse to generate content when the request lacks traceable grounding. |
+| nuevo | ### 6.4 Selected Findings | *What this does not demonstrate:* that this behavior is general, that it would occur without the project context contamination, or that it constitutes a validated test of FabricationService's detection capacity. Fabricat… |
+| nuevo | ### 6.4 Selected Findings | **D_ckm negative values:** D_ckm = (A0 − A_actual) / A0. When D_ckm < 0, A_actual > A0: the field has more accessible attractors than at baseline. This is not a deficit or an error. In Caso 0.12, D_ckm = −7.5 was the fir… |
+| nuevo | ### 6.4 Selected Findings | **trace_ip:** The monitoring infrastructure identifies a moment t_i in the trajectory where accumulated interactions show distributional pattern changes. The action a_{t_i} is observable in the trace. Whether a device re… |
+| nuevo | ### 6.5 What the Series Does Not Establish | ### 6.5 What the Series Does Not Establish |
+| nuevo | ### 6.5 What the Series Does Not Establish | The IAP series is an exploration under partially controlled conditions, not a controlled experiment. The following claims are not supported by the series as run: |
+| nuevo | ### 6.5 What the Series Does Not Establish | - That D_ckm or c(S) values from these runs are comparable across cases (different corpus states, different sentinel conditions). - That TinkerBellucio's behavior reflects a general property of Sonnet 4.6 rather than the… |
+| nuevo | ### 6.5 What the Series Does Not Establish | These are open lines, not closed findings. |
+| nuevo | ### 6.5 What the Series Does Not Establish | --- *Section 6 draft complete.* *[AUTO] flagged: tendency to write "demonstrates" for Caso 0.15 —* *resisted. The refusal is documented behavior, not a demonstration of* *system capability under controlled conditions.* |
+| nuevo | ## 7. Behavior Domain Graph G | --- ## 7. Behavior Domain Graph G (a desarrollar) Segunda matriz, termap fijo (TERMAP_behavior_v1.json). D_G en paralelo a D_ckm. Proof of concept. |
+| nuevo | ## 8. Discussion | Qué mide CKM que no miden los instrumentos existentes. Límites actuales. |
+| nuevo | ## 9. Conclusions and Future Work | --- ## 9. Conclusions and Future Work (a desarrollar) |
 
 ## v1 → v2
 
@@ -50,7 +168,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v2 → v3
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -167,7 +285,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v3 → v4
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -219,7 +337,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v6 → v7
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -245,7 +363,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v9 → v10
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -317,7 +435,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v13 → v14
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -366,7 +484,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v14 → v15
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -599,7 +717,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v15 → v16
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -656,7 +774,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v16 → v17
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -724,7 +842,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v22 → v23
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -747,7 +865,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v25 → v26
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -814,7 +932,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v28 → v29
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|
@@ -923,7 +1041,7 @@ Columnas: **título** = el último título `#` antes del bloque en su versión. 
 
 ## v30 → v31
 
-**Se van y no vuelven (hasta v32)**
+**Se van y no vuelven**
 
 | título | bloque | también en |
 |---|---|---|

@@ -17773,7 +17773,7 @@ construcción que `ckm_monitor.py:317`:
 Nada del chequeo falla. Lanzo el vivo.
 
 
-## REPORTE texto 21 — (2) el vivo y (3) el registro — A1.PAUSA — 2026-10-29 23:47 UTC
+## REPORTE texto 21 — (2) el vivo y (3) el registro — A1.PAUSA — 2026-10-29 23:42 UTC
 
 El vivo corrió **completo**: `./iap_chatroom/correr_caso0.sh` sin `--check`, en background, exit 0,
 **1204,67 s**. Sin intervención durante la corrida. `repo_commit` del log: `180844e`.

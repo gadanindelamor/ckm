@@ -17641,3 +17641,50 @@ Nada que decidir acá: era contar. Qué se hace con lo contado —si la torsión
 decisión cuando hay período 2 autoconjugado: todo lo declarado en el colapso, y el 78 % en las W de
 las curvas.
 
+
+## CIERRE texto 20 — A1.PAUSA — 2026-10-29 23:08 UTC
+
+Los cuatro puntos, de corrido y en orden, como pedía el texto (una sola unidad, A1.PAUSA al final).
+Ninguno quedó sin hacer y ninguno se amplió.
+
+| punto | commit | qué quedó medido |
+|---|---|---|
+| 1 — el margen exacto (R1) | `489b85c` | ninguna de las 14 W separa con el margen exacto; la que `calibrate` marcó `calibrado` tiene m = **−0,0649** contra su **+0,0114** muestreado |
+| 2 — la simetría (R3) | `d2a9a3e` | es un teorema: `α ≤ 2/3 ⟹ N_eff ≥ 2`, cota alcanzada; 769 W con N_eff < 2, **todas** con α > 2/3 |
+| 3 — el CP-E (R2) | `9345d25` | reproducido en `0e042ac`: el "5.27" de la frase es A24 "+1 texto" (5,269) y el de la tabla es D12 base (5,271); en HEAD **38 de 42 celdas no se superponen** |
+| 4 — la torsión | `225aabe` | **0** torsión en las 143 evaluaciones de los tres intentos; el mecanismo verificado con igualdad exacta en las órbitas autoconjugadas |
+
+- **Suite completa, en serie**, al abrir y al cerrar la sesión: **903 passed, 7 xfailed, 0 failed**
+  (71,7 s y 50,1 s). Idéntica en los dos extremos: nada de esto toca el instrumento.
+- **`services/` y `iap_chatroom/` sin tocar**, `git status` sin modificados fuera de lo entregado.
+  No cambié `calibrate`, el margen, la grilla, el estimador, los defaults ni qué entra a Δ_r. No
+  registré ninguna definición. No corrí el vivo (es el texto 21) ni toqué nada de los textos 17 y 19.
+- **El worktree de `0e042ac`** se creó fuera del repo y se borró; `git worktree list` queda sólo con
+  `/workspaces/ckm`.
+- Estado del punto en el repo: `docs/tasks/ESTADO_texto20_margen_simetria_cpe_torsion.md`.
+
+### Lo que espera decisión, en orden de irreversibilidad
+
+1. **P19 (NO BLOQUEA, E3)** — qué es "el margen exacto" cuando el empate `h = 0` del código casi nunca
+   ocurre en float64 (13 %–22 % de los 2^20 estados toman otro camino que la aritmética exacta).
+   Default vigente: las dos dinámicas reportadas, con el paso del código como columna principal.
+2. **§4.3.2 del paper (E3)** — sus cuatro números son de `0e042ac` y ninguno se reproduce con el
+   extractor de hoy. No propongo qué hacer con la frase.
+3. **Lo del punto 2 que es del modelo (E3)** — la condición exacta (`α ≤ 2/3`) y la cota
+   `N_eff ≥ 1/(α² + (1−α)²/2)`: las registra Opus.
+
+### Hueco de completitud, declarado
+
+Ningún test de `tests/` se mueve. La regla de `readme/CONVENTIONS.md` pide preguntarlo y declararlo:
+los cuatro puntos son **drivers de medición** y no cambian el comportamiento de ningún servicio, así
+que no hay nada del instrumento que un test nuevo debiera observar; los drivers vecinos del mismo tipo
+tampoco tienen test. Lo que sostiene cada afirmación son los controles internos de cada script,
+declarados: enumeración contra `relax_orbit` (500/500 por W), `F(N)` cerrada contra enumeración,
+distribución exacta contra simulada con N impar, muestreo real del instrumento con N = 20 y 21, y el
+paso de float64 contra el exacto con W entera. Está escrito también en el ESTADO.
+
+### A1.PAUSA
+
+No sigo con el texto 21: es un vivo, y un vivo no se corre sin orden explícita de delamor (y antes, el
+idle timeout del Codespace ≥ 60 min).
+

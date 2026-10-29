@@ -17227,3 +17227,90 @@ Para Code, que pidió un valor de uso. Fuente: dos capturas de `Settings → Usa
 - Los dos textos para Code (20 y 21) no me los pegó delamor en esta sesión: los leí de
   `docs/opus/`. Si la versión que delamor quiere pegar difiere de la del repo, no lo puedo saber.
 
+
+## REPORTE texto 20 — punto 1 — el margen exacto de las 14 W (R1) — 2026-10-29 23:4x UTC
+
+Script: `experiments/margen_exacto_14W.py`. Salida: `experiments/margen_exacto_14W_resultado.json`
+(escritura atómica). Reutiliza `simpson_en_las_curvas.w_por_sha` (reconstrucción + sha) y
+`piso_del_colapso` (la medida `P(a)`, la forma cerrada y la enumeración del colapso); no reescribe
+ninguna de las dos. No toca `services/` ni `iap_chatroom/`.
+
+**Las 14 W son todas N = 20, paridad par.** Las 14 verifican su sha; 0 no recomputables.
+
+`F(20)`: forma cerrada **2,612244**, por enumeración del colapso **2,612244**, dif −4,4e−16.
+
+| sha | int | N | par | N_eff0 exacto | F(20) | m exacto | ¿separa? | N_eff0 registrado | margen registrado | estado | N_eff0 a 200/0 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| bdb98f5b | 3 | 20 | par | 2,463770 | 2,612244 | **−0,064897** | **no** | 2,462145 | **+0,011418** | calibrado | 2,462145 |
+| fa1d1864 | 2 | 20 | par | 2,026897 | 2,612244 | −0,359096 | no | 2,015926 | −0,270535 | no_calibrado | 2,015926 |
+| 18138650 | 2 | 20 | par | 2,039858 | 2,612244 | −0,346944 | no | 2,017553 | −0,269075 | no_calibrado | 2,017553 |
+| 3d2e8f1d | 2 | 20 | par | 2,037020 | 2,612244 | −0,349579 | no | 2,039568 | −0,249751 | no_calibrado | 2,039568 |
+| c049d2e8 | 2 | 20 | par | 2,033188 | 2,612244 | −0,353160 | no | 2,019998 | −0,266888 | no_calibrado | 2,019998 |
+| 5d657507 | 3 | 20 | par | 2,070713 | 2,612244 | −0,319163 | no | 2,040192 | −0,249215 | no_calibrado | 2,040192 |
+| 698d0f3f | 3 | 20 | par | 2,377795 | 2,612244 | −0,108565 | no | 2,338634 | −0,048469 | no_calibrado | 2,338634 |
+| 62d909d4 | 4 | 20 | par | 2,025184 | 2,612244 | −0,360725 | no | 2,007210 | −0,335205 | no_calibrado | 1,999800 |
+| 2edc58cb | 4 | 20 | par | 2,027366 | 2,612244 | −0,358651 | no | 2,032281 | −0,311834 | no_calibrado | 2,019998 |
+| b01bce1b | 4 | 20 | par | 2,029228 | 2,612244 | −0,356889 | no | 2,016040 | −0,326846 | no_calibrado | 1,999800 |
+| 5459b10c | 4 | 20 | par | 2,029933 | 2,612244 | −0,356223 | no | 2,036353 | −0,308141 | no_calibrado | 2,081815 |
+| 0ad12b69 | 4 | 20 | par | 2,032349 | 2,612244 | −0,353948 | no | 2,032140 | −0,311962 | no_calibrado | 1,995012 |
+| 472e54ff | 4 | 20 | par | 2,027444 | 2,612244 | −0,358577 | no | 2,019965 | −0,323175 | no_calibrado | 2,018775 |
+| 6ca344c3 | 4 | 20 | par | 2,032893 | 2,612244 | −0,353438 | no | 2,028101 | −0,315653 | no_calibrado | 2,039568 |
+
+(El N_eff0 registrado de los intentos 2 y 3 coincide con el muestreado a 200/0 porque **es** ese
+muestreo. El intento 4 calibró a `n_runs = 1000`: ahí las dos columnas difieren, y eso es la
+diferencia entre 1000 y 200, no entre dos definiciones.)
+
+### Lo medido, sin interpretar
+
+1. **Ninguna de las 14 separa con el margen exacto.** `m exacto < 0` en las 14, incluida
+   **bdb98f5b**, la única que `calibrate` marcó `calibrado`: su margen registrado es **+0,011418**
+   (muestreado, 200/0) y su margen exacto es **−0,064897**. Las dos cantidades son la misma fórmula
+   (`d_colapso − d_sin_cambio`, `calibrate.py:337`, con `d_sin_cambio = 0`): la diferencia es que una
+   toma los dos N_eff muestreados y la otra los toma exactos.
+2. **El IC del 14.1 de bdb98f5b contiene a F(20).** `n_eff_ic95 = [2,273904; 2,684364]` a n_runs=200
+   y `F(20) = 2,612244` cae dentro. A 200 corridas la comparación `N_eff(W) > F` **no se resuelve**,
+   en ninguna de las dos direcciones.
+3. `periodo_max = 2` en las 14 W: no hay órbitas de período > 2 con masa.
+4. **La simetría ± se verifica numéricamente** sobre las 14: la diferencia máxima entre la masa de O
+   y la de −O es **1,7e−12** (control que el script calcula sin costo extra; el punto 2 lo prueba o
+   lo refuta como enunciado, acá sólo está medido).
+5. Órbitas autoconjugadas (O = −O) en estas 14 W: entre 496 y 1211 por W, con masa total exacta
+   entre **0,0038 y 0,0082**. Es el insumo del punto 2c.
+
+### Lo que apareció y hay que declarar: el paso de float64 no es el paso exacto
+
+`relax_orbit` calcula `h = W @ s` en float64 y conserva σ_i si `h = 0`
+(`landscape_engine.py:73-74`). Las entradas de estas W son racionales de denominador **q = 12**, así
+que el `h` exacto es un entero sobre 12 y se puede calcular **sin error** en int64. Medido:
+
+- **520.944** pares (estado, nodo) tienen `h` exacto **= 0** en bdb98f5b, sobre 405.374 estados;
+- de esos, en **179.110 estados** (17 % de los 2^20) el paso de float64 da un sucesor **distinto**
+  del exacto: el float devuelve ±1e−17 en lugar de 0, y el nodo se **voltea** en vez de conservarse.
+  Rango sobre las 14 W: **140.250 a 225.510** estados (13 % a 22 %);
+- el N_eff se mueve entre **−0,057 y +0,014** según qué paso se use.
+
+Por eso el script enumera con las dos y reporta las dos. **La columna de la tabla es la del paso del
+código**, que es la comparable con `calibrate`, y está **verificada contra `relax_orbit` real**:
+500 estados estratificados por cantidad de nodos activos por W, **14/14 W con 500/500 coincidencias**
+de órbita y período (al primer intento no coincidía: el producto por bloques sumaba en otro orden que
+el `W @ s` del código, y donde el `h` exacto es 0 eso cambia el estado siguiente. Se corrigió
+recomputando con el propio `W @ s`, estado por estado, los estados con algún empate exacto).
+
+**Ninguno de los 14 signos cambia** entre las dos dinámicas: con las dos, las 14 dan `m < 0`.
+
+### PREGUNTA P19 (NO BLOQUEA) — qué es "el margen exacto" cuando el empate casi nunca ocurre
+
+La regla de empate "h = 0 conserva σ_i" está escrita en el código y en el lema de
+`piso_del_colapso`, y **sobre el extremo de colapso sí se cumple en float** (ahí los acoplamientos
+son todos iguales y la suma de ±e cancela exacto; por eso la verificación exhaustiva del 14.2 pasó).
+Sobre las W del corpus **casi nunca se cumple**: el 13 %–22 % de los estados toma otro camino. Las
+dos lecturas son defendibles y no elijo ninguna:
+
+- el instrumento **es** el código, y entonces el N_eff exacto del instrumento es el de la columna;
+- la regla de empate **es** la definición, y entonces el float la incumple en 1 de cada 5 estados.
+
+**Default vigente y reversible:** reporto las dos, con el paso del código como columna principal
+porque es la que se compara con `calibrate`. No cambio nada en `services/`. **No BLOQUEA** porque los
+14 signos coinciden con las dos. Es **E3** (toca la semántica de N_eff y del margen): la decide
+delamor, y Opus registra la definición.
+

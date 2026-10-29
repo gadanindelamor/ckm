@@ -1,0 +1,1447 @@
+{
+ "que": "el margen exacto de las 14 W de las curvas (texto 20, punto 1)",
+ "defaults_del_instrumento": {
+  "n_runs": 200,
+  "seed": 0,
+  "sampling_mode": "uniform"
+ },
+ "piso_F_por_N": {
+  "20": {
+   "F_forma_cerrada": 2.612243743764531,
+   "F_por_enumeracion": 2.6122437437645316,
+   "dif": -4.440892098500626e-16,
+   "pesos_suman_1": 0.9999999999999999,
+   "n_orbitas_periodo_2_del_colapso": 92378
+  }
+ },
+ "W": [
+  {
+   "intento": "intento3",
+   "w_sha": "bdb98f5be458bf7234ea97c70e97701e0aa6e11d5505b3dc495a3ab0c77b036c",
+   "sha_verifica": true,
+   "estado": "calibrado",
+   "causa": null,
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.462144527883787,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": 0.011417903303729937,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 520944,
+     "denominador_comun_q": 12,
+     "estados_con_algun_empate": 405374,
+     "estados_con_sucesor_distinto_del_exacto": 179110
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1219,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 4,
+      "masa": 0.9925850626412038
+     },
+     "2": {
+      "orbitas": 1215,
+      "masa": 0.007414937358796123
+     }
+    },
+    "simpson": 0.4058820551724606,
+    "n_eff_exacto": 2.463769923445117,
+    "n_orbitas_autoconjugadas": 1047,
+    "masa_autoconjugada": 0.005224819040589719,
+    "masa_maxima": 0.44788036879327364,
+    "max_dif_masa_O_vs_menosO": 7.62390151010095e-13
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 520944,
+     "denominador_comun_q": 12,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 983,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 4,
+      "masa": 0.9945269256027967
+     },
+     "2": {
+      "orbitas": 979,
+      "masa": 0.00547307439720332
+     }
+    },
+    "simpson": 0.40603389773374443,
+    "n_eff_exacto": 2.462848559150958,
+    "n_orbitas_autoconjugadas": 707,
+    "masa_autoconjugada": 0.002524275260334305,
+    "masa_maxima": 0.4478561702106344,
+    "max_dif_masa_O_vs_menosO": 7.565614801308129e-13
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.0009213642941587885,
+    "n_orbitas_codigo_menos_exacto": 236,
+    "estados_con_sucesor_distinto": 179110,
+    "estados_con_algun_empate_exacto": 405374
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.06489667719756054,
+   "m_exacto_aritmetica_exacta": -0.06533859507444695,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.462144527883787,
+   "ic_del_141": {
+    "n_eff_plugin": 2.462144527883787,
+    "n_eff_unb": 2.480368939299514,
+    "n_eff_ic95": [
+     2.273904027718333,
+     2.684364129121325
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento2",
+   "w_sha": "fa1d186474ccd39812a967bff6ba3da86af899e89c0914498051db31e7b19179",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.015925813930047,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.270534983248933,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 771092,
+     "denominador_comun_q": 12,
+     "estados_con_algun_empate": 497774,
+     "estados_con_sucesor_distinto_del_exacto": 225510
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 554,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9933420294875637
+     },
+     "2": {
+      "orbitas": 552,
+      "masa": 0.006657970512436382
+     }
+    },
+    "simpson": 0.4933649004792374,
+    "n_eff_exacto": 2.026897331019363,
+    "n_orbitas_autoconjugadas": 496,
+    "masa_autoconjugada": 0.00597066761925354,
+    "masa_maxima": 0.4966710147444796,
+    "max_dif_masa_O_vs_menosO": 1.3954948308025905e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 771092,
+     "denominador_comun_q": 12,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 367,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.996783618213583
+     },
+     "2": {
+      "orbitas": 365,
+      "masa": 0.0032163817864169874
+     }
+    },
+    "simpson": 0.4967889104478588,
+    "n_eff_exacto": 2.012927380159297,
+    "n_orbitas_autoconjugadas": 279,
+    "masa_autoconjugada": 0.002312148635669968,
+    "masa_maxima": 0.4983918091074918,
+    "max_dif_masa_O_vs_menosO": 1.4006573678670975e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.013969950860066138,
+    "n_orbitas_codigo_menos_exacto": 187,
+    "estados_con_sucesor_distinto": 225510,
+    "estados_con_algun_empate_exacto": 497774
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.35909564973132446,
+   "m_exacto_aritmetica_exacta": -0.3725316644031098,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.015925813930047,
+   "ic_del_141": {
+    "n_eff_plugin": 2.015925813930047,
+    "n_eff_unb": 2.0262702372467163,
+    "n_eff_ic95": [
+     1.970339501624444,
+     2.0636714803607985
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento2",
+   "w_sha": "18138650361abc40d57ee531ae689b79bd34507d0e8d4e7e4b0cd5e783402066",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.0175527085645113,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.26907472317459047,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 414128,
+     "denominador_comun_q": 17,
+     "estados_con_algun_empate": 333410,
+     "estados_con_sucesor_distinto_del_exacto": 140250
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1479,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9901818479508449
+     },
+     "2": {
+      "orbitas": 1477,
+      "masa": 0.009818152049154863
+     }
+    },
+    "simpson": 0.49023030905378406,
+    "n_eff_exacto": 2.0398575557887186,
+    "n_orbitas_autoconjugadas": 1211,
+    "masa_autoconjugada": 0.007846294572273321,
+    "masa_maxima": 0.49509092397625154,
+    "max_dif_masa_O_vs_menosO": 1.6582291095801338e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 414128,
+     "denominador_comun_q": 17,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1197,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9928645528877974
+     },
+     "2": {
+      "orbitas": 1195,
+      "masa": 0.0071354471122023954
+     }
+    },
+    "simpson": 0.49289014056502056,
+    "n_eff_exacto": 2.028849671964747,
+    "n_orbitas_autoconjugadas": 825,
+    "masa_autoconjugada": 0.0043631194656584184,
+    "masa_maxima": 0.4964322764447308,
+    "max_dif_masa_O_vs_menosO": 1.6642243139131097e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.011007883823971554,
+    "n_orbitas_codigo_menos_exacto": 282,
+    "estados_con_sucesor_distinto": 140250,
+    "estados_con_algun_empate_exacto": 333410
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.34694415770411013,
+   "m_exacto_aritmetica_exacta": -0.35724613641295466,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.0175527085645113,
+   "ic_del_141": {
+    "n_eff_plugin": 2.0175527085645113,
+    "n_eff_unb": 2.0279221440945685,
+    "n_eff_ic95": [
+     1.9745854191722207,
+     2.062431543442173
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento2",
+   "w_sha": "3d2e8f1df4c4bdf7104e7f937c3e422cf6ee5b0c9125e52a27ea001ab131bbe1",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.039567611666327,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.24975101223448548,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 295988,
+     "denominador_comun_q": 23,
+     "estados_con_algun_empate": 242280,
+     "estados_con_sucesor_distinto_del_exacto": 87158
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1869,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9908713158616729
+     },
+     "2": {
+      "orbitas": 1867,
+      "masa": 0.009128684138326997
+     }
+    },
+    "simpson": 0.49091310624726886,
+    "n_eff_exacto": 2.037020375447683,
+    "n_orbitas_autoconjugadas": 1749,
+    "masa_autoconjugada": 0.008228938888739707,
+    "masa_maxima": 0.4954356579313825,
+    "max_dif_masa_O_vs_menosO": 1.0921263893237665e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 295988,
+     "denominador_comun_q": 23,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1603,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9928632223040366
+     },
+     "2": {
+      "orbitas": 1601,
+      "masa": 0.007136777695963223
+     }
+    },
+    "simpson": 0.49288876994813025,
+    "n_eff_exacto": 2.0288553137561567,
+    "n_orbitas_autoconjugadas": 1413,
+    "masa_autoconjugada": 0.006038617600128955,
+    "masa_maxima": 0.4964316111525669,
+    "max_dif_masa_O_vs_menosO": 1.0972334152370422e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.008165061691526532,
+    "n_orbitas_codigo_menos_exacto": 266,
+    "estados_con_sucesor_distinto": 87158,
+    "estados_con_algun_empate_exacto": 242280
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.3495791007078999,
+   "m_exacto_aritmetica_exacta": -0.3572408016384854,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.039567611666327,
+   "ic_del_141": {
+    "n_eff_plugin": 2.039567611666327,
+    "n_eff_unb": 2.0502781784463218,
+    "n_eff_ic95": [
+     1.9837425428662248,
+     2.0986256386697315
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento2",
+   "w_sha": "c049d2e893ffcaa3a6b87f30636840577b884b7e51336617f702c93dc72a232b",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.01999798000202,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.26688841495675497,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 323820,
+     "denominador_comun_q": 29,
+     "estados_con_algun_empate": 260080,
+     "estados_con_sucesor_distinto_del_exacto": 97882
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1733,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9918046865415576
+     },
+     "2": {
+      "orbitas": 1731,
+      "masa": 0.008195313458442426
+     }
+    },
+    "simpson": 0.49183839818470965,
+    "n_eff_exacto": 2.0331881440953508,
+    "n_orbitas_autoconjugadas": 1631,
+    "masa_autoconjugada": 0.007502755887017328,
+    "masa_maxima": 0.49590234327141364,
+    "max_dif_masa_O_vs_menosO": 1.269651050961329e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 323820,
+     "denominador_comun_q": 29,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1438,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9940387366761414
+     },
+     "2": {
+      "orbitas": 1436,
+      "masa": 0.005961263323858426
+     }
+    },
+    "simpson": 0.49405657623010313,
+    "n_eff_exacto": 2.0240596889337983,
+    "n_orbitas_autoconjugadas": 1298,
+    "masa_autoconjugada": 0.0050863932249202,
+    "masa_maxima": 0.4970193683387081,
+    "max_dif_masa_O_vs_menosO": 1.2747025657233735e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.009128455161552473,
+    "n_orbitas_codigo_menos_exacto": 295,
+    "estados_con_sucesor_distinto": 97882,
+    "estados_con_algun_empate_exacto": 260080
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.35316045111784056,
+   "m_exacto_aritmetica_exacta": -0.3617960374685296,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.01999798000202,
+   "ic_del_141": {
+    "n_eff_plugin": 2.01999798000202,
+    "n_eff_unb": 2.030405060708091,
+    "n_eff_ic95": [
+     1.9813606148098712,
+     2.0601722043317587
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento3",
+   "w_sha": "5d6575070be3cd58f9bc926dd06cab4b48b882329249e716d7d2f478fe26dade",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.040191778027135,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.24921471804825024,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 679268,
+     "denominador_comun_q": 9,
+     "estados_con_algun_empate": 467680,
+     "estados_con_sucesor_distinto_del_exacto": 185688
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 723,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.982690706481401
+     },
+     "2": {
+      "orbitas": 721,
+      "masa": 0.01730929351859907
+     }
+    },
+    "simpson": 0.4829254214687178,
+    "n_eff_exacto": 2.070713107126783,
+    "n_orbitas_autoconjugadas": 651,
+    "masa_autoconjugada": 0.003820962963751239,
+    "masa_maxima": 0.4913453532415522,
+    "max_dif_masa_O_vs_menosO": 1.703470697833609e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 679268,
+     "denominador_comun_q": 9,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 574,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 4,
+      "masa": 0.9814790859296136
+     },
+     "2": {
+      "orbitas": 570,
+      "masa": 0.018520914070386252
+     }
+    },
+    "simpson": 0.4699258638302687,
+    "n_eff_exacto": 2.1279952370554933,
+    "n_orbitas_autoconjugadas": 506,
+    "masa_autoconjugada": 0.002363071654858881,
+    "masa_maxima": 0.48462673968277303,
+    "max_dif_masa_O_vs_menosO": 1.667110893777135e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": -0.05728212992871029,
+    "n_orbitas_codigo_menos_exacto": 149,
+    "estados_con_sucesor_distinto": 185688,
+    "estados_con_algun_empate_exacto": 467680
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.3191629342905544,
+   "m_exacto_aritmetica_exacta": -0.2714969944132417,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.040191778027135,
+   "ic_del_141": {
+    "n_eff_plugin": 2.040191778027135,
+    "n_eff_unb": 2.0509120890446253,
+    "n_eff_ic95": [
+     1.985169478289671,
+     2.0983510960210716
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento3",
+   "w_sha": "698d0f3f6a00cac8f1953bb7a72b0765a3ba63f7d1ec93e4040f418907e589c0",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 200,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.3386342376052385,
+   "n_eff_colapso_registrado": 2.436944072133545,
+   "margen_registrado": -0.048469067461945015,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 646036,
+     "denominador_comun_q": 10,
+     "estados_con_algun_empate": 462890,
+     "estados_con_sucesor_distinto_del_exacto": 181914
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 867,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 6,
+      "masa": 0.9954806158753686
+     },
+     "2": {
+      "orbitas": 861,
+      "masa": 0.004519384124631355
+     }
+    },
+    "simpson": 0.42055761892981147,
+    "n_eff_exacto": 2.377795467229174,
+    "n_orbitas_autoconjugadas": 767,
+    "masa_autoconjugada": 0.004100363001277343,
+    "masa_maxima": 0.4570342550902201,
+    "max_dif_masa_O_vs_menosO": 9.429679259653767e-13
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 646036,
+     "denominador_comun_q": 10,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 691,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 6,
+      "masa": 0.9970368576212334
+     },
+     "2": {
+      "orbitas": 685,
+      "masa": 0.002963142378766652
+     }
+    },
+    "simpson": 0.41747558852042066,
+    "n_eff_exacto": 2.3953496383922945,
+    "n_orbitas_autoconjugadas": 535,
+    "masa_autoconjugada": 0.0022064687118789226,
+    "masa_maxima": 0.45516978023328836,
+    "max_dif_masa_O_vs_menosO": 9.298672942747999e-13
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": -0.017554171163120635,
+    "n_orbitas_codigo_menos_exacto": 176,
+    "estados_con_sucesor_distinto": 181914,
+    "estados_con_algun_empate_exacto": 462890
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.10856451850237891,
+   "m_exacto_aritmetica_exacta": -0.09923001573689016,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.3386342376052385,
+   "ic_del_141": {
+    "n_eff_plugin": 2.3386342376052385,
+    "n_eff_unb": 2.354472314245149,
+    "n_eff_ic95": [
+     2.1737314503308687,
+     2.530610443086895
+    ],
+    "n_runs": 200
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "62d909d4c74e7602b67abcb97391833b0a21ae75bf776d1966c67af0160da414",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.007209897953449,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.33520515866520073,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 462300,
+     "denominador_comun_q": 13,
+     "estados_con_algun_empate": 341888,
+     "estados_con_sucesor_distinto_del_exacto": 136726
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1112,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9937627645832201
+     },
+     "2": {
+      "orbitas": 1110,
+      "masa": 0.006237235416780023
+     }
+    },
+    "simpson": 0.4937824037583113,
+    "n_eff_exacto": 2.0251835472238984,
+    "n_orbitas_autoconjugadas": 1036,
+    "masa_autoconjugada": 0.0053230567162268335,
+    "masa_maxima": 0.4968813822921698,
+    "max_dif_masa_O_vs_menosO": 1.1196044091832391e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 462300,
+     "denominador_comun_q": 13,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 780,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.995860531367512
+     },
+     "2": {
+      "orbitas": 778,
+      "masa": 0.004139468632488148
+     }
+    },
+    "simpson": 0.49586920030576687,
+    "n_eff_exacto": 2.016660843995497,
+    "n_orbitas_autoconjugadas": 696,
+    "masa_autoconjugada": 0.0032796860002627156,
+    "masa_maxima": 0.4979302656843129,
+    "max_dif_masa_O_vs_menosO": 1.1138867606064196e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.00852270322840143,
+    "n_orbitas_codigo_menos_exacto": 332,
+    "estados_con_sucesor_distinto": 136726,
+    "estados_con_algun_empate_exacto": 341888
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.3607248041964479,
+   "m_exacto_aritmetica_exacta": -0.3689058019298057,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 1.9998000199980002,
+   "ic_del_141": {
+    "n_eff_plugin": 2.007209897953449,
+    "n_eff_unb": 2.0092356457309273,
+    "n_eff_ic95": [
+     1.9950995239076494,
+     2.0194681912750942
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "2edc58cb403a2a8b2922fefffe157fa06ed05c3bac1f00295c1cb1dfb8392d81",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.032280747391568,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.3118338737015822,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 286588,
+     "denominador_comun_q": 14,
+     "estados_con_algun_empate": 237726,
+     "estados_con_sucesor_distinto_del_exacto": 89328
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1006,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9932276443886587
+     },
+     "2": {
+      "orbitas": 1004,
+      "masa": 0.006772355611341149
+     }
+    },
+    "simpson": 0.4932507762073089,
+    "n_eff_exacto": 2.0273662977059543,
+    "n_orbitas_autoconjugadas": 870,
+    "masa_autoconjugada": 0.0056795178505505625,
+    "masa_maxima": 0.496613822194802,
+    "max_dif_masa_O_vs_menosO": 9.452993943170895e-13
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 286588,
+     "denominador_comun_q": 14,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 890,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9946622843101358
+     },
+     "2": {
+      "orbitas": 888,
+      "masa": 0.005337715689864157
+     }
+    },
+    "simpson": 0.49467666990653236,
+    "n_eff_exacto": 2.0215224627208452,
+    "n_orbitas_autoconjugadas": 758,
+    "masa_autoconjugada": 0.004469543614264786,
+    "masa_maxima": 0.4973311421555398,
+    "max_dif_masa_O_vs_menosO": 9.437450820826143e-13
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.005843834985109098,
+    "n_orbitas_codigo_menos_exacto": 116,
+    "estados_con_sucesor_distinto": 89328,
+    "estados_con_algun_empate_exacto": 237726
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.3586507605395932,
+   "m_exacto_aritmetica_exacta": -0.36422286883733723,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.01999798000202,
+   "ic_del_141": {
+    "n_eff_plugin": 2.032280747391568,
+    "n_eff_unb": 2.034382903852498,
+    "n_eff_ic95": [
+     2.0099011102920272,
+     2.055164377191024
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "b01bce1b0ddb353f7fb25c3ef135114bc4b3fd603f08f4b34c86a3faa70e3b00",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.01603961114628,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.3268463058453348,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 311208,
+     "denominador_comun_q": 20,
+     "estados_con_algun_empate": 249938,
+     "estados_con_sucesor_distinto_del_exacto": 98258
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1378,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9927716826517392
+     },
+     "2": {
+      "orbitas": 1376,
+      "masa": 0.007228317348260797
+     }
+    },
+    "simpson": 0.49279824616135504,
+    "n_eff_exacto": 2.0292280010927106,
+    "n_orbitas_autoconjugadas": 1304,
+    "masa_autoconjugada": 0.006766221394680411,
+    "masa_maxima": 0.4963858413263711,
+    "max_dif_masa_O_vs_menosO": 1.0029754804463664e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 311208,
+     "denominador_comun_q": 20,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1083,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9947296704843329
+     },
+     "2": {
+      "orbitas": 1081,
+      "masa": 0.005270329515666911
+     }
+    },
+    "simpson": 0.4947438520289125,
+    "n_eff_exacto": 2.021247956693276,
+    "n_orbitas_autoconjugadas": 1019,
+    "masa_autoconjugada": 0.0049737672028517775,
+    "masa_maxima": 0.49736483524266867,
+    "max_dif_masa_O_vs_menosO": 1.0044187703783791e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.007980044399434671,
+    "n_orbitas_codigo_menos_exacto": 295,
+    "estados_con_sucesor_distinto": 98258,
+    "estados_con_algun_empate_exacto": 249938
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.356888521028069,
+   "m_exacto_aritmetica_exacta": -0.36448613269725105,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 1.9998000199980002,
+   "ic_del_141": {
+    "n_eff_plugin": 2.01603961114628,
+    "n_eff_unb": 2.0180921251984762,
+    "n_eff_ic95": [
+     2.0003415319067517,
+     2.03198602687313
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "5459b10cca574feb05af823214deed659f41b3ea97efad6058c4d85fa371a4f9",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.036352973278977,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.30814133843437963,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 274944,
+     "denominador_comun_q": 20,
+     "estados_con_algun_empate": 225270,
+     "estados_con_sucesor_distinto_del_exacto": 88156
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1361,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.992599608853505
+     },
+     "2": {
+      "orbitas": 1359,
+      "masa": 0.007400391146494901
+     }
+    },
+    "simpson": 0.4926271240889468,
+    "n_eff_exacto": 2.029932886560757,
+    "n_orbitas_autoconjugadas": 1345,
+    "masa_autoconjugada": 0.007175680356769429,
+    "masa_maxima": 0.4962998044274819,
+    "max_dif_masa_O_vs_menosO": 1.4588330543574557e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 274944,
+     "denominador_comun_q": 20,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1097,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9944702743077551
+     },
+     "2": {
+      "orbitas": 1095,
+      "masa": 0.005529725692244842
+     }
+    },
+    "simpson": 0.49448564630915615,
+    "n_eff_exacto": 2.0223033923512364,
+    "n_orbitas_autoconjugadas": 1059,
+    "masa_autoconjugada": 0.0051197705802787956,
+    "masa_maxima": 0.4972351371546094,
+    "max_dif_masa_O_vs_menosO": 1.4636070133633439e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.0076294942095205265,
+    "n_orbitas_codigo_menos_exacto": 264,
+    "estados_con_sucesor_distinto": 88156,
+    "estados_con_algun_empate_exacto": 225270
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.35622290843938686,
+   "m_exacto_aritmetica_exacta": -0.36347467203325223,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.081815342979078,
+   "ic_del_141": {
+    "n_eff_plugin": 2.036352973278977,
+    "n_eff_unb": 2.038467659986043,
+    "n_eff_ic95": [
+     2.012560946714661,
+     2.060714257057946
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "0ad12b696b9ab9778bc8d9f9417044a65eb1e2cbc8545045aa452fa7beddd381",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.032140331482731,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.31196170151159297,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 285888,
+     "denominador_comun_q": 24,
+     "estados_con_algun_empate": 229376,
+     "estados_con_sucesor_distinto_del_exacto": 92576
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1558,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9920094611271364
+     },
+     "2": {
+      "orbitas": 1556,
+      "masa": 0.007990538872863539
+     }
+    },
+    "simpson": 0.49204157551534444,
+    "n_eff_exacto": 2.032348585488209,
+    "n_orbitas_autoconjugadas": 1534,
+    "masa_autoconjugada": 0.007385822381926277,
+    "masa_maxima": 0.4960047305640512,
+    "max_dif_masa_O_vs_menosO": 9.660050537263487e-13
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 285888,
+     "denominador_comun_q": 24,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1303,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9939989770291838
+     },
+     "2": {
+      "orbitas": 1301,
+      "masa": 0.006001022970816002
+     }
+    },
+    "simpson": 0.49401707389085175,
+    "n_eff_exacto": 2.0242215357539246,
+    "n_orbitas_autoconjugadas": 1257,
+    "masa_autoconjugada": 0.00553405572753462,
+    "masa_maxima": 0.49699948851507936,
+    "max_dif_masa_O_vs_menosO": 9.7488683792335e-13
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.008127049734284242,
+    "n_orbitas_codigo_menos_exacto": 255,
+    "estados_con_sucesor_distinto": 92576,
+    "estados_con_algun_empate_exacto": 229376
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.353948491659545,
+   "m_exacto_aritmetica_exacta": -0.3616416285540367,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 1.9950124688279303,
+   "ic_del_141": {
+    "n_eff_plugin": 2.032140331482731,
+    "n_eff_unb": 2.034242056478216,
+    "n_eff_ic95": [
+     2.009683710780714,
+     2.0551044933871325
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "472e54ff6655f979c3b3510118a2d03e978b4883d8c855ea047319be9590f698",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.019965337394811,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.32317505454981577,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 163832,
+     "denominador_comun_q": 25,
+     "estados_con_algun_empate": 146530,
+     "estados_con_sucesor_distinto_del_exacto": 53138
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1735,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9932087004842663
+     },
+     "2": {
+      "orbitas": 1733,
+      "masa": 0.006791299515733591
+     }
+    },
+    "simpson": 0.49323185238957556,
+    "n_eff_exacto": 2.0274440816327437,
+    "n_orbitas_autoconjugadas": 1707,
+    "masa_autoconjugada": 0.006389824056210022,
+    "masa_maxima": 0.49660435024280836,
+    "max_dif_masa_O_vs_menosO": 1.350364264851578e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 163832,
+     "denominador_comun_q": 25,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1616,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9940093059675312
+     },
+     "2": {
+      "orbitas": 1614,
+      "masa": 0.005990694032468465
+     }
+    },
+    "simpson": 0.49402732254088644,
+    "n_eff_exacto": 2.0241795430600673,
+    "n_orbitas_autoconjugadas": 1582,
+    "masa_autoconjugada": 0.005548173446760593,
+    "masa_maxima": 0.49700465298444463,
+    "max_dif_masa_O_vs_menosO": 1.3579692925702602e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.00326453857267639,
+    "n_orbitas_codigo_menos_exacto": 119,
+    "estados_con_sucesor_distinto": 53138,
+    "estados_con_algun_empate_exacto": 146530
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.35857700826859906,
+   "m_exacto_aritmetica_exacta": -0.3616816868625823,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.018774603815484,
+   "ic_del_141": {
+    "n_eff_plugin": 2.019965337394811,
+    "n_eff_unb": 2.022029802168976,
+    "n_eff_ic95": [
+     2.002262934769868,
+     2.0379835530711774
+    ],
+    "n_runs": 1000
+   }
+  },
+  {
+   "intento": "intento4",
+   "w_sha": "6ca344c3f05b6c240ce4323a9701d12c3682b8950b6f3942f02cc7e28de21c91",
+   "sha_verifica": true,
+   "estado": "no_calibrado",
+   "causa": "sin_separacion",
+   "n_runs_registrado": 1000,
+   "seed_registrado": 0,
+   "n_eff0_registrado": 2.0281013726190094,
+   "n_eff_colapso_registrado": 2.5352655437130482,
+   "margen_registrado": -0.31565307473639415,
+   "w_no_recomputables_en_la_corrida": 0,
+   "N": 20,
+   "paridad_N": "par",
+   "enumeracion_con_el_paso_del_codigo": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "codigo",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 246096,
+     "denominador_comun_q": 25,
+     "estados_con_algun_empate": 210282,
+     "estados_con_sucesor_distinto_del_exacto": 80158
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1482,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.9918767635873185
+     },
+     "2": {
+      "orbitas": 1480,
+      "masa": 0.008123236412681608
+     }
+    },
+    "simpson": 0.49190985969509926,
+    "n_eff_exacto": 2.032892775558169,
+    "n_orbitas_autoconjugadas": 942,
+    "masa_autoconjugada": 0.004563000209269037,
+    "masa_maxima": 0.4959383817942746,
+    "max_dif_masa_O_vs_menosO": 1.230682222796986e-12
+   },
+   "enumeracion_con_aritmetica_exacta": {
+    "N": 20,
+    "paridad_N": "par",
+    "modo_del_paso": "exacto",
+    "estados_enumerados": 1048576,
+    "empates": {
+     "empates_exactos_estado_nodo": 246096,
+     "denominador_comun_q": 25,
+     "estados_con_algun_empate": null
+    },
+    "pesos_suman": 1.0,
+    "n_orbitas_con_masa": 1370,
+    "periodo_max": 2,
+    "periodos": {
+     "1": {
+      "orbitas": 2,
+      "masa": 0.992932164584666
+     },
+     "2": {
+      "orbitas": 1368,
+      "masa": 0.00706783541533389
+     }
+    },
+    "simpson": 0.4929572263823498,
+    "n_eff_exacto": 2.0285735688239517,
+    "n_orbitas_autoconjugadas": 836,
+    "masa_autoconjugada": 0.0038116488774250067,
+    "masa_maxima": 0.4964660822929448,
+    "max_dif_masa_O_vs_menosO": 1.223576795439385e-12
+   },
+   "difiere_el_paso": {
+    "n_eff_codigo_menos_exacto": 0.0043192067342174845,
+    "n_orbitas_codigo_menos_exacto": 112,
+    "estados_con_sucesor_distinto": 80158,
+    "estados_con_algun_empate_exacto": 210282
+   },
+   "verificacion_contra_relax_orbit": {
+    "revisados": 500,
+    "discrepancias": [],
+    "coincide": true
+   },
+   "F": 2.612243743764531,
+   "m_exacto_paso_del_codigo": -0.35343755315628833,
+   "m_exacto_aritmetica_exacta": -0.3575072838717501,
+   "separa_paso_del_codigo": false,
+   "separa_aritmetica_exacta": false,
+   "n_eff0_muestreado_200_0_uniforme": 2.039567611666327,
+   "ic_del_141": {
+    "n_eff_plugin": 2.0281013726190094,
+    "n_eff_unb": 2.030190703799444,
+    "n_eff_ic95": [
+     2.0071317962672954,
+     2.049513735695756
+    ],
+    "n_runs": 1000
+   }
+  }
+ ]
+}

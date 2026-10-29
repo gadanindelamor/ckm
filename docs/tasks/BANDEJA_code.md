@@ -17228,7 +17228,7 @@ Para Code, que pidió un valor de uso. Fuente: dos capturas de `Settings → Usa
   `docs/opus/`. Si la versión que delamor quiere pegar difiere de la del repo, no lo puedo saber.
 
 
-## REPORTE texto 20 — punto 1 — el margen exacto de las 14 W (R1) — 2026-10-29 23:4x UTC
+## REPORTE texto 20 — punto 1 — el margen exacto de las 14 W (R1) — 2026-10-29 22:47 UTC
 
 Script: `experiments/margen_exacto_14W.py`. Salida: `experiments/margen_exacto_14W_resultado.json`
 (escritura atómica). Reutiliza `simpson_en_las_curvas.w_por_sha` (reconstrucción + sha) y
@@ -17313,4 +17313,142 @@ dos lecturas son defendibles y no elijo ninguna:
 porque es la que se compara con `calibrate`. No cambio nada en `services/`. **No BLOQUEA** porque los
 14 signos coinciden con las dos. Es **E3** (toca la semántica de N_eff y del margen): la decide
 delamor, y Opus registra la definición.
+
+
+## REPORTE texto 20 — punto 2 — N_eff ≥ 2 por la simetría σ ↔ −σ (R3) — 2026-10-29 23:16 UTC
+
+Script: `experiments/simetria_neff_dos.py`. Salida: `experiments/simetria_neff_dos_resultado.json`.
+Reutiliza `margen_exacto_14W` (la enumeración) y `piso_del_colapso` (la medida y la forma cerrada).
+No toca `services/` ni `iap_chatroom/`.
+
+### (a) La parte (a) es un teorema: se demuestra, no se corre
+
+Regla del proyecto: *"No se corre lo que se demuestra. Antes de una corrida, preguntar si el
+resultado es un teorema; si lo es, se demuestra en una línea."* El enunciado del paper **es** un
+teorema, y además tiene un **valor exacto** para lo que el v33 llama "dominantes". La prueba, entera,
+está en el docstring del script; acá el resumen:
+
+1. **El mapa es impar.** `h(−σ) = −h(σ)`, y la regla de `landscape_engine.py:73-74` manda `+1` donde
+   `h > 0`, `−1` donde `h < 0` y conserva donde `h = 0`. Con `−h` los tres casos dan `−σ'`: el tercero
+   también, porque `h = 0 ⟺ −h = 0`. Entonces **`f(−σ) = −f(σ)`**. En float64 vale igual: la negación
+   de IEEE754 es exacta y no cambia el orden de suma. **La divergencia float/exacto del punto 1 no
+   toca esto.**
+2. **La medida es invariante.** Un estado con `a` activos pesa `P(a)/C(N,a)`, la conjugación lleva `a`
+   a `N − a`, y `C(N,a) = C(N,N−a)`: la invariancia equivale a `P(a) = P(N−a)`, que vale porque
+   `[0,3; 0,7]` es simétrico alrededor de 1/2.
+3. **La conjugación de órbitas es una involución que preserva masa.** Una involución no aparea todo:
+   tiene **puntos fijos**, que son las órbitas con `O = −O` (autoconjugadas).
+4. **La condición exacta.** Con `α` = masa autoconjugada total y `μ` = masa de la mayor autoconjugada:
+   `Σm² = Σ_{O=−O} m² + 2Σ_{pares} m_p² ≤ μα + (1−α)²/2 ≤ α² + (1−α)²/2`, y entonces
+
+   **N_eff ≥ 1 / (α² + (1−α)²/2)**,  cota **alcanzada** (una autoconjugada con α, un par con (1−α)/2).
+
+   De ahí: **α = 0 ⟹ N_eff ≥ 2**, con igualdad sólo si toda la masa está en un par `{O, −O}`; y
+   resolviendo `α² + (1−α)²/2 ≤ 1/2`: **α ≤ 2/3 ⟹ N_eff ≥ 2**, con igualdad en α = 2/3. Con α = 1 en
+   una sola órbita, `N_eff = 1`.
+
+**Entonces el enunciado del v33 es correcto y "dominantes" tiene un número: 2/3 de la masa.**
+`F(N)` del colapso es un caso particular de la misma cota, **con igualdad**: ahí α = 2,5/N se reparte
+en partes iguales entre las `C(N,N/2)/2` órbitas balanceadas, y la cota con μ reproduce `F(N)` exacto
+(verificado para N = 4..20 par: diferencia máxima **1,3e−15**).
+
+Verificado, como eslabones y no como el teorema:
+
+| eslabón | cómo | resultado |
+|---|---|---|
+| `f(−σ) = −f(σ)` | exhaustivo, los 2^N estados, N = 4, 8, 12 (W al azar, seed 3 declarada) | 0 discrepancias |
+| `relax_orbit(−σ)` = conjugada de `relax_orbit(σ)` | código real, 7000 estados estratificados sobre las 14 W de N=20 | 0 discrepancias |
+| `relax(−σ) = −relax(σ)` | los mismos 7000 | 0 discrepancias |
+| `P(a) = P(N−a)`, N = 2..21 | forma cerrada | dif máx **2,8e−16** |
+| idem contra `sample_s0` real | 200.000 muestras, N = 5, 8, 20, 21 | dif máx vs la fórmula ~1e−3 (ruido de 200k) |
+
+### (b) Contraejemplos: existen, y todos cumplen la condición
+
+W simétricas, diagonal cero, entradas en {−1,0,+1}. Con entradas enteras el paso de float64 **es** el
+exacto (verificado): acá no hay la divergencia del punto 1.
+
+| N | paridad | W revisadas | cómo | N_eff mínimo | α del mínimo | órbitas del mínimo | con N_eff<2 | con α>2/3 | con α>0 |
+|---|---|---|---|---|---|---|---|---|---|
+| 2 | par | 3 | exhaustiva | **1,000000** | 1,0000 | 1 | 1 | 1 | 1 |
+| 3 | impar | 27 | exhaustiva | 2,000000 | 0,0000 | 2 | 0 | 0 | 12 |
+| 4 | par | 729 | exhaustiva | **1,798068** | 0,7188 | 3 | 8 | 8 | 399 |
+| 5 | impar | 59.049 | exhaustiva | **1,515152** | 0,8000 | 3 | 685 | 685 | 29.860 |
+| 6 | par | 10.000 | muestra, seed 0 | **1,187629** | 0,9167 | 5 | 40 | 59 | 5.945 |
+| 7 | impar | 10.000 | muestra, seed 0 | **1,487455** | 0,8163 | 9 | 24 | 37 | 6.487 |
+| 8 | par | 10.000 | muestra, seed 0 | **1,695543** | 0,7656 | 27 | 11 | 19 | 7.051 |
+
+Lo medido, sin ajustar ningún enunciado:
+
+- **Hay W con N_eff < 2 en los seis N donde puede haberlas**, y el mínimo baja hasta 1,19 (N=6).
+  La W del mínimo con N=4 es el triángulo superior `[0, 1, 0, 1, 0, 1]`.
+- **Las 769 W con N_eff < 2 de la búsqueda tienen α > 2/3, sin excepción.** Es lo que dice el teorema.
+- **La recíproca no vale, y también está medido:** con N = 6, 7 y 8 hay más W con α > 2/3 que con
+  N_eff < 2 (59 contra 40, 37 contra 24, 19 contra 11). α > 2/3 **permite** N_eff < 2, no lo fuerza.
+- **Las órbitas autoconjugadas no son cosa de N par.** Con N = 3 impar, 12 de 27 W tienen α > 0, y con
+  N = 5, 29.860 de 59.049. Lo que es propio de N par es el **colapso** (ahí las órbitas {σ,−σ}
+  aparecen en los balanceados); en una W cualquiera aparecen con las dos paridades.
+
+### (c) Sobre las 14 W del punto 1
+
+- α entre **0,0038 y 0,0082**: las 14 están lejísimos de 2/3, así que **las 14 tienen N_eff ≥ 2 por el
+  teorema**, y el exacto lo confirma: **0 de 14** con exacto < 2.
+- **El estimador a 200/0/uniforme da menos de 2 en 3 de las 14**, con el exacto por arriba:
+
+| sha | intento | N_eff exacto | estimador 200/0 | α | cota del teorema |
+|---|---|---|---|---|---|
+| 62d909d4 | 4 | 2,025184 | **1,999800** | 0,005323 | 2,0213 |
+| b01bce1b | 4 | 2,029228 | **1,999800** | 0,006766 | 2,0272 |
+| 0ad12b69 | 4 | 2,032349 | **1,995012** | 0,007386 | 2,0296 |
+
+  Es decir: donde el exacto roza 2 por arriba, el estimador cruza para abajo. No es el teorema lo que
+  falla; es el muestreo a 200.
+
+### (d) La línea del REG de fourforums v8n
+
+Citada por el paper: *"relax(−σ) = −relax(σ): las órbitas vienen en pares ±"*.
+
+- **La primera mitad vale tal como está escrita, y no necesita condición.** `relax` devuelve la fase
+  del loop de `max_iter`, y la cola y el período de σ y de −σ coinciden, así que la fase se
+  corresponde. Verificado sobre 7000 estados de las 14 W: 0 discrepancias.
+- **La segunda mitad necesita una condición, y es la del punto (a):** la conjugación es una
+  **involución**, no un apareamiento libre. Las órbitas vienen en pares `{O, −O}` **salvo las
+  autoconjugadas** (`O = −O`), que son los puntos fijos de la involución y no tienen pareja. Existen y
+  tienen masa medida: α > 0 en las 14 W (0,0038–0,0082) y en más de la mitad de las W chicas de (b).
+
+### (e) La paridad de n_runs contra la de N, sobre el colapso
+
+Exacta por la binomial con N impar; con N par, simulación con **1000 seeds declaradas (0..999)** que
+reparte la cola entre las `K = C(N,N/2)/2` órbitas balanceadas. Dos controles: con N impar las dos
+coinciden (dif de medias ≤ **6,2e−4**, dif de `P(≥F)` ≤ **9,7e−3**, 27 celdas), y contra el muestreo
+**real** del instrumento con N = 20 y 21 (100 seeds, `count_attractors` sobre `extremo_colapso`):
+media simulada 2,5968–2,6003 contra real 2,6009–2,6010 (N=20) y 1,9904–1,9908 contra 1,9882–1,9883
+(N=21). **199 y 201 los declara el driver**, con su razón: son el 200 ± 1 para ver la paridad.
+
+**La lectura de Opus se verifica, las dos mitades:**
+
+- **Con N impar el plug-in no pasa de 2, y llega a 2 sólo con n_runs par.** Medido para los nueve N
+  impares de 5 a 21: `max = 2,000000` exacto en los tres n_runs, y `P(plug-in = 2) = 0,0660` con
+  n_runs = 200 contra **0,0000** con 199 y con 201. También `P(≥ F) = 0` con n_runs impar, para los
+  nueve N. Es el teorema: con N impar hay dos cuencas de masa 1/2, el plug-in es `1/(p²+(1−p)²) ≤ 2`
+  con igualdad sólo si cada lado recibe exactamente `n_runs/2`, lo que **exige n_runs par**.
+- **Con N par, F(N) > 2** (de `F(4) = 4,987` y `F(6) = 5,333` bajando a `F(20) = 2,612`) y **la
+  paridad de n_runs no cambia nada**: `P(≥F)` con N=20 da 0,427 / 0,425 / 0,445 para 199 / 200 / 201,
+  dentro del ruido de 1000 seeds. Con N=4, `P(≥F)` = 0,018.
+- El sesgo del plug-in es negativo en todas las celdas (la media queda por debajo de `F(N)`), como ya
+  decía el 14.2.
+
+### Lo corregido en el camino, dicho
+
+La primera versión de (e) contaba las `n₀` muestras de la cola como **órbitas todas distintas**. Para
+N grande el error es ~1e−3, pero para N chico es enorme: con N = 4, donde hay **3** órbitas
+balanceadas, daba media **13,75** contra `F(4) = 4,99`. Está corregido antes de reportar (la cola se
+reparte y se cuentan las coincidencias) y queda escrito en el docstring, porque
+`piso_del_colapso.distribucion_exacta` tiene **la misma** limitación declarada ("se reporta la
+distribución **sin** colisiones") y ahí se usó con N ≈ 20, donde es inocua. Si alguien la usa con N
+chico, no lo es.
+
+### Sin preguntas nuevas en este punto
+
+El enunciado quedó probado con su condición exacta; no hay nada que decidir acá. La definición la
+registra Opus con este reporte (el valor 2/3 y la cota son del modelo: **E3**).
 

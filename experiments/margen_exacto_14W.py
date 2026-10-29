@@ -162,7 +162,14 @@ def denominador_comun(W: np.ndarray, tol: float = 1e-12) -> int | None:
     Se busca con `Fraction.limit_denominator` entrada por entrada y se
     **verifica**: si alguna entrada no es `p/q` dentro de `tol`, devuelve None y
     la enumeración exacta no se hace (sólo la de float64, declarada).
+
+    Camino corto para W ya entera (`q = 1`): lo usa la búsqueda de
+    `simetria_neff_dos.py`, que recorre decenas de miles de W con entradas en
+    {−1,0,+1} y donde las `Fraction` dominarían el tiempo.
     """
+    Wf = np.asarray(W, dtype=float)
+    if np.abs(Wf - np.round(Wf)).max() == 0.0:
+        return 1
     q = 1
     for x in np.asarray(W, dtype=float).ravel():
         f = Fraction(float(x)).limit_denominator(10 ** 6)

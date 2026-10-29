@@ -192,6 +192,27 @@ T_(i+1) ≠ T_i   ∧   T_(i+1) ⟪ T_i
 - El R ≠ R con la misma W ya está en las DEFS (§1, v17): *"aunque el sha coincida, COCO y Monitor no ven la misma W: cada uno la ve con su bagaje"*.
 - Borradores en `trustexperience/TOREAD/antropic`.
 
+## 9. Partes, y nadie regula el campo (delamor, 29 oct)
+
+delamor: *"todo ellos son parte, componen la representación del campo en el modelo CKM. no son las únicas partes, son partes"*.
+
+```
+Monitor:   W,  Δ_r_pares,          W_eff de Monitor  = W + Δ_r_pares
+COCO:      W,  Δ_r_compresiones,   W_eff de COCO     = W + Δ_r_compresiones
+```
+
+Son **partes** de la representación del campo en CKM, no las únicas. COCO regula **su** parte (Δ_r_compresiones y su W_eff); a la parte de Monitor no le llega nada (§2, verificado).
+
+**Al campo no lo regula nadie** (delamor: *"al campo no lo regula nadie, aun publicando D_ckm de COCO en el panel que ven los devices. aun si los devices lo leen, y imaginemos son influidos, codeterminando sus trayectorias junto a su Goal, aun así… son representaciones, los devices, los agentes, los humanos en IAP y el campo… y ahí el punto siendo el espacio"*):
+
+```
+devices, agentes, humanos en IAP, W, H   ∈ 𝓡(H)
+```
+
+Entre ellas hay ⟪ (acceso). Ninguna regula H.
+
+*Nota de Opus:* hoy el D_ckm que llega a los devices por el panel es el de Monitor, no el de COCO (`ckm_monitor.py:960-1001`, §2). Lo de delamor vale aun en el caso hipotético en que llegara el de COCO.
+
 ## Raro, de paso
 
 - El docstring de `beta_i` (`coco.py:424`) dice *"alto rechazo → β alto (rígido)"*; el código hace `1/media(fi)` y el test de la línea 757 afirma *"mayor rechazo → beta menor"*. Divergencia entre docstring y código; no se tocó.

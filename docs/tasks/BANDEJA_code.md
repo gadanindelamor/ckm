@@ -17528,3 +17528,116 @@ además toca qué declara §4.3.2. Lo decide delamor con el reporte; Opus regist
 `git worktree list` después de `remove`: sólo `/workspaces/ckm`. `git status` del repo: sin cambios
 fuera de lo que este punto agrega.
 
+
+## REPORTE texto 20 — punto 4 — la torsión: lo que deja afuera el rechazo completo — 2026-10-29 23:05 UTC
+
+Script: `experiments/torsion_lo_que_queda_afuera.py`. Salida:
+`experiments/torsion_lo_que_queda_afuera_resultado.json`. No toqué `services/` ni `iap_chatroom/`, y
+**no decido nada sobre qué entra a Δ_r**.
+
+### (a) Los intentos 2, 3 y 4, de sus estados preservados
+
+Los tres estados **están**, preservados en `process/` con su timestamp:
+`monitor_trajectory.jsonl.bak_1792649008` (intento 2), `...1793085284` (3) y `...1793150043` (4).
+**Las siete claves que pide el punto 4a están las siete, en las 143 evaluaciones**
+(`claves_ausentes: ninguna` en los tres). La tabla por evaluación está en el JSON; acá el resumen:
+
+| intento | evaluaciones | períodos vistos | N | n_runs | de período 2 | con torsión>0 | con Δ_r_torsion>0 | Σ aceptados | Σ expulsados | Σ torsión | Σ Δ_r | Σ Δ_r_torsion |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| intento 2 | 51 | [1] | 20 (par) | 1000 | 0 | **0** | **0** | 542 | 241 | **0** | 3136,0 | **0,0** |
+| intento 3 | 27 | [1] | 20 (par) | 1000 | 0 | **0** | **0** | 6 | 71 | **0** | 768,0 | **0,0** |
+| intento 4 | 65 | [1, 2] | 20 (par) | 1000 | **1** | **0** | **0** | 131 | 322 | **0** | 3880,0 | **0,0** |
+
+**Precisión sobre el texto 20:** dice que *"los logs del driver de los intentos 2–4 no guardan
+`periodo_orbita` ni `n_torsion`"*, y **es exacto**: en `experiments/serie2_caso0_intento4_log.json` no
+aparece ninguna de las tres claves. Donde sí están es en el `monitor_trajectory.jsonl` preservado, que
+es justo donde el punto 4a manda a buscarlas. (Al evaluar el texto contra el repo, antes de empezar,
+yo lo había leído como si negara también el `monitor_trajectory`: no lo niega. Lo corrijo acá.)
+
+**La única evaluación de período 2 de los tres intentos** (intento 4, i=62, `device_a`): `cola = 1`,
+`n_aceptados = 0`, `n_expulsados = 3`, `n_torsion = 0`, `pares_torsion = []`, `Δ_r_sum = 8,0`. Es
+decir: sus 3 pares declarados tenían **un nodo de cada lado**, así que quedaron expulsados en las dos
+fases y ninguno cayó en torsión.
+
+### (b) y (c) La contrafáctica no corresponde
+
+**No hay torsión > 0 en ninguna de las 143 evaluaciones de ningún intento.** El punto 4c dice:
+reportar la tabla de (a) y **no** armar la contrafáctica. Así queda. Nada que reconstruir, nada que
+reconstruir mal: `Δ_r_torsion_sum = 0,0` en los tres intentos, y `Σ Δ_r` es exactamente lo que entró.
+
+**Lo que esto no dice:** no dice que la torsión no ocurra. Dice que en estos tres intentos, con N = 20
+y órbitas que fueron puntos fijos en 142 de 143 evaluaciones, la decisión del 8 oct **no dejó nada
+afuera**. Lo que la decisión deja afuera cuando hay período 2 está medido en (d).
+
+### (d) El mecanismo, verificado contra el código
+
+**La lectura de Opus se verifica, y con una igualdad exacta**: en una órbita autoconjugada,
+**torsión = los pares con los dos nodos del mismo lado**, y **expulsados = los pares con uno de cada
+lado**, par por par.
+
+**(d.1) El colapso con N par (4..20), con un `sigma_prompt` balanceado de la banda.** La órbita es la
+autoconjugada `{σ, −σ}`, y en los nueve N:
+
+| N | clase de la órbita | nodos declarados | pares | aceptados | expulsados | **torsión** | mismo lado | uno de cada |
+|---|---|---|---|---|---|---|---|---|
+| 4 | período 2 autoconjugada | 2 | 1 | 0 | 0 | **1** | 1 | 0 |
+| 6 | período 2 autoconjugada | 3 | 3 | 0 | 0 | **3** | 3 | 0 |
+| 8 | período 2 autoconjugada | 4 | 6 | 0 | 0 | **6** | 6 | 0 |
+| 10 | período 2 autoconjugada | 5 | 10 | 0 | 0 | **10** | 10 | 0 |
+| 12 | período 2 autoconjugada | 6 | 15 | 0 | 0 | **15** | 15 | 0 |
+| 14 | período 2 autoconjugada | 7 | 21 | 0 | 0 | **21** | 21 | 0 |
+| 16 | período 2 autoconjugada | 8 | 28 | 0 | 0 | **28** | 28 | 0 |
+| 18 | período 2 autoconjugada | 9 | 36 | 0 | 0 | **36** | 36 | 0 |
+| 20 | período 2 autoconjugada | 10 | 45 | 0 | 0 | **45** | 45 | 0 |
+
+**Todos los pares declarados caen en torsión, y ninguno queda ni aceptado ni expulsado.** Ahí el
+rechazo completo deja afuera **el 100 %** de lo que el par declaró. La razón es la del código: con
+`sigma_prompt` balanceado, los declarados son exactamente los activos de una fase y los caídos de la
+otra, así que todo par tiene los dos nodos del mismo lado en cada fase.
+
+**(d.2) Las W del punto 2b con masa autoconjugada** (por N, la W del mínimo de N_eff que encontró la
+búsqueda; muestreo del instrumento, 200/0/uniforme, cada σ₀ hace de `sigma_prompt`):
+
+| N | α de esa W | clase | muestras | pares | frac aceptados | frac expulsados | **frac torsión** |
+|---|---|---|---|---|---|---|---|
+| 4 | 0,7188 | período 2 autoconj. | 150 | 172 | 0,000 | 0,378 | **0,622** |
+| 4 | | punto fijo | 50 | 93 | 1,000 | 0,000 | 0,000 |
+| 5 | 0,8000 | período 2 autoconj. | 155 | 341 | 0,000 | 0,545 | **0,455** |
+| 6 | 0,9167 | período 2 autoconj. | 188 | 632 | 0,000 | 0,505 | **0,495** |
+| 7 | 0,8163 | período 2 autoconj. | 161 | 798 | 0,000 | 0,558 | **0,442** |
+| 8 | 0,7656 | período 2 autoconj. | 157 | 1072 | 0,000 | 0,434 | **0,566** |
+| 8 | | período 2 **no** autoconj. | 19 | 117 | 0,051 | 0,128 | **0,821** |
+
+**En las órbitas autoconjugadas, `frac aceptados = 0,000` en los cinco N.** No es una coincidencia: si
+σ_prompt cae en una autoconjugada, cada par declarado está expulsado en **alguna** fase (en una de las
+dos fases ese nodo está caído), así que "aceptado" es imposible. Lo que varía es el reparto entre
+expulsado (uno de cada lado) y torsión (los dos del mismo lado).
+
+**(d.3 y d.4) Las 14 W del punto 1, por clase de órbita, con las de período 2 no autoconjugadas
+separadas** (agregado de las 14 W; 200 muestras por W, 2800 en total):
+
+| clase | W donde aparece | muestras | pares | aceptados | expulsados | **torsión** | mismo lado | uno de cada |
+|---|---|---|---|---|---|---|---|---|
+| punto fijo | 14 | 2785 | 130.551 | 88.913 | 41.638 | **0** | 128.778 | 1.773 |
+| período 2 **autoconjugada** | 8 | 13 | 562 | **0** | 122 | **440** | **440** | **122** |
+| período 2 **no** autoconjugada | 1 | 2 | 81 | 11 | 19 | **51** | 46 | 35 |
+
+- **En los puntos fijos la torsión es 0**, las 2785 muestras: es la invariante que el docstring de
+  `pares_por_orbita` declara (con una sola fase, "en todas" y "en alguna" coinciden). Verificada.
+- **En las autoconjugadas, torsión = mismo lado = 440 y expulsados = uno de cada lado = 122, exacto.**
+  Ésa es la lectura de Opus, con el signo igual y no aproximado. 440 de 562 pares (**78 %**) quedan
+  afuera de `Δ_r_pares`, y **0** quedan aceptados.
+- **En las de período 2 que no son autoconjugadas la igualdad no vale**, y por eso el punto 4d pedía
+  separarlas: torsión 51 contra mismo lado 46, y hay 11 aceptados (imposibles en una autoconjugada).
+  La equivalencia es propia de `O = −O`, no del período 2.
+- El muestreo a 200/0 encuentra período 2 en **15 de 2800 muestras** (0,5 %) sobre estas W, repartido
+  en 8 de las 14 W. Es consistente con la masa autoconjugada exacta del punto 1 (α entre 0,0038 y
+  0,0082) y con que los tres intentos no hayan registrado torsión.
+
+### Sin preguntas nuevas en este punto
+
+Nada que decidir acá: era contar. Qué se hace con lo contado —si la torsión entra o no a `Δ_r`— es
+**E1 y E3** y ya está decidido por delamor el 8 oct; este reporte sólo dice cuánto deja afuera esa
+decisión cuando hay período 2 autoconjugado: todo lo declarado en el colapso, y el 78 % en las W de
+las curvas.
+

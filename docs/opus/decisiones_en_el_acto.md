@@ -499,3 +499,4 @@
   - lo no verificado de fourforums (O1–O7, las aristas) pasó a *Pendientes*;
   - quedó declarado que las DEFS v20 no se leyeron enteras.
   El barrido encontró dónde estaba AUTO-5: en §7.6, y vuelve con ella. Para delamor: la notación *"D_ckm^calibrate"*. Estado en el repo: `docs/opus/PAPER_Landscape_Driven_Device_v33_borrador_opus.md`, `docs/opus/NECESIDADES_v33_y_tareas_repo_29oct2026.md`. **A1.PAUSA:** se revisa con delamor antes de armar los textos para Code.
+- **Corrección de delamor (A3):** *"entendí, dije. Parece más sesgo de inferencia"*. Escribir el v33 en la sesión del barrido no fue una decisión: delamor lo había entendido así. Opus lo había registrado como si fuera una razón (*"hecho en la misma sesión del barrido (delamor)"*). Corregido en el bloque de arriba del v33.

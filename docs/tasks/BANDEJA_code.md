@@ -17772,3 +17772,124 @@ construcción que `ckm_monitor.py:317`:
 
 Nada del chequeo falla. Lanzo el vivo.
 
+
+## REPORTE texto 21 — (2) el vivo y (3) el registro — A1.PAUSA — 2026-10-29 23:47 UTC
+
+El vivo corrió **completo**: `./iap_chatroom/correr_caso0.sh` sin `--check`, en background, exit 0,
+**1204,67 s**. Sin intervención durante la corrida. `repo_commit` del log: `180844e`.
+Log del driver: `experiments/serie2_caso0_20261029T231324Z_log.json`, copiado a
+`experiments/serie2_caso0_intento5_log.json` (los dos nombres, 782 K). `experiments/_state_S2-C0/` no
+se commitea. **REG borrador: `docs/REG_borrador_serie2_caso0_intento5.md`** — fuera de `registers/`,
+pasa a Clase R sólo con tu OK. Datos: `experiments/registro_intento5_resultado.json`, de
+`experiments/registro_intento5.py`. Sin veredicto global.
+
+### Primero, una corrección mía del reporte del chequeo previo (23:12 UTC)
+
+En ese reporte nombré **los modelos equivocados**. Escribí que verifiqué
+`build_provider('groq', model='llama-3.3-70b-versatile')` y que device B corría `gemini-2.5-flash`, y
+de ahí saqué una supuesta "deriva de comentario" en `correr_caso0.sh`. **Nada de eso era del repo: los
+nombres los puse yo en mi script de verificación, sin leerlos del archivo.** Los modelos reales, que
+son los que corrieron, son los que `DEVICES` declara y declaraba también en el intento 4:
+
+| device | provider | modelo |
+|---|---|---|
+| A | groq | `openai/gpt-oss-120b` |
+| B | gemini | `gemini-3.5-flash-lite` |
+| C | groq | `openai/gpt-oss-20b` |
+| D | groq | `qwen/qwen3.8-27b` |
+
+Lo que **sí** vale de ese reporte: el bloque `DEVICES` es **byte a byte idéntico** entre `481d744` y
+HEAD (eso fue un `diff` de archivo contra archivo, no de mi memoria), y `build_provider` devuelve la
+misma clase y el mismo modelo que el mapa anterior. **Y la "deriva de comentario" que reporté no
+existe:** el encabezado de `correr_caso0.sh` dice `gemini-3.5-flash-lite`, que es exactamente lo que
+corre. Era yo comparando contra un valor que había inventado. La entrada anterior no se reescribe
+(traza fechada); queda corregida acá.
+
+### (1) lo que el chequeo previo dejó pendiente de verificar después
+
+- **P18, medido en los tres momentos.** Antes: **910** tests recolectados, y los 3 tests
+  parametrizados de `test_calibrate_reusa_A0_en_lambda_cero.py` con **2** parámetros (la W del vivo no
+  estaba: el `--check` del 28 oct sólo había dejado `channel_ticks.jsonl`). El `--reset` no se llevó
+  ninguna W, porque no había. **Después del vivo: 913 recolectados**, y esos 3 tests con **3**
+  parámetros (10 ítems en ese archivo contra 7). El `+3` es exactamente el efecto de P18, y ahora
+  entra la W **nueva**: `6c16bb08`.
+- **P17, medido:** el `--reset` **sí** se llevó el residuo del `--check` — está preservado en
+  `process/channel_ticks.jsonl.bak_1793315609_serie2_caso0`. Eso responde con un hecho la parte de P17
+  que preguntaba si alcanza con que el `--reset` se lo lleve; la decisión sigue siendo tuya.
+
+### (2) el vivo, los números
+
+| | intento 4 | **intento 5** |
+|---|---|---|
+| duración real | 1204,04 s | **1204,67 s** |
+| mensajes en el canal | 98 | **44** |
+| corpus (textos) | 94 | **40** |
+| evaluaciones de Monitor | 65 | **11** |
+| generaciones de COCO | 7 | **1** |
+| calibraciones | 7 | **1** |
+| llamadas a LLM | 288 | **221** |
+| `429` | 0 | **0** |
+| errores fatales | 1 (device B, McpError) | **0** |
+| `triggers` de COCO | 0 | **0** |
+| `Σ Δ_r` | 3880,0 | **0,0** |
+
+- **Los cuatro devices sin un solo error**: `errores_llm = 0`, `429 = 0`, `ilegibles = 0`,
+  `write_failures = 0`; y **0 ocurrencias** de `McpError` y de `Traceback` en el stdout. El device B
+  que murió al cerrar en el intento 4 **no se repitió**.
+- **device_d salió por su propia decisión**, no por una caída: `LEAVE` en la vuelta 10, tick 90,
+  `criterio_motivo "auditoria"`, `action_result "left"`, `run_end` a los 69 s. 10 vueltas contra 225 /
+  229 / 229 de los otros tres.
+- Preflight: los cuatro responden (0,334 · 0,488 · 0,285 · 0,072 s).
+
+### (3) el registro: lo que quedó medido
+
+**El muestreo es el default, y se ve en la traza.** La única calibración registra `n_runs = 200`,
+`seed = 0`, `declared_by = None`, `propios = []`, `grilla [0; 0,25; 0,5; 0,75; 1,0]`. **Ningún driver
+declaró un valor propio.** `duration_s = 0,0675` contra 0,26–0,31 del intento 4 a 1000.
+
+**La calibración** (el origen, ciclo `bootstrap`): **`no_calibrado` / `sin_separacion`**, N = 20 (par),
+`N_eff0` muestreado **1,983930**, colapso **2,436944**, **margen −0,300206**, `valores = {}`,
+`blocking = True`, `w_sha 66ea8d05`, `w_sha_live_at_calibration = None` — que es el valor correcto para
+el origen, donde no había W viva (`ckm_monitor.py:785`).
+
+**El margen exacto, por enumeración de los 2^20 estados** (reusé `margen_exacto_14W.py`, como pedía el
+texto; las dos W reconstruidas desde los prefijos y **verificadas por sha**, 0 no recomputables;
+enumeración verificada contra `relax_orbit` 500/500 en las dos):
+
+| W | textos | ¿calibrada? | muestreado 200/0 | **exacto** | F(20) | **m exacto** | ¿separa? | α |
+|---|---|---|---|---|---|---|---|---|
+| `66ea8d05` | 30 | **sí** | 1,983930 | **2,056066** | 2,612244 | **−0,332154** | **no** | 0,004864 |
+| `6c16bb08` | 40 | **no** | 6,067961 | **6,608718** | 2,612244 | **+0,491519** | **sí** | 0,198664 |
+
+1. **El veredicto coincide entre lo muestreado y lo exacto**: `sin_separacion` con −0,300 muestreado y
+   −0,332 exacto. Acá el muestreo a 200 **no** invirtió el signo (en el texto 20 punto 1 sí lo había
+   invertido en una de las 14).
+2. **`N_eff0` muestreado cae por debajo de 2 (1,983930) y el exacto está por encima (2,056066)** — el
+   mismo patrón que medí en 3 de las 14 W. α = 0,004864 ≤ 2/3, así que el teorema del punto 2 exige
+   `N_eff ≥ 2`, y el exacto lo cumple: la que no lo cumple es la estimación.
+3. **La W con la que cierra el vivo nunca se calibró ni se evaluó, y ésa sí separa** (m = +0,491519).
+   El segundo rebuild (`volumen`, 40 textos) ocurrió a las 23:31:13, que es el instante de la
+   **última** evaluación de Monitor, y no hubo ninguna evaluación después: la corrida siguió hasta las
+   23:34 con los devices y cerró.
+
+**La vara de COCO, en las 11 evaluaciones:** `0,4 / 0,6`, `source "default"`, `calibrated false`,
+`provenance DECLARED`, `causa "no_calibrado:sin_separacion"`, `triggers 0`. El `w_sha_del_registro`
+**es** el de la W que COCO juzgó (y `w_matches` COCO–Monitor es True en las 11), mientras
+`w_sha_match` dice `false`: es la colisión que vos ya decidiste dejar registrada como está
+(`ckm_monitor.py:787`), y queda medida acá en un caso donde sí coincide.
+
+**La torsión:** las siete claves están en las 11 evaluaciones; **0** de período 2, **0** con torsión,
+**0,0** de `Δ_r_torsion`. **La contrafáctica no va** (texto 20 punto 4b). Y algo propio de este
+intento: **`Σ Δ_r = 0,0`** — los **745** pares declarados quedaron todos **aceptados**, ninguno
+expulsado, así que `W_eff = W` durante toda la corrida; `D_ckm = 0,0` en las 11.
+
+**Defaults, y dónde:** 11 de 11 evaluaciones de COCO con la vara por default de `coco.py`, y 1 de 1
+calibración `no_calibrado` que no entregó ningún número. Los defaults de **muestreo** no los cuento
+como caída: son el default único de la Config y son justamente lo que este intento viene a registrar.
+
+### A1.PAUSA
+
+- El REG es **borrador** y está fuera de `registers/`: pasa a Clase R sólo con tu OK.
+- No arreglé nada de lo que apareció. No toqué `services/` ni `iap_chatroom/`.
+- Sigue abierta **P19** (qué es el margen exacto), y sin respuesta **P13, P14, P17, P18**.
+

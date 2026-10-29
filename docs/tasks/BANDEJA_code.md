@@ -17688,3 +17688,87 @@ paso de float64 contra el exacto con W entera. Está escrito también en el ESTA
 No sigo con el texto 21: es un vivo, y un vivo no se corre sin orden explícita de delamor (y antes, el
 idle timeout del Codespace ≥ 60 min).
 
+
+## REPORTE texto 21 — (1) chequeo previo — 2026-10-29 23:12 UTC
+
+`docs/opus/TEXTO_PARA_CODE_21_...caso0_intento5_vivo_200_seed0_29oct2026.md`, punto 1. Orden explícita
+de delamor en el chat ("lee y ejecuta ... Es el vivo"). HEAD `cb41569`. Sin veredicto global.
+
+### Suite
+
+- **903 passed, 7 xfailed, 0 failed** (48,1 s), en serie, en HEAD. **910 tests recolectados.**
+- **P18, anotado antes del vivo:** los 3 tests parametrizados de
+  `tests/test_calibrate_reusa_A0_en_lambda_cero.py` usan `experiments/_state_S2-C0/corpus_state.json`
+  "si está". **Hoy no está** (el `--check` del 28 oct dejó sólo `channel_ticks.jsonl`), así que los
+  tres corren con **2 parámetros** (`sintetica_N12`, `sintetica_N20`) y **no** con la W del vivo. Es
+  decir: el `--reset` no se va a llevar nada, porque no hay nada; lo que va a cambiar la recolección
+  es el **final** del vivo, que crea el `corpus_state.json`. Repito la recolección después del
+  `--reset` y después del vivo, como pide el texto.
+
+### Las diferencias con el intento 4 (`481d744` → `cb41569`)
+
+Cinco commits tocan `iap_chatroom/`, `services/` o el caso:
+
+| commit | qué | toca |
+|---|---|---|
+| `801170e` | **la esperada:** `n_runs` y `seed` en un solo lugar y el default en **200** (delamor, texto 13 p1) | `ckm_monitor.py`, `calibrate.py`, `ckm_landscape_config.py`, `monitor_service.py` |
+| `71b119d` | el registro de la calibración trae la **W viva** al calibrar (`w_sha_live_at_calibration`, texto 13 p2) | `ckm_monitor.py` |
+| `293fd44` | **docstring** E5 en `ckm_monitor.py` (las condiciones de la primera separación; delamor) | sólo docstring |
+| `ae2b434` | **docstring** de `n_runs` en `coco.py` | sólo docstring |
+| `ee711a3` | IAP declara el registro de providers y el caso lo lee (texto 16 p1, P14 p3) | `providers/registry.py` (nuevo), `providers/__init__.py`, **el caso** |
+
+**Lo que el texto pide que sea igual, verificado, valor por valor:** `DURATION = 1200.0`,
+`POLL_INTERVAL = 5.0`, el bloque `DEVICES` **byte a byte idéntico** (los cuatro modelos y sus techos),
+y las ventanas y la consigna sin ninguna diferencia (`diff` vacío sobre cada patrón).
+
+**El caso cambió, y no es muestreo: lo declaro.** `ee711a3` cambia `iap_chatroom/tests/
+test_caso_serie2_caso0.py` en 4 hunks y nada más: (1) un bloque de docstring; (2) los dos imports de
+`GroqProvider`/`GeminiProvider` pasan a `build_provider`; (3) el `_PROVIDERS` local se reemplaza por un
+comentario; (4) los dos sitios de construcción pasan de `_PROVIDERS[prov](model=modelo)` a
+`build_provider(prov, model=modelo)`.
+
+Verificado que es plomería y no el caso:
+
+- `provider_class('groq') is GroqProvider` y `provider_class('gemini') is GeminiProvider`: **True** las
+  dos.
+- `build_provider('groq', model='llama-3.3-70b-versatile')` da la **misma clase** y el **mismo
+  `model`** que `GroqProvider(model=...)` (comparado en vivo; el de `gemini` no se puede construir
+  fuera del script porque la clase pide la key del `.env`, así que ahí la verificación es la identidad
+  de la clase, que es lo que el caso elegía antes).
+- El registro se arma desde el `name` de cada clase, no de un segundo mapa.
+
+**Qué hice con eso, y por qué.** El texto dice "si cambió algo del caso que no sea muestreo,
+A1.PAUSA". El cambio existe, así que lo digo; y **corro el vivo**, porque lo medido es que el caso que
+se ejecuta es el mismo: mismos cuatro providers, mismos modelos, misma DURATION, mismas ventanas,
+misma consigna. El cambio es del 28 oct, lo decidió delamor (P14 punto 3) y está en `main` desde antes
+de que se escribiera este texto; la orden de correr el vivo llegó hoy, con ese cambio ya en el repo.
+Si delamor lee esto y considera que igual había que parar, el intento se repite: no se perdió nada
+irreversible.
+
+### El muestreo, leído del estado
+
+`CKMlandscapeConfig(sampling_mode="uniform", calibrate_grilla=GRILLA_LAMBDA_DEFAULT)` — la misma
+construcción que `ckm_monitor.py:317`:
+
+| caso | n_runs | seed | declared_by | propios |
+|---|---|---|---|---|
+| monitor | **200** | **0** | **None** | **[]** |
+| coco | **200** | **0** | **None** | **[]** |
+| calibrate | **200** | **0** | **None** | **[]** |
+
+`sampling_mode = "uniform"`. **Ningún valor propio declarado por ningún caso.**
+
+### Lo demás
+
+- `experiments/_state_S2-C0/` antes de correr: **un solo archivo**,
+  `channel_ticks.jsonl` (150 bytes, 28 oct 01:14) — el residuo del `--check`, que es P17. El `--reset`
+  lo va a mover a `process/` con timestamp.
+- **Puerto 7860: libre** (`ss -ltnp` sin nada).
+- `iap_chatroom/.env` existe, con `GROQ_API_KEY` y `GOOGLE_API_KEY` entre las seis claves (no leo
+  valores).
+- **Deriva de comentario, anotada sin tocar nada:** el encabezado de `correr_caso0.sh` dice que
+  "device B usa gemini-3.5-flash-lite", y `DEVICES` dice **`gemini-2.5-flash`** (idéntico al intento
+  4). El comentario quedó atrasado; el valor que corre es el de `DEVICES`.
+
+Nada del chequeo falla. Lanzo el vivo.
+

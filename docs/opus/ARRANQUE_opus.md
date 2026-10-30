@@ -20,7 +20,7 @@ Proyecto TRUST / CKM. Carpetas conectadas: antropic (contexto) y ckm___source (r
 ```
 
 ## Para Opus — lo que no está en el texto de arriba
-- **Dónde escribir:** `docs/opus/` en el repo **y** copia en `antropic/___project/contexto_claude/`, en el mismo paso. **Nunca** en el proyecto claude.ai (`claude/`). Commit nombrando archivos; el push lo hace delamor (avisale cuántos commits faltan).
+- **Dónde escribir:** `docs/opus/` en el repo **y** copia en `antropic/___project/contexto_claude/`, en el mismo paso. **Nunca** en el proyecto claude.ai (`claude/`). Commit nombrando archivos; el push lo hace delamor (avisale cuántos commits faltan). **Sin la línea `Claude-Session:`** en ningún commit, sea el repo privado o público (delamor, 30 oct).
 - **Decisiones:** se marcan **en el acto** en `decisiones_en_el_acto.md` (quién · qué, con cita · estado en el repo). Archivo corto: lo viejo va a un histórico, sin borrar.
 - **Textos para Code:** un bloque completo y autocontenido cada vez; si corrige uno anterior, lo reemplaza entero. Verificar contra el repo antes. `A1.PAUSA`, no "ALTO". Incluir que pull/push en el Codespace los hace Code, y que los reportes van **también** a la BANDEJA.
 - **Código:** sólo se corre en el Codespace. En la PC se lee y se editan textos.

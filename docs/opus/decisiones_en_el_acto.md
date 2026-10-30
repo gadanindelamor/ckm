@@ -548,3 +548,9 @@
   - la DEFS v21 corrige §15 (Néel se corrió el 20 sep), §OP y la medida canónica;
   - "expelled" sale del paper hasta que delamor elija el rótulo.
   Lo que decide delamor está en su §7. Estado en el repo: ese archivo.
+- **Lo que agregó la revisión** (delamor: *"analytics.py… cruzalo"*, *"calibrate… con el criterio de Code del promedio del máximo, en vez del actual"*, *"así dejamos la grilla completa de objetos en DEFS"*). En el mismo archivo, §8–§11:
+  - `analytics.py` cuenta sobre atractores únicos sin peso (contra CRITERIOS C.4–C.5) y tiene defaults en la firma (seed 42);
+  - con el criterio del máximo, separar depende del interior del camino. **Sesgo declarado:** el máximo de puntos muestreados se infla;
+  - la grilla completa tiene 44 objetos;
+  - la lista de pendientes de delamor tiene 15.
+  **Opus decide:** el d exacto de la grilla de calibrate, por enumeración (las 14 + 2 W), va en un texto para Code después de P19 A. La elección del criterio es de delamor. Estado en el repo: `docs/opus/REVISION_DEFS_v20_OP_N_neel_salamanca_criterios_30oct2026.md`.

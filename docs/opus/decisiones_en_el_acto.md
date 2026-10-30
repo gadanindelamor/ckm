@@ -543,3 +543,8 @@
   - el 34, contra qué estimadores se ubica el aporte (Chao1, Good–Turing);
   - el 27, la afirmación sobre KR en §7.6 (R8).
   El 38 (§5.2 con números de la extracción vieja) es como R2: va a Code. Estado en el repo: esta línea.
+- **Revisión de las DEFS v20 (§N y §OP), Néel / SALAMANCA, full_meaning, trace_ip y CRITERIOS_diversidad** (delamor: *"una sola respuesta con todo en doc"*). Lo encontrado está en `docs/opus/REVISION_DEFS_v20_OP_N_neel_salamanca_criterios_30oct2026.md`. Lo que decide Opus está en su §6:
+  - la forma de P19 A sale de CRITERIOS §4: normalizar por la potencia de dos siguiente, o la suma exacta, más el diagnóstico D.5;
+  - la DEFS v21 corrige §15 (Néel se corrió el 20 sep), §OP y la medida canónica;
+  - "expelled" sale del paper hasta que delamor elija el rótulo.
+  Lo que decide delamor está en su §7. Estado en el repo: ese archivo.

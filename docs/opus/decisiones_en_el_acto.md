@@ -522,3 +522,12 @@
   - por la regla de `pares_por_orbita` (`landscape_engine.py:93-146`), en una órbita {σ, −σ} los pares con los dos nodos del mismo lado caen en torsión. El rechazo completo deja afuera justo esos.
   Puntos 2e y 4d del texto 20; 199 y 201 los declara el driver, con su razón. Estado en el repo: el texto 20.
 - **Opus no trabaja en paralelo con Code** (delamor: *"si consumimos a la vez Code y vos Opus creo que se suman los límites de uso… tendiendo a batch processing… luego vos revisás todo junto. Salvo los casos en vivo"*). Corrección (A3): Opus había dicho que haría R7 y R9 mientras Code corría el texto 20. Lo verificado: según el soporte de Claude, todas las superficies cuentan contra el mismo límite, y el uso depende de lo que se procesa (largo, complejidad, modelo, effort), no del tiempo humano; si una sesión quieta consume, no lo dice. R7 y R9 quedan para cuando Code termine, y van en el mismo lote que la revisión de sus reportes. Estado en el repo: esta línea.
+
+### 30 oct
+- **La revisión de los textos 20 y 21, en lote** (Opus; delamor: *"Terminó Code. Están sus reportes"*). Lo verificado por Opus, además de leer los reportes:
+  - **la cota del punto 2 de R3, a mano:** Σm² ≤ μα + (1−α)²/2 ≤ α² + (1−α)²/2, y α² + (1−α)²/2 ≤ 1/2 ⇔ 3α² − 2α ≤ 0 ⇔ α ≤ 2/3. Cierra;
+  - **el REG del intento 5 dice que la W 6c16bb08 "nunca se calibró" y no es así.** El panel final del log trae su `punto_calibrate`: `calibrado`, 0,252986 / 0,700804, margen 0,505971, n_runs 200, seed 0, aplicado *"al COCO del próximo ciclo"*, que no nació. `registro_intento5.py` sólo lee las calibraciones que un COCO usó. Va al texto 22.
+  Estado en el repo: esta línea; `docs/opus/TEXTO_PARA_CODE_22_*`.
+- **§4.3.2 del paper usa los números de HEAD, no los de `0e042ac`** (Opus, bajo el umbral). Las razones son dos reglas de delamor: *"la única versión del modelo que hay es la actual"*, y que el paper no declara lo que el código no hace. Los de `0e042ac` van al bloque de arriba como traza, con la reproducción del texto 20 (el "5.27" eran dos números distintos: A24 "+1 texto" 5,269 y D12 base 5,271). Reversible por delamor. Estado en el repo: esta línea; entra en el v34.
+- **El relevo de P13, P14, P17 y P18 a `DECISIONES_opus.md`** lo hace Code (texto 22). Las cuatro estaban decididas acá y Code las arrastraba como "sin decisión". No suben a delamor.
+- **P19 (el empate h = 0 en float64) sube a delamor: E3.** Estado en el repo: esta línea, a la espera.

@@ -1,4 +1,4 @@
-# Revisión — DEFS v20 (§N y §OP), Néel / SALAMANCA, full_meaning, trace_ip y CRITERIOS_diversidad — 30 oct 2026 (Opus 5.5, Cowork)
+# Revisión — DEFS v20 (§N y §OP), Néel / SALAMANCA, full_meaning, trace_ip, CRITERIOS_diversidad, analytics.py, el criterio de calibrate y la grilla completa — 30 oct 2026 (Opus 5.5, Cowork)
 
 *Pedido de delamor (30 oct): revisar las DEFS actuales, la grilla de OP y de N, y Néel / SALAMANCA (*"creo que hay tests que se hicieron"*), full_meaning e IP trace, y `docs/CRITERIOS_diversidad_formulacion_v1.md`. *"Luego una sola respuesta con todo en doc."* Lectura en la PC. No se tocó ningún archivo, salvo éste.*
 
@@ -111,7 +111,117 @@ Es un documento autocontenido, con formulación y especificación. Lo que trae, 
 2. **El rótulo de `expulsados`.** Está abierto desde el 8 oct. Hoy el código dice `expulsados` y el paper *"expelled"*.
 3. **¿Entran al paper los criterios de W sola (D.1–D.4) y la distinción topológico / métrico?** §5.2 ya usa D.1 sin nombrarlo como criterio.
 
-## 8. Lo que no hizo esta revisión
+## 8. `services/analytics.py`, cruzado con lo de arriba (delamor: *"revisá analytics.py y cruzalo con lo generado antes"*)
+Archivo de 183 líneas, último cambio `0ca5494` (3 oct). Tiene `copresence_matrix`, `cluster_nodes`, `perfect_oppositions`, `attractor_stats` y `optimal_density` (P4 / Ω*).
+1. **Cuenta en vez de pesar.** Las cuatro primeras reciben `attractors: dict[frozenset, int]`, los conjuntos de nodos activos de un estado terminal, y la correlación se hace sobre los atractores **únicos, sin peso**. CRITERIOS C.4 y C.5 (11 sep) dicen que ponderar por masa *"es necesario"*: promediar sobre órbitas únicas sin peso *"hereda el sesgo de conteo"* (deriva 0,19 contra 0,03 al multiplicar el presupuesto por 100). Además, la clave es un estado y no una órbita (CRITERIOS §2.1). La versión con peso existe, pero en un experimento: `experiments/driver_neel_salamanca.py`, `copresencia_pesada`, con un control de que, con pesos uniformes, da lo mismo que `analytics.copresence_matrix`. **En `services/` no está.**
+2. **`node_presence`:** la fila de §OP dice *"implementado, landscape_engine.py"*, y en `landscape_engine.py` no existe. El único `node_presence` es la clave de `attractor_stats` (`analytics.py:129`): la fracción de atractores **únicos**, sin peso. La DEFS y el código no coinciden.
+3. **Defaults en la firma** (contra la regla del 26 oct): `n_clusters = 4`, `threshold = −0.90`, `rho_steps = 30`, `n_samples = 300` y **`seed = 42`**, que no es el seed 0 del instrumento. `optimal_density` usa el RNG global (`np.random.seed`) y `int(rho·N)` (el piso).
+4. **Un veredicto en el código:** `optimal_density` devuelve `"confirmed": omega_interior`, y su docstring dice *"P4 prediction"*. Es interpretación dentro de una función; en el paper es F4 (el review, ítem 22, también la toca). Depende de `CKMGraph`, de `process/initial_static_model/`, que está archivado.
+5. **Quién lo usa:** sólo `experiments/driver_neel_salamanca.py`, para el control de `copresence_matrix`. Monitor y COCO no lo usan, así que las filas copresence_matrix, cluster_nodes y perfect_oppositions de §OP, marcadas S+D, hoy sólo tienen la forma S, offline.
+6. **`cluster_frontier_density`** no está en `analytics.py`: es su propio módulo, `services/cluster_frontier_density.py`, con el docstring *"Función propuesta para analytics.py"*. Lo usa `driver_neel_salamanca.py`. Está implementado y es la respuesta al ítem 19 del review.
+7. **Criterios de W sola** (CRITERIOS D.1–D.5): en `services/` no hay índice de frustración, espectro, CV ni diagnósticos de exactitud. El grep de `frustr` y `eigvalsh` no da nada. Los triángulos frustrados de fourforums están en el pipeline de `ckmdatasets` (copia en `docs/opus/ckmdatasets/build_W_v8n.py`).
+
+## 9. calibrate: el criterio del máximo en vez del de los extremos (delamor: *"calibrate NO separa, pero con el criterio de Code del promedio del máximo, en vez del actual"*)
+
+**Lo que hace hoy el código** (`services/calibrate.py:328-358`):
+- *separa* ⇔ margen = d(λ = 1) − d(λ = 0) > 0;
+- el umbral es d(0) + margen/2, *"el punto medio del salto"*;
+- `d_max` y `lambda_de_d_max` se registran, pero no deciden. Code lo dejó escrito el 10 oct (`bdbe053`): *"el colapso es λ=1 por construcción, así que no cambio la definición por mi cuenta: el margen sigue siendo entre los extremos. Lo que sí hago es declarar el máximo"*.
+
+**Lo que daría el criterio del máximo:** separa ⇔ d_max > 0, con el umbral en d_max/2. Con lo que se puede leer desde la PC (el paper y la última calibración de cada log):
+
+| intento | W | n_runs | d en λ = 0 / 0,25 / 0,5 / 0,75 / 1 | margen (hoy) | d_max @ λ | hoy | con el máximo |
+|---|---|---|---|---|---|---|---|
+| 2 | las 4 de los rebuilds | 200 | d_max = 0 en λ = 0, las cuatro (paper §6.4) | < 0 | 0 @ 0 | no | no |
+| 3 | rebuilds 1 y 2 | 200 | (sólo el máximo, en el paper) | < 0 | 0,0280 y 0,1760 @ 0,25 | no | **sí** (umbrales 0,014 y 0,088) |
+| 3 | bdb98f5b | 200 | 0 / 0,2312 / 0,1536 / 0,0114 / 0,0114 | +0,0114 | 0,2312 @ 0,25 | sí (0,0057) | sí (0,1156) |
+| 4 | 6ca344c3 (las otras 6, no leídas desde la PC) | 1000 | 0 / −0,032 / −0,200 / −0,316 / −0,316 | −0,316 | 0 @ 0 | no | no |
+| 5 | 66ea8d05 (origen) | 200 | 0 / −0,025 / −0,160 / −0,300 / −0,300 | −0,300 | 0 @ 0 | no | no |
+| 5 | 6c16bb08 | 200 | 0 / 0,520 / 0,616 / 0,524 / 0,506 | +0,506 | 0,616 @ 0,5 | sí (0,253) | sí (0,308) |
+
+**Lo que eso muestra, sin interpretar:**
+1. **Con el máximo, la separación depende del interior del camino**, de W_λ en un λ intermedio, y no sólo de N_eff(W) contra F(N). Hoy, por R1, separar es N_eff(W) > F(N), y F(N) no depende de W: es el ítem 7 del review. Con el máximo, la comparación pasa a ser N_eff(W) contra el mínimo de N_eff(W_λ) sobre la grilla, y eso sí depende de W.
+2. **Sesgo declarado del criterio:** d_max es el máximo de cuatro estimaciones con ruido (λ = 0 da 0 por construcción). Un máximo sobre puntos muestreados se infla: es el mismo efecto que la TASK de Néel midió para *"S sobre la mejor partición"* (0,030 / 0,014 / 0,005 con 200 / 1000 / 5000 muestras). A n_runs = 200, d_max > 0 puede salir sólo del ruido. La regla *separa ⇔ d_max > 0* dice que sí en cuanto un punto interior da menos N_eff que λ = 0.
+3. **Lo que falta para decidir:** el d exacto de cada punto de la grilla, por enumeración, para las 14 + 2 W. Son 5 puntos × 16 W de 2^20 estados: con lo que tardó el texto 20, debería entrar en una corrida autónoma. Con eso se ve qué diría el criterio del máximo sin ruido. Va como texto para Code en la próxima sesión, con el de P19 A: los dos tocan la dinámica y conviene medirlos después de A.
+4. **La decisión es de delamor:** el patrón es suyo (*"el colapso es λ=1 por construcción"*).
+
+## 10. La grilla completa de objetos, borrador para DEFS v21 §OP
+*S = W estática, D = dinámica. "services" = implementado en el instrumento; "exp" = sólo en `experiments/`; "—" = no hay código. **Las ubicaciones son las verificadas hoy con grep; donde no se verificó, se dice.** Las filas que vienen de la v20 conservan su objeto; lo nuevo va marcado ★.*
+
+| # | Objeto | Forma | Dónde (código) | Qué es | Estado / nota |
+|---|---|---|---|---|---|
+| 1 | fi | S | no verificado | fracción de textos donde aparece el nodo i | v20 |
+| 2 | W_ij | S | `services/corpus_service.py`, `node_extractor.py` | co-ocurrencia normalizada; signo por procedimiento declarado | v20. ★ Normalización: CRITERIOS §4 y P19 (diádica o no) |
+| 3 | W_ij/(fi·fj) | S | no verificado | observado/esperado | v20 |
+| 4 | T(W) ≡ ★frac_neg (CRITERIOS D.2) | S | — (en `services/` no hay) | Σ\|W<0\| / Σ\|W\| | ★ **dos nombres, un objeto** (Babel); métrico |
+| 5 | ★ índice de frustración (D.1) | S | `ckmdatasets` (fourforums), no en `services/` | triángulos con producto de signos < 0 / triángulos completos | ★ topológico; lo usa §5.2 del paper |
+| 6 | ★ espectro λ_min, λ_max (D.3) | S | — | autovalores de W | ★ métrico; no implementado |
+| 7 | ★ CV de las marginales (D.4) | S | — | desvío(f)/media(f), f_i = Σ_j\|W_ij\| | ★ no implementado |
+| 8 | ★ diagnósticos de exactitud (D.5) | S | — | `valores_distintos`, `diádico`, `frac_empates`, `frágil` | ★ *"obligatorio antes de reportar"* (CRITERIOS); no implementado; entra con P19 A |
+| 9 | perfect_oppositions | S | `services/analytics.py:76` | pares con corr. de co-presencia ≤ −0,90 | ★ sin peso, default −0,90 en la firma (§8) |
+| 10 | W_mixta | S | no verificado | W_pos + negativos en fronteras coercitivas | v20; su admisión requiere SALAMANCA + Néel |
+| 11 | c(S) | S+D | `landscape_engine.mean_cS` | mean(W_ij σ_i σ_j) | v20 |
+| 12 | r = c(S)/μ_W | D | no verificado | cohesión relativa | v20 |
+| 13 | Histéresis (P1 → F1) | S | no verificado | rama UP vs DOWN de c(S) | v20; review ítem 20 |
+| 14 | Ω* (P4 → F4) | S | `services/analytics.optimal_density` | argmax de c(S) sobre ρ | ★ `"confirmed"` en el código; seed 42; depende de un módulo archivado (§8) |
+| 15 | ★ σ₀, la medida de referencia | S+D | `landscape_engine.sample_s0` | banda 30–70 % de activos, elección uniforme | ★ decidida el 28 oct; CRITERIOS §2.3 la llamaba *"tercera referencia"* y canónica a la uniforme |
+| 16 | Boltzmann σ₀ | S+D | `landscape_engine.boltzmann_warmup` | calentamiento con β_c | v20 |
+| 17 | ★ órbita (relax_orbit) | S+D | `landscape_engine.relax_orbit` | el conjunto invariante alcanzado; período ≤ 2 (Goles) | ★ regla de empate h = 0 en float64: P19 |
+| 18 | Atractores A = \|L\| | S+D | `landscape_engine.deprecated_count_attractors` | conteo de terminales | v20; no converge |
+| 19 | ★ masas de cuenca | S+D | `landscape_engine.basin_masses` | fracción de σ₀ por órbita | ★ |
+| 20 | N_eff | S+D | `landscape_engine.n_eff`, `count_attractors` | 1/Σm² | v20, corregida: ±1–5 % es caso09 (R4); ★ cota inferior (fila 21) |
+| 21 | ★ α, masa autoconjugada, y la cota | S+D | `experiments/simetria_neff_dos.py` | N_eff ≥ 1/(α² + (1−α)²/2); ≥ 2 si α ≤ 2/3 | ★ probado (texto 20, 2) |
+| 22 | ★ F(N), el piso del colapso | S | `experiments/piso_del_colapso.py` | N_eff exacto del colapso: 2 con N impar, forma cerrada con N par | ★ verificado hasta N = 21 |
+| 23 | ★ enumeración exacta | S | `experiments/margen_exacto_14W.py`, `piso_del_colapso.py` | N_eff exacto bajo la medida del código | ★ hasta N ≈ 21; con el paso del código (P19) |
+| 24 | node_presence | S+D | `analytics.attractor_stats` (clave) — **no en landscape_engine** | presencia en atractores únicos | ★ la v20 dice landscape_engine: no está; sin peso, contra CRITERIOS C.4 |
+| 25 | d(σ) | S+D | `landscape_engine.basin_distance` | flips hasta cambiar de órbita | v20; no está en el panel |
+| 26 | copresence_matrix | S (★ hoy sólo S) | `services/analytics.py:22` | Pearson sobre atractores únicos | ★ sin peso; la versión con peso está sólo en exp |
+| 27 | cluster_nodes | S (★ hoy sólo S) | `services/analytics.py:48` | Ward sobre 1 − corr | ★ default `n_clusters = 4` en la firma |
+| 28 | cluster_frontier_density | S | `services/cluster_frontier_density.py` | min(intra_a, intra_b)/inter(a, b); "oposicion" si inter < 0 | v20; ★ módulo propio; lo usa el driver de Néel |
+| 29 | ★ SALAMANCA (ncut contra el nulo) | S | `experiments/driver_neel_salamanca.py` | ¿hay T0/T1 en W_pos? corte espectral contra barajados | ★ S1 registrado (`REG_salamanca_s1_v1`); detecta modularidad |
+| 30 | β_Néel | S | `experiments/driver_neel_salamanca.py` (`neel`) | barrido de β con la partición fija; persistencia de la cola | ★ **corrido** (20 sep): frontera de profundidad cero; la v20 decía "no corrido" |
+| 31 | D_masa_cuencas | D | `landscape_engine.d_masa_cuencas` | 1 − ln N_eff/ln N_eff0 | v20; ≡ D_ckm desde `dabd1ed` |
+| 32 | D_ckm (★ tres instancias) | D | `landscape_engine.d_ckm` | ídem | ★ D_ckm^calibrate, D_ckm^Monitor, D_ckm^COCO, con baselines distintos |
+| 33 | ★ W_Monitor, W_COCO, W_calibrate (W_λ) | D | `monitor_service`, `coco`, `calibrate` | W + Δ_r_pares; W + Δ_r_compresiones; (1−λ)W + λW_colapso | ★ notación confirmada el 29 oct; review ítem 11: W_eff ≡ W_Monitor |
+| 34 | Δ_r → ★ Δ_r_pares | D | `services/monitor_service.py` | pares rechazados **en todas** las fases | v20 (rótulo `expulsados`: Babel, [delamor]) |
+| 35 | ★ Δ_r_compresiones | D | `services/coco.py` | Δ_r_compresiones ← α_c · Δ_r_compresiones | ★ estaba en las SLAs; **α_c ≠ α de la fila 21** (review, ítem 3) |
+| 36 | Δ_r_torsion | D | `services/monitor_service.py:240-350` | pares rechazados en una fase y sostenidos en la otra | v20; ★ 0 en 154 evaluaciones; en una órbita autoconjugada = pares del mismo lado (texto 20, 4d) |
+| 37 | órbita en el panel | D | `monitor_service` (panel) | `periodo_orbita`, `n_aceptados`, `n_expulsados`, `n_torsion`, `pares_torsion` | v20 |
+| 38 | ★ margen y separación | S | `services/calibrate.py:337-348` | d(1) − d(0); separa ⇔ > 0 ⇔ N_eff(W) > F(N) | ★ R1: 0 de 14 W separan exacto; intento 5: 1 de 2 |
+| 39 | ★ d_max, λ de d_max | S | `services/calibrate.py:328-330` | máximo de la curva, registrado, no decide | ★ §9: criterio alternativo, a decidir por delamor |
+| 40 | ★ frac_rec | S+D | `calibrate`, `coco`, `monitor_service` | N_eff/N_eff0 | ★ |
+| 41 | ★ Threshold (MEASURED / DECLARED) | D | `services/ckm_trust_rule.py:255`; uso en `monitor_service.py:646` | el umbral con su procedencia y su W | ★ |
+| 42 | UNKNOWN | S+D | código y panel | ausencia de medición | v20 |
+| 43 | ★ full_meaning | S | — | T > τ | ★ sólo en la DEFS; inalcanzable con presencia sola (§1.1 h) |
+| 44 | ★ trace_ip | D | — (MonitorService lo hace observable) | el momento en que cambia el patrón distribucional | ★ en el paper §8.2–8.3; instancia en `REG_trace_ip_sesion_05oct_v1` |
+
+## 11. Pendientes de delamor — la lista completa (orden: instrumento, IAP, devices, servicios)
+**Instrumento**
+1. **Leer el v34** (`_borrador` y `_print`).
+2. **El criterio de calibrate:** ¿los extremos (hoy) o el máximo (§9)? Primero se mide exacto (texto para Code); después decidís.
+3. **¿Se pondera por masa en `services/analytics.py`** (CRITERIOS C.4–C.5)? Cambia lo que miden copresence_matrix, cluster_nodes, perfect_oppositions y node_presence. Recomendación de Opus: sí, porque es lo que ya decía el 11 sep y ya existe en el driver de Néel.
+4. **El rótulo de `expulsados`.** Abierto desde el 8 oct.
+5. **Los otros rótulos abiertos de §N:** OPERADOR_STOP_COCO en el código, Gatekeeper, los verbos de "agregar un nodo" y los prefijos del Orden BABEL.
+
+**Paper (el review del v34)**
+6. **¿Entran SALAMANCA y Néel?** (§7.1)
+7. **¿Entran los criterios de W sola (D.1–D.4) y la distinción topológico / métrico?** (§7.3)
+8. **Review, ítem 1:** "field" con tres sentidos. ¿Cuál es *el campo*, y cómo se llaman los otros dos?
+9. **Review, ítem 7:** calibrar compara N_eff0 con F(N), que no depende de W. Se cruza con el punto 2.
+10. **Review, ítems 18 y 28:** §3.3 (la verificación por convergencia independiente) y §7.6 (*"representar conocimiento y medir el campo son dos perspectivas de lo mismo"*): ¿se sostienen como están, se fundamentan o salen?
+11. **Review, ítem 34:** ¿contra qué se ubica el aporte de N_eff (Chao1, Good–Turing, la literatura de riqueza de especies)?
+12. **R8 / review, ítem 27:** quién revisa la literatura de KR 2023–2026 y cómo; mientras tanto, la afirmación de §7.6 sobre KR.
+13. **Acknowledgments:** *"verified all references"* con R9 pendiente, y nombrar a Claude Opus 5, el modelo de Code. Es tu voz.
+
+**IAP**
+14. **El OK para pasar el REG del intento 5 a `registers/`**, después del texto 22.
+
+**Infraestructura**
+15. **Codespace:** esperar el ciclo de facturación o subir el presupuesto (la hora de 2 núcleos cuesta USD 0,18). Lo que espera al Codespace: el texto 22, P19 A, el d exacto de la grilla (§9) y §5.2 a HEAD (review, ítem 38).
+
+## 12. Lo que no hizo esta revisión
 - No leyó las DEFS v20 enteras: §N, §OP, §15, §16 y §17, y las filas que se nombran.
 - No leyó CRITERIOS §C.1, C.3–C.5 en detalle, ni las TASK de SALAMANCA y Néel v1–v5, ni la SUPERTASK.
+- No leyó `services/cluster_frontier_density.py` ni el driver de Néel enteros.
+- Las calibraciones de los intentos 3 y 4 que no son la última de cada log no se leyeron desde la PC: el §9 usa el paper para los máximos de los intentos 2 y 3, y deja seis del intento 4 sin leer.
 - No corrió nada.

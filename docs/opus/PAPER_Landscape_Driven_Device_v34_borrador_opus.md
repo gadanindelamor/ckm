@@ -28,6 +28,7 @@
 > - **§4.3.2:** lo que el v33 decía del "+1 text" (Jaccard 1,00; 236 de 380 entradas de W cambian, 18 de signo), medido en `0e042ac`, no se re-midió en HEAD. En HEAD el texto extra cambia N en E7 (7 → 10).
 > - **La definición de separación** (candidata, §12 de las DEFS v20), si no se registra antes. Con R1 y R3 queda dicha como aritmética: separa ⇔ N_eff(W) > F(N).
 > - **El release:** tag, commit, DOI y fecha (Code Availability y el encabezado).
+> - **Acknowledgments:** dice *"The author has reviewed all content, verified all references"* y que Opus re-verificó las referencias. Con R9 pendiente, eso todavía no es cierto. Tampoco nombra a Claude Opus 5, el modelo de Code que corrió los experimentos de v33–v34. Lo decide delamor: es su voz.
 > - La tabla de D_ckm de §6.4 sin los intentos 4 y 5.
 >
 > **Retirado (no va al `_print`):**
@@ -1060,7 +1061,7 @@ described in §3.2. Claude Sonnet 4.6 (Anthropic), used through chat interfaces
 and through Claude Code, took part in the conceptual development, the
 implementation of the experimental code, the execution and analysis of
 experiments, and the drafting of earlier versions of this manuscript. Claude
-Opus 5.5 (Anthropic) was used for editorial revision of versions 28–33, for
+Opus 5.5 (Anthropic) was used for editorial revision of versions 28–34, for
 reading the code against the declarations, and for re-verification of the
 bibliographic references. The author has reviewed all
 content, verified all references, and takes full responsibility for the

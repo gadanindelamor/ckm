@@ -35,3 +35,27 @@ Parte del v34, que es el v32 más los ítems de verificación cerrados (R1–R4)
 ## 4. Límites de esta comparación
 - Buscar por los primeros 60 caracteres de una cita es aproximado: una cita que cambió levemente cuenta como "no hallada".
 - "Ya estaba en el v28" no dice que el review del v28 lo haya visto y lo aceptara: dice que estaba en el texto que ese review leyó.
+
+## 5. Agregado (30 oct, noche): el v29 y el inventario de los reviews de Kimi
+**Los reviews de Kimi que hay, del v28 al v32** (búsqueda en `antropic/`, `ckm___source/` y `ckmexperience/`):
+
+| versión | review de Kimi | archivo | veredicto (cita) |
+|---|---|---|---|
+| v28 | sí | `REVIEW_REPORT_PAPER_Landscape_Driven_Device_v28.md`; la conversación, en `antropic/___paper/REVIEW_RESEARCH.docx` | *"Major revision. The core is real and publishable"* |
+| v29 | sí | `REVIEW_REPORT_PAPER_v29_and_CKM_basal_ganglia.md` (copiado hoy al repo); la conversación, en `REVIEW_REPORT_PAPER.docx` | *"Minor revision, conditional on verification (down from major on v28)"* |
+| v30 | **no se encontró** | sólo el pedido (`PEDIDO_REVIEW_paper_v30_22oct2026.md`) y lo que delamor trajo el 22 oct (`decisiones_en_el_acto.md` l.132: *"¿de cuál de los 4 D_ckm hablamos?"*) | — |
+| v31 | **no es de Kimi** | `REVIEW_PAPER_v31_2026-10-22.md` lo escribió Opus (la instancia nueva se cortó por un error de la API) | — |
+| v32 | sí | `REVIEW_REPORT_PAPER_v32.md` (*"third review in a cycle"*) | *"minor revision, conditional on M1… releasable as a preprint"* |
+
+**La comparación de §2, con el v29 agregado** (dónde aparece primero el pasaje citado):
+
+| primera versión donde está | ítems |
+|---|---:|
+| v28 | 25 |
+| v29 | 6 |
+| v32 | 7 |
+| sólo v34 | 3 |
+| cita no hallada | 10 |
+| sin cita | 11 |
+
+**Lectura:** 38 de los 45 ítems con cita encontrada señalan pasajes que ya estaban en el v28, el v29 o el v32, y Kimi revisó esas tres versiones. 31 ya estaban en el v28 o en el v29, cuando Kimi pasó de *"major"* a *"minor revision"*.

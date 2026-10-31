@@ -583,3 +583,4 @@
   - los drivers de verificación;
   - los hallazgos.
   **Sesgo declarado:** el inventario sale de los nombres, de la primera línea de cada docstring y de conteos con grep, no de leer las aserciones. Estado en el repo: `docs/opus/SECCION_verificacion_offline_borrador_31oct2026.md`.
+- **Para qué va la sección de la suite** (delamor: *"es un matiz quizás. Es correcto lo que dice la serie IAP. Sólo que alguien que lea el paper sin ver el repo no puede conocer el modelo a través de las series de testing de IA, omitiendo la suite de testing de CKM"*). La serie IAP no se corrige. La sección V es la forma en que un lector sin el repo conoce el modelo: qué tiene que hacer cada parte y cómo se verifica. Opus lo toma como criterio para incorporarla: cada grupo de tests dice qué parte del modelo describe, antes que cuántos tests tiene. Estado en el repo: `docs/opus/SECCION_verificacion_offline_borrador_31oct2026.md` (a ajustar con este criterio al incorporarla).
